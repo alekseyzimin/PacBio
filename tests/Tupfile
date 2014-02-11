@@ -1,0 +1,14 @@
+include_rules
+
+CXXFLAGS += -std=c++0x -I$(TUP_CWD)
+
+# Compile Google test library
+: foreach gtest/src/gtest_main.cc gtest/src/gtest-all.cc |> !cxx |>
+: gtest_main.o gtest-all.o |> !ar |> libgtest_main.a
+
+# Compile individual tests
+CXXFLAGS += -I../src_lis
+: foreach test_lis.cc |> !cxx |> {all_tests}
+LDFLAGS_all_tests = -pthread
+: {all_tests} libgtest_main.a |> !lxxd |> all_tests
+: all_tests |> ./%f |>
