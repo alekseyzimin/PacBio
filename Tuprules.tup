@@ -1,3 +1,4 @@
+# Default rules
 !cc    = |> ^ CC    %f^ $(CC) $(CPPFLAGS) $(CPPFLAGS_%B) @(CPPFLAGS) $(CFLAGS) $(CFLAGS_%B) @(CFLAGS) -c -o %o %f |> %B.o
 !cxx   = |> ^ CXX   %f^ $(CXX) $(CPPFLAGS) $(CPPFLAGS_%B) @(CPPFLAGS) $(CXXFLAGS) $(CXXFLAGS_%B) @(CXXFLAGS) -c -o %o %f |> %B.o
 !ld    = |> ^ LD    %o^ $(CC) $(T_LDFLAGS) $(LDFLAGS) $(LDFLAGS_%O) $(LOADLIBES) $(LDLIBS) %f -o %o |>
@@ -7,8 +8,9 @@
 !ar    = |> ^ AR    %o^ $(AR) sruv $(ARFLAGS) $(ARFLAGS_%O) @(ARFLAGS) %o %f |>
 !yaggo = |> ^ YAGGO %f^ $(YAGGO) %f |> %B.hpp
 
+# Default variables
 ifdef CC
-  CC = @(GCC)
+  CC = @(CC)
 else
   CC = gcc
 endif
@@ -29,4 +31,17 @@ ifdef YAGGO
   YAGGO = @(YAGGO)
 else
   YAGGO = yaggo
+endif
+
+CXXFLAGS = -Wall -Werror -Wno-error=unknown-pragmas
+ifdef JELLYFISH_CFLAGS
+  JELLYFISH_CFLAGS = @(JELLYFISH_CFLAGS)
+else
+  JELLYFISH_CFLAGS = `pkg-config --cflags jellyfish-2.0`
+endif
+
+ifdef JELLYFISH_LIBS
+  JELLYFISH_LIBS = @(JELLYFISH_LIBS)
+else
+  JELLYFISH_LIB = `pkg-config --libs jellyfish-2.0`
 endif
