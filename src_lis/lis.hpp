@@ -1,8 +1,8 @@
 #ifndef __LIS_HPP__
 #define __LIS_HPP__
 
-#include <algorithm>
 #include <iterator>
+#include <algorithm>
 
 namespace lis {
 /* Compute the Longest Increasing Subsequence on the data in is the
@@ -33,10 +33,10 @@ size_t compute_M_P(const InputIterator X, const InputIterator Xend, M_type M, P_
 
   struct comp_type {
     const InputIterator& X_;
-    bool operator()(size_t x, size_t y) const {
-      return X_[x] < X_[y];
-    }
     comp_type(const InputIterator& x) : X_(x) { }
+    bool operator()(size_t x, size_t y) const {
+      return this->X_[x] < this->X_[y];
+    }
   };
 
   const comp_type comp(X);

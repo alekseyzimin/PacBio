@@ -7,8 +7,8 @@ CXXFLAGS += -std=c++0x -I$(TUP_CWD)
 : gtest_main.o gtest-all.o |> !ar |> libgtest_main.a
 
 # Compile individual tests
-CXXFLAGS += -I../src_lis -I../src_jf_aligner -fopenmp
-: foreach test_lis.cc test_lf_forward_list.cc |> !cxx |> {all_tests}
-LDFLAGS_all_tests = -pthread -fopenmp
-: {all_tests} libgtest_main.a |> !lxxd |> all_tests
-: all_tests |> ./%f |>
+CXXFLAGS += -I../src_lis -I../src_jf_aligner
+LDFLAGS += -pthread -L$(TUP_CWD) -lgtest_main
+: foreach test_lis.cc test_lf_forward_list.cc | libgtest_main.a |> !cxxld |> {all_tests}
+: foreach {all_tests} |> ./%f > %o |> %f.log
+
