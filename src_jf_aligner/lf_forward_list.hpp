@@ -95,7 +95,7 @@ public:
     T& operator*() { return static_cast<node*>(head_)->val_; }
     const T& operator*() const { return static_cast<const node*>(head_)->val_; }
     T* operator->() { return &static_cast<node*>(head_)->val_; }
-    const T& operator->() const { return &static_cast<const node*>(head_)->val_; }
+    const T* operator->() const { return &static_cast<const node*>(head_)->val_; }
     iterator& operator++() { head_ = (*const_cast<head_node* volatile*>(&head_))->next_; return *this; }
     iterator operator++(int) {
       iterator res(*this);
@@ -118,7 +118,7 @@ public:
     bool operator==(const const_iterator& rhs) const { return head_ == rhs.head_; }
     bool operator!=(const const_iterator& rhs) const { return head_ != rhs.head_; }
     const T& operator*() const { return static_cast<const node*>(head_)->val_; }
-    const T& operator->() const { return &static_cast<const node*>(head_)->val_; }
+    const T* operator->() const { return &static_cast<const node*>(head_)->val_; }
     const_iterator& operator++() { head_ = (*const_cast<head_node* volatile*>(&head_))->next_; return *this; }
     const_iterator operator++(int) {
       const_iterator res(*this);

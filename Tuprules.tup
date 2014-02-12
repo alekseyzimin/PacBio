@@ -43,5 +43,5 @@ endif
 ifdef JELLYFISH_LIBS
   JELLYFISH_LIBS = @(JELLYFISH_LIBS)
 else
-  JELLYFISH_LIB = `pkg-config --libs jellyfish-2.0`
+  JELLYFISH_LIBS = `pkg-config --libs jellyfish-2.0` -Wl,--rpath=`pkg-config --libs jellyfish-2.0 | sed -e 's/-L//g'`
 endif

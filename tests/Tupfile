@@ -7,8 +7,11 @@ CXXFLAGS += -std=c++0x -I$(TUP_CWD)
 : gtest_main.o gtest-all.o |> !ar |> libgtest_main.a
 
 # Compile individual tests
-CXXFLAGS += -I../src_lis -I../src_jf_aligner
+export PKG_CONFIG_PATH
+CXXFLAGS += -I..
+CXXFLAGS_test_mer_pos_hash += $(JELLYFISH_CFLAGS)
+LDFLAGS_test_mer_pos_hash += $(JELLYFISH_LIBS)
 LDFLAGS += -pthread -L$(TUP_CWD) -lgtest_main
-: foreach test_lis.cc test_lf_forward_list.cc | libgtest_main.a |> !cxxld |> {all_tests}
+: foreach test_lis.cc test_lf_forward_list.cc test_mer_pos_hash.cc | libgtest_main.a |> !cxxld |> {all_tests}
 : foreach {all_tests} |> ./%f > %o |> %f.log
 

@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <cstdlib>
 #include <vector>
-#include <lis.hpp>
+#include <src_lis/lis.hpp>
 
 namespace {
 TEST(LIS, Increasing) {
