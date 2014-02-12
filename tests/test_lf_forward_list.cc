@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <lf_forward_list.hpp>
+#include <src_jf_aligner/lf_forward_list.hpp>
 
 namespace {
 TEST(LfForwardList, PushFront) {
@@ -11,9 +11,13 @@ TEST(LfForwardList, PushFront) {
   EXPECT_FALSE(list.cbegin() != list.cend());
   EXPECT_EQ((distance_type)0, std::distance(list.cbegin(), list.cend()));
 
-  #pragma omp parallel for
-  for(int i = 0; i < size; ++i)
-    list.push_front(i);
+  bool it_equal = true;
+#pragma omp parallel for reduction(&&:it_equal)
+  for(int i = 0; i < size; ++i) {
+    lf_forward_list<int>::iterator it = list.push_front(i);
+    it_equal = it_equal && (*it == i);
+  }
+  EXPECT_TRUE(it_equal);
 
   EXPECT_FALSE(list.cbegin() == list.cend());
   EXPECT_TRUE(list.cbegin() != list.cend());

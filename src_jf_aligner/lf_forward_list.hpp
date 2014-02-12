@@ -40,25 +40,27 @@ public:
     } while(hn != ohn);
 
     while(hn) {
-      ohn = hn;
+      ohn = hn->next_;
       T_alloc_.destroy(&static_cast<node*>(hn)->val_);
       node_alloc_.deallocate(static_cast<node*>(hn), 1);
-      hn = ohn->next_;
+      hn = ohn;
     }
   }
 
-  /** Push an element to the front of the list (copy) */
-  void push_front(const value_type& val) {
+  /** Push an element to the front of the list (copy). Returns an
+      iterator to the newly inserted element. */
+  iterator push_front(const value_type& val) {
     node* n = node_alloc_.allocate(1);
     T_alloc_.construct(&n->val_, val);
-    push_front_(n);
+    return push_front_(n);
   }
 
-  /** Push an element to the front of the list (move) */
-  void push_front(value_type&& val) {
+  /** Push an element to the front of the list (move). Returns an
+      iterator to the newly inserted element. */
+  iterator push_front(value_type&& val) {
     node* n = node_alloc_.allocate(1);
     T_alloc_.construct(&n->val_, std::move(val));
-    push_front_(n);
+    return push_front_(n);
   }
 
   /** Get an iterator */
@@ -70,12 +72,13 @@ public:
   const_iterator cend() const { return const_iterator(); }
 
 protected:
-  void push_front_(head_node* n) {
+  iterator push_front_(head_node* n) {
     head_node* hn = *const_cast<head_node* volatile*>(&head_);
     do {
       n->next_ = hn;
       hn = __sync_val_compare_and_swap (&head_, hn, n);
     } while(hn != n->next_);
+    return iterator(n);
   }
 
 public:
