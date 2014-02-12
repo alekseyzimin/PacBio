@@ -29,5 +29,13 @@ TEST(LIS, Increasing) {
     if(i > 0)
       EXPECT_LT(lis_ind[i-1], lis_ind[i]);
   }
+
+  std::sort(v.begin(), v.end());
+  std::vector<int> sorted_seq = lis::sequence(v.cbegin(), v.cend());
+  EXPECT_EQ(v.size(), sorted_seq.size());
+  EXPECT_EQ(v, sorted_seq);
+
+  std::vector<int> rev_seq = lis::sequence(v.rbegin(), v.rend());
+  EXPECT_EQ((size_t)1, rev_seq.size());
 }
 }

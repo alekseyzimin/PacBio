@@ -23,6 +23,30 @@ public:
     T_alloc_(alloc), node_alloc_(alloc), head_(0)
   { }
 
+  ~lf_forward_list() {
+    clear();
+  }
+
+  /** Remove all element from the list. Not safe if other threads are
+      accessing elements in the list, but it can be mixed with other
+      insert operations. */
+  void clear() {
+    head_node* hn = *const_cast<head_node* volatile*>(&head_);
+    head_node* ohn;
+
+    do {
+      ohn = hn;
+      hn  = __sync_val_compare_and_swap (&head_, hn, 0);
+    } while(hn != ohn);
+
+    while(hn) {
+      ohn = hn;
+      T_alloc_.destroy(&static_cast<node*>(hn)->val_);
+      node_alloc_.deallocate(static_cast<node*>(hn), 1);
+      hn = ohn->next_;
+    }
+  }
+
   /** Push an element to the front of the list (copy) */
   void push_front(const value_type& val) {
     node* n = node_alloc_.allocate(1);
