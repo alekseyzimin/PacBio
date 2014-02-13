@@ -33,7 +33,7 @@ else
   YAGGO = yaggo
 endif
 
-CXXFLAGS = -Wall -Werror -Wno-error=unknown-pragmas
+CXXFLAGS = -Wall -Werror -Wno-error=unknown-pragmas -std=c++0x
 ifdef JELLYFISH_CFLAGS
   JELLYFISH_CFLAGS = @(JELLYFISH_CFLAGS)
 else

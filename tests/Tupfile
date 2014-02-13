@@ -1,6 +1,6 @@
 include_rules
 
-CXXFLAGS += -std=c++0x -I$(TUP_CWD)
+CXXFLAGS += -I$(TUP_CWD)
 
 # Compile Google test library
 : foreach gtest/src/gtest_main.cc gtest/src/gtest-all.cc |> !cxx |>
@@ -9,9 +9,15 @@ CXXFLAGS += -std=c++0x -I$(TUP_CWD)
 # Compile individual tests
 export PKG_CONFIG_PATH
 CXXFLAGS += -I..
+LDFLAGS += -pthread -L$(TUP_CWD) -lgtest_main
+TESTS = test_lis.cc test_lf_forward_list.cc test_mer_pos_hash.cc test_superread_parser.cc
+
+# Flags specific to some tests
 CXXFLAGS_test_mer_pos_hash += $(JELLYFISH_CFLAGS)
 LDFLAGS_test_mer_pos_hash += $(JELLYFISH_LIBS)
-LDFLAGS += -pthread -L$(TUP_CWD) -lgtest_main
-: foreach test_lis.cc test_lf_forward_list.cc test_mer_pos_hash.cc | libgtest_main.a |> !cxxld |> {all_tests}
+CXXFLAGS_test_superread_parser += $(JELLYFISH_CFLAGS)
+LDFLAGS_test_superread_parser += $(JELLYFISH_LIBS)
+
+: foreach $(TESTS) | libgtest_main.a |> !cxxld |> {all_tests}
 : foreach {all_tests} |> ./%f > %o |> %f.log
 

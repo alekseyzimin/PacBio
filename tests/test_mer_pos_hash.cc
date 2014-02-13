@@ -1,3 +1,5 @@
+#include <cstdlib>
+
 #include <gtest/gtest.h>
 #include <src_jf_aligner/mer_pos_hash.hpp>
 
@@ -24,14 +26,17 @@ TEST(MerPosHash, Insert) {
   static const int nb_inserts = 10000;
   # pragma omp parallel for
   for(int i = 0; i < nb_inserts; ++i)
-    hash.push_front(mers[i % nb_mers], frags[i % nb_frags], (unsigned int)i);
+    hash.push_front(mers[i % nb_mers], frags[i % nb_frags], i * (2 * (i % 2) - 1));
 
   for(int i = 0; i < nb_mers; ++i) {
     const list_type& list = hash[mers[i]];
+    const list_type* found_list = hash.find_pos(mers[i]);
+    EXPECT_EQ(&list, found_list);
     for(auto it = list.cbegin(); it != list.cend(); ++it) {
-      EXPECT_TRUE(it->offset >= (unsigned int)0 && it->offset < (unsigned int)nb_inserts);
-      EXPECT_EQ((unsigned int)i, it->offset % nb_mers);
-      EXPECT_EQ(frags[it->offset % nb_frags], *it->frag);
+      EXPECT_TRUE(abs(it->offset) >= 0 && it->offset < nb_inserts);
+      EXPECT_EQ(i, abs(it->offset) % nb_mers);
+      EXPECT_EQ(i % 2,  it->offset > 0);
+      EXPECT_EQ(frags[abs(it->offset) % nb_frags], *it->frag);
     }
   }
 }
