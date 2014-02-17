@@ -1,18 +1,7 @@
 #ifndef _SUPERREAD_PARSER_HPP_
 #define _SUPERREAD_PARSER_HPP_
 
-#include <src_jf_aligner/mer_pos_hash.hpp>
-#include <jellyfish/stream_manager.hpp>
-#include <jellyfish/whole_sequence_parser.hpp>
-
-
-using jellyfish::mer_dna;
-typedef mer_pos_hash<mer_dna> mer_pos_hash_type;
-
-typedef std::vector<const char*> file_vector;
-typedef jellyfish::stream_manager<file_vector::const_iterator> stream_manager;
-typedef jellyfish::whole_sequence_parser<stream_manager> read_parser;
-typedef std::vector<std::vector<std::string> > name_lists;
+#include <src_jf_aligner/jf_aligner.hpp>
 
 class superreads_read_mers : public jellyfish::thread_exec {
   mer_pos_hash_type& ary_;
@@ -27,33 +16,21 @@ public:
   { }
 
   virtual void start(int thid) {
-    mer_dna m, rm;
+    parse_sequence parser;
 
     while(true) {
       read_parser::job job(parser_);
       if(job.is_empty()) break;
 
       for(size_t i = 0; i < job->nb_filled; ++i) { // Process each read
-        names_[thid].push_back(job->data[i].header);
-        const std::string& name = names_[i].back();
-        std::string& seq = job->data[i].seq;
+        const char* header = names_.push_back(thid, job->data[i].header);
+        parser.reset(job->data[i].seq);
 
-        auto         base   = seq.begin();
-        unsigned int len    = 0; // Length of low quality stretch
-        int offset = -mer_dna::k() + 1;
-        for( ; base != seq.end(); ++base, ++offset) {
-          int code = mer_dna::code(*base);
-          if(mer_dna::not_dna(code)) {
-            len = 0;
-            continue;
-          }
-          m.shift_left(code);
-          rm.shift_right(mer_dna::complement(code));
-          ++len;
-          if(len >= mer_dna::k()) {
-            const bool is_canonical = m < rm;
-            ary_.push_front(is_canonical ? m : rm, name, is_canonical ? offset : -offset);
-          }
+        while(parser.next()) { // Process each k-mer
+            const bool is_canonical = parser.m < parser.rm;
+            ary_.push_front(is_canonical ? parser.m : parser.rm,
+                            header,
+                            is_canonical ? parser.offset : -parser.offset);
         }
       }
     }
@@ -62,8 +39,7 @@ public:
 
 void superread_parse(int threads, mer_pos_hash_type& hash, name_lists& names,
                      file_vector::const_iterator begin, file_vector::const_iterator end) {
-  if(names.size() < (size_t)threads)
-    names.resize(threads);
+  names.ensure(threads);
   stream_manager streams(begin, end);
   superreads_read_mers reader(threads, hash, names, streams);
   reader.exec_join(threads);

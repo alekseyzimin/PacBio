@@ -9,14 +9,14 @@
 template<typename mer_type = jellyfish::mer_dna>
 class mer_pos_hash {
   struct elt {
-    const std::string* frag;
-    int                offset;
+    const char* frag;
+    int         offset;
     // Ordering of the element based on there offset. Only meaningful
     // if the frags are equal, which is assumed.
     bool operator<(const elt& rhs) const { return offset < rhs.offset; }
     elt() = default;
-    elt(const std::string& s, int o) : frag(&s), offset(o) { }
-    elt(const std::string* s, int o) : frag(s), offset(o) { }
+    //    elt(const std::string& s, int o) : frag(&s), offset(o) { }
+    elt(const char* s, int o) : frag(s), offset(o) { }
   };
 
   // List type containing the positions of the mers
@@ -43,7 +43,7 @@ public:
   }
 
   /** Push a position for mer m. */
-  void push_front(const mer_type& m, const std::string& s, int o) {
+  void push_front(const mer_type& m, const char* s, int o) {
     (*this)[m].push_front(position_type(s, o));
   }
 
@@ -54,9 +54,21 @@ public:
     return find_pos(m, tmp_m);
   }
 
+  const mapped_type* find_pos(const mer_type& m) const {
+    key_type tmp_m;
+    return find_pos(m, tmp_m);
+  }
+
   /** Find the mer m in the hash. Return NULL if not found, a pointer
       to the list of positions if found. Optimization. */
   mapped_type* find_pos(const mer_type& m, mer_type& tmp_m) {
+    size_t id;
+    if(mers_.get_key_id(m, &id, tmp_m))
+      return &pos_[id];
+    return 0;
+  }
+
+  const mapped_type* find_pos(const mer_type& m, mer_type& tmp_m) const {
     size_t id;
     if(mers_.get_key_id(m, &id, tmp_m))
       return &pos_[id];

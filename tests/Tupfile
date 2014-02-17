@@ -10,13 +10,15 @@ CXXFLAGS += -I$(TUP_CWD)
 export PKG_CONFIG_PATH
 CXXFLAGS += -I..
 LDFLAGS += -pthread -L$(TUP_CWD) -lgtest_main
-TESTS = test_lis.cc test_lf_forward_list.cc test_mer_pos_hash.cc test_superread_parser.cc
+TESTS = test_lis.cc test_lf_forward_list.cc test_mer_pos_hash.cc test_superread_parser.cc test_pb_aligner.cc
 
 # Flags specific to some tests
 CXXFLAGS_test_mer_pos_hash += $(JELLYFISH_CFLAGS)
 LDFLAGS_test_mer_pos_hash += $(JELLYFISH_LIBS)
 CXXFLAGS_test_superread_parser += $(JELLYFISH_CFLAGS)
 LDFLAGS_test_superread_parser += $(JELLYFISH_LIBS)
+CXXFLAGS_test_pb_aligner += $(JELLYFISH_CFLAGS) -I../include
+LDFLAGS_test_pb_aligner += $(JELLYFISH_LIBS)
 
 : foreach $(TESTS) | libgtest_main.a |> !cxxld |> {all_tests}
 : foreach {all_tests} |> ./%f > %o |> %f.log

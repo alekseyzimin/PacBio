@@ -26,7 +26,7 @@ TEST(MerPosHash, Insert) {
   static const int nb_inserts = 10000;
   # pragma omp parallel for
   for(int i = 0; i < nb_inserts; ++i)
-    hash.push_front(mers[i % nb_mers], frags[i % nb_frags], i * (2 * (i % 2) - 1));
+    hash.push_front(mers[i % nb_mers], frags[i % nb_frags].c_str(), i * (2 * (i % 2) - 1));
 
   for(int i = 0; i < nb_mers; ++i) {
     const list_type& list = hash[mers[i]];
@@ -36,7 +36,7 @@ TEST(MerPosHash, Insert) {
       EXPECT_TRUE(abs(it->offset) >= 0 && it->offset < nb_inserts);
       EXPECT_EQ(i, abs(it->offset) % nb_mers);
       EXPECT_EQ(i % 2,  it->offset > 0);
-      EXPECT_EQ(frags[abs(it->offset) % nb_frags], *it->frag);
+      EXPECT_STREQ(frags[abs(it->offset) % nb_frags].c_str(), it->frag);
     }
   }
 }
