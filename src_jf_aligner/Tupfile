@@ -1,0 +1,9 @@
+include_rules
+
+export PKG_CONFIG_PATH
+
+CXXFLAGS += -I.. $(JELLYFISH_CFLAGS) -I../include
+LDFLAGS += $(JELLYFISH_LIBS)
+
+: jf_aligner_cmdline.yaggo |> !yaggo |>
+: jf_aligner.cc | jf_aligner_cmdline.hpp |> !cxxld |>

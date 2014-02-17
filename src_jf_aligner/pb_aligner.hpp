@@ -48,6 +48,16 @@ public:
         parser.reset(job->data[i].seq);
         frags_pos.clear();
         process_read(ary_, parser, frags_pos);
+        out << ">" << job->data[i].header << "\n";
+        for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
+          out << "+" << it->first << "\n";
+          const align_pb::mer_lists& ml = it->second;
+          for(auto offit = ml.offsets.cbegin(); offit != ml.offsets.cend(); ++offit) {
+            bool part_of_lis = std::binary_search(ml.lis.cbegin(), ml.lis.cend(), *offit);
+            out << " " <<(part_of_lis ? "[" : "") << *offit << (part_of_lis ? "]" : "");
+          }
+        }
+        out << jflib::endr;
       }
     }
   }

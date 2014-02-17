@@ -1,0 +1,21 @@
+purpose "Align PacBio reads and SuperReads"
+description ""
+
+option("s", "size") {
+  description "Number of k-mers in SuperReads"
+  uint64; required; suffix }
+option("m", "mer") {
+  description "Mer size"
+  uint32; required }
+option("t", "threads") {
+  description "Number of threads"
+  uint32; default 1 }
+option("o", "output") {
+  description "Output file (stdout)"
+  c_string; typestr "path" }
+option("r", "superreads") {
+  description "SuperReads sequence file"
+  c_string; typestr "path"; multiple }
+option("p", "pacbio") {
+  description "PacBio read sequence file"
+  c_string; typestr "path"; multiple }
