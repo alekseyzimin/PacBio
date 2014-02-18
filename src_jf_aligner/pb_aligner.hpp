@@ -59,9 +59,10 @@ public:
           out << "+" << it->first << "\n";
           const align_pb::mer_lists& ml      = it->second;
           auto                       lisit   = ml.lis.cbegin();
+          auto                       lisend  = ml.lis.cend();
           size_t                     current = 0;
           for(auto offit = ml.offsets.cbegin(); offit != ml.offsets.cend(); ++offit, ++current) {
-            bool part_of_lis = *lisit == current;
+            bool part_of_lis = (lisit < lisend && *lisit == current);
             out << " " <<(part_of_lis ? "[" : "")
                 << offit->pb_offset << ":" << offit->sr_offset
                 << (part_of_lis ? "]" : "");
@@ -89,13 +90,14 @@ public:
     // Compute LIS forward and backward on every super reads.
     for(auto it = frags_pos.begin(); it != frags_pos.end(); ++it) {
       mer_lists& mer_list = it->second;
-      std::vector<size_t> fwd_indices = lis::indices(mer_list.offsets.cbegin(), mer_list.offsets.cend());
-      std::vector<size_t> bwd_indices = lis::indices(mer_list.offsets.crbegin(), mer_list.offsets.crend());
-      mer_list.rev = bwd_indices.size() > fwd_indices.size();
-      if(mer_list.rev)
-        mer_list.lis = std::move(bwd_indices);
-      else
-        mer_list.lis = std::move(fwd_indices);
+      // std::vector<size_t> fwd_indices = lis::indices(mer_list.offsets.cbegin(), mer_list.offsets.cend());
+      // std::vector<size_t> bwd_indices = lis::indices(mer_list.offsets.crbegin(), mer_list.offsets.crend());
+      // mer_list.rev = bwd_indices.size() > fwd_indices.size();
+      // if(mer_list.rev)
+      //   mer_list.lis = std::move(bwd_indices);
+      // else
+        // mer_list.lis = std::move(fwd_indices);
+      mer_list.lis = lis::indices(mer_list.offsets.cbegin(), mer_list.offsets.cend());
     }
   }
 };

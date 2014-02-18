@@ -9,6 +9,7 @@
 int main(int argc, char *argv[])
 {
   jf_aligner_cmdline args(argc, argv);
+  mer_dna::k(args.mer_arg);
 
   // Open output file for early error reporting
   std::unique_ptr<std::ostream> out;
