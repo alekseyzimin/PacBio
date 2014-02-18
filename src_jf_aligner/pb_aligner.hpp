@@ -56,6 +56,7 @@ public:
             bool part_of_lis = std::binary_search(ml.lis.cbegin(), ml.lis.cend(), *offit);
             out << " " <<(part_of_lis ? "[" : "") << *offit << (part_of_lis ? "]" : "");
           }
+          out << "\n";
         }
         out << jflib::endr;
       }
