@@ -114,68 +114,72 @@ TEST(PbAligner, FakeSequences) {
     ASSERT_TRUE(read_id >= 1 && read_id <= 10); // Read id is valid
     EXPECT_TRUE(std::is_sorted(ml.offsets.cbegin(), ml.offsets.cend())); // mers offsets must be sorted
     EXPECT_EQ(ml.offsets.size(), ml.lis.size()); // lis has same size
-    std::equal(ml.offsets.cbegin(), ml.offsets.cend(), ml.lis.cbegin()); // and is equal
+    auto iit = ml.lis.cbegin();
+    for(auto it = ml.offsets.cbegin(); it != ml.offsets.cend(); ++it, ++iit) {
+      EXPECT_EQ(it->sr_offset, ml.offsets[*iit].sr_offset); // and is equivalent
+      EXPECT_EQ(it->pb_offset, ml.offsets[*iit].pb_offset); // and is equivalent
+    }
     SCOPED_TRACE(::testing::Message() << "Read:" << read_id);
 
     switch(read_id) {
     case 1:
       EXPECT_EQ((size_t)36, ml.offsets.size());
-      EXPECT_EQ(50, ml.offsets.front());
-      EXPECT_EQ(85, ml.offsets.back());
+      EXPECT_EQ(50, ml.offsets.front().sr_offset);
+      EXPECT_EQ(85, ml.offsets.back().sr_offset);
       break;
 
     case 2:
       EXPECT_EQ((size_t)61, ml.offsets.size());
-      EXPECT_EQ(-60, ml.offsets.front());
-      EXPECT_EQ(0, ml.offsets.back());
+      EXPECT_EQ(-60, ml.offsets.front().sr_offset);
+      EXPECT_EQ(0, ml.offsets.back().sr_offset);
       break;
 
     case 3:
       EXPECT_EQ((size_t)75, ml.offsets.size());
-      EXPECT_EQ(11, ml.offsets.front());
-      EXPECT_EQ(85, ml.offsets.back());
+      EXPECT_EQ(11, ml.offsets.front().sr_offset);
+      EXPECT_EQ(85, ml.offsets.back().sr_offset);
       break;
 
     case 4:
       EXPECT_EQ((size_t)71, ml.offsets.size());
-      EXPECT_EQ(-85, ml.offsets.front());
-      EXPECT_EQ(0, ml.offsets.back());
+      EXPECT_EQ(-85, ml.offsets.front().sr_offset);
+      EXPECT_EQ(0, ml.offsets.back().sr_offset);
       break;
 
     case 5:
       EXPECT_EQ((size_t)70, ml.offsets.size());
-      EXPECT_EQ(0, ml.offsets.front());
-      EXPECT_EQ(85, ml.offsets.back());
+      EXPECT_EQ(0, ml.offsets.front().sr_offset);
+      EXPECT_EQ(85, ml.offsets.back().sr_offset);
       break;
 
     case 6:
       EXPECT_EQ((size_t)70, ml.offsets.size());
-      EXPECT_EQ(-85, ml.offsets.front());
-      EXPECT_EQ(0, ml.offsets.back());
+      EXPECT_EQ(-85, ml.offsets.front().sr_offset);
+      EXPECT_EQ(0, ml.offsets.back().sr_offset);
       break;
 
     case 7:
       EXPECT_EQ((size_t)16, ml.offsets.size());
-      EXPECT_EQ(0, ml.offsets.front());
-      EXPECT_EQ(15, ml.offsets.back());
+      EXPECT_EQ(0, ml.offsets.front().sr_offset);
+      EXPECT_EQ(15, ml.offsets.back().sr_offset);
       break;
 
     case 8:
       EXPECT_EQ((size_t)6, ml.offsets.size());
-      EXPECT_EQ(-85, ml.offsets.front());
-      EXPECT_EQ(-80, ml.offsets.back());
+      EXPECT_EQ(-85, ml.offsets.front().sr_offset);
+      EXPECT_EQ(-80, ml.offsets.back().sr_offset);
       break;
 
     case 9:
       EXPECT_EQ((size_t)86, ml.offsets.size());
-      EXPECT_EQ(0, ml.offsets.front());
-      EXPECT_EQ(85, ml.offsets.back());
+      EXPECT_EQ(0, ml.offsets.front().sr_offset);
+      EXPECT_EQ(85, ml.offsets.back().sr_offset);
       break;
 
     case 10:
       EXPECT_EQ((size_t)86, ml.offsets.size());
-      EXPECT_EQ(-85, ml.offsets.front());
-      EXPECT_EQ(0, ml.offsets.back());
+      EXPECT_EQ(-85, ml.offsets.front().sr_offset);
+      EXPECT_EQ(0, ml.offsets.back().sr_offset);
       break;
     }
   }

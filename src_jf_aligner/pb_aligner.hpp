@@ -21,10 +21,16 @@ public:
   // LIS (longest increasing subsequence) on these offsets is then
   // compute, both forward and backward. The longest such
   // subsequence is stored.
+  struct pb_sr_offsets {
+    int pb_offset;
+    int sr_offset;
+    pb_sr_offsets(int pb_o, int sr_o) : pb_offset(pb_o), sr_offset(sr_o) { }
+    bool operator<(const pb_sr_offsets& rhs) const { return sr_offset < rhs.sr_offset; }
+  };
   struct mer_lists {
-    std::vector<int> offsets;
-    std::vector<int> lis;
-    bool             rev;
+    std::vector<pb_sr_offsets> offsets;
+    std::vector<size_t>        lis;
+    bool                       rev;
   };
   typedef std::map<const char*, mer_lists> frags_pos_type;
 
@@ -51,10 +57,16 @@ public:
         out << ">" << job->data[i].header << "\n";
         for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
           out << "+" << it->first << "\n";
-          const align_pb::mer_lists& ml = it->second;
-          for(auto offit = ml.offsets.cbegin(); offit != ml.offsets.cend(); ++offit) {
-            bool part_of_lis = std::binary_search(ml.lis.cbegin(), ml.lis.cend(), *offit);
-            out << " " <<(part_of_lis ? "[" : "") << *offit << (part_of_lis ? "]" : "");
+          const align_pb::mer_lists& ml      = it->second;
+          auto                       lisit   = ml.lis.cbegin();
+          size_t                     current = 0;
+          for(auto offit = ml.offsets.cbegin(); offit != ml.offsets.cend(); ++offit, ++current) {
+            bool part_of_lis = *lisit == current;
+            out << " " <<(part_of_lis ? "[" : "")
+                << offit->pb_offset << ":" << offit->sr_offset
+                << (part_of_lis ? "]" : "");
+            if(part_of_lis)
+              ++lisit;
           }
           out << "\n";
         }
@@ -70,15 +82,15 @@ public:
       if(!list) // mer not found in superreads
         continue;
       for(auto it = list->cbegin(); it != list->cend(); ++it) {
-        frags_pos[it->frag].offsets.push_back(is_canonical ? it->offset : -it->offset);
+        frags_pos[it->frag].offsets.push_back(pb_sr_offsets(parser.offset, is_canonical ? it->offset : -it->offset));
       }
     }
 
     // Compute LIS forward and backward on every super reads.
     for(auto it = frags_pos.begin(); it != frags_pos.end(); ++it) {
       mer_lists& mer_list = it->second;
-      std::vector<int> fwd_indices = lis::sequence(mer_list.offsets.cbegin(), mer_list.offsets.cend());
-      std::vector<int> bwd_indices = lis::sequence(mer_list.offsets.crbegin(), mer_list.offsets.crend());
+      std::vector<size_t> fwd_indices = lis::indices(mer_list.offsets.cbegin(), mer_list.offsets.cend());
+      std::vector<size_t> bwd_indices = lis::indices(mer_list.offsets.crbegin(), mer_list.offsets.crend());
       mer_list.rev = bwd_indices.size() > fwd_indices.size();
       if(mer_list.rev)
         mer_list.lis = std::move(bwd_indices);
