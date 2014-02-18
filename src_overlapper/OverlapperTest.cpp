@@ -25,6 +25,7 @@ int main(int argc, char* argv[])
 {
 
 	string IntervalFile;
+	string reads_info_name="TransformedReads.txt";
 	
 	for(int i=1;i<argc;++i)
 	{
@@ -32,6 +33,13 @@ int main(int argc, char* argv[])
 		{
 			i++;
 			IntervalFile=(argv[i]);
+			continue;
+		}
+
+		if(strcmp(argv[i],"TransformedReads")==0)
+		{
+			i++;
+			reads_info_name=(argv[i]);
 			continue;
 		}
 
@@ -44,7 +52,7 @@ int main(int argc, char* argv[])
 	string tag,n_tag;
 	
 
-	//
+	/*
 	ofstream out_transformed_reads("TransformedReads.txt");
 	while(get_pb_intervals(intervals_in, tag, pb_sr_map, n_tag))
 	{
@@ -70,8 +78,7 @@ int main(int argc, char* argv[])
 	}
 	
 
-	//
-	string reads_info_name="TransformedReads.txt";
+	*/
 	reads_table reads_table0;
 	ConstructReadsOverlaps_pb( reads_info_name,&reads_table0);
 
