@@ -503,7 +503,7 @@ void Sparse_Kmer_Ref_Graph_Query_LR(struct ref_t *ref, struct read_t *read,struc
 				
 
 				int map_idx=(*bktptr)->kmer_info.cod;
-				if(ref->repeat_maps[map_idx].size()>=0xfff)
+				if(ref->repeat_maps[map_idx].size()>=0xff)
 				{
 					continue;
 				}

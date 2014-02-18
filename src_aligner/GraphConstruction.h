@@ -729,12 +729,12 @@ void Sparse_Kmer_Ref_Graph_Construction(struct ref_read_t *read,struct hashtable
 		{
 			if(round==1)
 			{
-				if(((struct bucket_r1*) *(bktptr_c))->kmer_info.cov1<0xffff)
+				if(((struct bucket_r1*) *(bktptr_c))->kmer_info.cov1<0xff)
 				{((struct bucket_r1*) *(bktptr_c))->kmer_info.cov1++;}
 			}
 			else
 			{
-				if((*(bktptr_c))->kmer_info.cov1<0xffff)
+				if((*(bktptr_c))->kmer_info.cov1<0xff)
 				{
 					(*(bktptr_c))->kmer_info.cov1++;
 					if((*(bktptr_c))->kmer_info.cov1==1)

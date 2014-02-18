@@ -826,6 +826,7 @@ int main(int argc, char* argv[])
 
 					out_ref_matched<<tag<<": ";
 
+					/*
 					o_align_info<<tag<<": ";
 					
 
@@ -842,7 +843,7 @@ int main(int argc, char* argv[])
 					
 					o_align_info<<endl;
 					
-					
+					*/
 					
 
 					out_ref_matched<<endl;
@@ -1003,9 +1004,6 @@ int main(int argc, char* argv[])
 		
 		}
 
-
-//		cout<<"MapMatching k-mers:"<<map_match<<endl;
-		
 		cout<<"Matching k-mers:"<<matching_kmers<<endl;
 		cout<<"Total k-mers:"<<tot_kmers<<endl;
 
