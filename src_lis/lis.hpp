@@ -29,7 +29,7 @@ template<typename InputIterator, typename M_type, typename P_type>
 size_t compute_M_P(const InputIterator X, const InputIterator Xend, M_type M, P_type& P) {
   if(X == Xend)
     return 0;
-  size_t N = std::distance(X, Xend);
+  const size_t N = std::distance(X, Xend);
 
   struct comp_type {
     const InputIterator& X_;
