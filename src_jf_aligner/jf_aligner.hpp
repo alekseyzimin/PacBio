@@ -17,6 +17,8 @@ typedef std::vector<const char*> file_vector;
 typedef jellyfish::stream_manager<file_vector::const_iterator> stream_manager;
 typedef jellyfish::whole_sequence_parser<stream_manager> read_parser;
 
+// Multiple vector to hold names of fragments. There is a vector for
+// each thread and the string is copied when push_back is called.
 class name_lists {
   std::vector<std::vector<const char*> > names_;
 public:
@@ -49,6 +51,8 @@ public:
   }
 };
 
+// Parse a DNA sequence and break the input into k-mers. The offset is
+// 1-based
 struct parse_sequence {
   mer_dna                     m, rm;
   int                         offset;
@@ -61,7 +65,7 @@ struct parse_sequence {
   parse_sequence(const std::string* s) { reset(s); }
 
   void reset(const std::string& s) {
-    offset = -mer_dna::k();
+    offset = -mer_dna::k() + 1;
     len    = 0;
     base   = s.begin();
     end    = s.end();

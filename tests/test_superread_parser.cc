@@ -51,7 +51,7 @@ TEST(SuperReadParser, OneRead) {
     EXPECT_EQ(1, std::distance(list->cbegin(), list->cend()));
     const mer_pos_hash_type::position_type& pos = *list->cbegin();
     EXPECT_STREQ("superread", pos.frag);
-    EXPECT_EQ((int)i * (is_canonical ? 1 : -1), pos.offset);
+    EXPECT_EQ((int)(i + 1) * (is_canonical ? 1 : -1), pos.offset);
   }
 }
 
@@ -115,7 +115,7 @@ TEST(SuperReadParser, ManyReads) {
       // Is the read covering position i?
       EXPECT_TRUE((size_t)(read_id * delta) <= i && (size_t)(read_id * delta + read_len) > i);
       // Is offset valid
-      EXPECT_EQ((int)i - read_id * delta, is_canonical ? it->offset : -it->offset);
+      EXPECT_EQ((int)i + 1 - read_id * delta, is_canonical ? it->offset : -it->offset);
     }
     // Is number of reads covering position i correct?
     if(i <= read_len - mer_dna::k())

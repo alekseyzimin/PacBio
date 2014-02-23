@@ -8,6 +8,9 @@
 
 template<typename mer_type = jellyfish::mer_dna>
 class mer_pos_hash {
+  // The offset is 1-based, >0 if forward, <0 if backward. This is for
+  // the canonical representation of a k-mer with respect to the
+  // sequence in the fragment.
   struct elt {
     const char* frag;
     int         offset;
@@ -18,9 +21,6 @@ class mer_pos_hash {
     //    elt(const std::string& s, int o) : frag(&s), offset(o) { }
     elt(const char* s, int o) : frag(s), offset(o) { }
   };
-
-  // List type containing the positions of the mers
-
 
 public:
   typedef elt                  position_type;
