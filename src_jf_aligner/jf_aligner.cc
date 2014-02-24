@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
   // Output matches
   stream_manager streams(args.pacbio_arg.cbegin(), args.pacbio_arg.cend());
   jflib::o_multiplexer multiplexer(out.get(), 4 * args.threads_arg, 4096);
-  align_pb aligner(args.threads_arg, hash, streams, multiplexer);
+  align_pb aligner(args.threads_arg, hash, streams, multiplexer, args.stretch_constant_arg, args.stretch_factor_arg);
   aligner.exec_join(args.threads_arg);
 
   return 0;

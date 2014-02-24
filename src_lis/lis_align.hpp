@@ -98,7 +98,7 @@ void indices_reversed(P_type& P, const unsigned int len, unsigned int start, Out
     *out = start;
 }
 
-template<typename InputIterator, typename T = typename std::iterator_traits<InputIterator>::value_type>
+template<typename InputIterator, typename T>
 unsigned int indices(const InputIterator X, const InputIterator Xend, std::vector<unsigned int>& res,
                      T a, T b) {
   const size_t N = std::distance(X, Xend);
@@ -112,10 +112,11 @@ unsigned int indices(const InputIterator X, const InputIterator Xend, std::vecto
   return lis.first;
 }
 
-template<typename InputIterator, typename T = typename std::iterator_traits<InputIterator>::value_type>
+template<typename InputIterator, typename T>
 std::vector<unsigned int> indices(const InputIterator X, const InputIterator Xend,
                                   T a, T b) {
   std::vector<unsigned int> res;
+
   indices(X, Xend, res, a, b);
   return res;
 }

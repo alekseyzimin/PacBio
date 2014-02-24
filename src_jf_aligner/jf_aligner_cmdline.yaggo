@@ -13,6 +13,12 @@ option("t", "threads") {
 option("o", "output") {
   description "Output file (stdout)"
   c_string; typestr "path" }
+option("stretch-constant") {
+  description "Constant tolerated stretch between sequences"
+  int; default 10 }
+option("stretch-factor") {
+  description "Factor tolerated stretch between sequences"
+  int; default 2 }
 option("r", "superreads") {
   description "SuperReads sequence file"
   c_string; typestr "path"; multiple }
