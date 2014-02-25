@@ -34,6 +34,9 @@ int main(int argc, char *argv[])
   mer_dna::k(args.mer_arg);
   std::ios::sync_with_stdio(false);
 
+  if(!args.details_given && !args.coords_given)
+    jf_aligner_cmdline::error() << "No output file given. Doing nothing ungracefully.";
+
   // Open output file for early error reporting
   output_file details;
   output_file coords;
@@ -47,7 +50,8 @@ int main(int argc, char *argv[])
   superread_parse(args.threads_arg, hash, names, args.superreads_arg.cbegin(), args.superreads_arg.cend());
 
   // Create aligner
-  align_pb aligner(args.threads_arg, hash, streams, args.stretch_constant_arg, args.stretch_factor_arg);
+  align_pb aligner(args.threads_arg, hash, streams, args.stretch_constant_arg, args.stretch_factor_arg,
+                   args.consecutive_arg, args.nmers_arg);
   if(args.details_given) aligner.details_multiplexer(details.multiplexer());
   if(args.coords_given) aligner.coords_multiplexer(coords.multiplexer());
 

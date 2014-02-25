@@ -24,6 +24,7 @@ class align_pb : public jellyfish::thread_exec {
   const mer_pos_hash_type& ary_;
   read_parser              parser_;
   int                      stretch_constant_, stretch_factor_;
+  int                      consecutive_, nmers_;
 
   o_multiplexer* details_multiplexer_;
   o_multiplexer* coords_multiplexer_;
@@ -48,11 +49,13 @@ public:
   typedef std::map<const char*, mer_lists> frags_pos_type;
 
   align_pb(int nb_threads, const mer_pos_hash_type& ary, stream_manager& streams,
-           int stretch_constant, int stretch_factor) :
+           int stretch_constant, int stretch_factor, int consecutive, int nmers) :
     ary_(ary),
     parser_(4 * nb_threads, 100, 1, streams),
     stretch_constant_(stretch_constant),
     stretch_factor_(stretch_factor),
+    consecutive_(consecutive),
+    nmers_(nmers),
     details_multiplexer_(0),
     coords_multiplexer_(0)
   { }
@@ -61,7 +64,7 @@ public:
   align_pb& coords_multiplexer(o_multiplexer* m) {
     coords_multiplexer_ = m;
     omstream o(*coords_multiplexer_); // Write header
-    o << "RS RE QS QE N RL QL Q R\n";
+    o << "Rstart Rend Qstart Qend Nmers Qcons Rcons Qcover Rcover Rlen Qlen Qname Rname\n";
     o << jflib::endr;
     return *this;
   }
@@ -119,6 +122,27 @@ public:
   void print_coords(omstream& out, const std::string& pb_name, size_t pb_size, const frags_pos_type& frags_pos) {
     for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
       const align_pb::mer_lists& ml    = it->second;
+      const auto nb_mers               = std::distance(ml.lis.begin(), ml.lis.end());
+      if(nb_mers < nmers_) continue; // Enough matching mers
+
+      // Compute consecutive mers and covered bases
+      unsigned int pb_cover = mer_dna::k(), sr_cover = mer_dna::k(), pb_cons = 0, sr_cons = 0;
+      {
+        auto lisit = ml.lis.cbegin();
+        pb_sr_offsets prev = ml.offsets[*lisit];
+        pb_sr_offsets cur;
+        for(++lisit; lisit != ml.lis.cend(); prev = cur, ++lisit) {
+          cur                   = ml.offsets[*lisit];
+          unsigned int pb_diff  = cur.first - prev.first;
+          pb_cons              += pb_diff == 1;
+          pb_cover             += std::min(mer_dna::k(), pb_diff);
+          unsigned int sr_diff  = cur.second - prev.second;
+          sr_cons              += sr_diff == 1;
+          sr_cover             += std::min(mer_dna::k(), sr_diff);
+        }
+      }
+      if(pb_cons < (unsigned int)consecutive_ && sr_cons < (unsigned int)consecutive_) continue;
+
       auto                       first = ml.offsets[ml.lis.front()];
       auto                       last  = ml.offsets[ml.lis.back()];
       auto                       s2    = first.second;
@@ -129,10 +153,10 @@ public:
         e2 += mer_dna::k() - 1;
       out << first.first << " " << (last.first + mer_dna::k() - 1) // RS RE
           << " " << s2 << " " << e2 // QS QE
-          << " " << std::distance(ml.lis.begin(), ml.lis.end()) // N
+          << " " << nb_mers // N
+          << " " << pb_cons << " " << sr_cons
+          << " " << pb_cover << " " << sr_cover
           << " " << pb_size << " " << ml.frag->len // RL QL
-          // << " " << (last.first - first.first + mer_dna::k()) // RL
-          // << " " << (last.second - first.second + mer_dna::k()) // QL
           << " " << pb_name << " " << ml.frag->name << "\n"; // Q R
     }
     out << jflib::endr;
