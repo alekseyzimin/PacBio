@@ -25,6 +25,7 @@ class align_pb : public jellyfish::thread_exec {
   read_parser              parser_;
   int                      stretch_constant_, stretch_factor_;
   int                      consecutive_, nmers_;
+  const bool               compress_;
 
   o_multiplexer* details_multiplexer_;
   o_multiplexer* coords_multiplexer_;
@@ -49,13 +50,15 @@ public:
   typedef std::map<const char*, mer_lists> frags_pos_type;
 
   align_pb(int nb_threads, const mer_pos_hash_type& ary, stream_manager& streams,
-           int stretch_constant, int stretch_factor, int consecutive, int nmers) :
+           int stretch_constant, int stretch_factor, int consecutive, int nmers,
+           bool compress = false) :
     ary_(ary),
     parser_(4 * nb_threads, 100, 1, streams),
     stretch_constant_(stretch_constant),
     stretch_factor_(stretch_factor),
     consecutive_(consecutive),
     nmers_(nmers),
+    compress_(compress),
     details_multiplexer_(0),
     coords_multiplexer_(0)
   { }
@@ -71,7 +74,7 @@ public:
 
   virtual void start(int thid) {
     mer_dna         tmp_m;
-    parse_sequence  parser;
+    parse_sequence  parser(compress_);
     frags_pos_type  frags_pos;
 
     mstream     details(details_multiplexer_);

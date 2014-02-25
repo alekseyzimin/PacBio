@@ -47,11 +47,12 @@ int main(int argc, char *argv[])
   mer_pos_hash_type hash(args.size_arg);
   frag_lists names(args.threads_arg);
   stream_manager streams(args.pacbio_arg.cbegin(), args.pacbio_arg.cend());
-  superread_parse(args.threads_arg, hash, names, args.superreads_arg.cbegin(), args.superreads_arg.cend());
+  superread_parse(args.threads_arg, hash, names, args.superreads_arg.cbegin(), args.superreads_arg.cend(),
+                  args.compress_flag);
 
   // Create aligner
   align_pb aligner(args.threads_arg, hash, streams, args.stretch_constant_arg, args.stretch_factor_arg,
-                   args.consecutive_arg, args.nmers_arg);
+                   args.consecutive_arg, args.nmers_arg, args.compress_flag);
   if(args.details_given) aligner.details_multiplexer(details.multiplexer());
   if(args.coords_given) aligner.coords_multiplexer(coords.multiplexer());
 

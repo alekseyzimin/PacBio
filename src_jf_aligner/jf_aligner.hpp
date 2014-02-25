@@ -20,21 +20,24 @@ typedef jellyfish::whole_sequence_parser<stream_manager> read_parser;
 // Parse a DNA sequence and break the input into k-mers. The offset is
 // 1-based
 struct parse_sequence {
+  const bool                  compress;
   mer_dna                     m, rm;
   int                         offset;
+  int                         prev;
   unsigned int                len;
   std::string::const_iterator base;
   std::string::const_iterator end;
 
-  parse_sequence() = default;
-  parse_sequence(const std::string& s) { reset(s); }
-  parse_sequence(const std::string* s) { reset(s); }
+  parse_sequence(const bool c = false) : compress(c) { }
+  parse_sequence(const std::string& s, const bool c = false) : compress(c) { reset(s); }
+  parse_sequence(const std::string* s, const bool c = false) : compress(c) { reset(s); }
 
   void reset(const std::string& s) {
     offset = -mer_dna::k() + 1;
     len    = 0;
     base   = s.begin();
     end    = s.end();
+    prev   = -1;
   }
   void reset(const std::string* s) { reset(*s); }
 
@@ -42,10 +45,13 @@ struct parse_sequence {
     while(base < end) {
       int code = mer_dna::code(*base);
       ++base; ++offset;
+      int oprev = prev;
+      prev      = code;
       if(mer_dna::not_dna(code)) {
         len = 0;
         continue;
       }
+      if(compress && code == oprev) continue;
       ++len;
       m.shift_left(code);
       rm.shift_right(mer_dna::complement(code));

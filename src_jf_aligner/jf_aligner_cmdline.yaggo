@@ -22,6 +22,9 @@ option("c", "consecutive") {
 option("n", "nmers") {
   description "Minimum number of mers in a match"
   int; default 1 }
+option("C", "compress") {
+  description "Compress homopolymers"
+  off }
 option("details") {
   description "Output files with detail k-mer information"
   c_string; typestr "path" }
