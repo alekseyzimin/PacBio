@@ -19,6 +19,12 @@ option("stretch-constant") {
 option("stretch-factor") {
   description "Factor tolerated stretch between sequences"
   int; default 2 }
+option("details") {
+  description "Output files with detail k-mer information"
+  c_string; typestr "path" }
+option("coords") {
+  description "Output files with math coordinate information"
+  c_string; typestr "path" }
 option("r", "superreads") {
   description "SuperReads sequence file"
   c_string; typestr "path"; multiple }

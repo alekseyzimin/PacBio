@@ -23,7 +23,8 @@ public:
       if(job.is_empty()) break;
 
       for(size_t i = 0; i < job->nb_filled; ++i) { // Process each read
-        const char* header = names_.push_back(thid, job->data[i].header);
+        auto name_end = job->data[i].header.find_first_of(" \t\n\v\f\r");
+        const char* header = names_.push_back(thid, job->data[i].header.substr(0, name_end));
         parser.reset(job->data[i].seq);
 
         while(parser.next()) { // Process each k-mer
