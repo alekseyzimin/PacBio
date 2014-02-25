@@ -41,8 +41,9 @@ public:
   typedef std::pair<int, int> pb_sr_offsets; // first = pb_offset, second = sr_offset
 
   struct mer_lists {
-    std::vector<pb_sr_offsets> offsets;
-    std::vector<unsigned int>  lis;
+    std::vector<pb_sr_offsets>   offsets;
+    std::vector<unsigned int>    lis;
+    const frag_lists::frag_info* frag;
   };
   typedef std::map<const char*, mer_lists> frags_pos_type;
 
@@ -57,7 +58,13 @@ public:
   { }
 
   align_pb& details_multiplexer(o_multiplexer* m) { details_multiplexer_ = m; return *this; }
-  align_pb& coords_multiplexer(o_multiplexer* m) { coords_multiplexer_ = m; return *this; }
+  align_pb& coords_multiplexer(o_multiplexer* m) {
+    coords_multiplexer_ = m;
+    omstream o(*coords_multiplexer_); // Write header
+    o << "RS RE QS QE N RL QL Q R\n";
+    o << jflib::endr;
+    return *this;
+  }
 
   virtual void start(int thid) {
     mer_dna         tmp_m;
@@ -79,7 +86,7 @@ public:
         frags_pos.clear();
         process_read(ary_, parser, frags_pos, stretch_constant_, stretch_factor_);
         if(details) print_details(*details, name, frags_pos);
-        if(coords) print_coords(*coords, name, frags_pos);
+        if(coords) print_coords(*coords, name, job->data[i].seq.size(), frags_pos);
       }
     }
   }
@@ -109,23 +116,24 @@ public:
     out << jflib::endr;
   }
 
-  void print_coords(omstream& out, const std::string& pb_name, const frags_pos_type& frags_pos) {
+  void print_coords(omstream& out, const std::string& pb_name, size_t pb_size, const frags_pos_type& frags_pos) {
     for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
-      const align_pb::mer_lists& ml      = it->second;
-      auto first = ml.offsets[ml.lis.front()];
-      auto last = ml.offsets[ml.lis.back()];
-      auto s2 = first.second;
-      auto e2 = last.second;
+      const align_pb::mer_lists& ml    = it->second;
+      auto                       first = ml.offsets[ml.lis.front()];
+      auto                       last  = ml.offsets[ml.lis.back()];
+      auto                       s2    = first.second;
+      auto                       e2    = last.second;
       if(s2 < 0)
         s2 -= mer_dna::k() - 1;
       else
         e2 += mer_dna::k() - 1;
-      out << first.first << " " << (last.first + mer_dna::k() - 1) // S1 E1
-          << " " << s2 << " " << e2 // S2 E2
+      out << first.first << " " << (last.first + mer_dna::k() - 1) // RS RE
+          << " " << s2 << " " << e2 // QS QE
           << " " << std::distance(ml.lis.begin(), ml.lis.end()) // N
-          << " " << (last.first - first.first + mer_dna::k()) // L1
-          << " " << (last.second - first.second + mer_dna::k()) // L2
-          << " " << pb_name << " " << it->first << "\n"; // Q R
+          << " " << pb_size << " " << ml.frag->len // RL QL
+          // << " " << (last.first - first.first + mer_dna::k()) // RL
+          // << " " << (last.second - first.second + mer_dna::k()) // QL
+          << " " << pb_name << " " << ml.frag->name << "\n"; // Q R
     }
     out << jflib::endr;
   }
@@ -138,7 +146,9 @@ public:
       if(!list) // mer not found in superreads
         continue;
       for(auto it = list->cbegin(); it != list->cend(); ++it) {
-        frags_pos[it->frag].offsets.push_back(pb_sr_offsets(parser.offset + 1, is_canonical ? it->offset : -it->offset));
+        mer_lists& ml = frags_pos[it->frag->name];
+        ml.frag       = it->frag;
+        ml.offsets.push_back(pb_sr_offsets(parser.offset + 1, is_canonical ? it->offset : -it->offset));
       }
     }
 

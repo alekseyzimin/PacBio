@@ -30,7 +30,7 @@ TEST(SuperReadParser, OneRead) {
   mer_dna::k(17);
 
   mer_pos_hash_type hash(1024);
-  name_lists names(1);
+  frag_lists names(1);
   superread_parse(1, hash, names, file.path);
 
   // Check every k-mer in the sequence
@@ -50,7 +50,7 @@ TEST(SuperReadParser, OneRead) {
     ASSERT_TRUE(list != 0);
     EXPECT_EQ(1, std::distance(list->cbegin(), list->cend()));
     const mer_pos_hash_type::position_type& pos = *list->cbegin();
-    EXPECT_STREQ("superread", pos.frag);
+    EXPECT_STREQ("superread", pos.frag->name);
     EXPECT_EQ((int)(i + 1) * (is_canonical ? 1 : -1), pos.offset);
   }
 }
@@ -88,7 +88,7 @@ TEST(SuperReadParser, ManyReads) {
   mer_dna::k(17);
 
   mer_pos_hash_type hash(2048);
-  name_lists names(nb_threads);
+  frag_lists        names(nb_threads);
   superread_parse(nb_threads, hash, names, file.path);
 
   EXPECT_EQ((size_t)nb_threads, names.size());
@@ -109,7 +109,8 @@ TEST(SuperReadParser, ManyReads) {
     ASSERT_TRUE(list != 0);
     int count = 0;
     for(auto it = list->cbegin(); it != list->cend(); ++it, ++count) {
-      int read_id = std::atoi(it->frag);
+      EXPECT_EQ(read_len, (int)it->frag->len);
+      int read_id = std::atoi(it->frag->name);
       // Is id valid?
       EXPECT_TRUE(read_id >= 0 && read_id < nb_reads);
       // Is the read covering position i?

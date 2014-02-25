@@ -6,20 +6,20 @@
 #include <jellyfish/jellyfish.hpp>
 #include <src_jf_aligner/lf_forward_list.hpp>
 
-template<typename mer_type = jellyfish::mer_dna>
+template<typename T, typename mer_type = jellyfish::mer_dna>
 class mer_pos_hash {
   // The offset is 1-based, >0 if forward, <0 if backward. This is for
   // the canonical representation of a k-mer with respect to the
   // sequence in the fragment.
   struct elt {
-    const char* frag;
-    int         offset;
+    const T* frag;
+    int      offset;
     // Ordering of the element based on there offset. Only meaningful
     // if the frags are equal, which is assumed.
     bool operator<(const elt& rhs) const { return offset < rhs.offset; }
     elt() = default;
     //    elt(const std::string& s, int o) : frag(&s), offset(o) { }
-    elt(const char* s, int o) : frag(s), offset(o) { }
+    elt(const T* s, int o) : frag(s), offset(o) { }
   };
 
 public:
@@ -43,7 +43,7 @@ public:
   }
 
   /** Push a position for mer m. */
-  void push_front(const mer_type& m, const char* s, int o) {
+  void push_front(const mer_type& m, const T* s, int o) {
     (*this)[m].push_front(position_type(s, o));
   }
 

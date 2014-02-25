@@ -42,17 +42,14 @@ int main(int argc, char *argv[])
 
   // Read the super reads
   mer_pos_hash_type hash(args.size_arg);
-  name_lists names(args.threads_arg);
+  frag_lists names(args.threads_arg);
   stream_manager streams(args.pacbio_arg.cbegin(), args.pacbio_arg.cend());
   superread_parse(args.threads_arg, hash, names, args.superreads_arg.cbegin(), args.superreads_arg.cend());
 
   // Create aligner
   align_pb aligner(args.threads_arg, hash, streams, args.stretch_constant_arg, args.stretch_factor_arg);
   if(args.details_given) aligner.details_multiplexer(details.multiplexer());
-  if(args.coords_given) {
-    coords.file() << "S1 E1 S2 E2 N L1 L2 Q R" << std::endl;
-    aligner.coords_multiplexer(coords.multiplexer());
-  }
+  if(args.coords_given) aligner.coords_multiplexer(coords.multiplexer());
 
   // Output matches
   aligner.exec_join(args.threads_arg);

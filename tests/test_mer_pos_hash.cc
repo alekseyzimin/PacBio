@@ -5,7 +5,7 @@
 
 namespace {
 using jellyfish::mer_dna;
-typedef mer_pos_hash<mer_dna> mer_pos_hash_type;
+typedef mer_pos_hash<const char, mer_dna> mer_pos_hash_type;
 typedef mer_pos_hash_type::position_type position_type;
 typedef mer_pos_hash_type::mapped_type list_type;
 

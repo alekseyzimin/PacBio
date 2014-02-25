@@ -99,7 +99,7 @@ TEST(PbAligner, FakeSequences) {
   std::string pacbio_sequence = generate_sequences(pb_file.path, sr_file.path);
 
   mer_pos_hash_type hash(1024);
-  name_lists names(1);
+  frag_lists names(1);
   superread_parse(1, hash, names, sr_file.path);
   EXPECT_EQ((size_t)1, names.size());
 
@@ -123,61 +123,61 @@ TEST(PbAligner, FakeSequences) {
 
     switch(read_id) {
     case 1:
-      EXPECT_EQ((size_t)36, ml.offsets.size());
+      ASSERT_EQ((size_t)36, ml.offsets.size());
       EXPECT_EQ(51, ml.offsets.front().second);
       EXPECT_EQ(86, ml.offsets.back().second);
       break;
 
     case 2:
-      EXPECT_EQ((size_t)61, ml.offsets.size());
+      ASSERT_EQ((size_t)61, ml.offsets.size());
       EXPECT_EQ(-61, ml.offsets.front().second);
       EXPECT_EQ(-1, ml.offsets.back().second);
       break;
 
     case 3:
-      EXPECT_EQ((size_t)75, ml.offsets.size());
+      ASSERT_EQ((size_t)75, ml.offsets.size());
       EXPECT_EQ(12, ml.offsets.front().second);
       EXPECT_EQ(86, ml.offsets.back().second);
       break;
 
     case 4:
-      EXPECT_EQ((size_t)71, ml.offsets.size());
+      ASSERT_EQ((size_t)71, ml.offsets.size());
       EXPECT_EQ(-86, ml.offsets.front().second);
       EXPECT_EQ(-1, ml.offsets.back().second);
       break;
 
     case 5:
-      EXPECT_EQ((size_t)70, ml.offsets.size());
+      ASSERT_EQ((size_t)70, ml.offsets.size());
       EXPECT_EQ(1, ml.offsets.front().second);
       EXPECT_EQ(86, ml.offsets.back().second);
       break;
 
     case 6:
-      EXPECT_EQ((size_t)70, ml.offsets.size());
+      ASSERT_EQ((size_t)70, ml.offsets.size());
       EXPECT_EQ(-86, ml.offsets.front().second);
       EXPECT_EQ(-1, ml.offsets.back().second);
       break;
 
     case 7:
-      EXPECT_EQ((size_t)16, ml.offsets.size());
+      ASSERT_EQ((size_t)16, ml.offsets.size());
       EXPECT_EQ(1, ml.offsets.front().second);
       EXPECT_EQ(16, ml.offsets.back().second);
       break;
 
     case 8:
-      EXPECT_EQ((size_t)6, ml.offsets.size());
+      ASSERT_EQ((size_t)6, ml.offsets.size());
       EXPECT_EQ(-86, ml.offsets.front().second);
       EXPECT_EQ(-81, ml.offsets.back().second);
       break;
 
     case 9:
-      EXPECT_EQ((size_t)86, ml.offsets.size());
+      ASSERT_EQ((size_t)86, ml.offsets.size());
       EXPECT_EQ(1, ml.offsets.front().second);
       EXPECT_EQ(86, ml.offsets.back().second);
       break;
 
     case 10:
-      EXPECT_EQ((size_t)86, ml.offsets.size());
+      ASSERT_EQ((size_t)86, ml.offsets.size());
       EXPECT_EQ(-86, ml.offsets.front().second);
       EXPECT_EQ(-1, ml.offsets.back().second);
       break;
