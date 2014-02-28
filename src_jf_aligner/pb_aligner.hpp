@@ -123,44 +123,71 @@ public:
   }
 
   void print_coords(omstream& out, const std::string& pb_name, size_t pb_size, const frags_pos_type& frags_pos) {
+    struct coords_info {
+      int          rs, re;
+      int          qs, qe;
+      int          nb_mers;
+      unsigned int pb_cons, sr_cons;
+      unsigned int pb_cover, sr_cover;
+      size_t       ql;
+      const char*  qname;
+      coords_info(const char* name, size_t l, int n) :
+        nb_mers(n),
+        pb_cons(0), sr_cons(0), pb_cover(mer_dna::k()), sr_cover(mer_dna::k()),
+        ql(l), qname(name)
+      { }
+      bool operator<(const coords_info& rhs) const { return rs < rhs.rs || (rs == rhs.rs && re < rhs.re); }
+    };
+    std::vector<coords_info> coords;
+
     for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
-      const align_pb::mer_lists& ml    = it->second;
-      const auto nb_mers               = std::distance(ml.lis.begin(), ml.lis.end());
+      const align_pb::mer_lists& ml      = it->second;
+      const auto                 nb_mers = std::distance(ml.lis.begin(), ml.lis.end());
       if(nb_mers < nmers_) continue; // Enough matching mers
 
       // Compute consecutive mers and covered bases
-      unsigned int pb_cover = mer_dna::k(), sr_cover = mer_dna::k(), pb_cons = 0, sr_cons = 0;
+      coords_info info(ml.frag->name, ml.frag->len, nb_mers);
       {
         auto lisit = ml.lis.cbegin();
         pb_sr_offsets prev = ml.offsets[*lisit];
         pb_sr_offsets cur;
         for(++lisit; lisit != ml.lis.cend(); prev = cur, ++lisit) {
-          cur                   = ml.offsets[*lisit];
-          unsigned int pb_diff  = cur.first - prev.first;
-          pb_cons              += pb_diff == 1;
-          pb_cover             += std::min(mer_dna::k(), pb_diff);
-          unsigned int sr_diff  = cur.second - prev.second;
-          sr_cons              += sr_diff == 1;
-          sr_cover             += std::min(mer_dna::k(), sr_diff);
+          cur                         = ml.offsets[*lisit];
+          const unsigned int pb_diff  = cur.first - prev.first;
+          info.pb_cons               += pb_diff == 1;
+          info.pb_cover              += std::min(mer_dna::k(), pb_diff);
+          const unsigned int sr_diff  = cur.second - prev.second;
+          info.sr_cons               += sr_diff == 1;
+          info.sr_cover              += std::min(mer_dna::k(), sr_diff);
         }
       }
-      if(pb_cons < (unsigned int)consecutive_ && sr_cons < (unsigned int)consecutive_) continue;
+      if(info.pb_cons < (unsigned int)consecutive_ && info.sr_cons < (unsigned int)consecutive_) continue;
 
       auto                       first = ml.offsets[ml.lis.front()];
       auto                       last  = ml.offsets[ml.lis.back()];
-      auto                       s2    = first.second;
-      auto                       e2    = last.second;
-      if(s2 < 0)
-        s2 -= mer_dna::k() - 1;
-      else
-        e2 += mer_dna::k() - 1;
-      out << first.first << " " << (last.first + mer_dna::k() - 1) // RS RE
-          << " " << s2 << " " << e2 // QS QE
-          << " " << nb_mers // N
-          << " " << pb_cons << " " << sr_cons
-          << " " << pb_cover << " " << sr_cover
-          << " " << pb_size << " " << ml.frag->len // RL QL
-          << " " << pb_name << " " << ml.frag->name << "\n"; // Q R
+      info.rs = first.first;
+      info.re = last.first + mer_dna::k() - 1;
+
+      info.qs = first.second;
+      info.qe = last.second;
+      if(info.qs < 0) {
+        info.qs = -info.qs + mer_dna::k() - 1;
+        info.qe = -info.qe;
+      } else {
+        info.qe += mer_dna::k() - 1;
+      }
+
+      coords.push_back(info);
+    }
+
+    std::sort(coords.begin(), coords.end());
+    for(auto it = coords.cbegin(); it != coords.cend(); ++it) {
+      out << it->rs << " " << it->re << " " << it->qs << " " << it->qe << " "
+          << it->nb_mers << " "
+          << it->pb_cons << " " << it->sr_cons << " "
+          << it->pb_cover << " " << it->sr_cover << " "
+          << pb_size << " " << it->ql << " "
+          << pb_name << " " << it->qname << "\n";
     }
     out << jflib::endr;
   }
