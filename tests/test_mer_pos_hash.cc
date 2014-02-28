@@ -8,6 +8,7 @@ using jellyfish::mer_dna;
 typedef mer_pos_hash<const char, mer_dna> mer_pos_hash_type;
 typedef mer_pos_hash_type::position_type position_type;
 typedef mer_pos_hash_type::mapped_type list_type;
+typedef mer_pos_hash_type::const_pos_iterator const_pos_iterator;
 
 TEST(MerPosHash, Insert) {
   mer_dna::k(17);
@@ -29,10 +30,10 @@ TEST(MerPosHash, Insert) {
     hash.push_front(mers[i % nb_mers], frags[i % nb_frags].c_str(), i * (2 * (i % 2) - 1));
 
   for(int i = 0; i < nb_mers; ++i) {
-    const list_type& list = hash[mers[i]];
-    const list_type* found_list = hash.find_pos(mers[i]);
-    EXPECT_EQ(&list, found_list);
-    for(auto it = list.cbegin(); it != list.cend(); ++it) {
+    //    const list_type&   list       = hash[mers[i]];
+    const_pos_iterator it = hash.find_pos(mers[i]);
+    //    EXPECT_EQ(list.cbegin(), it);
+    for( ; it != hash.pos_end(); ++it) {
       EXPECT_TRUE(abs(it->offset) >= 0 && it->offset < nb_inserts);
       EXPECT_EQ(i, abs(it->offset) % nb_mers);
       EXPECT_EQ(i % 2,  it->offset > 0);

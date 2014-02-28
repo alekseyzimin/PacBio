@@ -20,6 +20,10 @@ public:
   { }
 };
 
+// struct frags_pos_type {
+//   std::map
+// };
+
 class align_pb : public jellyfish::thread_exec {
   const mer_pos_hash_type& ary_;
   read_parser              parser_;
@@ -169,20 +173,18 @@ public:
                            int a, int b) {
     while(parser.next()) { // Process each k-mer
       const bool is_canonical = parser.m < parser.rm;
-      list_type* list = ary.find_pos(is_canonical ? parser.m : parser.rm);
-      if(!list) // mer not found in superreads
-        continue;
-      for(auto it = list->cbegin(); it != list->cend(); ++it) {
+      auto it = ary.find_pos(is_canonical ? parser.m : parser.rm);
+      for( ; it != ary.pos_end(); ++it) {
         mer_lists& ml = frags_pos[it->frag->name];
         ml.frag       = it->frag;
         ml.offsets.push_back(pb_sr_offsets(parser.offset + 1, is_canonical ? it->offset : -it->offset));
       }
     }
+    if(frags_pos.empty()) return;
 
     // Compute LIS forward and backward on every super reads.
     for(auto it = frags_pos.begin(); it != frags_pos.end(); ++it) {
       mer_lists& mer_list = it->second;
-      //      mer_list.lis = lis::indices(mer_list.offsets.cbegin(), mer_list.offsets.cend());
       mer_list.lis = lis_align::indices(mer_list.offsets.cbegin(), mer_list.offsets.cend(),
                                         a, b);
     }

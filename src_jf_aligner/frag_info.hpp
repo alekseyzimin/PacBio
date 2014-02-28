@@ -14,7 +14,7 @@ public:
   ~frag_lists() {
     for(auto it = names_.cbegin(); it != names_.cend(); ++it)
       for(auto it2 = it->cbegin(); it2 != it->cend(); ++it2)
-        free((void*)*it2);
+        ::operator delete((void*)*it2);
   }
 
   size_t size() const { return names_.size(); }
