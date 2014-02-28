@@ -67,7 +67,7 @@ public:
   align_pb& coords_multiplexer(o_multiplexer* m) {
     coords_multiplexer_ = m;
     omstream o(*coords_multiplexer_); // Write header
-    o << "Rstart Rend Qstart Qend Nmers Qcons Rcons Qcover Rcover Rlen Qlen Qname Rname\n";
+    o << "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Qname Rname\n";
     o << jflib::endr;
     return *this;
   }
