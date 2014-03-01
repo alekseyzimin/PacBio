@@ -53,7 +53,7 @@ std::ostream& operator<<(std::ostream& os, const std::pair<T, U>& x) {
  */
 template<typename T>
 bool same_sign(T a, T b) {
-  return (a > 0 && b > 0) || (a < 0 && b < 0);
+  return !((a > 0) ^ (b > 0));
 };
 
 template<typename InputIterator, typename T>
