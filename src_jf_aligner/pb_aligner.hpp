@@ -218,5 +218,21 @@ public:
   }
 };
 
+void align_pb_reads(int threads, mer_pos_hash_type& hash, int stretch_const, int stretch_factor,
+                    int consecutive, int nmers, bool compress,
+                    const char* pb_path,
+                    const char* coords_path = 0, const char* details_path = 0) {
+  output_file details, coords;
+  if(coords_path) coords.open(coords_path, threads);
+  if(details_path) details.open(details_path, threads);
+  file_vector files;
+  files.push_back(pb_path);
+  stream_manager streams(files.cbegin(), files.cend());
+  align_pb aligner(threads, hash, streams, stretch_const, stretch_factor,
+                   consecutive, nmers, compress);
+  if(coords_path) aligner.coords_multiplexer(coords.multiplexer());
+  if(details_path) aligner.details_multiplexer(details.multiplexer());
+  aligner.exec_join(threads);
+}
 
 #endif /* _PB_ALIGNER_HPP_ */

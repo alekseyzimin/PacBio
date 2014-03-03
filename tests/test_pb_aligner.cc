@@ -98,7 +98,7 @@ TEST(PbAligner, FakeSequences) {
   remove_file sr_file("/tmp/superreads.fa", false);
   std::string pacbio_sequence = generate_sequences(pb_file.path, sr_file.path);
 
-  mer_pos_hash_type hash(1024);
+  mer_pos_hash_type hash(2048);
   frag_lists names(1);
   superread_parse(1, hash, names, sr_file.path);
   EXPECT_EQ((size_t)1, names.size());
