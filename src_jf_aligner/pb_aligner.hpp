@@ -82,6 +82,7 @@ public:
     mer_dna         tmp_m;
     parse_sequence  parser(compress_);
     frags_pos_type  frags_pos;
+    lis_align::forward_list<lis_align::element<int> > L; // L buffer
 
     mstream     details(details_multiplexer_);
     mstream     coords(coords_multiplexer_);
@@ -96,7 +97,7 @@ public:
         name = job->data[i].header.substr(0, name_end);
         parser.reset(job->data[i].seq);
         frags_pos.clear();
-        process_read(ary_, parser, frags_pos, stretch_constant_, stretch_factor_);
+        process_read(ary_, parser, frags_pos, L, stretch_constant_, stretch_factor_);
         if(details) print_details(*details, name, frags_pos);
         if(coords) print_coords(*coords, name, job->data[i].seq.size(), frags_pos);
       }
@@ -221,7 +222,8 @@ public:
     out << jflib::endr;
   }
 
-  static void process_read(const mer_pos_hash_type& ary, parse_sequence& parser, frags_pos_type& frags_pos,
+  static void process_read(const mer_pos_hash_type& ary, parse_sequence& parser,
+                           frags_pos_type& frags_pos, lis_align::forward_list<lis_align::element<int> >& L,
                            int a, int b) {
     while(parser.next()) { // Process each k-mer
       const bool is_canonical = parser.m < parser.rm;
@@ -241,11 +243,21 @@ public:
     // Compute LIS forward and backward on every super reads.
     for(auto it = frags_pos.begin(); it != frags_pos.end(); ++it) {
       mer_lists& mer_list = it->second;
-      mer_list.fwd_lis = lis_align::indices(mer_list.fwd_offsets.cbegin(), mer_list.fwd_offsets.cend(),
-                                            a, b);
-      mer_list.bwd_lis = lis_align::indices(mer_list.bwd_offsets.cbegin(), mer_list.bwd_offsets.cend(),
-                                            a, b);
+      mer_list.fwd_lis.clear();
+      mer_list.bwd_lis.clear();
+      L.clear();
+      lis_align::indices(mer_list.fwd_offsets.cbegin(), mer_list.fwd_offsets.cend(),
+                         L, mer_list.fwd_lis, a, b);
+      L.clear();
+      lis_align::indices(mer_list.bwd_offsets.cbegin(), mer_list.bwd_offsets.cend(),
+                         L, mer_list.bwd_lis, a, b);
     }
+  }
+
+  static void process_read(const mer_pos_hash_type& ary, parse_sequence& parser,
+                           frags_pos_type& frags_pos, int a, int b) {
+    lis_align::forward_list<lis_align::element<int> > L;
+    process_read(ary, parser, frags_pos, L, a, b);
   }
 };
 

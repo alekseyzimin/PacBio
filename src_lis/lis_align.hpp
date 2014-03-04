@@ -19,38 +19,50 @@ class forward_list : public lf_forward_list_base<T> {
   typedef lf_forward_list_base<T> super;
   typedef typename super::node    node;
 
+  struct data_page {
+    static const size_t node_per_page = 1024 * 1024;
+    node*  data;
+    size_t used;
+  };
+
 public:
   typedef typename super::iterator       iterator;
   typedef typename super::const_iterator const_iterator;
   typedef T                              value_type;
 
-  forward_list() : super(0) {
+  forward_list() : super(0), cpage_ind(0) {
     static_assert(std::is_trivial<T>::value, "Forward list defined only for trivial types");
+    data_pages.push_back({ new node[data_page::node_per_page], 0 });
   }
-  ~forward_list() { }
+  ~forward_list() {
+    for(auto it = data_pages.begin(); it != data_pages.end(); ++it)
+      delete [] it->data;
+  }
+
+  void clear() {
+    for(auto it = data_pages.begin(); it != data_pages.end(); ++it)
+      it->used = 0;
+    cpage_ind          = 0;
+    super::head_.next_ = 0;
+  }
 
   iterator insert_after(const_iterator position, const value_type& val) {
-    struct data_page {
-      node*  data;
-      size_t used;
-    };
-    static const size_t       node_per_page = 1024 * 1024;
-    static __thread data_page thread_data   = { 0, 0 };
-
-    if(!thread_data.data || thread_data.used >= node_per_page) {
-      thread_data.used = 0;
-      thread_data.data = new node[node_per_page];
-      data_pages.push_front(thread_data.data);
+    data_page* cpage = &data_pages[cpage_ind];
+    if(cpage->used >= data_page::node_per_page) {
+      if(++cpage_ind >= (int)data_pages.size())
+        data_pages.push_back({ new node[data_page::node_per_page], 0 });
+      cpage = &data_pages[cpage_ind];
     }
-    node* cnode = &thread_data.data[thread_data.used++];
+
+    node* cnode = &cpage->data[cpage->used++];
     std::copy(&val, &val + 1, &cnode->val_);
     super::insert_after_(position, cnode);
     return iterator(cnode);
   }
-  //  iterator insert_after(const_iterator position, value_type&& val) 
 
 private:
-  lf_forward_list<node*> data_pages;
+  std::vector<data_page> data_pages;
+  int                    cpage_ind;
 };
 
 
@@ -112,6 +124,7 @@ std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const I
     // possible extension, as further subsequence length are too short
     // to improve on this extension.
     auto prev = L.cbefore_begin();
+    const auto before_begin = prev;
     auto it   = L.cbegin();
     for( ; it != L.cend() && it->len >= e_longest.len; ++it) {
       const unsigned int j = it->elt;
@@ -127,7 +140,7 @@ std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const I
           break;
         }
       }
-      if(it->len < prev->len)
+      if(prev == before_begin || it->len < prev->len)
         prev = it;
     }
     L.insert_after(prev, e_longest);
@@ -146,11 +159,10 @@ void indices_reversed(P_type& P, const unsigned int len, unsigned int start, Out
 }
 
 template<typename InputIterator, typename T>
-unsigned int indices(const InputIterator X, const InputIterator Xend, std::vector<unsigned int>& res,
+unsigned int indices(const InputIterator X, const InputIterator Xend,
+                     forward_list<element<T> >& L, std::vector<unsigned int>& res,
                      T a, T b) {
   const size_t N = std::distance(X, Xend);
-  //  std::vector<element<T> > L(N);
-  forward_list<element<T> > L;
   std::vector<unsigned int> P(N);
   const std::pair<unsigned int, unsigned int> lis = compute_L_P(X, Xend, L, P, a, b);
 
@@ -158,6 +170,13 @@ unsigned int indices(const InputIterator X, const InputIterator Xend, std::vecto
     res.resize(lis.first);
   indices_reversed(P, lis.first, lis.second, res.rbegin());
   return lis.first;
+}
+
+template<typename InputIterator, typename T>
+unsigned int indices(const InputIterator X, const InputIterator Xend, std::vector<unsigned int>& res,
+                     T a, T b) {
+  forward_list<element<T> > L;
+  return indices(X, Xend, L, res, a, b);
 }
 
 template<typename InputIterator, typename T>

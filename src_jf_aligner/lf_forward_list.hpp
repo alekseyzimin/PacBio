@@ -6,7 +6,7 @@
 template<typename T>
 struct lf_forward_list_base {
   struct head_node {
-    head_node* next_;
+    mutable head_node* next_;
   };
   struct node : head_node {
     T val_;
