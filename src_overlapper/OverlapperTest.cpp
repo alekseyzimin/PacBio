@@ -3,7 +3,6 @@
 #include "string"
 #include "vector"
 #include "cstdlib"
-
 #include <map>
 #include <math.h>
 #include "memory"
@@ -52,9 +51,10 @@ int main(int argc, char* argv[])
 	string tag,n_tag;
 	
 
-	/*
+	
 	ofstream out_transformed_reads("TransformedReads.txt");
-	while(get_pb_intervals(intervals_in, tag, pb_sr_map, n_tag))
+	contigs_info contigs_info;
+	while (get_pb_intervals(intervals_in, tag, pb_sr_map, n_tag, &contigs_info))
 	{
 	
 		if(pb_sr_map.size()>1)
@@ -78,8 +78,12 @@ int main(int argc, char* argv[])
 	}
 	
 
-	*/
+	//
+
 	reads_table reads_table0;
-	ConstructReadsOverlaps_pb( reads_info_name,&reads_table0);
+	ConstructReadsOverlaps_pb(reads_info_name, &reads_table0, &contigs_info);
+
+	return 0;
+
 
 }

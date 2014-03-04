@@ -387,6 +387,58 @@ struct stacked_bucket0
 };
 
 
+
+
+
+
+
+
+struct c_info
+{
+
+	uint8_t used : 1, removed : 1, unique : 1, flip : 1, marked : 1, loc_unique : 1, positive : 1, rcomp : 1;
+};
+
+
+struct adjacent_contig_info
+{
+	int32_t dist_sum;
+	int8_t cov;
+	string bridge;
+
+};
+
+
+struct scaffold_contig_info
+{
+	int32_t dist_sum;
+	int8_t cov;
+
+};
+
+
+struct contigs_info
+{
+	int total_contigs;
+	int K_size;
+	vector<int> contig_sz_vt, kmer_cnt_vt, comp_vt;
+	vector<int> contigs_hp_b, contigs_hp_e;
+	vector<string> contigs_str;
+	map<int, vector<int> > Length_ID;
+	map<int, vector<int> > Cov_Length;
+	//map<int, vector<int> > ctg_in_scf;
+	//vector<vector<int> > scaffolds;
+	//vector<vector<int> > gaps_in_scaffolds;
+
+	vector < vector<int>::iterator> LengthRank;
+	vector<int> cov_vt;
+	vector<struct c_info> c_info_vt;
+	
+	map<int, map<int, struct adjacent_contig_info> > contig_adjacency_left, contig_adjacency_right;
+};
+
+
+
 bool get_a_fasta_read(ifstream & fasta_in, string &tag, string &str, string & n_tag)
 {
 	

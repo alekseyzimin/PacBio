@@ -597,14 +597,14 @@ void BFSearchBubbleRemoval_read(reads_overlap_info *reads_overlap_info,reads_tab
 
 
 
-void ConstructReadsOverlaps_pb(string reads_info_name,reads_table* reads_table)
+void ConstructReadsOverlaps_pb(string reads_info_name, reads_table* reads_table, contigs_info *contigs_info)
 {
 	// 
 	reads_overlap_info reads_overlap_info;
 	bool EXACT=1;
 	ifstream in_reads_info;
 	in_reads_info.open(reads_info_name.c_str());
-	ofstream out_extended_reads("Extended_Sr.txt");
+	ofstream out_extended_reads("Extended_Sr.txt"), out_extended_reads_layout("Extended_Sr_layout.txt");
 	string tag;
 	int32_t num_reads=0,n_selected_reads=0;
 	int n_ctgs;
@@ -615,10 +615,10 @@ void ConstructReadsOverlaps_pb(string reads_info_name,reads_table* reads_table)
 
 	reads_overlap_info.cov_vt.push_back(0);
 
-	while(getline(in_reads_info,tag))
+	while (getline(in_reads_info, tag))
 	{
-		
-		n_selected_reads=0;
+
+		n_selected_reads = 0;
 		selected_reads.clear();
 		read_contig_index.clear();
 		contig_in_reads.clear();
@@ -631,188 +631,190 @@ void ConstructReadsOverlaps_pb(string reads_info_name,reads_table* reads_table)
 		reads_overlap_info.used_vt_left.clear();
 		reads_overlap_info.used_vt_right.clear();
 
-		if(tag.size()<=1)
+		if (tag.size() <= 1)
 		{
 			continue;
 		}
-		out_extended_reads<<tag<<endl;
+		out_extended_reads << tag << endl;
+
+		out_extended_reads_layout << tag << endl;
 		num_reads++;
-		in_reads_info>>n_sr_lines;
-		for (int sr_line=0;sr_line<n_sr_lines;++sr_line)
+		in_reads_info >> n_sr_lines;
+		for (int sr_line = 0; sr_line < n_sr_lines; ++sr_line)
 		{
-			in_reads_info>>n_ctgs;
-			vector<int> contigs_vt,contigs_vt_rc;
+			in_reads_info >> n_ctgs;
+			vector<int> contigs_vt, contigs_vt_rc;
 			int ctg;
 			// get the contigs into a vector
-			for (int i=0;i<n_ctgs;++i)
+			for (int i = 0; i < n_ctgs; ++i)
 			{
-				in_reads_info>>ctg;
+				in_reads_info >> ctg;
 				contigs_vt.push_back(ctg);
 			}
-		
-			contigs_vt_rc=contigs_vt;
-			reverse(contigs_vt_rc.begin(),contigs_vt_rc.end());
-		
+
+			contigs_vt_rc = contigs_vt;
+			reverse(contigs_vt_rc.begin(), contigs_vt_rc.end());
+
 			// compare and take the smaller vector
-			for (int i=0;i<n_ctgs;++i)
+			for (int i = 0; i < n_ctgs; ++i)
 			{
-				contigs_vt_rc[i]=-contigs_vt_rc[i];
+				contigs_vt_rc[i] = -contigs_vt_rc[i];
 			}
-			bool take_rc=0;	
-			for (int i=0;i<n_ctgs;++i)
+			bool take_rc = 0;
+			for (int i = 0; i<n_ctgs; ++i)
 			{
-				if(contigs_vt_rc[i]>contigs_vt[i])
+				if (contigs_vt_rc[i]>contigs_vt[i])
 				{
-					take_rc=0;
+					take_rc = 0;
 					break;
 				}
-				if(contigs_vt_rc[i]<contigs_vt[i])
+				if (contigs_vt_rc[i] < contigs_vt[i])
 				{
-					take_rc=1;
+					take_rc = 1;
 					break;
 				}
 			}
-			if(take_rc)
+			if (take_rc)
 			{
-				contigs_vt=contigs_vt_rc;
+				contigs_vt = contigs_vt_rc;
 			}
-			if(selected_reads[contigs_vt]!=0)
+			if (selected_reads[contigs_vt] != 0)
 			{
-			
+
 				reads_overlap_info.cov_vt[abs(selected_reads[contigs_vt])]++;
 				continue;
 			}
 			else
 			{
 				n_selected_reads++;
-				if(take_rc)
+				if (take_rc)
 				{
-					selected_reads[contigs_vt]=-n_selected_reads;
+					selected_reads[contigs_vt] = -n_selected_reads;
 					reads_overlap_info.cov_vt.push_back(1);
 				}
 				else
 				{
-					selected_reads[contigs_vt]=n_selected_reads;
+					selected_reads[contigs_vt] = n_selected_reads;
 					reads_overlap_info.cov_vt.push_back(1);
 				}
 			}
 
 			//cout<<n_selected_reads<<endl;
 			// now in selected reads
-			for (int i=0;i<n_ctgs;++i)
+			for (int i = 0; i < n_ctgs; ++i)
 			{
-				ctg=contigs_vt[i];	
-				if(contig_in_reads[abs(ctg)].size()==0||contig_in_reads[abs(ctg)].back()!=n_selected_reads)//check and don't save duplicate values
+				ctg = contigs_vt[i];
+				if (contig_in_reads[abs(ctg)].size() == 0 || contig_in_reads[abs(ctg)].back() != n_selected_reads)//check and don't save duplicate values
 				{
 					contig_in_reads[abs(ctg)].push_back(n_selected_reads);
 				}
 			}
 
 			read_contig_index.push_back(contigs_vt);
-	
+
 		}
 
 		///////for each pb read
 
 
 
-		reads_overlap_info.left_overlaps.resize(n_selected_reads+1);
-		reads_overlap_info.right_overlaps.resize(n_selected_reads+1);
-		reads_overlap_info.contained_vt.resize(n_selected_reads+1);
-		reads_overlap_info.used_vt.resize(n_selected_reads+1);
-		reads_overlap_info.used_vt_left.resize(n_selected_reads+1);
-		reads_overlap_info.used_vt_right.resize(n_selected_reads+1);
-		
-		for (int i=0;i<read_contig_index.size();++i)
+		reads_overlap_info.left_overlaps.resize(n_selected_reads + 1);
+		reads_overlap_info.right_overlaps.resize(n_selected_reads + 1);
+		reads_overlap_info.contained_vt.resize(n_selected_reads + 1);
+		reads_overlap_info.used_vt.resize(n_selected_reads + 1);
+		reads_overlap_info.used_vt_left.resize(n_selected_reads + 1);
+		reads_overlap_info.used_vt_right.resize(n_selected_reads + 1);
+
+		for (int i = 0; i < read_contig_index.size(); ++i)
 		{
 
-			if(EXACT)
+			if (EXACT)
 			{
 
-			
-				for (int round1=1;round1<=2;++round1)
+
+				for (int round1 = 1; round1 <= 2; ++round1)
 				{
 					//front/rear overlap
-					vector<int32_t> current_read=read_contig_index[i];
-				
-					if(round1==2)
+					vector<int32_t> current_read = read_contig_index[i];
+
+					if (round1 == 2)
 					{
-						reverse(current_read.begin(),current_read.end());
-						for (int j=0;j<current_read.size();++j)
+						reverse(current_read.begin(), current_read.end());
+						for (int j = 0; j < current_read.size(); ++j)
 						{
-							current_read[j]=-current_read[j];
+							current_read[j] = -current_read[j];
 						}
 
 					}
 
-			
-					for (int r=0;r<contig_in_reads[abs(current_read[0])].size();++r)
+
+					for (int r = 0; r < contig_in_reads[abs(current_read[0])].size(); ++r)
 					{
-						int read_idx=contig_in_reads[abs(current_read[0])][r];
-						if(read_idx-1==i)
+						int read_idx = contig_in_reads[abs(current_read[0])][r];
+						if (read_idx - 1 == i)
 						{
 							continue;
 						}
 
-						vector<int32_t> ctgs_vt=read_contig_index[read_idx-1];
-						for (int round2=1;round2<=2;++round2)
+						vector<int32_t> ctgs_vt = read_contig_index[read_idx - 1];
+						for (int round2 = 1; round2 <= 2; ++round2)
 						{
-							if(round2==2)
+							if (round2 == 2)
 							{
-								reverse(ctgs_vt.begin(),ctgs_vt.end());
-								for (int j=0;j<ctgs_vt.size();++j)
+								reverse(ctgs_vt.begin(), ctgs_vt.end());
+								for (int j = 0; j < ctgs_vt.size(); ++j)
 								{
-									ctgs_vt[j]=-ctgs_vt[j];
+									ctgs_vt[j] = -ctgs_vt[j];
 								}
 							}
-							for (int j=0;j<ctgs_vt.size();++j)
+							for (int j = 0; j < ctgs_vt.size(); ++j)
 							{
-								int pos=0;
-								bool overlap=1;
-								for(int k=j;k!=ctgs_vt.size();++k)
+								int pos = 0;
+								bool overlap = 1;
+								for (int k = j; k != ctgs_vt.size(); ++k)
 								{
-									if (current_read[pos]!=ctgs_vt[k])
+									if (current_read[pos] != ctgs_vt[k])
 									{
-										overlap=0;
+										overlap = 0;
 										break;
 									}
 									pos++;
-									if(pos==current_read.size()&&k!=ctgs_vt.size()-1)
+									if (pos == current_read.size() && k != ctgs_vt.size() - 1)
 									{
-										overlap=0;
+										overlap = 0;
 										break;
 									}
 								}
 								//check if we have a proper overlap.
-								if(overlap==1)
+								if (overlap == 1)
 								{
 									vector<int> edge;
-									if(ctgs_vt.size()-j==current_read.size())
+									if (ctgs_vt.size() - j == current_read.size())
 									{
-										reads_overlap_info.contained_vt[i+1]=1;
-										cout<<"";//contained overlap
+										reads_overlap_info.contained_vt[i + 1] = 1;
+										cout << "";//contained overlap
 									}
 
 
-									for(int k=0;k<j;++k)
+									for (int k = 0; k < j; ++k)
 									{
 										edge.push_back(ctgs_vt[k]);
 									}
 
 									// record the overlap and break;
-									if(round1==1)
+									if (round1 == 1)
 									{
 										//front overlap
-										if(round2==1)
+										if (round2 == 1)
 										{
 											//
-											reads_overlap_info.left_overlaps[i+1][read_idx]=edge;
+											reads_overlap_info.left_overlaps[i + 1][read_idx] = edge;
 										}
 										else
 										{
 											//flip
-											
-											reads_overlap_info.left_overlaps[i+1][-read_idx]=edge;
+
+											reads_overlap_info.left_overlaps[i + 1][-read_idx] = edge;
 										}
 
 									}
@@ -820,31 +822,31 @@ void ConstructReadsOverlaps_pb(string reads_info_name,reads_table* reads_table)
 									{
 										//rear overlap
 
-										reverse(edge.begin(),edge.end());
-										for(int k=0;k<edge.size();++k)
+										reverse(edge.begin(), edge.end());
+										for (int k = 0; k < edge.size(); ++k)
 										{
-											edge[k]=-edge[k];
+											edge[k] = -edge[k];
 										}
 
-										if(round2==1)
+										if (round2 == 1)
 										{
 											//flip
-											
-											reads_overlap_info.right_overlaps[i+1][-read_idx]=edge;
+
+											reads_overlap_info.right_overlaps[i + 1][-read_idx] = edge;
 										}
 										else
 										{
-										
-											reads_overlap_info.right_overlaps[i+1][read_idx]=edge;
+
+											reads_overlap_info.right_overlaps[i + 1][read_idx] = edge;
 										}
 									}
 
 									break;
 
 								}
-					
+
 							}
-					
+
 						}
 
 					}
@@ -854,128 +856,179 @@ void ConstructReadsOverlaps_pb(string reads_info_name,reads_table* reads_table)
 			}
 
 		}
-	
-		for(int i=0;i<reads_overlap_info.right_overlaps.size();++i)
+
+		for (int i = 0; i < reads_overlap_info.right_overlaps.size(); ++i)
 		{
-			map<int32_t, vector<int32_t> >::iterator temp_it1,temp_it2;
-			for(temp_it1=reads_overlap_info.right_overlaps[i].begin();temp_it1!=reads_overlap_info.right_overlaps[i].end(); )
+			map<int32_t, vector<int32_t> >::iterator temp_it1, temp_it2;
+			for (temp_it1 = reads_overlap_info.right_overlaps[i].begin(); temp_it1 != reads_overlap_info.right_overlaps[i].end();)
 			{
-				temp_it2=temp_it1;
+				temp_it2 = temp_it1;
 				temp_it2++;
-				if(reads_overlap_info.contained_vt[abs(temp_it1->first)]||reads_overlap_info.contained_vt[i])
+				if (reads_overlap_info.contained_vt[abs(temp_it1->first)] || reads_overlap_info.contained_vt[i])
 				{
 					reads_overlap_info.right_overlaps[i].erase(temp_it1);
 				}
-				temp_it1=temp_it2;
+				temp_it1 = temp_it2;
 			}
 
-			for(temp_it1=reads_overlap_info.left_overlaps[i].begin();temp_it1!=reads_overlap_info.left_overlaps[i].end(); )
+			for (temp_it1 = reads_overlap_info.left_overlaps[i].begin(); temp_it1 != reads_overlap_info.left_overlaps[i].end();)
 			{
-				temp_it2=temp_it1;
+				temp_it2 = temp_it1;
 				temp_it2++;
-				if(reads_overlap_info.contained_vt[abs(temp_it1->first)]||reads_overlap_info.contained_vt[i])
+				if (reads_overlap_info.contained_vt[abs(temp_it1->first)] || reads_overlap_info.contained_vt[i])
 				{
 					reads_overlap_info.left_overlaps[i].erase(temp_it1);
 				}
-				temp_it1=temp_it2;
+				temp_it1 = temp_it2;
 			}
 
 		}
 
-		
 
-		int max_dist=20;
-		int max_depth=20;
-	
-		for(int i=1;i<reads_overlap_info.contained_vt.size();++i)
+
+		int max_dist = 20;
+		int max_depth = 20;
+
+		for (int i = 1; i<reads_overlap_info.contained_vt.size(); ++i)
 		{
 			//cout<<i<<endl;
 			//cout<<reads_overlap_info.right_overlaps[11].size()<<endl;
-			int beg_read=i;
-			
+			int beg_read = i;
 
-			if(reads_overlap_info.contained_vt[i]==0)
+
+			if (reads_overlap_info.contained_vt[i] == 0)
 			{
-				if(reads_overlap_info.right_overlaps[i].size()>1)
+				if (reads_overlap_info.right_overlaps[i].size()>1)
 				{
-					BFSearchBubbleRemoval_read(&reads_overlap_info,reads_table, beg_read, max_depth, max_dist);
+					BFSearchBubbleRemoval_read(&reads_overlap_info, reads_table, beg_read, max_depth, max_dist);
 				}
 				//cout<<"l"<<endl;
-				if(reads_overlap_info.left_overlaps[i].size()>1)
+				if (reads_overlap_info.left_overlaps[i].size() > 1)
 				{
-					BFSearchBubbleRemoval_read(&reads_overlap_info,reads_table, -beg_read, max_depth, max_dist);
+					BFSearchBubbleRemoval_read(&reads_overlap_info, reads_table, -beg_read, max_depth, max_dist);
 				}
 			}
 		}
 
 
-		
 
-		for(int read_idx=1;read_idx<reads_overlap_info.contained_vt.size();++read_idx)
+
+		int extended = 0;
+
+
+		for (int read_idx = 1; read_idx < (int)reads_overlap_info.contained_vt.size(); ++read_idx)
 		{
-			vector<int> left_ext,right_ext,extended_read;
-			if(reads_overlap_info.contained_vt[read_idx]==0&&reads_overlap_info.used_vt[read_idx]==0)
-			{
-				
+			//cout << read_idx << endl;
+			vector<int> left_ext, right_ext, extended_read, left_read_idx, right_read_idx, left_edge_sz, right_edge_sz;
+			vector< vector<int> > layout;
 
-				for (int it=1;it<=2;++it)
+			if (reads_overlap_info.contained_vt[read_idx] == 0 && reads_overlap_info.used_vt[read_idx] == 0)
+			{
+
+
+				for (int it = 1; it <= 2; ++it)
 				{
-					int current_read=read_idx;
-					
-					reads_overlap_info.used_vt[current_read]=1;
+					int current_read = read_idx;
+
+					reads_overlap_info.used_vt[current_read] = 1;
 					bool Right;
-					if(it==1)
+					if (it == 1)
 					{
-						Right=1;
+						Right = 1;
 					}
 					else
 					{
-						Right=0;
+						Right = 0;
 					}
 
-					while(1)
+					while (1)
 					{
 						int next_read;
-						if(Right==1)
-						{		
-							if(reads_overlap_info.right_overlaps[abs(current_read)].size()==1)
+						if (Right == 1)
+						{
+							if (reads_overlap_info.right_overlaps[abs(current_read)].size() == 1)
 							{
-								next_read=reads_overlap_info.right_overlaps[abs(current_read)].begin()->first;
-								vector<int> edge=reads_overlap_info.right_overlaps[abs(current_read)].begin()->second;
-								for(int e=0;e<edge.size();++e)
+								next_read = reads_overlap_info.right_overlaps[abs(current_read)].begin()->first;
+								if ((next_read > 0 && reads_overlap_info.left_overlaps[next_read].size() > 1) || (next_read<0 && reads_overlap_info.right_overlaps[-next_read].size()>1))
 								{
-									if(it==1)
+									break;
+								}
+								vector<int> edge = reads_overlap_info.right_overlaps[abs(current_read)].begin()->second;
+								for (int e = 0; e < (int)edge.size(); ++e)//-1
+								{
+									if (it == 1)
 									{
 										right_ext.push_back(edge[e]);
+
 									}
 									else
 									{
 										left_ext.push_back(-edge[e]);
+
 									}
 								}
+
+
+								if (it == 1)
+								{
+
+									right_edge_sz.push_back(edge.size());
+									right_read_idx.push_back(next_read);
+								}
+								else
+								{
+
+									left_edge_sz.push_back(edge.size());
+									left_read_idx.push_back(-next_read);
+								}
+
 							}
 							else
-							{break;}
+							{
+								break;
+							}
 						}
 						else
 						{
-							if(Right==0)
+							if (Right == 0)
 							{
-								if(reads_overlap_info.left_overlaps[abs(current_read)].size()==1)
+								if (reads_overlap_info.left_overlaps[abs(current_read)].size() == 1)
 								{
-									next_read=reads_overlap_info.left_overlaps[abs(current_read)].begin()->first;
-									vector<int> edge=reads_overlap_info.left_overlaps[abs(current_read)].begin()->second;
-									
-									for(int e=0;e<edge.size();++e)
+									next_read = reads_overlap_info.left_overlaps[abs(current_read)].begin()->first;
+
+									if ((next_read > 0 && reads_overlap_info.right_overlaps[next_read].size() > 1) || (next_read<0 && reads_overlap_info.left_overlaps[-next_read].size()>1))
 									{
-										if(it==1)
+										break;
+									}
+									vector<int> edge = reads_overlap_info.left_overlaps[abs(current_read)].begin()->second;
+
+
+
+									for (int e = (int)edge.size() - 1; e >= 0; --e)//-1
+									{
+										if (it == 1)
 										{
-										right_ext.push_back(-edge[e]);
+											right_ext.push_back(-edge[e]);
+
 										}
 										else
 										{
+
 											left_ext.push_back(edge[e]);
+
 										}
+									}
+
+									if (it == 1)
+									{
+										right_read_idx.push_back(-next_read);
+										right_edge_sz.push_back(edge.size());
+									}
+									else
+									{
+
+										left_read_idx.push_back(next_read);
+										left_edge_sz.push_back(edge.size());
 									}
 								}
 								else
@@ -984,49 +1037,129 @@ void ConstructReadsOverlaps_pb(string reads_info_name,reads_table* reads_table)
 								}
 							}
 						}
-						
-						if(next_read<0)
+
+						if (next_read < 0)
 						{
-							Right=!Right;
+							Right = !Right;
 						}
-						current_read=abs(next_read);
-						if(reads_overlap_info.used_vt[abs(current_read)])
-						{break;}
-						reads_overlap_info.used_vt[abs(current_read)]=1;
+						current_read = abs(next_read);
+						if (reads_overlap_info.used_vt[abs(current_read)])
+						{
+							break;
+						}
+						reads_overlap_info.used_vt[abs(current_read)] = 1;
 					}
 				}
 
-				if(left_ext.size()>0||right_ext.size()>0)
+				if (left_ext.size() > 0 || right_ext.size() > 0)
 				{
-					for(int jj=0;jj<left_ext.size();++jj)
+					extended++;
+					reverse(left_ext.begin(), left_ext.end());
+					reverse(left_edge_sz.begin(), left_edge_sz.end());
+					reverse(left_read_idx.begin(), left_read_idx.end());
+
+
+					for (int jj = 0; jj < (int)left_ext.size(); ++jj)
 					{
 						extended_read.push_back(left_ext[jj]);
-						out_extended_reads<<left_ext[jj]<<" ";
 					}
-					for(int jj=0;jj<read_contig_index[read_idx-1].size();++jj)
+					for (int jj = 0; jj < (int)read_contig_index[read_idx - 1].size(); ++jj)
 					{
-						extended_read.push_back(read_contig_index[read_idx-1][jj]);
-						out_extended_reads<<read_contig_index[read_idx-1][jj]<<" ";
+						extended_read.push_back(read_contig_index[read_idx - 1][jj]);
 					}
-					for(int jj=0;jj<right_ext.size();++jj)
+					for (int jj = 0; jj < (int)right_ext.size(); ++jj)
 					{
 						extended_read.push_back(right_ext[jj]);
-						out_extended_reads<<right_ext[jj]<<" ";
 					}
-					out_extended_reads<<endl;
+					left_read_idx.push_back(read_idx);
+					//int ctgs_in_read = read_contig_index[read_idx - 1].size();
+					for (int jj = 0; jj < (int)right_read_idx.size(); ++jj)
+					{
+						int tmp_ctg = left_read_idx[left_read_idx.size() - 1];
+						left_read_idx.push_back(right_read_idx[jj]);
+						int ctgs_in_read = read_contig_index[abs(right_read_idx[jj]) - 1].size();
+						ctgs_in_read -= right_edge_sz[jj];
+						ctgs_in_read = (int)read_contig_index[abs(tmp_ctg) - 1].size() - ctgs_in_read;
+						left_edge_sz.push_back(ctgs_in_read);
+
+					}
+					int tap_zeros = 0;
+					vector<int> zeros_vt, output_vt, temp_vt;
+					out_extended_reads_layout << extended << ": " << extended_read.size() << endl;
+					for (int jj = 0; jj < (int)left_read_idx.size(); ++jj)
+					{
+						output_vt = zeros_vt;
+						int cur_idx = left_read_idx[jj];
+						temp_vt = read_contig_index[abs(cur_idx) - 1];
+						if (cur_idx < 0)
+						{
+							reverse(temp_vt.begin(), temp_vt.end());
+							for (int kk = 0; kk < (int)temp_vt.size(); ++kk)
+							{
+								temp_vt[kk] = -temp_vt[kk];
+							}
+						}
+						for (int kk = 0; kk < (int)temp_vt.size(); ++kk)
+						{
+							output_vt.push_back(temp_vt[kk]);
+						}
+						if (jj != (int)left_read_idx.size() - 1)
+						{
+							int zeros = (int)left_edge_sz[jj];
+							for (int kk = 0; kk < zeros; ++kk)
+							{
+								zeros_vt.push_back(0);
+							}
+						}
+						for (int kk = 0; kk < output_vt.size(); ++kk)
+						{
+							out_extended_reads_layout << output_vt[kk] << ", ";
+						}
+						out_extended_reads_layout << endl;
+
+					}
+
+
+					out_extended_reads << extended << ": " << extended_read.size() << endl;
+					out_extended_reads << extended_read[0] << " ";
+
+					//contigs_info->c_info_vt[abs(extended_read[0])].used = 1;
+					for (int jj = 1; jj < (int)extended_read.size(); ++jj)
+					{
+
+						//contigs_info->c_info_vt[abs(extended_read[jj])].used = 1;
+						int overlap = -1;
+						if (extended_read[jj - 1] < 0)
+						{
+							overlap = contigs_info->contig_adjacency_left[-extended_read[jj - 1]][-extended_read[jj]].dist_sum;
+						}
+						else
+						{
+							overlap = contigs_info->contig_adjacency_right[extended_read[jj - 1]][extended_read[jj]].dist_sum;
+						}
+
+						out_extended_reads << overlap << " " << extended_read[jj] << " ";
+					}
+					out_extended_reads << endl;
 				}
 
 			}
 
-			
-
 		}
-		cout<<"";
-		/////////////finished
+		int length_sum = 0;
+		for (int i = 1; i <= contigs_info->total_contigs; ++i)
+		{
+			if (contigs_info->c_info_vt[i].used == 0)
+			{
+				extended++;
+				length_sum += contigs_info->contig_sz_vt[i];
+				out_extended_reads << extended << ": " << 1 << endl;
+				out_extended_reads << i << endl;
 
+			}
+		}
 
-
-
+		
 	}
 	in_reads_info.close();
 	out_extended_reads.close();
