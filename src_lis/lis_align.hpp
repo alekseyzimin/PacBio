@@ -3,16 +3,30 @@
 
 #include <vector>
 #include <iterator>
+#include <type_traits>
 
 namespace lis_align {
+// /**
+//  * A forward list defined for trivial data types. Per thread bulk
+//  * memory management.
+//  */
+// template <typename T>
+// class forward_list : public lf_foward_list_base<T> {
+//   typedef lf_foward_list_base<T> super;
+// public:
+//   forward_list() : super(0) {
+//     static_assert(std::is_trivial<T>::value, "Forward list defined only for trivial types");
+//   }
+//   ~forward_list() { }
+// };
+
+
 /**
  * Compute an alignment on an array X where each element is a pair of
  * offsets. It returns the longest alignment (in term of number of
- * elements) where all the second offset have the same sign (all
- * positive or all negative, probably representing orientation), the
- * second offset are all increasing and where the spans in first
- * offsets is bounded by an affine relation to the spans of the second
- * offsets (and conversely).
+ * elements) the second offset are all increasing and where the spans
+ * in first offsets is bounded by an affine relation to the spans of
+ * the second offsets (and conversely).
  *
  * The algorithm is quadratic in the length of X.
  */
@@ -48,14 +62,6 @@ std::ostream& operator<<(std::ostream& os, const std::pair<T, U>& x) {
   return os << "<" << x.first << ", " << x.second << ">";
 }
 
-/**
- * Return true if a and b have the same sign. Result is undefined if either a or b is 0.
- */
-template<typename T>
-bool same_sign(T a, T b) {
-  return !((a > 0) ^ (b > 0));
-};
-
 template<typename InputIterator, typename T>
 std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const InputIterator Xend,
                                                   std::vector<element<T> >& L, std::vector<unsigned int>& P,
@@ -72,7 +78,7 @@ std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const I
     e_longest.span2 = 0;
     j_longest       = N;
     for(size_t j = 0; j < i; ++j) {
-      if(same_sign(X[i].second, X[j].second) && X[i].second > X[j].second && e_longest.len < L[j].len + 1) {
+      if(X[i].second > X[j].second && e_longest.len < L[j].len + 1) {
         T new_span1 = L[j].span1 + (X[i].first - X[j].first);
         T new_span2 = L[j].span2 + (X[i].second - X[j].second);
         if(new_span1 <= a + b * new_span2 &&

@@ -47,8 +47,10 @@ public:
   typedef std::pair<int, int> pb_sr_offsets; // first = pb_offset, second = sr_offset
 
   struct mer_lists {
-    std::vector<pb_sr_offsets>   offsets;
-    std::vector<unsigned int>    lis;
+    std::vector<pb_sr_offsets>   fwd_offsets;
+    std::vector<pb_sr_offsets>   bwd_offsets;
+    std::vector<unsigned int>    fwd_lis;
+    std::vector<unsigned int>    bwd_lis;
     const frag_lists::frag_info* frag;
   };
   typedef std::map<const char*, mer_lists> frags_pos_type;
@@ -109,14 +111,32 @@ public:
       else
         out << ".";
       out << " " << it->first;
-      const align_pb::mer_lists& ml      = it->second;
-      auto                       lisit   = ml.lis.cbegin();
-      auto                       lisend  = ml.lis.cend();
-      size_t                     current = 0;
-      for(auto offit = ml.offsets.cbegin(); offit != ml.offsets.cend(); ++offit, ++current) {
-        bool part_of_lis = (lisit < lisend && *lisit == current);
+      const align_pb::mer_lists& ml              = it->second;
+      const bool                       fwd_align =
+        std::distance(ml.fwd_lis.cbegin(), ml.fwd_lis.cend()) > std::distance(ml.bwd_lis.cbegin(), ml.bwd_lis.cend());
+      auto                       lisit           = fwd_align ? ml.fwd_lis.cbegin() : ml.bwd_lis.cbegin();
+      const auto                 lisend          = fwd_align ? ml.fwd_lis.cend() : ml.bwd_lis.cend();
+      auto                       fwd_offit       = ml.fwd_offsets.cbegin();
+      const auto                 fwd_offbegin    = fwd_offit;
+      const auto                 fwd_offend      = ml.fwd_offsets.cend();
+      auto                       bwd_offit       = ml.bwd_offsets.cbegin();
+      const auto                 bwd_offbegin    = bwd_offit;
+      const auto                 bwd_offend      = ml.bwd_offsets.cend();
+
+      while(fwd_offit != fwd_offend || bwd_offit != bwd_offend) {
+        std::pair<int, int> pos;
+        bool                part_of_lis = false;
+        if(fwd_offit != fwd_offend && (bwd_offit == bwd_offend || fwd_offit->first < bwd_offit->first)) {
+          pos = *fwd_offit;
+          part_of_lis = fwd_align && (lisit < lisend) && (*lisit == std::distance(fwd_offbegin, fwd_offit));
+          ++fwd_offit;
+        } else if(bwd_offit != bwd_offend && (fwd_offit == fwd_offend || bwd_offit->first < fwd_offit->first)) {
+          pos = *bwd_offit;
+          part_of_lis = !fwd_align && (lisit < lisend) && (*lisit == std::distance(bwd_offbegin, bwd_offit));
+          ++bwd_offit;
+        }
         out << " " <<(part_of_lis ? "[" : "")
-            << offit->first << ":" << offit->second
+            << pos.first << ":" << pos.second
             << (part_of_lis ? "]" : "");
         if(part_of_lis)
           ++lisit;
@@ -145,18 +165,23 @@ public:
     std::vector<coords_info> coords;
 
     for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
-      const align_pb::mer_lists& ml      = it->second;
-      const auto                 nb_mers = std::distance(ml.lis.begin(), ml.lis.end());
+      const align_pb::mer_lists& ml          = it->second;
+      const auto                 fwd_nb_mers = std::distance(ml.fwd_lis.begin(), ml.fwd_lis.end());
+      const auto                 bwd_nb_mers = std::distance(ml.bwd_lis.begin(), ml.bwd_lis.end());
+      const bool                 fwd_align   = fwd_nb_mers >= bwd_nb_mers;
+      const auto                 nb_mers     = fwd_align ? fwd_nb_mers : bwd_nb_mers;
       if(nb_mers < nmers_) continue; // Enough matching mers
 
       // Compute consecutive mers and covered bases
       coords_info info(ml.frag->name, ml.frag->len, nb_mers);
+      const std::vector<pb_sr_offsets>& offsets = fwd_align ? ml.fwd_offsets : ml.bwd_offsets;
+      const std::vector<unsigned int>&  lis     = fwd_align ? ml.fwd_lis : ml.bwd_lis;
       {
-        auto lisit = ml.lis.cbegin();
-        pb_sr_offsets prev = ml.offsets[*lisit];
-        pb_sr_offsets cur;
-        for(++lisit; lisit != ml.lis.cend(); prev = cur, ++lisit) {
-          cur                         = ml.offsets[*lisit];
+        auto                              lisit   = lis.cbegin();
+        pb_sr_offsets                     prev    = offsets[*lisit];
+        pb_sr_offsets                     cur;
+        for(++lisit; lisit != lis.cend(); prev = cur, ++lisit) {
+          cur                         = offsets[*lisit];
           const unsigned int pb_diff  = cur.first - prev.first;
           info.pb_cons               += pb_diff == 1;
           info.pb_cover              += std::min(mer_dna::k(), pb_diff);
@@ -167,8 +192,8 @@ public:
       }
       if(info.pb_cons < (unsigned int)consecutive_ && info.sr_cons < (unsigned int)consecutive_) continue;
 
-      auto                       first = ml.offsets[ml.lis.front()];
-      auto                       last  = ml.offsets[ml.lis.back()];
+      auto                       first = offsets[lis.front()];
+      auto                       last  = offsets[lis.back()];
       info.rs = first.first;
       info.re = last.first + mer_dna::k() - 1;
 
@@ -204,7 +229,11 @@ public:
       for( ; it != ary.pos_end(); ++it) {
         mer_lists& ml = frags_pos[it->frag->name];
         ml.frag       = it->frag;
-        ml.offsets.push_back(pb_sr_offsets(parser.offset + 1, is_canonical ? it->offset : -it->offset));
+        const int offset = is_canonical ? it->offset : -it->offset;
+        if(offset > 0)
+          ml.fwd_offsets.push_back(pb_sr_offsets(parser.offset + 1, offset));
+        else
+          ml.bwd_offsets.push_back(pb_sr_offsets(parser.offset + 1, offset));
       }
     }
     if(frags_pos.empty()) return;
@@ -212,11 +241,29 @@ public:
     // Compute LIS forward and backward on every super reads.
     for(auto it = frags_pos.begin(); it != frags_pos.end(); ++it) {
       mer_lists& mer_list = it->second;
-      mer_list.lis = lis_align::indices(mer_list.offsets.cbegin(), mer_list.offsets.cend(),
-                                        a, b);
+      mer_list.fwd_lis = lis_align::indices(mer_list.fwd_offsets.cbegin(), mer_list.fwd_offsets.cend(),
+                                            a, b);
+      mer_list.bwd_lis = lis_align::indices(mer_list.bwd_offsets.cbegin(), mer_list.bwd_offsets.cend(),
+                                            a, b);
     }
   }
 };
 
+void align_pb_reads(int threads, mer_pos_hash_type& hash, int stretch_const, int stretch_factor,
+                    int consecutive, int nmers, bool compress,
+                    const char* pb_path,
+                    const char* coords_path = 0, const char* details_path = 0) {
+  output_file details, coords;
+  if(coords_path) coords.open(coords_path, threads);
+  if(details_path) details.open(details_path, threads);
+  file_vector files;
+  files.push_back(pb_path);
+  stream_manager streams(files.cbegin(), files.cend());
+  align_pb aligner(threads, hash, streams, stretch_const, stretch_factor,
+                   consecutive, nmers, compress);
+  if(coords_path) aligner.coords_multiplexer(coords.multiplexer());
+  if(details_path) aligner.details_multiplexer(details.multiplexer());
+  aligner.exec_join(threads);
+}
 
 #endif /* _PB_ALIGNER_HPP_ */
