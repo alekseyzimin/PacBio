@@ -3,8 +3,24 @@
 
 #include <vector>
 #include <iterator>
+#include <type_traits>
 
 namespace lis_align {
+// /**
+//  * A forward list defined for trivial data types. Per thread bulk
+//  * memory management.
+//  */
+// template <typename T>
+// class forward_list : public lf_foward_list_base<T> {
+//   typedef lf_foward_list_base<T> super;
+// public:
+//   forward_list() : super(0) {
+//     static_assert(std::is_trivial<T>::value, "Forward list defined only for trivial types");
+//   }
+//   ~forward_list() { }
+// };
+
+
 /**
  * Compute an alignment on an array X where each element is a pair of
  * offsets. It returns the longest alignment (in term of number of

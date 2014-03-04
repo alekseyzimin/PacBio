@@ -12,7 +12,7 @@ struct lf_forward_list_base {
     T val_;
   };
 
-  lf_forward_list_base(head_node* h) : head_(h) { }
+  lf_forward_list_base(head_node* h)  { head_.next_ = h; }
 
   class iterator;
   // Const iterator
@@ -69,26 +69,26 @@ struct lf_forward_list_base {
   };
 
   /** Get an iterator */
-  iterator begin() { return iterator(head_); }
-  const_iterator begin() const { return const_iterator(head_); }
-  const_iterator cbegin() const { return const_iterator(head_); }
+  iterator begin() { return iterator(head_.next_); }
+  const_iterator begin() const { return const_iterator(head_.next_); }
+  const_iterator cbegin() const { return const_iterator(head_.next_); }
   iterator end() { return iterator(); }
   const_iterator end() const { return const_iterator(); }
   const_iterator cend() const { return const_iterator(); }
 
-  static void push_front_(head_node** head, head_node* n) {
-    head_node* hn = *const_cast<head_node* volatile*>(head);
+  static void insert_after_(head_node* head, head_node* n) {
+    head_node* hn = *const_cast<head_node* volatile*>(&(head->next_));
     do {
       n->next_ = hn;
-      hn = __sync_val_compare_and_swap (head, hn, n);
+      hn = __sync_val_compare_and_swap(&head->next_, hn, n);
     } while(hn != n->next_);
   }
 
   iterator push_front_(head_node* n) {
-    push_front_(&head_, n);
+    insert_after_(&head_, n);
     return iterator(n);
   }
-  head_node*      head_;
+  head_node head_;
 };
 
 template<typename T, class Alloc = std::allocator<T> >
@@ -117,12 +117,12 @@ public:
       accessing elements in the list, but it can be mixed with other
       insert operations. */
   void clear() {
-    head_node* hn = *const_cast<head_node* volatile*>(&this->head_);
+    head_node* hn = *const_cast<head_node* volatile*>(&(this->head_.next_));
     head_node* ohn;
 
     do {
       ohn = hn;
-      hn  = __sync_val_compare_and_swap (&this->head_, hn, 0);
+      hn  = __sync_val_compare_and_swap (&this->head_.next_, hn, 0);
     } while(hn != ohn);
 
     while(hn) {

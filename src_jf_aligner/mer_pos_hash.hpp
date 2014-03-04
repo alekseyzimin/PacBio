@@ -40,8 +40,8 @@ public:
     pos_(0)
     //    pos_(mers_.size())
   {
-    pos_ = new head_node*[mers_.size()];
-    memset(pos_, '\0', sizeof(head_node*) * mers_.size());
+    pos_ = new head_node[mers_.size()];
+    memset(pos_, '\0', sizeof(head_node) * mers_.size());
   }
 
   ~mer_pos_hash() {
@@ -60,7 +60,7 @@ public:
   //   return mapped_type(pos_[id]);
   // }
 
-  head_node** insert_mer(const mer_type& m) {
+  head_node* insert_mer(const mer_type& m) {
     bool   is_new;
     size_t id;
     if(!mers_.set(m, &is_new, &id))
@@ -85,7 +85,7 @@ public:
     node* cnode  = &thread_data.data[thread_data.used++];
     cnode->val_.frag   = s;
     cnode->val_.offset = o;
-    mapped_type::push_front_(insert_mer(m), cnode);
+    mapped_type::insert_after_(insert_mer(m), cnode);
   }
 
   pos_iterator pos_end() { return pos_iterator(); }
@@ -108,20 +108,20 @@ public:
   pos_iterator find_pos(const mer_type& m, mer_type& tmp_m) {
     size_t id;
     if(mers_.get_key_id(m, &id, tmp_m))
-      return pos_iterator(pos_[id]);
+      return pos_iterator(pos_[id].next_);
     return pos_iterator();
   }
 
   pos_iterator find_pos(const mer_type& m, mer_type& tmp_m) const {
     size_t id;
     if(mers_.get_key_id(m, &id, tmp_m))
-      return pos_iterator(pos_[id]);
+      return pos_iterator(pos_[id].next_);
     return pos_iterator();
   }
 
 private:
   mer_array                         mers_;
-  typename mapped_type::head_node** pos_;
+  typename mapped_type::head_node*  pos_;
   lf_forward_list<node*>            data_pages;
 };
 
