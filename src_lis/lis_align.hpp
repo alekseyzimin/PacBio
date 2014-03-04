@@ -4,21 +4,54 @@
 #include <vector>
 #include <iterator>
 #include <type_traits>
+#include <algorithm>
+
+#include <src_jf_aligner/lf_forward_list.hpp>
+
 
 namespace lis_align {
-// /**
-//  * A forward list defined for trivial data types. Per thread bulk
-//  * memory management.
-//  */
-// template <typename T>
-// class forward_list : public lf_foward_list_base<T> {
-//   typedef lf_foward_list_base<T> super;
-// public:
-//   forward_list() : super(0) {
-//     static_assert(std::is_trivial<T>::value, "Forward list defined only for trivial types");
-//   }
-//   ~forward_list() { }
-// };
+/**
+ * A forward list defined for trivial data types. Per thread bulk
+ * memory management.
+ */
+template <typename T>
+class forward_list : public lf_forward_list_base<T> {
+  typedef lf_forward_list_base<T> super;
+  typedef typename super::node    node;
+
+public:
+  typedef typename super::iterator       iterator;
+  typedef typename super::const_iterator const_iterator;
+  typedef T                              value_type;
+
+  forward_list() : super(0) {
+    static_assert(std::is_trivial<T>::value, "Forward list defined only for trivial types");
+  }
+  ~forward_list() { }
+
+  iterator insert_after(const_iterator position, const value_type& val) {
+    struct data_page {
+      node*  data;
+      size_t used;
+    };
+    static const size_t       node_per_page = 1024 * 1024;
+    static __thread data_page thread_data   = { 0, 0 };
+
+    if(!thread_data.data || thread_data.used >= node_per_page) {
+      thread_data.used = 0;
+      thread_data.data = new node[node_per_page];
+      data_pages.push_front(thread_data.data);
+    }
+    node* cnode = &thread_data.data[thread_data.used++];
+    std::copy(&val, &val + 1, &cnode->val_);
+    super::insert_after_(position, cnode);
+    return iterator(cnode);
+  }
+  //  iterator insert_after(const_iterator position, value_type&& val) 
+
+private:
+  lf_forward_list<node*> data_pages;
+};
 
 
 /**
@@ -49,6 +82,7 @@ namespace lis_align {
  */
 template<typename T>
 struct element {
+  size_t       elt;             // Index of element in X
   unsigned int len;             // Length of LIS
   T            span1;
   T            span2;
@@ -64,34 +98,41 @@ std::ostream& operator<<(std::ostream& os, const std::pair<T, U>& x) {
 
 template<typename InputIterator, typename T>
 std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const InputIterator Xend,
-                                                  std::vector<element<T> >& L, std::vector<unsigned int>& P,
+                                                  forward_list<element<T> >& L, std::vector<unsigned int>& P,
                                                   T a, T b) {
   unsigned int longest = 0, longest_ind = 0;
   const size_t N = std::distance(X, Xend);
 
-  for(size_t i = 0 ; i < N; ++i) {
-    element<T>&   e_longest = L[i];
+  for(unsigned int i = 0 ; i < N; ++i) {
+    element<T>    e_longest = { i, 1, 0, 0 };
     unsigned int& j_longest = P[i];
-
-    e_longest.len   = 1;
-    e_longest.span1 = 0;
-    e_longest.span2 = 0;
     j_longest       = N;
-    for(size_t j = 0; j < i; ++j) {
-      if(X[i].second > X[j].second && e_longest.len < L[j].len + 1) {
-        T new_span1 = L[j].span1 + (X[i].first - X[j].first);
-        T new_span2 = L[j].span2 + (X[i].second - X[j].second);
+
+    // Go in decreasing order of subsequence length. Stop at first
+    // possible extension, as further subsequence length are too short
+    // to improve on this extension.
+    auto prev = L.cbefore_begin();
+    auto it   = L.cbegin();
+    for( ; it != L.cend() && it->len >= e_longest.len; ++it) {
+      const unsigned int j = it->elt;
+      if(X[i].second > X[j].second && e_longest.len < it->len + 1) {
+        T new_span1 = it->span1 + (X[i].first - X[j].first);
+        T new_span2 = it->span2 + (X[i].second - X[j].second);
         if(new_span1 <= a + b * new_span2 &&
            new_span2 <= a + b * new_span1) {
-          e_longest.len   = L[j].len + 1;
+          e_longest.len   = it->len + 1;
           j_longest       = j;
           e_longest.span1 = new_span1;
           e_longest.span2 = new_span2;
+          break;
         }
       }
+      if(it->len < prev->len)
+        prev = it;
     }
+    L.insert_after(prev, e_longest);
     if(longest < e_longest.len) {
-      longest = e_longest.len;
+      longest     = e_longest.len;
       longest_ind = i;
     }
   }
@@ -108,7 +149,8 @@ template<typename InputIterator, typename T>
 unsigned int indices(const InputIterator X, const InputIterator Xend, std::vector<unsigned int>& res,
                      T a, T b) {
   const size_t N = std::distance(X, Xend);
-  std::vector<element<T> > L(N);
+  //  std::vector<element<T> > L(N);
+  forward_list<element<T> > L;
   std::vector<unsigned int> P(N);
   const std::pair<unsigned int, unsigned int> lis = compute_L_P(X, Xend, L, P, a, b);
 

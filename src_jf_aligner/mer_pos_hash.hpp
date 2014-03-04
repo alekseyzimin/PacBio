@@ -74,8 +74,8 @@ public:
       node*  data;
       size_t used;
     };
-    static const size_t node_per_page = 1024 * 1024;
-    static __thread data_page thread_data = { 0, 0 };
+    static const size_t       node_per_page = 1024 * 1024;
+    static __thread data_page thread_data   = { 0, 0 };
 
     if(!thread_data.data || thread_data.used >= node_per_page) {
       thread_data.used = 0;

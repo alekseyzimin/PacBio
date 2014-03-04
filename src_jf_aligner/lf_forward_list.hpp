@@ -19,7 +19,8 @@ struct lf_forward_list_base {
   class const_iterator : public std::iterator<std::forward_iterator_tag, T> {
   public:
     friend class iterator;
-    explicit const_iterator(head_node* head = 0) : head_(head) { }
+    friend struct lf_forward_list_base<T>;
+    explicit const_iterator(const head_node* head = 0) : head_(head) { }
     const_iterator(const const_iterator& rhs) : head_(rhs.head_) { }
     const_iterator(const iterator& rhs) : head_(rhs.head_) { }
     const_iterator& operator=(const const_iterator& rhs) {
@@ -37,13 +38,14 @@ struct lf_forward_list_base {
       return res;
     }
   private:
-    head_node* head_;
+    const head_node* head_;
   };
 
   // Iterator
   class iterator : public std::iterator<std::forward_iterator_tag, T> {
   public:
     friend class const_iterator;
+    friend struct lf_forward_list_base<T>;
     explicit iterator(head_node* head = 0) : head_(head) { }
     iterator(const iterator& rhs) : head_(rhs.head_) { }
     iterator& operator=(const iterator& rhs) {
@@ -72,16 +74,24 @@ struct lf_forward_list_base {
   iterator begin() { return iterator(head_.next_); }
   const_iterator begin() const { return const_iterator(head_.next_); }
   const_iterator cbegin() const { return const_iterator(head_.next_); }
+  iterator before_begin() { return iterator(&head_); }
+  const_iterator before_begin() const { return const_iterator(&head_); }
+  const_iterator cbefore_begin() const { return const_iterator(&head_); }
+
   iterator end() { return iterator(); }
   const_iterator end() const { return const_iterator(); }
   const_iterator cend() const { return const_iterator(); }
 
-  static void insert_after_(head_node* head, head_node* n) {
+  static void insert_after_(const head_node* head, head_node* n) {
     head_node* hn = *const_cast<head_node* volatile*>(&(head->next_));
     do {
       n->next_ = hn;
       hn = __sync_val_compare_and_swap(&head->next_, hn, n);
     } while(hn != n->next_);
+  }
+
+  static void insert_after_(const_iterator pos, head_node* n) {
+    insert_after_(pos.head_, n);
   }
 
   iterator push_front_(head_node* n) {
