@@ -3,23 +3,24 @@
 
 #include <memory>
 
-template<typename T>
+template<typename T, bool LF = true>
 struct lf_forward_list_base {
   struct head_node {
-    head_node* next_;
+    mutable head_node* next_;
   };
   struct node : head_node {
     T val_;
   };
 
-  lf_forward_list_base(head_node* h) : head_(h) { }
+  lf_forward_list_base(head_node* h)  { head_.next_ = h; }
 
   class iterator;
   // Const iterator
   class const_iterator : public std::iterator<std::forward_iterator_tag, T> {
   public:
     friend class iterator;
-    explicit const_iterator(head_node* head = 0) : head_(head) { }
+    friend struct lf_forward_list_base<T, LF>;
+    explicit const_iterator(const head_node* head = 0) : head_(head) { }
     const_iterator(const const_iterator& rhs) : head_(rhs.head_) { }
     const_iterator(const iterator& rhs) : head_(rhs.head_) { }
     const_iterator& operator=(const const_iterator& rhs) {
@@ -37,13 +38,14 @@ struct lf_forward_list_base {
       return res;
     }
   private:
-    head_node* head_;
+    const head_node* head_;
   };
 
   // Iterator
   class iterator : public std::iterator<std::forward_iterator_tag, T> {
   public:
     friend class const_iterator;
+    friend struct lf_forward_list_base<T, LF>;
     explicit iterator(head_node* head = 0) : head_(head) { }
     iterator(const iterator& rhs) : head_(rhs.head_) { }
     iterator& operator=(const iterator& rhs) {
@@ -69,26 +71,39 @@ struct lf_forward_list_base {
   };
 
   /** Get an iterator */
-  iterator begin() { return iterator(head_); }
-  const_iterator begin() const { return const_iterator(head_); }
-  const_iterator cbegin() const { return const_iterator(head_); }
+  iterator begin() { return iterator(head_.next_); }
+  const_iterator begin() const { return const_iterator(head_.next_); }
+  const_iterator cbegin() const { return const_iterator(head_.next_); }
+  iterator before_begin() { return iterator(&head_); }
+  const_iterator before_begin() const { return const_iterator(&head_); }
+  const_iterator cbefore_begin() const { return const_iterator(&head_); }
+
   iterator end() { return iterator(); }
   const_iterator end() const { return const_iterator(); }
   const_iterator cend() const { return const_iterator(); }
 
-  static void push_front_(head_node** head, head_node* n) {
-    head_node* hn = *const_cast<head_node* volatile*>(head);
-    do {
-      n->next_ = hn;
-      hn = __sync_val_compare_and_swap (head, hn, n);
-    } while(hn != n->next_);
+  static void insert_after_(const head_node* head, head_node* n) {
+    if(LF) {
+      head_node* hn = *const_cast<head_node* volatile*>(&(head->next_));
+      do {
+        n->next_ = hn;
+        hn = __sync_val_compare_and_swap(&head->next_, hn, n);
+      } while(hn != n->next_);
+    } else {
+      n->next_    = head->next_;
+      head->next_ = n;
+    }
+  }
+
+  static void insert_after_(const_iterator pos, head_node* n) {
+    insert_after_(pos.head_, n);
   }
 
   iterator push_front_(head_node* n) {
-    push_front_(&head_, n);
+    insert_after_(&head_, n);
     return iterator(n);
   }
-  head_node*      head_;
+  head_node head_;
 };
 
 template<typename T, class Alloc = std::allocator<T> >
@@ -117,12 +132,12 @@ public:
       accessing elements in the list, but it can be mixed with other
       insert operations. */
   void clear() {
-    head_node* hn = *const_cast<head_node* volatile*>(&this->head_);
+    head_node* hn = *const_cast<head_node* volatile*>(&(this->head_.next_));
     head_node* ohn;
 
     do {
       ohn = hn;
-      hn  = __sync_val_compare_and_swap (&this->head_, hn, 0);
+      hn  = __sync_val_compare_and_swap (&this->head_.next_, hn, 0);
     } while(hn != ohn);
 
     while(hn) {

@@ -3,16 +3,75 @@
 
 #include <vector>
 #include <iterator>
+#include <type_traits>
+#include <algorithm>
+
+#include <src_jf_aligner/lf_forward_list.hpp>
+
 
 namespace lis_align {
 /**
+ * A forward list defined for trivial data types. Per thread bulk
+ * memory management.
+ */
+template <typename T>
+class forward_list : public lf_forward_list_base<T, false> {
+  typedef lf_forward_list_base<T, false> super;
+  typedef typename super::node    node;
+
+  struct data_page {
+    static const size_t node_per_page = 1024 * 1024;
+    node*  data;
+    size_t used;
+  };
+
+public:
+  typedef typename super::iterator       iterator;
+  typedef typename super::const_iterator const_iterator;
+  typedef T                              value_type;
+
+  forward_list() : super(0), cpage_ind(0) {
+    static_assert(std::is_trivial<T>::value, "Forward list defined only for trivial types");
+    data_pages.push_back({ new node[data_page::node_per_page], 0 });
+  }
+  ~forward_list() {
+    for(auto it = data_pages.begin(); it != data_pages.end(); ++it)
+      delete [] it->data;
+  }
+  
+  void clear() {
+    for(auto it = data_pages.begin(); it != data_pages.end(); ++it)
+      it->used = 0;
+    cpage_ind          = 0;
+    super::head_.next_ = 0;
+  }
+
+  iterator insert_after(const_iterator position, const value_type& val) {
+    data_page* cpage = &data_pages[cpage_ind];
+    if(cpage->used >= data_page::node_per_page) {
+      if(++cpage_ind >= (int)data_pages.size())
+        data_pages.push_back({ new node[data_page::node_per_page], 0 });
+      cpage = &data_pages[cpage_ind];
+    }
+
+    node* cnode = &cpage->data[cpage->used++];
+    std::copy(&val, &val + 1, &cnode->val_);
+    super::insert_after_(position, cnode);
+    return iterator(cnode);
+  }
+
+private:
+  std::vector<data_page> data_pages;
+  int                    cpage_ind;
+};
+
+
+/**
  * Compute an alignment on an array X where each element is a pair of
  * offsets. It returns the longest alignment (in term of number of
- * elements) where all the second offset have the same sign (all
- * positive or all negative, probably representing orientation), the
- * second offset are all increasing and where the spans in first
- * offsets is bounded by an affine relation to the spans of the second
- * offsets (and conversely).
+ * elements) the second offset are all increasing and where the spans
+ * in first offsets is bounded by an affine relation to the spans of
+ * the second offsets (and conversely).
  *
  * The algorithm is quadratic in the length of X.
  */
@@ -35,6 +94,7 @@ namespace lis_align {
  */
 template<typename T>
 struct element {
+  size_t       elt;             // Index of element in X
   unsigned int len;             // Length of LIS
   T            span1;
   T            span2;
@@ -48,44 +108,44 @@ std::ostream& operator<<(std::ostream& os, const std::pair<T, U>& x) {
   return os << "<" << x.first << ", " << x.second << ">";
 }
 
-/**
- * Return true if a and b have the same sign. Result is undefined if either a or b is 0.
- */
-template<typename T>
-bool same_sign(T a, T b) {
-  return (a > 0 && b > 0) || (a < 0 && b < 0);
-};
-
 template<typename InputIterator, typename T>
 std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const InputIterator Xend,
-                                                  std::vector<element<T> >& L, std::vector<unsigned int>& P,
+                                                  forward_list<element<T> >& L, std::vector<unsigned int>& P,
                                                   T a, T b) {
   unsigned int longest = 0, longest_ind = 0;
   const size_t N = std::distance(X, Xend);
 
-  for(size_t i = 0 ; i < N; ++i) {
-    element<T>&   e_longest = L[i];
+  for(unsigned int i = 0 ; i < N; ++i) {
+    element<T>    e_longest = { i, 1, 0, 0 };
     unsigned int& j_longest = P[i];
-
-    e_longest.len   = 1;
-    e_longest.span1 = 0;
-    e_longest.span2 = 0;
     j_longest       = N;
-    for(size_t j = 0; j < i; ++j) {
-      if(same_sign(X[i].second, X[j].second) && X[i].second > X[j].second && e_longest.len < L[j].len + 1) {
-        T new_span1 = L[j].span1 + (X[i].first - X[j].first);
-        T new_span2 = L[j].span2 + (X[i].second - X[j].second);
+
+    // Go in decreasing order of subsequence length. Stop at first
+    // possible extension, as further subsequence length are too short
+    // to improve on this extension.
+    auto prev = L.cbefore_begin();
+    const auto before_begin = prev;
+    auto it   = L.cbegin();
+    for( ; it != L.cend() && it->len >= e_longest.len; ++it) {
+      const unsigned int j = it->elt;
+      if(X[i].second > X[j].second && e_longest.len < it->len + 1) {
+        T new_span1 = it->span1 + (X[i].first - X[j].first);
+        T new_span2 = it->span2 + (X[i].second - X[j].second);
         if(new_span1 <= a + b * new_span2 &&
            new_span2 <= a + b * new_span1) {
-          e_longest.len   = L[j].len + 1;
+          e_longest.len   = it->len + 1;
           j_longest       = j;
           e_longest.span1 = new_span1;
           e_longest.span2 = new_span2;
+          break;
         }
       }
+      if(prev == before_begin || it->len < prev->len)
+        prev = it;
     }
+    L.insert_after(prev, e_longest);
     if(longest < e_longest.len) {
-      longest = e_longest.len;
+      longest     = e_longest.len;
       longest_ind = i;
     }
   }
@@ -99,10 +159,10 @@ void indices_reversed(P_type& P, const unsigned int len, unsigned int start, Out
 }
 
 template<typename InputIterator, typename T>
-unsigned int indices(const InputIterator X, const InputIterator Xend, std::vector<unsigned int>& res,
+unsigned int indices(const InputIterator X, const InputIterator Xend,
+                     forward_list<element<T> >& L, std::vector<unsigned int>& res,
                      T a, T b) {
   const size_t N = std::distance(X, Xend);
-  std::vector<element<T> > L(N);
   std::vector<unsigned int> P(N);
   const std::pair<unsigned int, unsigned int> lis = compute_L_P(X, Xend, L, P, a, b);
 
@@ -110,6 +170,13 @@ unsigned int indices(const InputIterator X, const InputIterator Xend, std::vecto
     res.resize(lis.first);
   indices_reversed(P, lis.first, lis.second, res.rbegin());
   return lis.first;
+}
+
+template<typename InputIterator, typename T>
+unsigned int indices(const InputIterator X, const InputIterator Xend, std::vector<unsigned int>& res,
+                     T a, T b) {
+  forward_list<element<T> > L;
+  return indices(X, Xend, L, res, a, b);
 }
 
 template<typename InputIterator, typename T>

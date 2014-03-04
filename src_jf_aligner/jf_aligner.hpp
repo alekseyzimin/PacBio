@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include <jflib/multiplexed_io.hpp>
 #include <src_jf_aligner/frag_info.hpp>
 #include <src_jf_aligner/mer_pos_hash.hpp>
 #include <jellyfish/stream_manager.hpp>
@@ -61,5 +62,27 @@ struct parse_sequence {
     return false;
   }
 };
+
+using jflib::o_multiplexer;
+// Manage an output file.
+class output_file {
+  std::unique_ptr<std::ostream>  file_;
+  std::unique_ptr<o_multiplexer> multiplexer_;
+
+public:
+  output_file() = default;
+  output_file(const char* path, int threads) {
+    open(path, threads);
+  }
+  void open(const char* path, int threads) {
+    file_.reset(new std::ofstream(path));
+    if(!file_->good())
+      eraise(std::runtime_error) << "Failed to open file '" << path << "'";
+    multiplexer_.reset(new o_multiplexer(file_.get(), 4 * threads, 4096));
+  }
+  std::ostream& file() { return *file_; }
+  o_multiplexer* multiplexer() { return multiplexer_.get(); }
+};
+
 
 #endif /* _JF_ALIGNER_HPP_ */
