@@ -15,8 +15,8 @@ namespace lis_align {
  * memory management.
  */
 template <typename T>
-class forward_list : public lf_forward_list_base<T> {
-  typedef lf_forward_list_base<T> super;
+class forward_list : public lf_forward_list_base<T, false> {
+  typedef lf_forward_list_base<T, false> super;
   typedef typename super::node    node;
 
   struct data_page {
@@ -38,7 +38,7 @@ public:
     for(auto it = data_pages.begin(); it != data_pages.end(); ++it)
       delete [] it->data;
   }
-
+  
   void clear() {
     for(auto it = data_pages.begin(); it != data_pages.end(); ++it)
       it->used = 0;

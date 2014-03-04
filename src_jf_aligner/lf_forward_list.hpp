@@ -3,7 +3,7 @@
 
 #include <memory>
 
-template<typename T>
+template<typename T, bool LF = true>
 struct lf_forward_list_base {
   struct head_node {
     mutable head_node* next_;
@@ -19,7 +19,7 @@ struct lf_forward_list_base {
   class const_iterator : public std::iterator<std::forward_iterator_tag, T> {
   public:
     friend class iterator;
-    friend struct lf_forward_list_base<T>;
+    friend struct lf_forward_list_base<T, LF>;
     explicit const_iterator(const head_node* head = 0) : head_(head) { }
     const_iterator(const const_iterator& rhs) : head_(rhs.head_) { }
     const_iterator(const iterator& rhs) : head_(rhs.head_) { }
@@ -45,7 +45,7 @@ struct lf_forward_list_base {
   class iterator : public std::iterator<std::forward_iterator_tag, T> {
   public:
     friend class const_iterator;
-    friend struct lf_forward_list_base<T>;
+    friend struct lf_forward_list_base<T, LF>;
     explicit iterator(head_node* head = 0) : head_(head) { }
     iterator(const iterator& rhs) : head_(rhs.head_) { }
     iterator& operator=(const iterator& rhs) {
@@ -83,11 +83,16 @@ struct lf_forward_list_base {
   const_iterator cend() const { return const_iterator(); }
 
   static void insert_after_(const head_node* head, head_node* n) {
-    head_node* hn = *const_cast<head_node* volatile*>(&(head->next_));
-    do {
-      n->next_ = hn;
-      hn = __sync_val_compare_and_swap(&head->next_, hn, n);
-    } while(hn != n->next_);
+    if(LF) {
+      head_node* hn = *const_cast<head_node* volatile*>(&(head->next_));
+      do {
+        n->next_ = hn;
+        hn = __sync_val_compare_and_swap(&head->next_, hn, n);
+      } while(hn != n->next_);
+    } else {
+      n->next_    = head->next_;
+      head->next_ = n;
+    }
   }
 
   static void insert_after_(const_iterator pos, head_node* n) {
