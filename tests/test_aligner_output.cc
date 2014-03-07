@@ -131,7 +131,7 @@ static const char* const super_reads =
   "AGGGTCCGTCTGGTCGGCGGCCCGAACCGGCGCGTCCGCGGCCGGAAGACCCGCCGTCCC\n";
 
 static const char* normal_coords[3] = {
-  "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Qname Rname",
+  "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Rname Qname",
   "303 877 3051 3597 90 79 79 263 262 1287 3668 pb sr1",
   "303 1150 1420 613 107 93 93 328 327 1287 3000 pb sr2"
 };
@@ -149,7 +149,7 @@ static const char* normal_details[2] = {
   " [654:3383] [655:3384] [656:3385] [657:3386] [658:3387] [659:3388] [660:3389] [661:3390] [675:3403]"
   " [676:3404] [746:3467] [747:3468] [748:3469] [749:3470] [750:3471] [813:3533] [855:3575] [856:3576]"
   " [857:3577] [858:3578] [859:3579] [860:3580] [861:3581]",
-  ". sr2 56:1300 57:1301 58:1302 59:1303 60:1304 61:1305 62:1306 63:1307 64:1308 65:1309 66:1310 67:1311"
+  "pb sr2 56:1300 57:1301 58:1302 59:1303 60:1304 61:1305 62:1306 63:1307 64:1308 65:1309 66:1310 67:1311"
   " 68:1312 69:1313 70:1314 71:1315 [303:-1404] [304:-1403] [305:-1402] [306:-1401] [307:-1400] [345:-1365]"
   " [346:-1364] [347:-1363] [348:-1362] [349:-1361] [373:-1337] [374:-1336] [375:-1335] [376:-1334]"
   " [377:-1333] [403:-1309] [404:-1308] [405:-1307] [455:-1266] [456:-1265] [457:-1264] [458:-1263]"
@@ -167,7 +167,7 @@ static const char* normal_details[2] = {
 };
 
 static const char* comp_coords[3] = {
-  "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Qname Rname",
+  "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Rname Qname",
   "277 928 3023 3647 198 124 125 459 454 1287 3668 pb sr1",
   "277 1167 1452 601 294 185 198 647 622 1287 3000 pb sr2"
 };
@@ -197,7 +197,7 @@ static const char* comp_details[2] = {
   " [856:3576] [857:3577] [858:3578] [860:3580] [862:3583] [863:3584] [864:3585] [865:3586] [888:3608]"
   " [890:3610] [891:3611] [892:3612] [893:3613] [894:3614] [895:3615] [897:3617] [900:3619] [902:3621]"
   " [903:3622] [904:3623] [905:3624] [907:3626] [908:3627] [909:3628] [910:3629] [912:3631]",
-  ". sr2 48:1292 49:1293 51:1295 52:1296 53:1297 54:1298 55:1299 57:1301 59:1303 60:1304 61:1305 62:1306"
+  "pb sr2 48:1292 49:1293 51:1295 52:1296 53:1297 54:1298 55:1299 57:1301 59:1303 60:1304 61:1305 62:1306"
   " 63:1307 64:1308 65:1309 66:1310 67:1311 70:1314 149:1379 [277:-1436] [278:-1435] [299:-1413]"
   " [300:-1412] [301:-1411] [302:-1410] [303:-1409] [305:-1408] [337:-1382] [338:-1381] [339:-1379]"
   " [342:-1376] [343:-1374] [344:-1372] [346:-1370] [347:-1369] [349:-1368] [350:-1367] [352:-1365]"
@@ -259,13 +259,25 @@ protected:
   }
 };
 
-void check_file(const char* path, const char* lines[], size_t nlen) {
+void check_file(const char* path, const char* lines[], size_t nlen, size_t header) {
   std::ifstream is(path);
   std::string line;
-  for(size_t i = 0; i < nlen; ++i) {
+
+  for(size_t i = 0; i < header; ++i) { // All lines in header are in order
     ASSERT_TRUE(is.good());
     std::getline(is, line);
     ASSERT_STREQ(lines[i], line.c_str());
+  }
+
+  // Put remaining lines in a set to match out of order
+  std::set<std::string> set_lines;
+  for(size_t i = header; i < nlen; ++i)
+    set_lines.insert(std::string(lines[i]));
+
+  for(size_t i = header; i < nlen; ++i) {
+    ASSERT_TRUE(is.good());
+    std::getline(is, line);
+    EXPECT_EQ((size_t)1, set_lines.erase(line));
   }
   EXPECT_FALSE(std::getline(is, line));
 }
@@ -276,8 +288,8 @@ TEST_F(AlignerOutput, Normal) {
   frag_lists names(1);
   superread_parse(1, hash, names, sr_file.path);
   align_pb_reads(1, hash, 10, 2, 4, 10, false, pb_file.path, coords_file.path, details_file.path);
-  check_file(coords_file.path, normal_coords, sizeof(normal_coords) / sizeof(char*));
-  check_file(details_file.path, normal_details, sizeof(normal_details) / sizeof(char*));
+  check_file(coords_file.path, normal_coords, sizeof(normal_coords) / sizeof(char*), 1);
+  check_file(details_file.path, normal_details, sizeof(normal_details) / sizeof(char*), 0);
 } // AlignerOutput.Normal
 
 TEST_F(AlignerOutput, Compressed) {
@@ -286,8 +298,8 @@ TEST_F(AlignerOutput, Compressed) {
   frag_lists names(1);
   superread_parse(1, hash, names, sr_file.path, true);
   align_pb_reads(1, hash, 10, 2, 4, 10, true, pb_file.path, coords_file.path, details_file.path);
-  check_file(coords_file.path, comp_coords, sizeof(normal_coords) / sizeof(char*));
-  check_file(details_file.path, comp_details, sizeof(normal_details) / sizeof(char*));
+  check_file(coords_file.path, comp_coords, sizeof(normal_coords) / sizeof(char*), 1);
+  check_file(details_file.path, comp_details, sizeof(normal_details) / sizeof(char*), 0);
 
 } // AlignerOutput.Compressed
 

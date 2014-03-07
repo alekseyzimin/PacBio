@@ -31,6 +31,9 @@ option("details") {
 option("coords") {
   description "Output files with math coordinate information"
   c_string; typestr "path" }
+option("H", "no-header") {
+  description "Do not output header"
+  off }
 option("r", "superreads") {
   description "SuperReads sequence file"
   c_string; typestr "path"; multiple }

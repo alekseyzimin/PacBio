@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
   align_pb aligner(args.threads_arg, hash, streams, args.stretch_constant_arg, args.stretch_factor_arg,
                    args.consecutive_arg, args.nmers_arg, args.compress_flag);
   if(args.details_given) aligner.details_multiplexer(details.multiplexer());
-  if(args.coords_given) aligner.coords_multiplexer(coords.multiplexer());
+  if(args.coords_given) aligner.coords_multiplexer(coords.multiplexer(), !args.no_header_flag);
 
   // Output matches
   aligner.exec_join(args.threads_arg);

@@ -70,11 +70,13 @@ public:
   { }
 
   align_pb& details_multiplexer(o_multiplexer* m) { details_multiplexer_ = m; return *this; }
-  align_pb& coords_multiplexer(o_multiplexer* m) {
+  align_pb& coords_multiplexer(o_multiplexer* m, bool header) {
     coords_multiplexer_ = m;
-    omstream o(*coords_multiplexer_); // Write header
-    o << "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Qname Rname\n";
-    o << jflib::endr;
+    if(header) {
+      omstream o(*coords_multiplexer_); // Write header
+      o << "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Rname Qname\n";
+      o << jflib::endr;
+    }
     return *this;
   }
 
@@ -105,13 +107,8 @@ public:
   }
 
   void print_details(omstream& out, const std::string& pb_name, const frags_pos_type& frags_pos) {
-    bool first = true;
-    for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it, first = false) {
-      if(first)
-        out << pb_name;
-      else
-        out << ".";
-      out << " " << it->first;
+    for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
+      out << pb_name << " " << it->first;
       const align_pb::mer_lists& ml              = it->second;
       const bool                       fwd_align =
         std::distance(ml.fwd_lis.cbegin(), ml.fwd_lis.cend()) > std::distance(ml.bwd_lis.cbegin(), ml.bwd_lis.cend());
@@ -273,7 +270,7 @@ void align_pb_reads(int threads, mer_pos_hash_type& hash, int stretch_const, int
   stream_manager streams(files.cbegin(), files.cend());
   align_pb aligner(threads, hash, streams, stretch_const, stretch_factor,
                    consecutive, nmers, compress);
-  if(coords_path) aligner.coords_multiplexer(coords.multiplexer());
+  if(coords_path) aligner.coords_multiplexer(coords.multiplexer(), true);
   if(details_path) aligner.details_multiplexer(details.multiplexer());
   aligner.exec_join(threads);
 }
