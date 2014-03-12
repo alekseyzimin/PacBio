@@ -1,0 +1,115 @@
+#! /usr/bin/env ruby
+
+require 'optparse'
+
+$opts = {
+  :k => 70,
+  :ppb => 2, # points per base
+  :lmargin => 50, # top margin
+  :tmargin => 50, # left margin
+  :space => 20, # space between unitigs
+}
+
+parser = OptionParser.new do |o|
+  o.banner = "Usage: $0 kUnitigsLengths [super_read ...]"
+
+  o.on("-k", "Length of k-mer") { |v|
+    $opts[:k] = v.to_i
+  }
+
+  o.on("--ppb", "Points per base (#{$opts[:ppb]})") { |v|
+    $opts[:ppb] = v.to_i
+  }
+
+  o.on("-h", "--help", "This message") {
+    puts(o)
+    exit(0)
+  }
+end
+parser.parse!
+
+lengths_file = ARGV.shift
+if lengths_file.nil? || ARGV.empty?
+  STDERR.puts(parser)
+  exit(1)
+end
+
+lengths = {}
+open(lengths_file) { |fd|
+  fd.each_line { |l|
+    name, length = l.split
+    lengths[name] = length.to_i
+  }
+}
+
+fontsize = 14
+
+puts(<<EOS)
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1">
+  <defs
+     id="defs4">
+    <marker
+       refX="0"
+       refY="0"
+       orient="auto"
+       id="Arrow1Mstart"
+       style="overflow:visible">
+      <path
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         transform="matrix(0.4,0,0,0.4,4,0)"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt" />
+    </marker>
+    <marker
+       refX="0"
+       refY="0"
+       orient="auto"
+       id="Arrow1Mend"
+       style="overflow:visible">
+      <path
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt" />
+    </marker>
+  </defs>
+EOS
+
+def xc x; $opts[:lmargin] + $opts[:ppb] * x; end
+def yc i; $opts[:tmargin] + i * $opts[:space]; end
+
+ARGV.each { |sr|
+  unitigs = sr.split(/_/)
+
+  2.times { |iteration|
+    cstart = cend = nil # Start and end of contig in pixel
+    unitigs.each_with_index { |ur, i|
+      unitig = ur[0..-2]
+      ori    = ur[-1]
+      len    = lengths[unitig]
+      if !len
+        puts("<text x=\"#{lmargin}\" y=\"#{yc(i)}\" color=\"red\">Unknown unitig #{unitig}</text>") if iteration == 0
+        next
+      end
+
+      if cend
+        cend  += len - $opts[:k] + 1
+        cstart = cend - len + 1
+      else
+        cstart = 1
+        cend   = len
+      end
+
+      if iteration == 0
+        puts("<path d=\"M#{xc(cstart)} #{yc(i)} L#{xc(cstart)} 0\" stroke=\"lightgrey\" />")
+        puts("<path d=\"M#{xc(cend)} #{yc(i)} L#{xc(cend)} 0\" stroke=\"lightgrey\" />")
+      else
+        marker = (ori == "F") ? "marker-start=\"url(#Arrow1Mstart)\"" : "marker-end=\"url(#Arrow1Mend)\""
+        puts("<text x=\"#{xc(cstart)}\" y=\"#{yc(i)}\" text-anchor=\"middle\" font-size=\"50%\">#{cstart}</text>")
+        puts("<text x=\"#{xc(cend)}\" y=\"#{yc(i)}\" text-anchor=\"middle\" font-size=\"50%\">#{cend}</text>")
+        puts("<path d=\"M#{xc(cstart)} #{yc(i) + 2} L#{xc(cend)} #{yc(i) + 2}\" stroke=\"black\" #{marker}/>")
+        midpoint = (cstart + cend) / 2
+        puts("<text x=\"#{xc(midpoint)}\" y=\"#{yc(i)}\" text-anchor=\"middle\">#{unitig}</text>")
+      end
+    }
+  }
+}
+puts('</svg>')
