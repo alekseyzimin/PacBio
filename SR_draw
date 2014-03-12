@@ -4,6 +4,7 @@ require 'optparse'
 
 $opts = {
   :k => 70,
+  :mk => 17,
   :ppb => 2, # points per base
   :lmargin => 50, # top margin
   :tmargin => 50, # left margin
@@ -11,10 +12,14 @@ $opts = {
 }
 
 parser = OptionParser.new do |o|
-  o.banner = "Usage: $0 kUnitigsLengths [super_read ...]"
+  o.banner = "Usage: $0 kUnitigsLengths super_read [PacBio_read details_file]"
 
-  o.on("-k", "Length of k-mer") { |v|
+  o.on("-k", "Length of k-mer for unitigs") { |v|
     $opts[:k] = v.to_i
+  }
+
+  o.on("-m", "--mk", "Length of k-mer for matching") { |v|
+    $opts[:mk] = v.to_i
   }
 
   o.on("--ppb", "Points per base (#{$opts[:ppb]})") { |v|
@@ -29,7 +34,8 @@ end
 parser.parse!
 
 lengths_file = ARGV.shift
-if lengths_file.nil? || ARGV.empty?
+super_read   = ARGV.shift
+if lengths_file.nil? || super_read.nil?
   STDERR.puts(parser)
   exit(1)
 end
@@ -73,43 +79,93 @@ puts(<<EOS)
   </defs>
 EOS
 
+$extra_offset = 0
+
 def xc x; $opts[:lmargin] + $opts[:ppb] * x; end
-def yc i; $opts[:tmargin] + i * $opts[:space]; end
+def yc i; $extra_offset + $opts[:tmargin] + i * $opts[:space]; end
+def marker ori; ori ? "marker-end=\"url(#Arrow1Mend)\"" : "marker-start=\"url(#Arrow1Mstart)\""; end
 
-ARGV.each { |sr|
-  unitigs = sr.split(/_/)
+vertical_lines = ""
+kmer_lines = ""
+match_lines = ""
+sr_lines = ""
 
-  2.times { |iteration|
-    cstart = cend = nil # Start and end of contig in pixel
-    unitigs.each_with_index { |ur, i|
-      unitig = ur[0..-2]
-      ori    = ur[-1]
-      len    = lengths[unitig]
-      if !len
-        puts("<text x=\"#{lmargin}\" y=\"#{yc(i)}\" color=\"red\">Unknown unitig #{unitig}</text>") if iteration == 0
-        next
-      end
+# A pacbio read is given with details of maching. Display all the k-mers
+if ARGV.size >= 2
+  pacbio_read = ARGV.shift
+  details_file = ARGV.shift
 
-      if cend
-        cend  += len - $opts[:k] + 1
-        cstart = cend - len + 1
-      else
-        cstart = 1
-        cend   = len
-      end
+  open(details_file) { |fd|
+    fd.each_line { |l|
+      pb, sr, rest = l.split(' ', 3)
+      next unless pb == pacbio_read && sr == super_read
+      matches = rest.split.map { |m|
+        m =~ /^(\[)?(\d+):([\d-]+)\]?$/
+        [$1, $2.to_i, $3.to_i]
+      }.sort_by { |s, pb_x, sr_x| sr_x }
+      pb_matches = matches.minmax_by { |x, pb_x, sr_x| pb_x }
+      pb_matches = [pb_matches[0][1], pb_matches[1][1]]
+      
+      prev_top = -$opts[:mk] # prev k-mer drawn at the top
+      yoff = $opts[:space] - 4 # yoff for the previous k-mer draw
+      max_yoff = 0;
+      matches.each { |selected, pb_x, sr_x|
+        ori = sr_x > 0
+        sr_x = sr_x.abs
 
-      if iteration == 0
-        puts("<path d=\"M#{xc(cstart)} #{yc(i)} L#{xc(cstart)} 0\" stroke=\"lightgrey\" />")
-        puts("<path d=\"M#{xc(cend)} #{yc(i)} L#{xc(cend)} 0\" stroke=\"lightgrey\" />")
-      else
-        marker = (ori == "F") ? "marker-start=\"url(#Arrow1Mstart)\"" : "marker-end=\"url(#Arrow1Mend)\""
-        puts("<text x=\"#{xc(cstart)}\" y=\"#{yc(i)}\" text-anchor=\"middle\" font-size=\"50%\">#{cstart}</text>")
-        puts("<text x=\"#{xc(cend)}\" y=\"#{yc(i)}\" text-anchor=\"middle\" font-size=\"50%\">#{cend}</text>")
-        puts("<path d=\"M#{xc(cstart)} #{yc(i) + 2} L#{xc(cend)} #{yc(i) + 2}\" stroke=\"black\" #{marker}/>")
-        midpoint = (cstart + cend) / 2
-        puts("<text x=\"#{xc(midpoint)}\" y=\"#{yc(i)}\" text-anchor=\"middle\">#{unitig}</text>")
-      end
+        if sr_x > prev_top + $opts[:mk]
+          yoff = $opts[:space]
+          prev_top = sr_x
+        else
+          yoff += 4
+        end
+        max_yoff = yoff if yoff > max_yoff
+        stroke = selected ? "stroke=\"red\"" : "stroke=\"black\""
+        match_lines += "<path d=\"M#{xc(sr_x)} #{$opts[:tmargin] + yoff} L#{xc(pb_x - pb_matches[0])} #{$opts[:tmargin] + 2}\" stroke=\"lightgrey\" opacity=\"0.5\"/>\n"
+        kmer_lines += "<path d=\"M#{xc(sr_x)} #{$opts[:tmargin] + yoff} l#{$opts[:mk]} 0\" #{stroke} #{marker(ori)}/>\n"
+      }
+      $extra_offset = max_yoff + $opts[:space]
+
+      # draw pac bio read line
+      pb_len = pb_matches[1] - pb_matches[0] + 1
+      match_lines += "<path d=\"M#{xc(0)} #{$opts[:tmargin] + 2} L#{xc(pb_len)} #{$opts[:tmargin] + 2}\" stroke=\"black\" />\n"
+      match_lines += "<text x=\"#{xc(0)}\" y=\"#{$opts[:tmargin]}\" text-anchor=\"middle\" font-size=\"50%\">#{pb_matches[0]}</text>\n"
+      match_lines += "<text x=\"#{xc(pb_len)}\" y=\"#{$opts[:tmargin]}\" text-anchor=\"middle\" font-size=\"50%\">#{pb_matches[1]}</text>\n"    
+
+      break
     }
   }
+end
+
+unitigs = super_read.split(/_/)
+
+cstart = cend = nil # Start and end of contig in pixel
+unitigs.each_with_index { |ur, i|
+  unitig = ur[0..-2]
+  ori    = ur[-1]
+  len    = lengths[unitig]
+  if !len
+    puts("<text x=\"#{lmargin}\" y=\"#{yc(i)}\" color=\"red\">Unknown unitig #{unitig}</text>") if iteration == 0
+    next
+  end
+  
+  if cend
+    cend  += len - $opts[:k] + 1
+    cstart = cend - len + 1
+  else
+    cstart = 1
+    cend   = len
+  end
+  
+  vertical_lines += "<path d=\"M#{xc(cstart)} #{yc(i)} L#{xc(cstart)} #{$opts[:tmargin]}\" stroke=\"lightgrey\" />\n"
+  vertical_lines += "<path d=\"M#{xc(cend)} #{yc(i)} L#{xc(cend)} #{$opts[:tmargin]}\" stroke=\"lightgrey\" />\n"
+  
+  sr_lines += "<text x=\"#{xc(cstart)}\" y=\"#{yc(i)}\" text-anchor=\"middle\" font-size=\"50%\">#{cstart}</text>\n"
+  sr_lines += "<text x=\"#{xc(cend)}\" y=\"#{yc(i)}\" text-anchor=\"middle\" font-size=\"50%\">#{cend}</text>\n"
+  sr_lines += "<path d=\"M#{xc(cstart)} #{yc(i) + 2} L#{xc(cend)} #{yc(i) + 2}\" stroke=\"black\" #{marker(ori == "F")}/>\n"
+  midpoint = (cstart + cend) / 2
+  sr_lines += "<text x=\"#{xc(midpoint)}\" y=\"#{yc(i)}\" text-anchor=\"middle\">#{unitig}</text>\n"
 }
+
+puts(vertical_lines, match_lines, kmer_lines, sr_lines)
 puts('</svg>')
