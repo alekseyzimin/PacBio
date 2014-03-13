@@ -80,8 +80,9 @@ puts(<<EOS)
 EOS
 
 $extra_offset = 0
+$kmers_offset = 0
 
-def xc x; $opts[:lmargin] + $opts[:ppb] * x; end
+def xc x; $opts[:lmargin] + $opts[:ppb] * ($kmers_offset + x); end
 def yc i; $extra_offset + $opts[:tmargin] + i * $opts[:space]; end
 def marker ori; ori ? "marker-end=\"url(#Arrow1Mend)\"" : "marker-start=\"url(#Arrow1Mstart)\""; end
 
@@ -91,6 +92,7 @@ match_lines = ""
 sr_lines = ""
 
 # A pacbio read is given with details of maching. Display all the k-mers
+$kmers_base = $opts[:tmargin]
 if ARGV.size >= 2
   pacbio_read = ARGV.shift
   details_file = ARGV.shift
@@ -99,20 +101,27 @@ if ARGV.size >= 2
     fd.each_line { |l|
       pb, sr, rest = l.split(' ', 3)
       next unless pb == pacbio_read && sr == super_read
+
+      $kmers_base += $opts[:space]
+      
       matches = rest.split.map { |m|
         m =~ /^(\[)?(\d+):([\d-]+)\]?$/
-        [$1, $2.to_i, $3.to_i]
+        [$1, $2.to_i, $3.to_i.abs, $3.to_i > 0]
       }.sort_by { |s, pb_x, sr_x| sr_x }
       pb_matches = matches.minmax_by { |x, pb_x, sr_x| pb_x }
       pb_matches = [pb_matches[0][1], pb_matches[1][1]]
+
+      # Shift matches based on location of most matches
+      sr_min = matches.min_by { |s, pb_x, sr_x, ori| s ? sr_x : 1_000_000_000 }
+      sr_max = matches.max_by { |s, pb_x, sr_x, ori| s ? sr_x : 0 }
+      barycenter = matches.inject([0, 0]) { |a, (s, pb_x, sr_x, ori)| s ? [a[0] + 1, a[1] + pb_x] : a }
+      barycenter = (barycenter[1].to_f / barycenter[0]).round
+      $kmers_offset = barycenter - ((sr_max[2] - sr_min[2]).abs) / 2 - pb_matches[0] - sr_min[2].abs
       
       prev_top = -$opts[:mk] # prev k-mer drawn at the top
       yoff = $opts[:space] - 4 # yoff for the previous k-mer draw
       max_yoff = 0;
-      matches.each { |selected, pb_x, sr_x|
-        ori = sr_x > 0
-        sr_x = sr_x.abs
-
+      matches.each { |selected, pb_x, sr_x, ori|
         if sr_x > prev_top + $opts[:mk]
           yoff = $opts[:space]
           prev_top = sr_x
@@ -121,16 +130,17 @@ if ARGV.size >= 2
         end
         max_yoff = yoff if yoff > max_yoff
         stroke = selected ? "stroke=\"red\"" : "stroke=\"black\""
-        match_lines += "<path d=\"M#{xc(sr_x)} #{$opts[:tmargin] + yoff} L#{xc(pb_x - pb_matches[0])} #{$opts[:tmargin] + 2}\" stroke=\"lightgrey\" opacity=\"0.5\"/>\n"
+        match_lines += "<path d=\"M#{xc(sr_x)} #{$opts[:tmargin] + yoff} L#{xc(pb_x - pb_matches[0] - $kmers_offset)} #{$opts[:tmargin] + 2}\" stroke=\"lightgrey\" opacity=\"0.5\"/>\n"
+        match_lines += "<text visibility=\"hidden\" text-anchor=\"middle\" x=\"#{xc(pb_x - pb_matches[0] - $kmers_offset)} y=\"#{$opts[:tmargin]}\"\">#{pb_x}</text>\n"
         kmer_lines += "<path d=\"M#{xc(sr_x)} #{$opts[:tmargin] + yoff} l#{$opts[:mk]} 0\" #{stroke} #{marker(ori)}/>\n"
       }
       $extra_offset = max_yoff + $opts[:space]
 
       # draw pac bio read line
       pb_len = pb_matches[1] - pb_matches[0] + 1
-      match_lines += "<path d=\"M#{xc(0)} #{$opts[:tmargin] + 2} L#{xc(pb_len)} #{$opts[:tmargin] + 2}\" stroke=\"black\" />\n"
-      match_lines += "<text x=\"#{xc(0)}\" y=\"#{$opts[:tmargin]}\" text-anchor=\"middle\" font-size=\"50%\">#{pb_matches[0]}</text>\n"
-      match_lines += "<text x=\"#{xc(pb_len)}\" y=\"#{$opts[:tmargin]}\" text-anchor=\"middle\" font-size=\"50%\">#{pb_matches[1]}</text>\n"    
+      match_lines += "<path d=\"M#{xc(0 - $kmers_offset)} #{$opts[:tmargin] + 2} L#{xc(pb_len - $kmers_offset)} #{$opts[:tmargin] + 2}\" stroke=\"black\" />\n"
+      match_lines += "<text x=\"#{xc(0 - $kmers_offset)}\" y=\"#{$opts[:tmargin]}\" text-anchor=\"middle\" font-size=\"50%\">#{pb_matches[0]}</text>\n"
+      match_lines += "<text x=\"#{xc(pb_len - $kmers_offset)}\" y=\"#{$opts[:tmargin]}\" text-anchor=\"middle\" font-size=\"50%\">#{pb_matches[1]}</text>\n"    
 
       break
     }
@@ -157,8 +167,8 @@ unitigs.each_with_index { |ur, i|
     cend   = len
   end
   
-  vertical_lines += "<path d=\"M#{xc(cstart)} #{yc(i)} L#{xc(cstart)} #{$opts[:tmargin]}\" stroke=\"lightgrey\" />\n"
-  vertical_lines += "<path d=\"M#{xc(cend)} #{yc(i)} L#{xc(cend)} #{$opts[:tmargin]}\" stroke=\"lightgrey\" />\n"
+  vertical_lines += "<path d=\"M#{xc(cstart)} #{yc(i)} L#{xc(cstart)} #{$kmers_base}\" stroke=\"lightgrey\" />\n"
+  vertical_lines += "<path d=\"M#{xc(cend)} #{yc(i)} L#{xc(cend)} #{$kmers_base}\" stroke=\"lightgrey\" />\n"
   
   sr_lines += "<text x=\"#{xc(cstart)}\" y=\"#{yc(i)}\" text-anchor=\"middle\" font-size=\"50%\">#{cstart}</text>\n"
   sr_lines += "<text x=\"#{xc(cend)}\" y=\"#{yc(i)}\" text-anchor=\"middle\" font-size=\"50%\">#{cend}</text>\n"
