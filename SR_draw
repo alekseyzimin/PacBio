@@ -121,6 +121,7 @@ if ARGV.size >= 2
       prev_top = -$opts[:mk] # prev k-mer drawn at the top
       yoff = $opts[:space] - 4 # yoff for the previous k-mer draw
       max_yoff = 0;
+      match_id = 0
       matches.each { |selected, pb_x, sr_x, ori|
         if sr_x > prev_top + $opts[:mk]
           yoff = $opts[:space]
@@ -130,9 +131,10 @@ if ARGV.size >= 2
         end
         max_yoff = yoff if yoff > max_yoff
         stroke = selected ? "stroke=\"red\"" : "stroke=\"black\""
-        match_lines += "<path d=\"M#{xc(sr_x)} #{$opts[:tmargin] + yoff} L#{xc(pb_x - pb_matches[0] - $kmers_offset)} #{$opts[:tmargin] + 2}\" stroke=\"lightgrey\" opacity=\"0.5\"/>\n"
-        match_lines += "<text visibility=\"hidden\" text-anchor=\"middle\" x=\"#{xc(pb_x - pb_matches[0] - $kmers_offset)} y=\"#{$opts[:tmargin]}\"\">#{pb_x}</text>\n"
-        kmer_lines += "<path d=\"M#{xc(sr_x)} #{$opts[:tmargin] + yoff} l#{$opts[:mk]} 0\" #{stroke} #{marker(ori)}/>\n"
+        match_lines += "<path d=\"M#{xc(sr_x)} #{$opts[:tmargin] + yoff} L#{xc(pb_x - pb_matches[0] - $kmers_offset)} #{$opts[:tmargin] + 2}\" stroke=\"lightgrey\" opacity=\"0.5\"> <set attributeName=\"opacity\" from=\"0.5\" to=\"1\" begin=\"match_#{match_id}.mouseover\" end=\"match_#{match_id}.mouseout\"/> </path>\n"
+        match_lines += "<text visibility=\"hidden\" text-anchor=\"middle\" font-size=\"50%\" x=\"#{xc(pb_x - pb_matches[0] - $kmers_offset)}\" y=\"#{$opts[:tmargin]}\">#{pb_x} <set attributeName=\"visibility\" from=\"hidden\" to=\"visible\" begin=\"match_#{match_id}.mouseover\" end=\"match_#{match_id}.mouseout\" /> </text>\n"
+        kmer_lines += "<path id=\"match_#{match_id}\" d=\"M#{xc(sr_x)} #{$opts[:tmargin] + yoff} l#{$opts[:mk]} 0\" #{stroke} #{marker(ori)}/>\n"
+        match_id += 1
       }
       $extra_offset = max_yoff + $opts[:space]
 
