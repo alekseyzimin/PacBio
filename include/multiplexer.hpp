@@ -61,5 +61,9 @@ private:
   std::mutex    mutex_;
 };
 
+Multiplexer::ostream& endr(Multiplexer::ostream& os) {
+  os.end_record();
+  return os;
+}
 
 #endif /* __MULTIPLEXER_H__ */

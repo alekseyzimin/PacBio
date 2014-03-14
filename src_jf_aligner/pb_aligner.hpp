@@ -4,19 +4,15 @@
 #include <src_jf_aligner/jf_aligner.hpp>
 #include <src_lis/lis_align.hpp>
 #include <jellyfish/thread_exec.hpp>
-#include <jflib/multiplexed_io.hpp>
-
-using jflib::o_multiplexer;
-using jflib::omstream;
 
 /**
  * A unique ptr to a multiplexed output stream with a convenient
  * constructor.
  */
-class mstream : public std::unique_ptr<omstream> {
+class mstream : public std::unique_ptr<Multiplexer::ostream> {
 public:
-  mstream(o_multiplexer* m) :
-    std::unique_ptr<omstream>(m ? new omstream(*m) : 0)
+  mstream(Multiplexer* m) :
+    std::unique_ptr<Multiplexer::ostream>(m ? new Multiplexer::ostream(m) : 0)
   { }
 };
 
@@ -27,8 +23,8 @@ class align_pb : public jellyfish::thread_exec {
   int                      consecutive_, nmers_;
   const bool               compress_;
 
-  o_multiplexer* details_multiplexer_;
-  o_multiplexer* coords_multiplexer_;
+  Multiplexer* details_multiplexer_;
+  Multiplexer* coords_multiplexer_;
 
 
   typedef const mer_pos_hash_type::mapped_type list_type;
@@ -65,13 +61,13 @@ public:
     coords_multiplexer_(0)
   { }
 
-  align_pb& details_multiplexer(o_multiplexer* m) { details_multiplexer_ = m; return *this; }
-  align_pb& coords_multiplexer(o_multiplexer* m, bool header) {
+  align_pb& details_multiplexer(Multiplexer* m) { details_multiplexer_ = m; return *this; }
+  align_pb& coords_multiplexer(Multiplexer* m, bool header) {
     coords_multiplexer_ = m;
     if(header) {
-      omstream o(*coords_multiplexer_); // Write header
+      Multiplexer::ostream o(coords_multiplexer_); // Write header
       o << "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Rname Qname\n";
-      o << jflib::endr;
+      o.end_record();
     }
     return *this;
   }
@@ -102,7 +98,7 @@ public:
     }
   }
 
-  void print_details(omstream& out, const std::string& pb_name, const frags_pos_type& frags_pos) {
+  void print_details(Multiplexer::ostream& out, const std::string& pb_name, const frags_pos_type& frags_pos) {
     for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
       out << pb_name << " " << it->first;
       const align_pb::mer_lists& ml              = it->second;
@@ -137,10 +133,10 @@ public:
       }
       out << "\n";
     }
-    out << jflib::endr;
+    out.end_record();
   }
 
-  void print_coords(omstream& out, const std::string& pb_name, size_t pb_size, const frags_pos_type& frags_pos) {
+  void print_coords(Multiplexer::ostream& out, const std::string& pb_name, size_t pb_size, const frags_pos_type& frags_pos) {
     struct coords_info {
       int          rs, re;
       int          qs, qe;
@@ -212,7 +208,7 @@ public:
           << pb_size << " " << it->ql << " "
           << pb_name << " " << it->qname << "\n";
     }
-    out << jflib::endr;
+    out.end_record();
   }
 
   static void process_read(const mer_pos_hash_type& ary, parse_sequence& parser,
