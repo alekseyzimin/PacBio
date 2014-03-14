@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 while ($line = <STDIN>) {
     chomp ($line);
     @flds = split (" ", $line);
@@ -7,14 +7,20 @@ while ($line = <STDIN>) {
     push (@beginSupers, $flds[2]);
     push (@endSupers, $flds[3]);
     push (@superReadLengths, $flds[10]);
-    $pacbioName = $flds[-2];
+    if (defined ($pacbioName)) {
+	if ($flds[-2] ne $pacbioName) {
+	    print "You screwed up! Only use for ONE (1) pacbio read at a time. Bye!\n";
+	    exit (1); }
+    }
+    else {
+	$pacbioName = $flds[-2]; }
     $superReadName = $flds[-1];
     if ($flds[2] > $flds[3]) {
 	$superReadName = &reverseSuperReadName ($superReadName); }
     push (@superReadNames, $superReadName);
 }
 
-print "digraph {\n";
+print "digraph \"$pacbioName\" {\n";
 print "node [fontsize=10];\n";
 for ($i=0; $i<=$#superReadNames; ++$i) {
 #    print "$i $minOffsets[$i] $maxOffsets[$i] $superReadNames[$i]\n";
