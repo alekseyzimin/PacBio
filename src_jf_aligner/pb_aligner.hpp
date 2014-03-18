@@ -20,14 +20,10 @@ public:
   { }
 };
 
-// struct frags_pos_type {
-//   std::map
-// };
-
 class align_pb : public jellyfish::thread_exec {
   const mer_pos_hash_type& ary_;
   read_parser              parser_;
-  int                      stretch_constant_, stretch_factor_;
+  double                   stretch_constant_, stretch_factor_;
   int                      consecutive_, nmers_;
   const bool               compress_;
 
@@ -56,7 +52,7 @@ public:
   typedef std::map<const char*, mer_lists> frags_pos_type;
 
   align_pb(int nb_threads, const mer_pos_hash_type& ary, stream_manager& streams,
-           int stretch_constant, int stretch_factor, int consecutive, int nmers,
+           double stretch_constant, double stretch_factor, int consecutive, int nmers,
            bool compress = false) :
     ary_(ary),
     parser_(4 * nb_threads, 100, 1, streams),
@@ -84,7 +80,7 @@ public:
     mer_dna         tmp_m;
     parse_sequence  parser(compress_);
     frags_pos_type  frags_pos;
-    lis_align::forward_list<lis_align::element<int> > L; // L buffer
+    lis_align::forward_list<lis_align::element<double> > L; // L buffer
 
     mstream     details(details_multiplexer_);
     mstream     coords(coords_multiplexer_);
@@ -220,8 +216,8 @@ public:
   }
 
   static void process_read(const mer_pos_hash_type& ary, parse_sequence& parser,
-                           frags_pos_type& frags_pos, lis_align::forward_list<lis_align::element<int> >& L,
-                           int a, int b) {
+                           frags_pos_type& frags_pos, lis_align::forward_list<lis_align::element<double> >& L,
+                           double a, double b) {
     while(parser.next()) { // Process each k-mer
       const bool is_canonical = parser.m < parser.rm;
       auto it = ary.find_pos(is_canonical ? parser.m : parser.rm);
@@ -252,13 +248,13 @@ public:
   }
 
   static void process_read(const mer_pos_hash_type& ary, parse_sequence& parser,
-                           frags_pos_type& frags_pos, int a, int b) {
-    lis_align::forward_list<lis_align::element<int> > L;
+                           frags_pos_type& frags_pos, double a, double b) {
+    lis_align::forward_list<lis_align::element<double> > L;
     process_read(ary, parser, frags_pos, L, a, b);
   }
 };
 
-void align_pb_reads(int threads, mer_pos_hash_type& hash, int stretch_const, int stretch_factor,
+void align_pb_reads(int threads, mer_pos_hash_type& hash, double stretch_const, double stretch_factor,
                     int consecutive, int nmers, bool compress,
                     const char* pb_path,
                     const char* coords_path = 0, const char* details_path = 0) {
