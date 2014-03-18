@@ -116,7 +116,7 @@ public:
       while(fwd_offit != fwd_offend || bwd_offit != bwd_offend) {
         std::pair<int, int> pos;
         bool                part_of_lis = false;
-        if(fwd_offit != fwd_offend && (bwd_offit == bwd_offend || fwd_offit->first < bwd_offit->first)) {
+        if(fwd_offit != fwd_offend && (bwd_offit == bwd_offend || fwd_offit->first <= bwd_offit->first)) {
           pos = *fwd_offit;
           part_of_lis = fwd_align && (lisit < lisend) && (*lisit == std::distance(fwd_offbegin, fwd_offit));
           ++fwd_offit;
