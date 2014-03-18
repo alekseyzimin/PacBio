@@ -4,8 +4,7 @@ while ($line = <STDIN>) {
     @flds = split (" ", $line);
     push (@minOffsets, $flds[0]);
     push (@maxOffsets, $flds[1]);
-    push (@beginSupers, $flds[2]);
-    push (@endSupers, $flds[3]);
+    push (@numKMers, $flds[4]);
     push (@superReadLengths, $flds[10]);
     if (defined ($pacbioName)) {
 	if ($flds[-2] ne $pacbioName) {
@@ -16,7 +15,12 @@ while ($line = <STDIN>) {
 	$pacbioName = $flds[-2]; }
     $superReadName = $flds[-1];
     if ($flds[2] > $flds[3]) {
-	$superReadName = &reverseSuperReadName ($superReadName); }
+	$superReadName = &reverseSuperReadName ($superReadName); 
+	$flds[2] = $flds[10] + 1 - $flds[2];
+	$flds[3] = $flds[10] + 1 - $flds[3];
+    }
+    push (@beginSupers, $flds[2]);
+    push (@endSupers, $flds[3]);
     push (@superReadNames, $superReadName);
 }
 
@@ -24,7 +28,7 @@ print "digraph \"$pacbioName\" {\n";
 print "node [fontsize=10];\n";
 for ($i=0; $i<=$#superReadNames; ++$i) {
 #    print "$i $minOffsets[$i] $maxOffsets[$i] $superReadNames[$i]\n";
-    print "$i [tooltip=\"$superReadNames[$i]\",label=\"$i($superReadLengths[$i])\\n($minOffsets[$i],$maxOffsets[$i])\\n($beginSupers[$i],$endSupers[$i])\"];\n";
+    print "$i [tooltip=\"$superReadNames[$i]\",label=\"($i) L$superReadLengths[$i] #$numKMers[$i]\\nP ($minOffsets[$i],$maxOffsets[$i])\\nS ($beginSupers[$i],$endSupers[$i])\"];\n";
 }
 
 for ($i=0; $i<=$#superReadNames; ++$i) {
