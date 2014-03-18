@@ -77,7 +77,7 @@ public:
     file_.reset(new std::ofstream(path));
     if(!file_->good())
       eraise(std::runtime_error) << "Failed to open file '" << path << "'";
-    multiplexer_.reset(new Multiplexer(*file_.get()));
+    multiplexer_.reset(new Multiplexer(*file_.get(), 1024 * 1024, 10 * 1024 * 1024));
   }
   std::ostream& file() { return *file_; }
   Multiplexer* multiplexer() { return multiplexer_.get(); }

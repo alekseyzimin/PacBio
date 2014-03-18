@@ -46,7 +46,9 @@ public:
 
   protected:
     void do_flush_() {
+      if(this->tellp() == 0) return;
       m_.os_ << this->rdbuf();
+      // m_.os_ << this->str();
       this->str("");
       this->seekg(0);
     }
