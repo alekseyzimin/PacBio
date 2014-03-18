@@ -5,8 +5,9 @@
 namespace {
 struct remove_file {
   const char* path;
-  remove_file(const char* p) : path(p) { }
-  ~remove_file() { unlink(path); }
+  bool do_unlink;
+  remove_file(const char* p, bool unlink = true) : path(p), do_unlink(unlink) { }
+  ~remove_file() { if(do_unlink) unlink(path); }
 };
 
 static const char* const pac_bio =
@@ -31,7 +32,7 @@ static const char* const pac_bio =
   "GACCGGTGGCGTCGCCCTTCACCATACGCACGCAAACCAACGCACACCACCCAAGCCTGTCTCTACCCTC"
   "CGCCACCCACCCACCGCAGATCGTACC\n";
 static const char* const super_reads =
-  ">sr1\n"
+  ">234R_239F\n"
   "GAGCCGCCGGCGTAGATGATCGTCTCGACATTGGCGACCTCGCCCAGATCGAGCCCCTCGGTCAGCACGA"
   "TGATCGTGTCGTTCCCGCCGTCGGCGAATTCGCGCACGATATCGTCGGCGGAATCGACGAAATAGGTGTC"
   "GTCGCCGCCGAAGCCCGCCATCCGGTCGCCGCCGCCGCGCCCGTCGAGCACGTTGTCGCCGTCATTGCCG"
@@ -85,7 +86,7 @@ static const char* const super_reads =
   "CCCCGGCGAGGAAGAAGCGCACCATCTCGGCCGAGGCATCGGGACCGGCCGGATCGGTGTAGGAGCCGGC"
   "GGCCCGTCCGCCCGACCAGGCATGGCCCGATCCCTCGATGCGCCAGAGTTCGGCCAGTGCGGTTCCGTCG"
   "GCAGCCGCATGGGTCTCGCGTCGCCATG\n"
-  ">sr2\n"
+  ">98345F_1234567R_5472F\n"
   "GCGCAGGCCGCGCCGGAGGCCTCCGCCGCCCCCCCGCGTCGCCGGATGGGGGCCGCGGTCGATGCCCTCC"
   "GCCGGCTGCGCCCCACGGGCCTCGCGTCCGCCGACGCCGGACGGGGGGCCGAGCCTGCCCTTCCCACGGG"
   "CGCCCGGTTCGAGCGGCTCCATCACGCAGGCACCGCCGGTGCCCGCGACTACCGGCTCTATATACCCGCG"
@@ -132,12 +133,18 @@ static const char* const super_reads =
 
 static const char* normal_coords[3] = {
   "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Rname Qname",
-  "303 877 3051 3597 90 79 79 263 262 1287 3668 pb sr1",
-  "303 1150 1420 613 107 93 93 328 327 1287 3000 pb sr2"
+  "303 877 3051 3597 90 79 79 263 262 1287 3668 pb 234R_239F",
+  "303 1150 1420 613 107 93 93 328 327 1287 3000 pb 98345F_1234567R_5472F"
+};
+
+static const char* forward_coords[3] = {
+  "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Rname Qname",
+  "303 877 3051 3597 90 79 79 263 262 1287 3668 pb 234R_239F",
+  "303 1150 1581 2388 107 93 93 328 327 1287 3000 pb 5472R_1234567F_98345R"
 };
 
 static const char* normal_details[2] = {
-  "pb sr1 56:-3155 57:-3154 58:-3153 59:-3152 60:-3151 61:-3150 62:-3149 63:-3148 64:-3147 65:-3146"
+  "pb 234R_239F 56:-3155 57:-3154 58:-3153 59:-3152 60:-3151 61:-3150 62:-3149 63:-3148 64:-3147 65:-3146"
   " 66:-3145 67:-3144 68:-3143 69:-3142 70:-3141 71:-3140 [303:3051] [304:3052] [305:3053] [306:3054]"
   " [307:3055] [345:3090] [346:3091] [347:3092] [348:3093] [349:3094] [373:3118] [374:3119] [375:3120]"
   " [376:3121] [377:3122] [403:3146] [404:3147] [405:3148] [455:3189] [456:3190] [457:3191] [458:3192]"
@@ -149,7 +156,7 @@ static const char* normal_details[2] = {
   " [654:3383] [655:3384] [656:3385] [657:3386] [658:3387] [659:3388] [660:3389] [661:3390] [675:3403]"
   " [676:3404] [746:3467] [747:3468] [748:3469] [749:3470] [750:3471] [813:3533] [855:3575] [856:3576]"
   " [857:3577] [858:3578] [859:3579] [860:3580] [861:3581]",
-  "pb sr2 56:1300 57:1301 58:1302 59:1303 60:1304 61:1305 62:1306 63:1307 64:1308 65:1309 66:1310 67:1311"
+  "pb 98345F_1234567R_5472F 56:1300 57:1301 58:1302 59:1303 60:1304 61:1305 62:1306 63:1307 64:1308 65:1309 66:1310 67:1311"
   " 68:1312 69:1313 70:1314 71:1315 [303:-1404] [304:-1403] [305:-1402] [306:-1401] [307:-1400] [345:-1365]"
   " [346:-1364] [347:-1363] [348:-1362] [349:-1361] [373:-1337] [374:-1336] [375:-1335] [376:-1334]"
   " [377:-1333] [403:-1309] [404:-1308] [405:-1307] [455:-1266] [456:-1265] [457:-1264] [458:-1263]"
@@ -168,12 +175,12 @@ static const char* normal_details[2] = {
 
 static const char* comp_coords[3] = {
   "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Rname Qname",
-  "277 928 3023 3647 198 124 125 459 454 1287 3668 pb sr1",
-  "277 1167 1452 601 294 185 198 647 622 1287 3000 pb sr2"
+  "277 928 3023 3647 198 124 125 459 454 1287 3668 pb 234R_239F",
+  "277 1167 1452 601 294 185 198 647 622 1287 3000 pb 98345F_1234567R_5472F"
 };
 
 static const char* comp_details[2] = {
-  "pb sr1 48:-3167 49:-3166 51:-3165 52:-3164 53:-3162 54:-3161 55:-3160 57:-3157 59:-3156 60:-3155"
+  "pb 234R_239F 48:-3167 49:-3166 51:-3165 52:-3164 53:-3162 54:-3161 55:-3160 57:-3157 59:-3156 60:-3155"
   " 61:-3154 62:-3153 63:-3152 64:-3151 65:-3149 66:-3148 67:-3147 70:-3145 149:-3084 [277:3023] [278:3024]"
   " [299:3047] [300:3048] [301:3049] [302:3050] [303:3051] [305:3053] [337:3082] [338:3083] [339:3084]"
   " [342:3087] [343:3088] [344:3089] [346:3091] [347:3092] [349:3094] [350:3096] [352:3098] [354:3100]"
@@ -197,7 +204,7 @@ static const char* comp_details[2] = {
   " [856:3576] [857:3577] [858:3578] [860:3580] [862:3583] [863:3584] [864:3585] [865:3586] [888:3608]"
   " [890:3610] [891:3611] [892:3612] [893:3613] [894:3614] [895:3615] [897:3617] [900:3619] [902:3621]"
   " [903:3622] [904:3623] [905:3624] [907:3626] [908:3627] [909:3628] [910:3629] [912:3631]",
-  "pb sr2 48:1292 49:1293 51:1295 52:1296 53:1297 54:1298 55:1299 57:1301 59:1303 60:1304 61:1305 62:1306"
+  "pb 98345F_1234567R_5472F 48:1292 49:1293 51:1295 52:1296 53:1297 54:1298 55:1299 57:1301 59:1303 60:1304 61:1305 62:1306"
   " 63:1307 64:1308 65:1309 66:1310 67:1311 70:1314 149:1379 [277:-1436] [278:-1435] [299:-1413]"
   " [300:-1412] [301:-1411] [302:-1410] [303:-1409] [305:-1408] [337:-1382] [338:-1381] [339:-1379]"
   " [342:-1376] [343:-1374] [344:-1372] [346:-1370] [347:-1369] [349:-1368] [350:-1367] [352:-1365]"
@@ -241,7 +248,7 @@ class AlignerOutput : public ::testing::Test {
 public:
   AlignerOutput() :
     sr_file("/tmp/superreads.fa"), pb_file("/tmp/pb.fa"),
-    coords_file("/tmp/test.coords"), details_file("/tmp/test.details") { }
+    coords_file("/tmp/test.coords"), details_file("/tmp/test.details") { coords_file.do_unlink = false; details_file.do_unlink = false; }
 
 protected:
   remove_file sr_file, pb_file, coords_file, details_file;
@@ -277,6 +284,7 @@ void check_file(const char* path, const char* lines[], size_t nlen, size_t heade
   for(size_t i = header; i < nlen; ++i) {
     ASSERT_TRUE(is.good());
     std::getline(is, line);
+    SCOPED_TRACE(::testing::Message() << "line:" << line);
     EXPECT_EQ((size_t)1, set_lines.erase(line));
   }
   EXPECT_FALSE(std::getline(is, line));
@@ -287,17 +295,28 @@ TEST_F(AlignerOutput, Normal) {
   mer_pos_hash_type hash(strlen(super_reads) * 2);
   frag_lists names(1);
   superread_parse(1, hash, names, sr_file.path);
-  align_pb_reads(1, hash, 10, 2, 4, 10, false, pb_file.path, coords_file.path, details_file.path);
+  align_pb_reads(1, hash, 10, 2, 4, 10, false, false, pb_file.path, coords_file.path, details_file.path);
   check_file(coords_file.path, normal_coords, sizeof(normal_coords) / sizeof(char*), 1);
   check_file(details_file.path, normal_details, sizeof(normal_details) / sizeof(char*), 0);
 } // AlignerOutput.Normal
+
+TEST_F(AlignerOutput, Forward) {
+  mer_dna::k(17);
+  mer_pos_hash_type hash(strlen(super_reads) * 2);
+  frag_lists names(1);
+  superread_parse(1, hash, names, sr_file.path);
+  align_pb_reads(1, hash, 10, 2, 4, 10, false, true, pb_file.path, coords_file.path, details_file.path);
+  check_file(coords_file.path, forward_coords, sizeof(normal_coords) / sizeof(char*), 1);
+  check_file(details_file.path, normal_details, sizeof(normal_details) / sizeof(char*), 0);
+} // AlignerOutput.Forward
+
 
 TEST_F(AlignerOutput, Compressed) {
   mer_dna::k(17);
   mer_pos_hash_type hash(strlen(super_reads) * 2);
   frag_lists names(1);
   superread_parse(1, hash, names, sr_file.path, true);
-  align_pb_reads(1, hash, 10, 2, 4, 10, true, pb_file.path, coords_file.path, details_file.path);
+  align_pb_reads(1, hash, 10, 2, 4, 10, true, false, pb_file.path, coords_file.path, details_file.path);
   check_file(coords_file.path, comp_coords, sizeof(normal_coords) / sizeof(char*), 1);
   check_file(details_file.path, comp_details, sizeof(normal_details) / sizeof(char*), 0);
 

@@ -197,4 +197,15 @@ TEST(PbAligner, FakeSequences) {
   }
 }
 
+TEST(PbAligner, ReverseSRName) {
+  EXPECT_EQ("", align_pb::reverse_super_read_name(""));
+  EXPECT_EQ("toto", align_pb::reverse_super_read_name("toto"));
+  EXPECT_EQ("1F_2R_3_4R", align_pb::reverse_super_read_name("1F_2R_3_4R"));
+
+  EXPECT_EQ("asdfR", align_pb::reverse_super_read_name("asdfF"));
+  EXPECT_EQ("1234F", align_pb::reverse_super_read_name("1234R"));
+  EXPECT_EQ("asdf;lkjqweropuF_1R", align_pb::reverse_super_read_name("1F_asdf;lkjqweropuR"));
+  EXPECT_EQ("4R_3F_2R_1F", align_pb::reverse_super_read_name("1R_2F_3R_4F"));
+} // PbAligner.ReverseSRName
+
 } // namespace {

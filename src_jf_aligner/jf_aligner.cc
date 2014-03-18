@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
   // Create aligner
   stream_manager streams(args.pacbio_arg.cbegin(), args.pacbio_arg.cend());
   align_pb aligner(args.threads_arg, hash, streams, args.stretch_constant_arg, args.stretch_factor_arg,
-                   args.consecutive_arg, args.nmers_arg, args.compress_flag);
+                   args.consecutive_arg, args.nmers_arg, args.forward_flag, args.compress_flag);
   if(args.details_given) aligner.details_multiplexer(details.multiplexer());
   if(args.coords_given) aligner.coords_multiplexer(coords.multiplexer(), !args.no_header_flag);
 

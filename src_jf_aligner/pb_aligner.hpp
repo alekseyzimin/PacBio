@@ -21,6 +21,7 @@ class align_pb : public jellyfish::thread_exec {
   read_parser              parser_;
   double                   stretch_constant_, stretch_factor_;
   int                      consecutive_, nmers_;
+  const bool               forward_;
   const bool               compress_;
 
   Multiplexer* details_multiplexer_;
@@ -49,13 +50,14 @@ public:
 
   align_pb(int nb_threads, const mer_pos_hash_type& ary, stream_manager& streams,
            double stretch_constant, double stretch_factor, int consecutive, int nmers,
-           bool compress = false) :
+           bool forward = false, bool compress = false) :
     ary_(ary),
     parser_(4 * nb_threads, 100, 1, streams),
     stretch_constant_(stretch_constant),
     stretch_factor_(stretch_factor),
     consecutive_(consecutive),
     nmers_(nmers),
+    forward_(forward),
     compress_(compress),
     details_multiplexer_(0),
     coords_multiplexer_(0)
@@ -144,11 +146,12 @@ public:
       unsigned int pb_cons, sr_cons;
       unsigned int pb_cover, sr_cover;
       size_t       ql;
+      bool         rn;
       const char*  qname;
       coords_info(const char* name, size_t l, int n) :
         nb_mers(n),
         pb_cons(0), sr_cons(0), pb_cover(mer_dna::k()), sr_cover(mer_dna::k()),
-        ql(l), qname(name)
+        ql(l), rn(false), qname(name)
       { }
       bool operator<(const coords_info& rhs) const { return rs < rhs.rs || (rs == rhs.rs && re < rhs.re); }
     };
@@ -192,6 +195,11 @@ public:
       if(info.qs < 0) {
         info.qs = -info.qs + mer_dna::k() - 1;
         info.qe = -info.qe;
+        if(forward_) {
+          info.qs      = info.ql - info.qs + 1;
+          info.qe      = info.ql - info.qe + 1;
+          info.rn      = true;
+        }
       } else {
         info.qe += mer_dna::k() - 1;
       }
@@ -206,7 +214,7 @@ public:
           << it->pb_cons << " " << it->sr_cons << " "
           << it->pb_cover << " " << it->sr_cover << " "
           << pb_size << " " << it->ql << " "
-          << pb_name << " " << it->qname << "\n";
+          << pb_name << " " << (it->rn ? reverse_super_read_name(it->qname) : it->qname) << "\n";
     }
     out.end_record();
   }
@@ -249,10 +257,43 @@ public:
     lis_align::forward_list<lis_align::element<double> > L;
     process_read(ary, parser, frags_pos, L, a, b);
   }
+
+  // Reverse the name of a super read. For example 1R_2F_3F becomes
+  // 3R_2R_1F. If the name is not valid, name is returned unchanged.
+  static std::string reverse_super_read_name(const std::string& name) {
+    std::string res;
+    const size_t nsize = name.size();
+    if(nsize == 0)
+      return res;
+
+    size_t ppos = nsize;
+    size_t pos  = name.find_last_of('_');
+    while(true) {
+      pos = (pos == std::string::npos) ? 0 : pos + 1;
+      if(pos > ppos - 2) goto invalid_name;
+      res += name.substr(pos, ppos - pos - 1);
+      switch(name[ppos - 1]) {
+      case 'R': res += 'F'; break;
+      case 'F': res += 'R'; break;
+      default: goto invalid_name;
+      }
+      if(pos == 0)
+        break;
+      res += '_';
+      ppos = pos - 1;
+      pos  = name.find_last_of('_', ppos - 1);
+    }
+    return res;
+
+  invalid_name:
+    res = name;
+    return res;
+  }
+
 };
 
 void align_pb_reads(int threads, mer_pos_hash_type& hash, double stretch_const, double stretch_factor,
-                    int consecutive, int nmers, bool compress,
+                    int consecutive, int nmers, bool compress, bool forward,
                     const char* pb_path,
                     const char* coords_path = 0, const char* details_path = 0) {
   output_file details, coords;
@@ -262,7 +303,7 @@ void align_pb_reads(int threads, mer_pos_hash_type& hash, double stretch_const, 
   files.push_back(pb_path);
   stream_manager streams(files.cbegin(), files.cend());
   align_pb aligner(threads, hash, streams, stretch_const, stretch_factor,
-                   consecutive, nmers, compress);
+                   consecutive, nmers, forward, compress);
   if(coords_path) aligner.coords_multiplexer(coords.multiplexer(), true);
   if(details_path) aligner.details_multiplexer(details.multiplexer());
   aligner.exec_join(threads);

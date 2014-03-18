@@ -16,6 +16,9 @@ option("stretch-constant") {
 option("stretch-factor") {
   description "Factor tolerated stretch between sequences"
   double; default 1.3 }
+option("f", "forward") {
+  description "Show all matches forward (reverse super read name if needed)"
+  off }
 option("c", "consecutive") {
   description "Minimum number of consecutive mer in a match"
   int; default 0 }
