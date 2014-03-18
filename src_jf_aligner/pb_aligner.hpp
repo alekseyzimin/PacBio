@@ -215,6 +215,7 @@ public:
                            frags_pos_type& frags_pos, lis_align::forward_list<lis_align::element<double> >& L,
                            double a, double b) {
     while(parser.next()) { // Process each k-mer
+      if(parser.m.is_homopolymer()) continue;
       const bool is_canonical = parser.m < parser.rm;
       auto it = ary.find_pos(is_canonical ? parser.m : parser.rm);
       for( ; it != ary.pos_end(); ++it) {

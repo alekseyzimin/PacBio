@@ -34,10 +34,11 @@ public:
         parser.reset(job->data[i].seq);
 
         while(parser.next()) { // Process each k-mer
-            const bool is_canonical = parser.m < parser.rm;
-            ary_.push_front(is_canonical ? parser.m : parser.rm,
-                            header,
-                            is_canonical ? parser.offset : -parser.offset);
+          if(parser.m.is_homopolymer()) continue;
+          const bool is_canonical = parser.m < parser.rm;
+          ary_.push_front(is_canonical ? parser.m : parser.rm,
+                          header,
+                          is_canonical ? parser.offset : -parser.offset);
         }
       }
     }
