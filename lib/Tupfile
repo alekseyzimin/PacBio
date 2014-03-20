@@ -1,0 +1,7 @@
+include_rules
+
+COMMON_FILES = MurmurHash3.cpp
+CXXFLAGS += -I../include
+
+: foreach $(COMMON_FILES) |> !cxx |> {library}
+: {library} |> !ar |> libcommon.a
