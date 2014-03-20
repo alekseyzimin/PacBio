@@ -28,6 +28,9 @@ option("n", "nmers") {
 option("C", "compress") {
   description "Compress homopolymers"
   off }
+option("d", "duplicated") {
+  description "Remove duplicated match entries from coords file"
+  off }
 option("details") {
   description "Output files with detail k-mer information"
   c_string; typestr "path" }

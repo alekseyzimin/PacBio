@@ -4,6 +4,7 @@
 #include <src_jf_aligner/jf_aligner.hpp>
 #include <src_lis/lis_align.hpp>
 #include <jellyfish/thread_exec.hpp>
+#include <MurmurHash3.h>
 
 /**
  * A unique ptr to a multiplexed output stream with a convenient
@@ -23,6 +24,7 @@ class align_pb : public jellyfish::thread_exec {
   int                      consecutive_, nmers_;
   const bool               forward_;
   const bool               compress_;
+  const bool               duplicated_;
 
   Multiplexer* details_multiplexer_;
   Multiplexer* coords_multiplexer_;
@@ -50,7 +52,7 @@ public:
 
   align_pb(int nb_threads, const mer_pos_hash_type& ary, stream_manager& streams,
            double stretch_constant, double stretch_factor, int consecutive, int nmers,
-           bool forward = false, bool compress = false) :
+           bool forward = false, bool compress = false, bool duplicated = false) :
     ary_(ary),
     parser_(4 * nb_threads, 100, 1, streams),
     stretch_constant_(stretch_constant),
@@ -59,6 +61,7 @@ public:
     nmers_(nmers),
     forward_(forward),
     compress_(compress),
+    duplicated_(duplicated),
     details_multiplexer_(0),
     coords_multiplexer_(0)
   { }
@@ -138,25 +141,32 @@ public:
     out.end_record();
   }
 
-  void print_coords(Multiplexer::ostream& out, const std::string& pb_name, size_t pb_size, const frags_pos_type& frags_pos) {
-    struct coords_info {
-      int          rs, re;
-      int          qs, qe;
-      int          nb_mers;
-      unsigned int pb_cons, sr_cons;
-      unsigned int pb_cover, sr_cover;
-      size_t       ql;
-      bool         rn;
-      const char*  qname;
-      coords_info(const char* name, size_t l, int n) :
-        nb_mers(n),
-        pb_cons(0), sr_cons(0), pb_cover(mer_dna::k()), sr_cover(mer_dna::k()),
-        ql(l), rn(false), qname(name)
-      { }
-      bool operator<(const coords_info& rhs) const { return rs < rhs.rs || (rs == rhs.rs && re < rhs.re); }
-    };
-    std::vector<coords_info> coords;
+  struct coords_info {
+    int          rs, re;
+    int          qs, qe;
+    int          nb_mers;
+    unsigned int pb_cons, sr_cons;
+    unsigned int pb_cover, sr_cover;
+    size_t       ql;
+    bool         rn;
+    uint64_t     hash;
+    const char*  qname;
+    coords_info(const char* name, size_t l, int n) :
+      nb_mers(n),
+      pb_cons(0), sr_cons(0), pb_cover(mer_dna::k()), sr_cover(mer_dna::k()),
+      ql(l), rn(false), qname(name)
+    { }
 
+    bool operator<(const coords_info& rhs) const {
+      return rs < rhs.rs ||
+                  (rs == rhs.rs && (re < rhs.re ||
+                                    (re == rhs.re && (hash < rhs.hash ||
+                                                      (hash == rhs.hash && ql < rhs.ql)))));
+    }
+  };
+
+  std::vector<coords_info> compute_coordinates(const frags_pos_type& frags_pos) {
+    std::vector<coords_info> coords;
     for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
       const align_pb::mer_lists& ml          = it->second;
       const auto                 fwd_nb_mers = std::distance(ml.fwd_lis.begin(), ml.fwd_lis.end());
@@ -165,7 +175,9 @@ public:
       const auto                 nb_mers     = fwd_align ? fwd_nb_mers : bwd_nb_mers;
       if(nb_mers < nmers_) continue; // Enough matching mers
 
-      // Compute consecutive mers and covered bases
+      // Compute consecutive mers and covered bases. Compute hash of
+      // positions in pb read of aligned mers.
+      MurmurHash3A hasher;
       coords_info info(ml.frag->name, ml.frag->len, nb_mers);
       const std::vector<pb_sr_offsets>& offsets = fwd_align ? ml.fwd_offsets : ml.bwd_offsets;
       const std::vector<unsigned int>&  lis     = fwd_align ? ml.fwd_lis : ml.bwd_lis;
@@ -181,14 +193,18 @@ public:
           const unsigned int sr_diff  = cur.second - prev.second;
           info.sr_cons               += sr_diff == 1;
           info.sr_cover              += std::min(mer_dna::k(), sr_diff);
+          hasher.add((uint32_t)cur.first);
         }
       }
       if(info.pb_cons < (unsigned int)consecutive_ && info.sr_cons < (unsigned int)consecutive_) continue;
 
-      auto                       first = offsets[lis.front()];
-      auto                       last  = offsets[lis.back()];
-      info.rs = first.first;
-      info.re = last.first + mer_dna::k() - 1;
+      uint64_t r1, r2;
+      hasher.finalize(r1, r2);
+      info.hash  = r1 ^ r2;
+      auto first = offsets[lis.front()];
+      auto last  = offsets[lis.back()];
+      info.rs    = first.first;
+      info.re    = last.first + mer_dna::k() - 1;
 
       info.qs = first.second;
       info.qe = last.second;
@@ -207,8 +223,16 @@ public:
       coords.push_back(info);
     }
 
+    return coords;
+  }
+
+  void print_coords(Multiplexer::ostream& out, const std::string& pb_name, size_t pb_size, const frags_pos_type& frags_pos) {
+    std::vector<coords_info> coords = compute_coordinates(frags_pos);
+
     std::sort(coords.begin(), coords.end());
-    for(auto it = coords.cbegin(); it != coords.cend(); ++it) {
+    for(auto it = coords.cbegin(), pit = it; it != coords.cend(); pit = it, ++it) {
+      if(duplicated_ && it != pit && it->rs == pit->rs && it->re == pit->re && it->hash == pit->hash)
+        continue;
       out << it->rs << " " << it->re << " " << it->qs << " " << it->qe << " "
           << it->nb_mers << " "
           << it->pb_cons << " " << it->sr_cons << " "
@@ -293,7 +317,7 @@ public:
 };
 
 void align_pb_reads(int threads, mer_pos_hash_type& hash, double stretch_const, double stretch_factor,
-                    int consecutive, int nmers, bool compress, bool forward,
+                    int consecutive, int nmers, bool compress, bool forward, bool duplicated,
                     const char* pb_path,
                     const char* coords_path = 0, const char* details_path = 0) {
   output_file details, coords;
@@ -303,7 +327,7 @@ void align_pb_reads(int threads, mer_pos_hash_type& hash, double stretch_const, 
   files.push_back(pb_path);
   stream_manager streams(files.cbegin(), files.cend());
   align_pb aligner(threads, hash, streams, stretch_const, stretch_factor,
-                   consecutive, nmers, forward, compress);
+                   consecutive, nmers, forward, compress, duplicated);
   if(coords_path) aligner.coords_multiplexer(coords.multiplexer(), true);
   if(details_path) aligner.details_multiplexer(details.multiplexer());
   aligner.exec_join(threads);
