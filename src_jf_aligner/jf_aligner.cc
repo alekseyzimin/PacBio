@@ -22,6 +22,21 @@ int main(int argc, char *argv[])
   if(args.details_given) details.open(args.details_arg, args.threads_arg);
   if(args.coords_given) coords.open(args.coords_arg, args.threads_arg);
 
+  // Read k-unitig lengths
+  std::unique_ptr<unitig_length_map> unitigs_lengths;
+  if(args.unitigs_lengths_given) {
+    unitigs_lengths.reset(new unitig_length_map);
+    std::ifstream is(args.unitigs_lengths_arg);
+    if(!is.good())
+      jf_aligner_cmdline::error() << "Failed to open unitig lengths map file '" << args.unitigs_lengths_arg << "'";
+    std::string  unitig;
+    unsigned int len;
+    while(is.good()) {
+      is >> unitig >> len;
+      (*unitigs_lengths)[unitig] = len;
+    }
+  }
+
   // Read the super reads
   mer_pos_hash_type hash(args.size_arg);
   frag_lists names(args.threads_arg);
@@ -34,6 +49,7 @@ int main(int argc, char *argv[])
                    args.consecutive_arg, args.nmers_arg, args.forward_flag, args.compress_flag, args.duplicated_flag);
   if(args.details_given) aligner.details_multiplexer(details.multiplexer());
   if(args.coords_given) aligner.coords_multiplexer(coords.multiplexer(), !args.no_header_flag);
+  if(unitigs_lengths) aligner.unitigs_lengths(unitigs_lengths.get());
 
   // Output matches
   aligner.exec_join(args.threads_arg);

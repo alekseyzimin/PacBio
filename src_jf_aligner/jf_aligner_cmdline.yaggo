@@ -40,6 +40,9 @@ option("coords") {
 option("H", "no-header") {
   description "Do not output header"
   off }
+option("l", "unitigs-lengths") {
+  description "Length of k-unitigs"
+  c_string; typestr "path" }
 option("r", "superreads") {
   description "SuperReads sequence file"
   c_string; typestr "path"; multiple }

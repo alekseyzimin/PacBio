@@ -1,6 +1,8 @@
 #ifndef _PB_ALIGNER_HPP_
 #define _PB_ALIGNER_HPP_
 
+#include <unordered_map>
+
 #include <src_jf_aligner/jf_aligner.hpp>
 #include <src_lis/lis_align.hpp>
 #include <jellyfish/thread_exec.hpp>
@@ -17,6 +19,8 @@ public:
   { }
 };
 
+typedef std::unordered_map<std::string, unsigned int> unitig_length_map;
+
 class align_pb : public jellyfish::thread_exec {
   const mer_pos_hash_type& ary_;
   read_parser              parser_;
@@ -26,8 +30,9 @@ class align_pb : public jellyfish::thread_exec {
   const bool               compress_;
   const bool               duplicated_;
 
-  Multiplexer* details_multiplexer_;
-  Multiplexer* coords_multiplexer_;
+  Multiplexer*             details_multiplexer_;
+  Multiplexer*             coords_multiplexer_;
+  const unitig_length_map* unitigs_lengths_;
 
 
   typedef const mer_pos_hash_type::mapped_type list_type;
@@ -63,7 +68,8 @@ public:
     compress_(compress),
     duplicated_(duplicated),
     details_multiplexer_(0),
-    coords_multiplexer_(0)
+    coords_multiplexer_(0),
+    unitigs_lengths_(0)
   { }
 
   align_pb& details_multiplexer(Multiplexer* m) { details_multiplexer_ = m; return *this; }
@@ -76,6 +82,7 @@ public:
     }
     return *this;
   }
+  align_pb& unitigs_lengths(const unitig_length_map* m) { unitigs_lengths_ = m; return *this; }
 
   virtual void start(int thid) {
     mer_dna         tmp_m;
@@ -142,19 +149,20 @@ public:
   }
 
   struct coords_info {
-    int          rs, re;
-    int          qs, qe;
-    int          nb_mers;
-    unsigned int pb_cons, sr_cons;
-    unsigned int pb_cover, sr_cover;
-    size_t       ql;
-    bool         rn;
-    uint64_t     hash;
-    const char*  qname;
-    coords_info(const char* name, size_t l, int n) :
+    int              rs, re;
+    int              qs, qe;
+    int              nb_mers;
+    unsigned int     pb_cons, sr_cons;
+    unsigned int     pb_cover, sr_cover;
+    size_t           ql;
+    bool             rn;
+    uint64_t         hash;
+    const char*      qname;
+    const mer_lists* ml;
+    coords_info(const char* name, const mer_lists* m, size_t l, int n) :
       nb_mers(n),
       pb_cons(0), sr_cons(0), pb_cover(mer_dna::k()), sr_cover(mer_dna::k()),
-      ql(l), rn(false), qname(name)
+      ql(l), rn(false), qname(name), ml(m)
     { }
 
     bool operator<(const coords_info& rhs) const {
@@ -178,7 +186,7 @@ public:
       // Compute consecutive mers and covered bases. Compute hash of
       // positions in pb read of aligned mers.
       MurmurHash3A hasher;
-      coords_info info(ml.frag->name, ml.frag->len, nb_mers);
+      coords_info info(ml.frag->name, &ml, ml.frag->len, nb_mers);
       const std::vector<pb_sr_offsets>& offsets = fwd_align ? ml.fwd_offsets : ml.bwd_offsets;
       const std::vector<unsigned int>&  lis     = fwd_align ? ml.fwd_lis : ml.bwd_lis;
       {
@@ -233,14 +241,35 @@ public:
     for(auto it = coords.cbegin(), pit = it; it != coords.cend(); pit = it, ++it) {
       if(duplicated_ && it != pit && it->rs == pit->rs && it->re == pit->re && it->hash == pit->hash)
         continue;
+      std::string qname = it->rn ? reverse_super_read_name(it->qname) : it->qname;
       out << it->rs << " " << it->re << " " << it->qs << " " << it->qe << " "
           << it->nb_mers << " "
           << it->pb_cons << " " << it->sr_cons << " "
           << it->pb_cover << " " << it->sr_cover << " "
           << pb_size << " " << it->ql << " "
-          << pb_name << " " << (it->rn ? reverse_super_read_name(it->qname) : it->qname) << "\n";
+          << pb_name << " " << qname;
+      if(unitigs_lengths_)
+        print_mers_in_unitigs(out, it->ml, qname);
+      out << "\n";
     }
     out.end_record();
+  }
+
+  // For each k-unitigs in the super read qname, output its length, the number of k-mers
+  void print_mers_in_unitigs(Multiplexer::ostream& out, const mer_lists* ml, const std::string qname) {
+    if(qname.empty()) return;
+    size_t punitig = 0, nunitig = 0;
+    while(punitig < qname.size()) {
+      nunitig = qname.find_first_of('_', punitig);
+      if(nunitig == std::string::npos) nunitig = qname.size();
+      auto it = unitigs_lengths_->find(qname.substr(punitig, nunitig - punitig - 1));
+      punitig = nunitig + 1;
+      if(it == unitigs_lengths_->cend()) {
+        out << "0";
+        continue;
+      }
+      
+    }
   }
 
   static void process_read(const mer_pos_hash_type& ary, parse_sequence& parser,
