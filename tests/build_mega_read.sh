@@ -1,6 +1,6 @@
 #!/bin/bash
-WORKDIR=$1
-FILENAME=$2
+WORKDIR=$1  #input/output folder
+FILENAME=$2  #filename of a coores file for matches of SINGLE pacbio read to the super-reads
 
 #will fail if there is a gap in pacBio read coverage
 
