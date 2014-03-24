@@ -46,11 +46,13 @@ public:
   // such subsequence is stored.
   typedef std::pair<int, int> pb_sr_offsets; // first = pb_offset, second = sr_offset
 
+  struct off_lis {
+    std::vector<pb_sr_offsets>   offsets;
+    std::vector<unsigned int>    lis;
+  };
   struct mer_lists {
-    std::vector<pb_sr_offsets>   fwd_offsets;
-    std::vector<pb_sr_offsets>   bwd_offsets;
-    std::vector<unsigned int>    fwd_lis;
-    std::vector<unsigned int>    bwd_lis;
+    off_lis fwd;
+    off_lis bwd;
     const frag_lists::frag_info* frag;
   };
   typedef std::map<const char*, mer_lists> frags_pos_type;
@@ -115,15 +117,15 @@ public:
       out << pb_name << " " << it->first;
       const align_pb::mer_lists& ml              = it->second;
       const bool                       fwd_align =
-        std::distance(ml.fwd_lis.cbegin(), ml.fwd_lis.cend()) > std::distance(ml.bwd_lis.cbegin(), ml.bwd_lis.cend());
-      auto                       lisit           = fwd_align ? ml.fwd_lis.cbegin() : ml.bwd_lis.cbegin();
-      const auto                 lisend          = fwd_align ? ml.fwd_lis.cend() : ml.bwd_lis.cend();
-      auto                       fwd_offit       = ml.fwd_offsets.cbegin();
+        std::distance(ml.fwd.lis.cbegin(), ml.fwd.lis.cend()) > std::distance(ml.bwd.lis.cbegin(), ml.bwd.lis.cend());
+      auto                       lisit           = fwd_align ? ml.fwd.lis.cbegin() : ml.bwd.lis.cbegin();
+      const auto                 lisend          = fwd_align ? ml.fwd.lis.cend() : ml.bwd.lis.cend();
+      auto                       fwd_offit       = ml.fwd.offsets.cbegin();
       const auto                 fwd_offbegin    = fwd_offit;
-      const auto                 fwd_offend      = ml.fwd_offsets.cend();
-      auto                       bwd_offit       = ml.bwd_offsets.cbegin();
+      const auto                 fwd_offend      = ml.fwd.offsets.cend();
+      auto                       bwd_offit       = ml.bwd.offsets.cbegin();
       const auto                 bwd_offbegin    = bwd_offit;
-      const auto                 bwd_offend      = ml.bwd_offsets.cend();
+      const auto                 bwd_offend      = ml.bwd.offsets.cend();
 
       while(fwd_offit != fwd_offend || bwd_offit != bwd_offend) {
         std::pair<int, int> pos;
@@ -158,7 +160,7 @@ public:
     bool             rn;
     uint64_t         hash;
     const char*      qname;
-    const mer_lists* ml;
+    const off_lis*   lis;
     coords_info(const char* name, const mer_lists* m, size_t l, int n) :
       nb_mers(n),
       pb_cons(0), sr_cons(0), pb_cover(mer_dna::k()), sr_cover(mer_dna::k()),
@@ -177,8 +179,8 @@ public:
     std::vector<coords_info> coords;
     for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
       const align_pb::mer_lists& ml          = it->second;
-      const auto                 fwd_nb_mers = std::distance(ml.fwd_lis.begin(), ml.fwd_lis.end());
-      const auto                 bwd_nb_mers = std::distance(ml.bwd_lis.begin(), ml.bwd_lis.end());
+      const auto                 fwd_nb_mers = std::distance(ml.fwd.lis.begin(), ml.fwd.lis.end());
+      const auto                 bwd_nb_mers = std::distance(ml.bwd.lis.begin(), ml.bwd.lis.end());
       const bool                 fwd_align   = fwd_nb_mers >= bwd_nb_mers;
       const auto                 nb_mers     = fwd_align ? fwd_nb_mers : bwd_nb_mers;
       if(nb_mers < nmers_) continue; // Enough matching mers
@@ -187,8 +189,8 @@ public:
       // positions in pb read of aligned mers.
       MurmurHash3A hasher;
       coords_info info(ml.frag->name, &ml, ml.frag->len, nb_mers);
-      const std::vector<pb_sr_offsets>& offsets = fwd_align ? ml.fwd_offsets : ml.bwd_offsets;
-      const std::vector<unsigned int>&  lis     = fwd_align ? ml.fwd_lis : ml.bwd_lis;
+      const std::vector<pb_sr_offsets>& offsets = fwd_align ? ml.fwd.offsets : ml.bwd.offsets;
+      const std::vector<unsigned int>&  lis     = fwd_align ? ml.fwd.lis : ml.bwd.lis;
       {
         auto                              lisit   = lis.cbegin();
         pb_sr_offsets                     prev    = offsets[*lisit];
@@ -257,19 +259,7 @@ public:
 
   // For each k-unitigs in the super read qname, output its length, the number of k-mers
   void print_mers_in_unitigs(Multiplexer::ostream& out, const mer_lists* ml, const std::string qname) {
-    if(qname.empty()) return;
-    size_t punitig = 0, nunitig = 0;
-    while(punitig < qname.size()) {
-      nunitig = qname.find_first_of('_', punitig);
-      if(nunitig == std::string::npos) nunitig = qname.size();
-      auto it = unitigs_lengths_->find(qname.substr(punitig, nunitig - punitig - 1));
-      punitig = nunitig + 1;
-      if(it == unitigs_lengths_->cend()) {
-        out << "0";
-        continue;
-      }
-      
-    }
+    // super_read_name unitigs(qname);
   }
 
   static void process_read(const mer_pos_hash_type& ary, parse_sequence& parser,
@@ -284,9 +274,9 @@ public:
         ml.frag       = it->frag;
         const int offset = is_canonical ? it->offset : -it->offset;
         if(offset > 0)
-          ml.fwd_offsets.push_back(pb_sr_offsets(parser.offset + 1, offset));
+          ml.fwd.offsets.push_back(pb_sr_offsets(parser.offset + 1, offset));
         else
-          ml.bwd_offsets.push_back(pb_sr_offsets(parser.offset + 1, offset));
+          ml.bwd.offsets.push_back(pb_sr_offsets(parser.offset + 1, offset));
       }
     }
     if(frags_pos.empty()) return;
@@ -294,14 +284,14 @@ public:
     // Compute LIS forward and backward on every super reads.
     for(auto it = frags_pos.begin(); it != frags_pos.end(); ++it) {
       mer_lists& mer_list = it->second;
-      mer_list.fwd_lis.clear();
-      mer_list.bwd_lis.clear();
+      mer_list.fwd.lis.clear();
+      mer_list.bwd.lis.clear();
       L.clear();
-      lis_align::indices(mer_list.fwd_offsets.cbegin(), mer_list.fwd_offsets.cend(),
-                         L, mer_list.fwd_lis, a, b);
+      lis_align::indices(mer_list.fwd.offsets.cbegin(), mer_list.fwd.offsets.cend(),
+                         L, mer_list.fwd.lis, a, b);
       L.clear();
-      lis_align::indices(mer_list.bwd_offsets.cbegin(), mer_list.bwd_offsets.cend(),
-                         L, mer_list.bwd_lis, a, b);
+      lis_align::indices(mer_list.bwd.offsets.cbegin(), mer_list.bwd.offsets.cend(),
+                         L, mer_list.bwd.lis, a, b);
     }
   }
 

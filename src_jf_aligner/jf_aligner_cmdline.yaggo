@@ -43,6 +43,9 @@ option("H", "no-header") {
 option("l", "unitigs-lengths") {
   description "Length of k-unitigs"
   c_string; typestr "path" }
+option("k", "k-mer") {
+  description "Length of k-mer used to create k-unitigs"
+  uint32 }
 option("r", "superreads") {
   description "SuperReads sequence file"
   c_string; typestr "path"; multiple }

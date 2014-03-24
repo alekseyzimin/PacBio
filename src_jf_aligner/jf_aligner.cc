@@ -25,6 +25,8 @@ int main(int argc, char *argv[])
   // Read k-unitig lengths
   std::unique_ptr<unitig_length_map> unitigs_lengths;
   if(args.unitigs_lengths_given) {
+    if(!args.k_mer_given)
+      jf_aligner_cmdline::error() << "The mer length used for generating the k-unitigs (-k --k-mer) is required if the unitig lengths switch (-l, --unitig-lengths) is passed.";
     unitigs_lengths.reset(new unitig_length_map);
     std::ifstream is(args.unitigs_lengths_arg);
     if(!is.good())

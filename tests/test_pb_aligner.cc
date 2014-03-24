@@ -112,86 +112,86 @@ TEST(PbAligner, FakeSequences) {
     const align_pb::mer_lists& ml = it->second;
     int read_id = std::atoi(it->first + 1);
     ASSERT_TRUE(read_id >= 1 && read_id <= 10); // Read id is valid
-    EXPECT_TRUE(std::is_sorted(ml.fwd_offsets.cbegin(), ml.fwd_offsets.cend())); // mers offsets must be sorted
-    EXPECT_TRUE(std::is_sorted(ml.bwd_offsets.cbegin(), ml.bwd_offsets.cend())); // mers offsets must be sorted
-    EXPECT_EQ(ml.fwd_offsets.size(), ml.fwd_lis.size()); // lis has same size
+    EXPECT_TRUE(std::is_sorted(ml.fwd.offsets.cbegin(), ml.fwd.offsets.cend())); // mers offsets must be sorted
+    EXPECT_TRUE(std::is_sorted(ml.bwd.offsets.cbegin(), ml.bwd.offsets.cend())); // mers offsets must be sorted
+    EXPECT_EQ(ml.fwd.offsets.size(), ml.fwd.lis.size()); // lis has same size
     {
-      auto iit = ml.fwd_lis.cbegin();
-      for(auto it = ml.fwd_offsets.cbegin(); it != ml.fwd_offsets.cend(); ++it, ++iit) {
-        EXPECT_EQ(it->second, ml.fwd_offsets[*iit].second); // and is equivalent
-        EXPECT_EQ(it->first, ml.fwd_offsets[*iit].first); // and is equivalent
+      auto iit = ml.fwd.lis.cbegin();
+      for(auto it = ml.fwd.offsets.cbegin(); it != ml.fwd.offsets.cend(); ++it, ++iit) {
+        EXPECT_EQ(it->second, ml.fwd.offsets[*iit].second); // and is equivalent
+        EXPECT_EQ(it->first, ml.fwd.offsets[*iit].first); // and is equivalent
       }
     }
 
-    EXPECT_EQ(ml.bwd_offsets.size(), ml.bwd_lis.size()); // lis has same size
+    EXPECT_EQ(ml.bwd.offsets.size(), ml.bwd.lis.size()); // lis has same size
     {
-      auto iit = ml.bwd_lis.cbegin();
-      for(auto it = ml.bwd_offsets.cbegin(); it != ml.bwd_offsets.cend(); ++it, ++iit) {
-        EXPECT_EQ(it->second, ml.bwd_offsets[*iit].second); // and is equivalent
-        EXPECT_EQ(it->first, ml.bwd_offsets[*iit].first); // and is equivalent
+      auto iit = ml.bwd.lis.cbegin();
+      for(auto it = ml.bwd.offsets.cbegin(); it != ml.bwd.offsets.cend(); ++it, ++iit) {
+        EXPECT_EQ(it->second, ml.bwd.offsets[*iit].second); // and is equivalent
+        EXPECT_EQ(it->first, ml.bwd.offsets[*iit].first); // and is equivalent
       }
     }
     SCOPED_TRACE(::testing::Message() << "Read:" << read_id);
 
     switch(read_id) {
     case 1:
-      ASSERT_EQ((size_t)36, ml.fwd_offsets.size());
-      EXPECT_EQ(51, ml.fwd_offsets.front().second);
-      EXPECT_EQ(86, ml.fwd_offsets.back().second);
+      ASSERT_EQ((size_t)36, ml.fwd.offsets.size());
+      EXPECT_EQ(51, ml.fwd.offsets.front().second);
+      EXPECT_EQ(86, ml.fwd.offsets.back().second);
       break;
 
     case 2:
-      ASSERT_EQ((size_t)61, ml.bwd_offsets.size());
-      EXPECT_EQ(-61, ml.bwd_offsets.front().second);
-      EXPECT_EQ(-1, ml.bwd_offsets.back().second);
+      ASSERT_EQ((size_t)61, ml.bwd.offsets.size());
+      EXPECT_EQ(-61, ml.bwd.offsets.front().second);
+      EXPECT_EQ(-1, ml.bwd.offsets.back().second);
       break;
 
     case 3:
-      ASSERT_EQ((size_t)75, ml.fwd_offsets.size());
-      EXPECT_EQ(12, ml.fwd_offsets.front().second);
-      EXPECT_EQ(86, ml.fwd_offsets.back().second);
+      ASSERT_EQ((size_t)75, ml.fwd.offsets.size());
+      EXPECT_EQ(12, ml.fwd.offsets.front().second);
+      EXPECT_EQ(86, ml.fwd.offsets.back().second);
       break;
 
     case 4:
-      ASSERT_EQ((size_t)71, ml.bwd_offsets.size());
-      EXPECT_EQ(-86, ml.bwd_offsets.front().second);
-      EXPECT_EQ(-1, ml.bwd_offsets.back().second);
+      ASSERT_EQ((size_t)71, ml.bwd.offsets.size());
+      EXPECT_EQ(-86, ml.bwd.offsets.front().second);
+      EXPECT_EQ(-1, ml.bwd.offsets.back().second);
       break;
 
     case 5:
-      ASSERT_EQ((size_t)70, ml.fwd_offsets.size());
-      EXPECT_EQ(1, ml.fwd_offsets.front().second);
-      EXPECT_EQ(86, ml.fwd_offsets.back().second);
+      ASSERT_EQ((size_t)70, ml.fwd.offsets.size());
+      EXPECT_EQ(1, ml.fwd.offsets.front().second);
+      EXPECT_EQ(86, ml.fwd.offsets.back().second);
       break;
 
     case 6:
-      ASSERT_EQ((size_t)70, ml.bwd_offsets.size());
-      EXPECT_EQ(-86, ml.bwd_offsets.front().second);
-      EXPECT_EQ(-1, ml.bwd_offsets.back().second);
+      ASSERT_EQ((size_t)70, ml.bwd.offsets.size());
+      EXPECT_EQ(-86, ml.bwd.offsets.front().second);
+      EXPECT_EQ(-1, ml.bwd.offsets.back().second);
       break;
 
     case 7:
-      ASSERT_EQ((size_t)16, ml.fwd_offsets.size());
-      EXPECT_EQ(1, ml.fwd_offsets.front().second);
-      EXPECT_EQ(16, ml.fwd_offsets.back().second);
+      ASSERT_EQ((size_t)16, ml.fwd.offsets.size());
+      EXPECT_EQ(1, ml.fwd.offsets.front().second);
+      EXPECT_EQ(16, ml.fwd.offsets.back().second);
       break;
 
     case 8:
-      ASSERT_EQ((size_t)6, ml.bwd_offsets.size());
-      EXPECT_EQ(-86, ml.bwd_offsets.front().second);
-      EXPECT_EQ(-81, ml.bwd_offsets.back().second);
+      ASSERT_EQ((size_t)6, ml.bwd.offsets.size());
+      EXPECT_EQ(-86, ml.bwd.offsets.front().second);
+      EXPECT_EQ(-81, ml.bwd.offsets.back().second);
       break;
 
     case 9:
-      ASSERT_EQ((size_t)86, ml.fwd_offsets.size());
-      EXPECT_EQ(1, ml.fwd_offsets.front().second);
-      EXPECT_EQ(86, ml.fwd_offsets.back().second);
+      ASSERT_EQ((size_t)86, ml.fwd.offsets.size());
+      EXPECT_EQ(1, ml.fwd.offsets.front().second);
+      EXPECT_EQ(86, ml.fwd.offsets.back().second);
       break;
 
     case 10:
-      ASSERT_EQ((size_t)86, ml.bwd_offsets.size());
-      EXPECT_EQ(-86, ml.bwd_offsets.front().second);
-      EXPECT_EQ(-1, ml.bwd_offsets.back().second);
+      ASSERT_EQ((size_t)86, ml.bwd.offsets.size());
+      EXPECT_EQ(-86, ml.bwd.offsets.front().second);
+      EXPECT_EQ(-1, ml.bwd.offsets.back().second);
       break;
     }
   }
