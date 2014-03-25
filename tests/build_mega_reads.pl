@@ -9,8 +9,9 @@
 while($line=<STDIN>){
     chomp($line);
     @f=split(/\s+/,$line);
-    push(@starts,$f[0]);
-    push(@ends,$f[1]);
+    push(@starts,$f[0]-$f[2]);
+    push(@ends,$f[1]+$f[10]-$f[3]);
+    push(@scores,$f[8]+$f[1]);#we include the last position and number of kmers MUST SUBTRACT THE PREVIOUS LAST COORDINATE
     push(@sr,$f[12]);
     push(@lines,$line);
     push(@contained,0);
@@ -38,10 +39,11 @@ while($spur_found){
     }
 }
 
+#find the first non-spur super-read 
 for($i=0;$i<$#sr;$i++){
     last if(not($spur[$i]));
 }
-
+#create first mega-read
 push(@mega_reads,$sr[$i]);
 push(@mega_reads_last_sr,$sr[$i]);
 push(@mega_reads_last_pos,$ends[$i]);
@@ -52,27 +54,31 @@ $used[$i]=1;
 $ext_flag=1;
 $mri=0;
 
+#main mega-read extension loop -- loop until all mega-reads are created
 while(1){
     print "Extending mega-read $mega_reads[$mri]\n";
     $ext_flag=1;
-    while($ext_flag){
+    while($ext_flag){#if there was extension
 	$ext_flag=0;
-#here we look for the best extension for current mega-read
+#here we look for the best extension for current mega-read, must overlap and have the highest score=amount of extension+k-mer coverage, only consider overlapping extensions
 	@extensions=();
 	$max_ext=0;
 	$max_ext_index=0;
+	$max_overlap=0;
 	print "Looking for extensions for $mega_reads_last_pos[$mri] $mega_reads_last_sr[$mri]\n";
 	for($i=$mega_reads_last_index[$mri];$i<=$#sr;$i++){
-	    next if($starts[$i]>$mega_reads_last_pos[$mri]);
-            next if($contained[$i]);
-	    next if($spur[$i]);
-	    $ext=overlap_ext($mega_reads_last_sr[$mri],$sr[$i]);
-	    if($ext>0){
-		print "New extension $i $ext $starts[$i] $ends[$i]  $sr[$i]\n"; 
+	    next if($starts[$i]>$mega_reads_last_pos[$mri]);#if pb indicates no overlap
+            next if($contained[$i]);#if already declared contained
+	    next if($spur[$i]);#if spur
+	    $overlap=overlap_ext($mega_reads_last_sr[$mri],$sr[$i]);
+	    if($overlap>0){
+		$ext_score=$scores[$i]-$mega_reads_last_pos[$mri];#here we score the continuation
+		print "New extension $i $ext_score $starts[$i] $ends[$i]  $sr[$i]\n"; 
 		push(@extensions,$i);
-		if($ext>$max_ext){
-		    $max_ext=$ext;
+		if($ext_score>$max_ext){
+		    $max_ext=$ext_score;
 		    $max_ext_index=$i;
+		    $max_overlap=$overlap;
 		}
 	    }
 	}
@@ -84,7 +90,7 @@ while(1){
 	    @t=split(/_/,$sr[$max_ext_index]);
 	    print "Old mega read $mega_reads[$mri]\n";
 	    print "Extension     $sr[$max_ext_index]\n";
-	    $mega_reads[$mri].="_".join("_",@t[$#t-$max_ext+1..$#t]);
+	    $mega_reads[$mri].="_".join("_",@t[$#t-$max_overlap+1..$#t]);
 	    $mega_reads_num_sr[$mri]++;
 	    print "Extended mega read $mega_reads[$mri]\n";
 	    print "Checking containees\n";
