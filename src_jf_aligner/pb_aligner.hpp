@@ -200,7 +200,7 @@ public:
         const auto unitig_id = sr_name_->unitig_id(0);
         if(unitig_id != super_read_name::invalid && unitig_id < aligner_.unitigs_lengths_->size()) {
           info_.resize(2 * sr_name_->size() - 1, 0);
-          cend_ = unitigs_lengths(0);
+          cend_ = unitigs_lengths(unitig_id);
         } else { // error
           sr_name_.reset();
         }
@@ -216,10 +216,13 @@ public:
 
       unsigned int       cendi;
       const unsigned int sr_pos = abs(pos);
-      while((sr_pos + mer_dna::k() > cend_ + 1) && (cunitig_ < sr_name_->size()))
-        cend_ += unitigs_lengths(++cunitig_) - k_len();
-      if(cunitig_ >= sr_name_->size()) // error. k-mer beyond end of k_unitigs
-        goto error;
+      while(sr_pos + mer_dna::k() > cend_ + 1) {
+        const auto unitig_id = sr_name_->unitig_id(++cunitig_);
+        if(unitig_id != super_read_name::invalid && unitig_id < nb_unitigs())
+          cend_ += unitigs_lengths(unitig_id) - k_len();
+        else
+          goto error;
+      }
       ++info_[2 * cunitig_];
       cendi = cend_;
       for(unsigned int i = cunitig_; (i < sr_name_->size() - 1) && (sr_pos + k_len() > cendi); ++i) {

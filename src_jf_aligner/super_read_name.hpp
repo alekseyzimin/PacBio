@@ -19,6 +19,7 @@ public:
 
   size_t nb_unitigs() const { return unitigs_.size() - 1; }
   size_t size() const { return nb_unitigs(); }
+  const std::string& name() const { return name_; }
 
   unitig operator[](size_t i) const {
     if(i >= nb_unitigs()) return { std::numeric_limits<unsigned long>::max(), '\0' };
