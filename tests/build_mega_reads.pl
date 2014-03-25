@@ -6,9 +6,15 @@
 @starts=();
 @ends=();
 @sr=();
+@pb_cover;
 while($line=<STDIN>){
     chomp($line);
     @f=split(/\s+/,$line);
+    if(scalar(@pb_cover)==0){#record coverage of pacbio reads to distinguish between spurs and gaps in coverage
+	for($i=0;$i<=$f[10];$i++){
+		push(@pb_cover,0);
+	}
+    }
     push(@starts,$f[0]-$f[2]);
     push(@ends,$f[1]+$f[10]-$f[3]);
     push(@scores,$f[8]+$f[1]);#we include the last position and number of kmers MUST SUBTRACT THE PREVIOUS LAST COORDINATE
@@ -17,14 +23,18 @@ while($line=<STDIN>){
     push(@contained,0);
     push(@used,0);
     push(@spur,0);
+    for($i=$f[0]-$f[2];$i<=$f[1]+$f[10]-$f[3];$i++){
+	$pb_cover[$i]++;
+    }
 }
 
 #first we pre-process the data by removing "spurs"; everything that does not overlap on the right is a spur, except for the last super-read
 $spur_found=1;
 while($spur_found){
     $spur_found=0;
-    for($i=0;$i<$#sr-2;$i++){
+    for($i=0;$i<$#sr;$i++){
 	next if($spur[$i]);
+        next if($pb_cover[$ends[$i]]<=1); #not a spur if nothing covering the end according to PB matches
 	for($j=$i+1;$j<=$#sr;$j++){
 	    next if($spur[$j]);
 	    next if($starts[$j]>$ends[$i]);

@@ -37,11 +37,10 @@ sub check_match{
     my ($first_coord,$last_coord,$last_end,$name)=@_;
     my $flag=0;
     if($last_coord>=$last_end){
-        if(scalar(@current_matches)==0){
-	    $flag=1;
-        }else{
+            $flag=1;
 	    for(my $i=0;$i<=$#current_matches;$i++){
 		if($current_ends[$i]>$first_coord+$min_overlap){
+		    $flag=0;
 		    if(overlap($current_matches[$i],$name)){
 			$flag=1;
 			last;
@@ -49,7 +48,6 @@ sub check_match{
 		}
 	    }
         }
-    }
     return($flag);
 }
 
