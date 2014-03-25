@@ -112,86 +112,86 @@ TEST(PbAligner, FakeSequences) {
     const align_pb::mer_lists& ml = it->second;
     int read_id = std::atoi(it->first + 1);
     ASSERT_TRUE(read_id >= 1 && read_id <= 10); // Read id is valid
-    EXPECT_TRUE(std::is_sorted(ml.fwd_offsets.cbegin(), ml.fwd_offsets.cend())); // mers offsets must be sorted
-    EXPECT_TRUE(std::is_sorted(ml.bwd_offsets.cbegin(), ml.bwd_offsets.cend())); // mers offsets must be sorted
-    EXPECT_EQ(ml.fwd_offsets.size(), ml.fwd_lis.size()); // lis has same size
+    EXPECT_TRUE(std::is_sorted(ml.fwd.offsets.cbegin(), ml.fwd.offsets.cend())); // mers offsets must be sorted
+    EXPECT_TRUE(std::is_sorted(ml.bwd.offsets.cbegin(), ml.bwd.offsets.cend())); // mers offsets must be sorted
+    EXPECT_EQ(ml.fwd.offsets.size(), ml.fwd.lis.size()); // lis has same size
     {
-      auto iit = ml.fwd_lis.cbegin();
-      for(auto it = ml.fwd_offsets.cbegin(); it != ml.fwd_offsets.cend(); ++it, ++iit) {
-        EXPECT_EQ(it->second, ml.fwd_offsets[*iit].second); // and is equivalent
-        EXPECT_EQ(it->first, ml.fwd_offsets[*iit].first); // and is equivalent
+      auto iit = ml.fwd.lis.cbegin();
+      for(auto it = ml.fwd.offsets.cbegin(); it != ml.fwd.offsets.cend(); ++it, ++iit) {
+        EXPECT_EQ(it->second, ml.fwd.offsets[*iit].second); // and is equivalent
+        EXPECT_EQ(it->first, ml.fwd.offsets[*iit].first); // and is equivalent
       }
     }
 
-    EXPECT_EQ(ml.bwd_offsets.size(), ml.bwd_lis.size()); // lis has same size
+    EXPECT_EQ(ml.bwd.offsets.size(), ml.bwd.lis.size()); // lis has same size
     {
-      auto iit = ml.bwd_lis.cbegin();
-      for(auto it = ml.bwd_offsets.cbegin(); it != ml.bwd_offsets.cend(); ++it, ++iit) {
-        EXPECT_EQ(it->second, ml.bwd_offsets[*iit].second); // and is equivalent
-        EXPECT_EQ(it->first, ml.bwd_offsets[*iit].first); // and is equivalent
+      auto iit = ml.bwd.lis.cbegin();
+      for(auto it = ml.bwd.offsets.cbegin(); it != ml.bwd.offsets.cend(); ++it, ++iit) {
+        EXPECT_EQ(it->second, ml.bwd.offsets[*iit].second); // and is equivalent
+        EXPECT_EQ(it->first, ml.bwd.offsets[*iit].first); // and is equivalent
       }
     }
     SCOPED_TRACE(::testing::Message() << "Read:" << read_id);
 
     switch(read_id) {
     case 1:
-      ASSERT_EQ((size_t)36, ml.fwd_offsets.size());
-      EXPECT_EQ(51, ml.fwd_offsets.front().second);
-      EXPECT_EQ(86, ml.fwd_offsets.back().second);
+      ASSERT_EQ((size_t)36, ml.fwd.offsets.size());
+      EXPECT_EQ(51, ml.fwd.offsets.front().second);
+      EXPECT_EQ(86, ml.fwd.offsets.back().second);
       break;
 
     case 2:
-      ASSERT_EQ((size_t)61, ml.bwd_offsets.size());
-      EXPECT_EQ(-61, ml.bwd_offsets.front().second);
-      EXPECT_EQ(-1, ml.bwd_offsets.back().second);
+      ASSERT_EQ((size_t)61, ml.bwd.offsets.size());
+      EXPECT_EQ(-61, ml.bwd.offsets.front().second);
+      EXPECT_EQ(-1, ml.bwd.offsets.back().second);
       break;
 
     case 3:
-      ASSERT_EQ((size_t)75, ml.fwd_offsets.size());
-      EXPECT_EQ(12, ml.fwd_offsets.front().second);
-      EXPECT_EQ(86, ml.fwd_offsets.back().second);
+      ASSERT_EQ((size_t)75, ml.fwd.offsets.size());
+      EXPECT_EQ(12, ml.fwd.offsets.front().second);
+      EXPECT_EQ(86, ml.fwd.offsets.back().second);
       break;
 
     case 4:
-      ASSERT_EQ((size_t)71, ml.bwd_offsets.size());
-      EXPECT_EQ(-86, ml.bwd_offsets.front().second);
-      EXPECT_EQ(-1, ml.bwd_offsets.back().second);
+      ASSERT_EQ((size_t)71, ml.bwd.offsets.size());
+      EXPECT_EQ(-86, ml.bwd.offsets.front().second);
+      EXPECT_EQ(-1, ml.bwd.offsets.back().second);
       break;
 
     case 5:
-      ASSERT_EQ((size_t)70, ml.fwd_offsets.size());
-      EXPECT_EQ(1, ml.fwd_offsets.front().second);
-      EXPECT_EQ(86, ml.fwd_offsets.back().second);
+      ASSERT_EQ((size_t)70, ml.fwd.offsets.size());
+      EXPECT_EQ(1, ml.fwd.offsets.front().second);
+      EXPECT_EQ(86, ml.fwd.offsets.back().second);
       break;
 
     case 6:
-      ASSERT_EQ((size_t)70, ml.bwd_offsets.size());
-      EXPECT_EQ(-86, ml.bwd_offsets.front().second);
-      EXPECT_EQ(-1, ml.bwd_offsets.back().second);
+      ASSERT_EQ((size_t)70, ml.bwd.offsets.size());
+      EXPECT_EQ(-86, ml.bwd.offsets.front().second);
+      EXPECT_EQ(-1, ml.bwd.offsets.back().second);
       break;
 
     case 7:
-      ASSERT_EQ((size_t)16, ml.fwd_offsets.size());
-      EXPECT_EQ(1, ml.fwd_offsets.front().second);
-      EXPECT_EQ(16, ml.fwd_offsets.back().second);
+      ASSERT_EQ((size_t)16, ml.fwd.offsets.size());
+      EXPECT_EQ(1, ml.fwd.offsets.front().second);
+      EXPECT_EQ(16, ml.fwd.offsets.back().second);
       break;
 
     case 8:
-      ASSERT_EQ((size_t)6, ml.bwd_offsets.size());
-      EXPECT_EQ(-86, ml.bwd_offsets.front().second);
-      EXPECT_EQ(-81, ml.bwd_offsets.back().second);
+      ASSERT_EQ((size_t)6, ml.bwd.offsets.size());
+      EXPECT_EQ(-86, ml.bwd.offsets.front().second);
+      EXPECT_EQ(-81, ml.bwd.offsets.back().second);
       break;
 
     case 9:
-      ASSERT_EQ((size_t)86, ml.fwd_offsets.size());
-      EXPECT_EQ(1, ml.fwd_offsets.front().second);
-      EXPECT_EQ(86, ml.fwd_offsets.back().second);
+      ASSERT_EQ((size_t)86, ml.fwd.offsets.size());
+      EXPECT_EQ(1, ml.fwd.offsets.front().second);
+      EXPECT_EQ(86, ml.fwd.offsets.back().second);
       break;
 
     case 10:
-      ASSERT_EQ((size_t)86, ml.bwd_offsets.size());
-      EXPECT_EQ(-86, ml.bwd_offsets.front().second);
-      EXPECT_EQ(-1, ml.bwd_offsets.back().second);
+      ASSERT_EQ((size_t)86, ml.bwd.offsets.size());
+      EXPECT_EQ(-86, ml.bwd.offsets.front().second);
+      EXPECT_EQ(-1, ml.bwd.offsets.back().second);
       break;
     }
   }
@@ -207,5 +207,108 @@ TEST(PbAligner, ReverseSRName) {
   EXPECT_EQ("asdf;lkjqweropuF_1R", align_pb::reverse_super_read_name("1F_asdf;lkjqweropuR"));
   EXPECT_EQ("4R_3F_2R_1F", align_pb::reverse_super_read_name("1R_2F_3R_4F"));
 } // PbAligner.ReverseSRName
+
+typedef std::vector<int> vi;
+struct mock_align_pb {
+  std::unique_ptr<vi> unitigs_lengths_;
+  unsigned int        k_len_;
+};
+
+TEST(ComputeKmersInfo, SimpleOverlap) {
+  mer_dna::k(17);
+  mock_align_pb aligner;
+  aligner.k_len_ = 30;
+  aligner.unitigs_lengths_.reset(new vi({ 100, 100, 100 }));
+  const std::string bad_name = "0F_1R_3F";
+  const std::string good_name = "0F_1R_2F";
+
+  vi bad_info, good_info;
+  align_pb::compute_kmers_info<mock_align_pb> compute_bad(bad_info, bad_name, aligner);
+  align_pb::compute_kmers_info<mock_align_pb> compute_good(good_info, good_name, aligner);
+  EXPECT_EQ(vi({0, 0, 0, 0, 0}), bad_info);
+  EXPECT_EQ(vi({0, 0, 0, 0, 0}), good_info);
+
+  compute_bad.add_mer(20);
+  compute_good.add_mer(70);
+  EXPECT_EQ(vi({1, 0, 0, 0, 0}), bad_info);
+  EXPECT_EQ(vi({1, 0, 0, 0, 0}), good_info);
+
+  compute_bad.add_mer(71);
+  compute_good.add_mer(84);
+  EXPECT_EQ(vi({2, 1, 1, 0, 0}), bad_info);
+  EXPECT_EQ(vi({2, 1, 1, 0, 0}), good_info);
+
+  compute_bad.add_mer(85);
+  compute_good.add_mer(130);
+  EXPECT_EQ(vi({2, 1, 2, 0, 0}), bad_info);
+  EXPECT_EQ(vi({2, 1, 2, 0, 0}), good_info);
+
+  compute_bad.add_mer(142);
+  compute_good.add_mer(150);
+  EXPECT_EQ(vi({}), bad_info);
+  EXPECT_EQ(vi({2, 1, 3, 1, 1}), good_info);
+
+  compute_bad.add_mer(170);
+  compute_good.add_mer(180);
+  EXPECT_EQ(vi({}), bad_info);
+  EXPECT_EQ(vi({2, 1, 3, 1, 2}), good_info);
+} // PbAligner.ComputeKmersInfo
+
+TEST(ComputeKmersInfo, ComplexOverlap) {
+  mer_dna::k(17);
+  mock_align_pb aligner;
+  aligner.k_len_ = 30;
+  aligner.unitigs_lengths_.reset(new vi({ 100, 31, 31, 40, 100 }));
+  const std::string name = "0F_1R_2F_3R_4F";
+
+  vi info;
+  align_pb::compute_kmers_info<mock_align_pb> compute(info, name, aligner);
+  EXPECT_EQ(vi({0, 0, 0, 0, 0, 0, 0, 0, 0}), info);
+
+  compute.add_mer(70);
+  EXPECT_EQ(vi({1, 0, 0, 0, 0, 0, 0, 0, 0}), info);
+
+  compute.add_mer(71);
+  EXPECT_EQ(vi({2, 1, 1, 0, 0, 0, 0, 0, 0}), info);
+
+  compute.add_mer(72);
+  EXPECT_EQ(vi({3, 2, 2, 1, 1, 0, 0, 0, 0}), info);
+
+  compute.add_mer(73);
+  EXPECT_EQ(vi({4, 3, 3, 2, 2, 1, 1, 0, 0}), info);
+
+  compute.add_mer(74);
+  EXPECT_EQ(vi({5, 4, 4, 3, 3, 2, 2, 0, 0}), info);
+
+  compute.add_mer(82);
+  EXPECT_EQ(vi({6, 5, 5, 4, 4, 3, 3, 0, 0}), info);
+
+  compute.add_mer(83);
+  EXPECT_EQ(vi({7, 6, 6, 5, 5, 4, 4, 1, 1}), info);
+
+  compute.add_mer(84);
+  EXPECT_EQ(vi({8, 7, 7, 6, 6, 5, 5, 2, 2}), info);
+
+  compute.add_mer(85);
+  EXPECT_EQ(vi({8, 7, 8, 7, 7, 6, 6, 3, 3}), info);
+
+  compute.add_mer(86);
+  EXPECT_EQ(vi({8, 7, 8, 7, 8, 7, 7, 4, 4}), info);
+
+  compute.add_mer(87);
+  EXPECT_EQ(vi({8, 7, 8, 7, 8, 7, 8, 5, 5}), info);
+
+  compute.add_mer(96);
+  EXPECT_EQ(vi({8, 7, 8, 7, 8, 7, 9, 6, 6}), info);
+
+  compute.add_mer(97);
+  EXPECT_EQ(vi({8, 7, 8, 7, 8, 7, 9, 6, 7}), info);
+
+  compute.add_mer(166);
+  EXPECT_EQ(vi({8, 7, 8, 7, 8, 7, 9, 6, 8}), info);
+
+  compute.add_mer(167);
+  EXPECT_EQ(vi({}), info);
+} // ComputeKmersInfo.ComplexOverlap
 
 } // namespace {
