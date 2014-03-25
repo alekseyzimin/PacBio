@@ -23,19 +23,19 @@ int main(int argc, char *argv[])
   if(args.coords_given) coords.open(args.coords_arg, args.threads_arg);
 
   // Read k-unitig lengths
-  std::unique_ptr<unitig_length_map> unitigs_lengths;
+  std::unique_ptr<std::vector<int> > unitigs_lengths;
   if(args.unitigs_lengths_given) {
     if(!args.k_mer_given)
-      jf_aligner_cmdline::error() << "The mer length used for generating the k-unitigs (-k --k-mer) is required if the unitig lengths switch (-l, --unitig-lengths) is passed.";
-    unitigs_lengths.reset(new unitig_length_map);
+      jf_aligner_cmdline::error() << "The mer length used for generating the k-unitigs (-k, --k-mer) is required if the unitig lengths switch (-l, --unitig-lengths) is passed.";
+    unitigs_lengths.reset(new std::vector<int>);
     std::ifstream is(args.unitigs_lengths_arg);
     if(!is.good())
       jf_aligner_cmdline::error() << "Failed to open unitig lengths map file '" << args.unitigs_lengths_arg << "'";
-    std::string  unitig;
+    std::string unitig;
     unsigned int len;
     while(is.good()) {
       is >> unitig >> len;
-      (*unitigs_lengths)[unitig] = len;
+      unitigs_lengths->push_back(len);
     }
   }
 
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
                    args.consecutive_arg, args.nmers_arg, args.forward_flag, args.compress_flag, args.duplicated_flag);
   if(args.details_given) aligner.details_multiplexer(details.multiplexer());
   if(args.coords_given) aligner.coords_multiplexer(coords.multiplexer(), !args.no_header_flag);
-  if(unitigs_lengths) aligner.unitigs_lengths(unitigs_lengths.get());
+  if(unitigs_lengths) aligner.unitigs_lengths(unitigs_lengths.get(), args.k_mer_arg);
 
   // Output matches
   aligner.exec_join(args.threads_arg);

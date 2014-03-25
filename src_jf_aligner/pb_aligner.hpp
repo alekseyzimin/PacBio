@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include <src_jf_aligner/jf_aligner.hpp>
+#include <src_jf_aligner/super_read_name.hpp>
 #include <src_lis/lis_align.hpp>
 #include <jellyfish/thread_exec.hpp>
 #include <MurmurHash3.h>
@@ -19,8 +20,6 @@ public:
   { }
 };
 
-typedef std::unordered_map<std::string, unsigned int> unitig_length_map;
-
 class align_pb : public jellyfish::thread_exec {
   const mer_pos_hash_type& ary_;
   read_parser              parser_;
@@ -32,7 +31,8 @@ class align_pb : public jellyfish::thread_exec {
 
   Multiplexer*             details_multiplexer_;
   Multiplexer*             coords_multiplexer_;
-  const unitig_length_map* unitigs_lengths_;
+  const std::vector<int>*  unitigs_lengths_; // Lengths of unitigs
+  unsigned int             k_len_; // k-mer length used for creating k-unitigs
 
 
   typedef const mer_pos_hash_type::mapped_type list_type;
@@ -71,7 +71,7 @@ public:
     duplicated_(duplicated),
     details_multiplexer_(0),
     coords_multiplexer_(0),
-    unitigs_lengths_(0)
+    unitigs_lengths_(0), k_len_(0)
   { }
 
   align_pb& details_multiplexer(Multiplexer* m) { details_multiplexer_ = m; return *this; }
@@ -84,7 +84,11 @@ public:
     }
     return *this;
   }
-  align_pb& unitigs_lengths(const unitig_length_map* m) { unitigs_lengths_ = m; return *this; }
+  align_pb& unitigs_lengths(const std::vector<int>* m, unsigned int k_len) {
+    unitigs_lengths_ = m;
+    k_len_           = k_len;
+    return *this;
+  }
 
   virtual void start(int thid) {
     mer_dna         tmp_m;
@@ -150,6 +154,7 @@ public:
     out.end_record();
   }
 
+  // Contains the summary information of an alignment of a pac-bio and a super read (named qname).
   struct coords_info {
     int              rs, re;
     int              qs, qe;
@@ -160,11 +165,11 @@ public:
     bool             rn;
     uint64_t         hash;
     const char*      qname;
-    const off_lis*   lis;
-    coords_info(const char* name, const mer_lists* m, size_t l, int n) :
+    std::vector<int> kmers_info; // Number of k-mers in k-unitigs and common between unitigs
+    coords_info(const char* name, size_t l, int n) :
       nb_mers(n),
       pb_cons(0), sr_cons(0), pb_cover(mer_dna::k()), sr_cover(mer_dna::k()),
-      ql(l), rn(false), qname(name), ml(m)
+      ql(l), rn(false), qname(name)
     { }
 
     bool operator<(const coords_info& rhs) const {
@@ -175,6 +180,68 @@ public:
     }
   };
 
+  // Helper class that computes the number of k-mers in each k-unitigs
+  // and that are shared between the k-unitigs. It handles errors
+  // gracefully (the kmers_info array is then empty) and can be a NOOP
+  // if the super read name is empty.
+  template<typename AlignerT>
+  struct compute_kmers_info {
+    std::vector<int>&                info_;
+    std::unique_ptr<super_read_name> sr_name_;
+    unsigned int                     cunitig_;
+    unsigned int                     cend_;
+    const AlignerT&                  aligner_;
+
+    compute_kmers_info(std::vector<int>& info, const std::string& name, const AlignerT& aligner) :
+      info_(info), sr_name_(aligner.k_len_ && name.size() ? new super_read_name(name) : 0),
+      cunitig_(0), cend_(0), aligner_(aligner)
+    {
+      if(sr_name_) {
+        const auto unitig_id = sr_name_->unitig_id(0);
+        if(unitig_id != super_read_name::invalid && unitig_id < aligner_.unitigs_lengths_->size()) {
+          info_.resize(2 * sr_name_->size() - 1, 0);
+          cend_ = unitigs_lengths(0);
+        } else { // error
+          sr_name_.reset();
+        }
+      }
+    }
+
+    int unitigs_lengths(long int id) const { return (*aligner_.unitigs_lengths_)[id]; }
+    size_t nb_unitigs() const { return aligner_.unitigs_lengths_->size(); }
+    unsigned int k_len() const { return aligner_.k_len_; }
+
+    void add_mer(const int pos) {
+      if(!sr_name_) return;
+
+      unsigned int       cendi;
+      const unsigned int sr_pos = abs(pos);
+      while((sr_pos + mer_dna::k() > cend_ + 1) && (cunitig_ < sr_name_->size()))
+        cend_ += unitigs_lengths(++cunitig_) - k_len();
+      if(cunitig_ >= sr_name_->size()) // error. k-mer beyond end of k_unitigs
+        goto error;
+      ++info_[2 * cunitig_];
+      cendi = cend_;
+      for(unsigned int i = cunitig_; (i < sr_name_->size() - 1) && (sr_pos + k_len() > cendi); ++i) {
+        ++info_[2 * i + 1];
+        ++info_[2 * i + 2];
+        const auto unitig_id = sr_name_->unitig_id(i + 1);
+        if(unitig_id != super_read_name::invalid && unitig_id < nb_unitigs())
+          cendi += unitigs_lengths(unitig_id) - k_len();
+        else
+          goto error;
+      }
+      return;
+
+    error:
+      sr_name_.reset();
+      info_.resize(0);
+    }
+  };
+
+
+  // Compute the statistics of the matches in frags_pos (all the
+  // matches to a given pac-bio read)
   std::vector<coords_info> compute_coordinates(const frags_pos_type& frags_pos) {
     std::vector<coords_info> coords;
     for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
@@ -183,18 +250,23 @@ public:
       const auto                 bwd_nb_mers = std::distance(ml.bwd.lis.begin(), ml.bwd.lis.end());
       const bool                 fwd_align   = fwd_nb_mers >= bwd_nb_mers;
       const auto                 nb_mers     = fwd_align ? fwd_nb_mers : bwd_nb_mers;
-      if(nb_mers < nmers_) continue; // Enough matching mers
+      if(nb_mers < nmers_) continue; // Enough matching mers?
 
       // Compute consecutive mers and covered bases. Compute hash of
-      // positions in pb read of aligned mers.
-      MurmurHash3A hasher;
-      coords_info info(ml.frag->name, &ml, ml.frag->len, nb_mers);
-      const std::vector<pb_sr_offsets>& offsets = fwd_align ? ml.fwd.offsets : ml.bwd.offsets;
-      const std::vector<unsigned int>&  lis     = fwd_align ? ml.fwd.lis : ml.bwd.lis;
+      // positions in pb read of aligned mers. If k_len_ > 0, also
+      // compute the number of k-mers aligned in each k-unitigs of the
+      // super-read. If an error occurs (unknown k-unitigs, k-unitigs
+      // too short, etc.), an empty vector is returned.
+      MurmurHash3A                      hasher;
+      coords_info                       info(ml.frag->name, ml.frag->len, nb_mers);
+      const std::vector<pb_sr_offsets>& offsets   = fwd_align ? ml.fwd.offsets : ml.bwd.offsets;
+      const std::vector<unsigned int>&  lis       = fwd_align ? ml.fwd.lis : ml.bwd.lis;
+      compute_kmers_info<align_pb>      kmers_info(info.kmers_info, ml.frag->name, *this);
       {
         auto                              lisit   = lis.cbegin();
         pb_sr_offsets                     prev    = offsets[*lisit];
         pb_sr_offsets                     cur;
+        kmers_info.add_mer(prev.second);
         for(++lisit; lisit != lis.cend(); prev = cur, ++lisit) {
           cur                         = offsets[*lisit];
           const unsigned int pb_diff  = cur.first - prev.first;
@@ -204,6 +276,7 @@ public:
           info.sr_cons               += sr_diff == 1;
           info.sr_cover              += std::min(mer_dna::k(), sr_diff);
           hasher.add((uint32_t)cur.first);
+          kmers_info.add_mer(cur.second);
         }
       }
       if(info.pb_cons < (unsigned int)consecutive_ && info.sr_cons < (unsigned int)consecutive_) continue;
@@ -250,17 +323,17 @@ public:
           << it->pb_cover << " " << it->sr_cover << " "
           << pb_size << " " << it->ql << " "
           << pb_name << " " << qname;
-      if(unitigs_lengths_)
-        print_mers_in_unitigs(out, it->ml, qname);
+      for(auto mit : it->kmers_info)
+        out << " " << mit;
       out << "\n";
     }
     out.end_record();
   }
 
   // For each k-unitigs in the super read qname, output its length, the number of k-mers
-  void print_mers_in_unitigs(Multiplexer::ostream& out, const mer_lists* ml, const std::string qname) {
-    // super_read_name unitigs(qname);
-  }
+  // void print_mers_in_unitigs(Multiplexer::ostream& out, const mer_lists* ml, const std::string qname) {
+  //   // super_read_name unitigs(qname);
+  // }
 
   static void process_read(const mer_pos_hash_type& ary, parse_sequence& parser,
                            frags_pos_type& frags_pos, lis_align::forward_list<lis_align::element<double> >& L,

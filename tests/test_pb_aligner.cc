@@ -208,4 +208,107 @@ TEST(PbAligner, ReverseSRName) {
   EXPECT_EQ("4R_3F_2R_1F", align_pb::reverse_super_read_name("1R_2F_3R_4F"));
 } // PbAligner.ReverseSRName
 
+typedef std::vector<int> vi;
+struct mock_align_pb {
+  std::unique_ptr<vi> unitigs_lengths_;
+  unsigned int        k_len_;
+};
+
+TEST(ComputeKmersInfo, SimpleOverlap) {
+  mer_dna::k(17);
+  mock_align_pb aligner;
+  aligner.k_len_ = 30;
+  aligner.unitigs_lengths_.reset(new vi({ 100, 100, 100 }));
+  const std::string bad_name = "0F_1R_3F";
+  const std::string good_name = "0F_1R_2F";
+
+  vi bad_info, good_info;
+  align_pb::compute_kmers_info<mock_align_pb> compute_bad(bad_info, bad_name, aligner);
+  align_pb::compute_kmers_info<mock_align_pb> compute_good(good_info, good_name, aligner);
+  EXPECT_EQ(vi({0, 0, 0, 0, 0}), bad_info);
+  EXPECT_EQ(vi({0, 0, 0, 0, 0}), good_info);
+
+  compute_bad.add_mer(20);
+  compute_good.add_mer(70);
+  EXPECT_EQ(vi({1, 0, 0, 0, 0}), bad_info);
+  EXPECT_EQ(vi({1, 0, 0, 0, 0}), good_info);
+
+  compute_bad.add_mer(71);
+  compute_good.add_mer(84);
+  EXPECT_EQ(vi({2, 1, 1, 0, 0}), bad_info);
+  EXPECT_EQ(vi({2, 1, 1, 0, 0}), good_info);
+
+  compute_bad.add_mer(85);
+  compute_good.add_mer(130);
+  EXPECT_EQ(vi({2, 1, 2, 0, 0}), bad_info);
+  EXPECT_EQ(vi({2, 1, 2, 0, 0}), good_info);
+
+  compute_bad.add_mer(142);
+  compute_good.add_mer(150);
+  EXPECT_EQ(vi({}), bad_info);
+  EXPECT_EQ(vi({2, 1, 3, 1, 1}), good_info);
+
+  compute_bad.add_mer(170);
+  compute_good.add_mer(180);
+  EXPECT_EQ(vi({}), bad_info);
+  EXPECT_EQ(vi({2, 1, 3, 1, 2}), good_info);
+} // PbAligner.ComputeKmersInfo
+
+TEST(ComputeKmersInfo, ComplexOverlap) {
+  mer_dna::k(17);
+  mock_align_pb aligner;
+  aligner.k_len_ = 30;
+  aligner.unitigs_lengths_.reset(new vi({ 100, 31, 31, 40, 100 }));
+  const std::string name = "0F_1R_2F_3R_4F";
+
+  vi info;
+  align_pb::compute_kmers_info<mock_align_pb> compute(info, name, aligner);
+  EXPECT_EQ(vi({0, 0, 0, 0, 0, 0, 0, 0, 0}), info);
+
+  compute.add_mer(70);
+  EXPECT_EQ(vi({1, 0, 0, 0, 0, 0, 0, 0, 0}), info);
+
+  compute.add_mer(71);
+  EXPECT_EQ(vi({2, 1, 1, 0, 0, 0, 0, 0, 0}), info);
+
+  compute.add_mer(72);
+  EXPECT_EQ(vi({3, 2, 2, 1, 1, 0, 0, 0, 0}), info);
+
+  compute.add_mer(73);
+  EXPECT_EQ(vi({4, 3, 3, 2, 2, 1, 1, 0, 0}), info);
+
+  compute.add_mer(74);
+  EXPECT_EQ(vi({5, 4, 4, 3, 3, 2, 2, 0, 0}), info);
+
+  compute.add_mer(82);
+  EXPECT_EQ(vi({6, 5, 5, 4, 4, 3, 3, 0, 0}), info);
+
+  compute.add_mer(83);
+  EXPECT_EQ(vi({7, 6, 6, 5, 5, 4, 4, 1, 1}), info);
+
+  compute.add_mer(84);
+  EXPECT_EQ(vi({8, 7, 7, 6, 6, 5, 5, 2, 2}), info);
+
+  compute.add_mer(85);
+  EXPECT_EQ(vi({8, 7, 8, 7, 7, 6, 6, 3, 3}), info);
+
+  compute.add_mer(86);
+  EXPECT_EQ(vi({8, 7, 8, 7, 8, 7, 7, 4, 4}), info);
+
+  compute.add_mer(87);
+  EXPECT_EQ(vi({8, 7, 8, 7, 8, 7, 8, 5, 5}), info);
+
+  compute.add_mer(96);
+  EXPECT_EQ(vi({8, 7, 8, 7, 8, 7, 9, 6, 6}), info);
+
+  compute.add_mer(97);
+  EXPECT_EQ(vi({8, 7, 8, 7, 8, 7, 9, 6, 7}), info);
+
+  compute.add_mer(166);
+  EXPECT_EQ(vi({8, 7, 8, 7, 8, 7, 9, 6, 8}), info);
+
+  compute.add_mer(167);
+  EXPECT_EQ(vi({}), info);
+} // ComputeKmersInfo.ComplexOverlap
+
 } // namespace {

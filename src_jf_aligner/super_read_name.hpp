@@ -1,22 +1,34 @@
 #ifndef __SUPER_READ_NAME_H__
 #define __SUPER_READ_NAME_H__
 
+#include <limits>
+
 class super_read_name {
   const std::string         name_;
   const std::vector<size_t> unitigs_;
 
 public:
-  super_read_name(std::string name) : name_(name), unitigs_(parse(name)) { }
+  static const unsigned long invalid = std::numeric_limits<unsigned long>::max();
+
+  super_read_name(const std::string& name) : name_(name), unitigs_(parse(name)) { }
 
   struct unitig {
-    std::string name;
-    char        ori; // 'F' or 'R'
+    unsigned long id;
+    char          ori; // 'F' or 'R'
   };
 
   size_t nb_unitigs() const { return unitigs_.size() - 1; }
+  size_t size() const { return nb_unitigs(); }
+
   unitig operator[](size_t i) const {
-    if(i >= nb_unitigs()) return { "", '\0' };
-    return { name_.substr(unitigs_[i], unitigs_[i + 1] - unitigs_[i] - 2), name_[unitigs_[i + 1] - 2] };
+    if(i >= nb_unitigs()) return { std::numeric_limits<unsigned long>::max(), '\0' };
+    return { std::stoul(name_.substr(unitigs_[i], unitigs_[i + 1] - unitigs_[i] - 2)), name_[unitigs_[i + 1] - 2] };
+  }
+
+  unsigned long unitig_id(size_t i) const {
+    if(i < nb_unitigs())
+      return std::stoul(name_.substr(unitigs_[i], unitigs_[i + 1] - unitigs_[i] - 2));
+    return std::numeric_limits<unsigned long>::max();
   }
 
   static char reverse_ori(char ori) {
