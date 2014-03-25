@@ -1,12 +1,16 @@
 #!/bin/bash
-WORKDIR=$1  #input/output folder
-FILENAME=$2  #filename of a coores file for matches of SINGLE pacbio read to the super-reads
+
+FILENAME=$1  #filename of a coords file for matches of SINGLE pacbio read to the super-reads
+EXEPATH=`dirname $0`
 
 #will fail if there is a gap in pacBio read coverage
 
-./filter_matches.pl < $WORKDIR/$FILENAME  > $WORKDIR/$FILENAME.filtered
-wc -l $WORKDIR/$FILENAME.filtered
-cat $WORKDIR/$FILENAME.filtered | ./findPathAcrossPacbioRead.perl| dot  -T svg -o $WORKDIR/$FILENAME.filtered.svg
-cat $WORKDIR/$FILENAME.filtered | ./build_mega_reads.pl 1>$WORKDIR/$FILENAME.debug.out 2>$WORKDIR/$FILENAME.megareads; 
-grep ^used $WORKDIR/$FILENAME.debug.out | perl -ane '{print join(" ",@F[1..$#F]),"\n"}' > $WORKDIR/$FILENAME.filtered2
-cat $WORKDIR/$FILENAME.filtered2 | ./findPathAcrossPacbioRead.perl| dot  -T svg -o $WORKDIR/$FILENAME.filtered2.svg
+$EXEPATH/filter_matches.pl < $FILENAME  > $FILENAME.filtered
+wc -l $FILENAME.filtered
+cat $FILENAME.filtered | $EXEPATH/findPathAcrossPacbioRead.perl| dot  -T svg -o $FILENAME.filtered.svg
+cat $FILENAME.filtered | $EXEPATH/build_mega_reads.pl 1> $FILENAME.debug.out 2>$FILENAME.megareads; 
+grep ^used $FILENAME.debug.out | perl -ane '{print join(" ",@F[1..$#F]),"\n"}' > $FILENAME.filtered2
+cat $FILENAME.filtered2 | $EXEPATH/findPathAcrossPacbioRead.perl| dot  -T svg -o $FILENAME.filtered2.svg
+ln -sf /genome7/raid/alekseyz/PB_ScerW303/assembly/work1
+/home/alekseyz/myprogs/MaSuRCA/build/inst/bin/createFastaSuperReadSequences work1 $FILENAME.megareads -seqdiffmax 0 -min-ovl-len 69 -minreadsinsuperread 1  -good-sr-filename $FILENAME.megareads.names  -kunitigsfile /genome7/raid/alekseyz/PB_ScerW303/assembly/guillaumeKUnitigsAtLeast32bases_all.fasta -good-sequence-output-file $FILENAME.megareads.fa -super-read-name-and-lengths-file $FILENAME.megareads.sizes  -rename-super-reads 2> work1/createFastaSuperReadSequences.errors.txt
+
