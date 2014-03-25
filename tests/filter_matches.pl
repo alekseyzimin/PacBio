@@ -4,7 +4,7 @@ $nmatches=2;
 $score_window=.95;
 $min_overlap=1;
 $start=0;
-$end=0;
+$end=-100;
 @current_matches=();
 @current_ends=();
 @bestmtch=(); 
@@ -29,8 +29,24 @@ while($line=<STDIN>){
         }
         $start=$f[0];
     }
-    push(@bestmtch,$line) if(check_match($f[0],$f[1],$end,$f[12]));   
+    push(@bestmtch,$line) if(check_match($f[0],$f[1],$end,$f[12])); 
 }
+#last one!!!
+        if(scalar(@bestmtch)>0){
+            @ff=split(/\s+/,$bestmtch[$#bestmtch]);
+            $max_score=$ff[8]*$score_window;
+            $bgn=$#bestmtch-$nmatches>=0?$#bestmtch-$nmatches:0;
+            for($i=$bgn;$i<=$#bestmtch;$i++){
+                @ff=split(/\s+/,$bestmtch[$i]);
+                if($ff[8]>=$max_score){
+                    $end=$ff[1];
+                    print $bestmtch[$i],"\n";
+                    push(@current_matches,$ff[12]);
+                    push(@current_ends,$ff[1]);
+                }
+            }
+            @bestmtch=();
+        }
 
 
 sub check_match{
