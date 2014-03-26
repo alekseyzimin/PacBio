@@ -271,7 +271,7 @@ public:
         auto                              lisit   = lis.cbegin();
         pb_sr_offsets                     prev    = offsets[*lisit];
         pb_sr_offsets                     cur;
-        kmers_info.add_mer(prev.second);
+        kmers_info.add_mer(fwd_align ? prev.second : info.ql + prev.second - mer_dna::k() + 2);
         for(++lisit; lisit != lis.cend(); prev = cur, ++lisit) {
           cur                         = offsets[*lisit];
           const unsigned int pb_diff  = cur.first - prev.first;
