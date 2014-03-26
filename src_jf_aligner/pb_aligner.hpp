@@ -1,7 +1,10 @@
 #ifndef _PB_ALIGNER_HPP_
 #define _PB_ALIGNER_HPP_
 
+#include <unordered_map>
+
 #include <src_jf_aligner/jf_aligner.hpp>
+#include <src_jf_aligner/super_read_name.hpp>
 #include <src_lis/lis_align.hpp>
 #include <jellyfish/thread_exec.hpp>
 #include <MurmurHash3.h>
@@ -26,8 +29,10 @@ class align_pb : public jellyfish::thread_exec {
   const bool               compress_;
   const bool               duplicated_;
 
-  Multiplexer* details_multiplexer_;
-  Multiplexer* coords_multiplexer_;
+  Multiplexer*             details_multiplexer_;
+  Multiplexer*             coords_multiplexer_;
+  const std::vector<int>*  unitigs_lengths_; // Lengths of unitigs
+  unsigned int             k_len_; // k-mer length used for creating k-unitigs
 
 
   typedef const mer_pos_hash_type::mapped_type list_type;
@@ -41,11 +46,13 @@ public:
   // such subsequence is stored.
   typedef std::pair<int, int> pb_sr_offsets; // first = pb_offset, second = sr_offset
 
+  struct off_lis {
+    std::vector<pb_sr_offsets>   offsets;
+    std::vector<unsigned int>    lis;
+  };
   struct mer_lists {
-    std::vector<pb_sr_offsets>   fwd_offsets;
-    std::vector<pb_sr_offsets>   bwd_offsets;
-    std::vector<unsigned int>    fwd_lis;
-    std::vector<unsigned int>    bwd_lis;
+    off_lis fwd;
+    off_lis bwd;
     const frag_lists::frag_info* frag;
   };
   typedef std::map<const char*, mer_lists> frags_pos_type;
@@ -63,7 +70,8 @@ public:
     compress_(compress),
     duplicated_(duplicated),
     details_multiplexer_(0),
-    coords_multiplexer_(0)
+    coords_multiplexer_(0),
+    unitigs_lengths_(0), k_len_(0)
   { }
 
   align_pb& details_multiplexer(Multiplexer* m) { details_multiplexer_ = m; return *this; }
@@ -74,6 +82,11 @@ public:
       o << "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Rname Qname\n";
       o.end_record();
     }
+    return *this;
+  }
+  align_pb& unitigs_lengths(const std::vector<int>* m, unsigned int k_len) {
+    unitigs_lengths_ = m;
+    k_len_           = k_len;
     return *this;
   }
 
@@ -108,15 +121,15 @@ public:
       out << pb_name << " " << it->first;
       const align_pb::mer_lists& ml              = it->second;
       const bool                       fwd_align =
-        std::distance(ml.fwd_lis.cbegin(), ml.fwd_lis.cend()) > std::distance(ml.bwd_lis.cbegin(), ml.bwd_lis.cend());
-      auto                       lisit           = fwd_align ? ml.fwd_lis.cbegin() : ml.bwd_lis.cbegin();
-      const auto                 lisend          = fwd_align ? ml.fwd_lis.cend() : ml.bwd_lis.cend();
-      auto                       fwd_offit       = ml.fwd_offsets.cbegin();
+        std::distance(ml.fwd.lis.cbegin(), ml.fwd.lis.cend()) > std::distance(ml.bwd.lis.cbegin(), ml.bwd.lis.cend());
+      auto                       lisit           = fwd_align ? ml.fwd.lis.cbegin() : ml.bwd.lis.cbegin();
+      const auto                 lisend          = fwd_align ? ml.fwd.lis.cend() : ml.bwd.lis.cend();
+      auto                       fwd_offit       = ml.fwd.offsets.cbegin();
       const auto                 fwd_offbegin    = fwd_offit;
-      const auto                 fwd_offend      = ml.fwd_offsets.cend();
-      auto                       bwd_offit       = ml.bwd_offsets.cbegin();
+      const auto                 fwd_offend      = ml.fwd.offsets.cend();
+      auto                       bwd_offit       = ml.bwd.offsets.cbegin();
       const auto                 bwd_offbegin    = bwd_offit;
-      const auto                 bwd_offend      = ml.bwd_offsets.cend();
+      const auto                 bwd_offend      = ml.bwd.offsets.cend();
 
       while(fwd_offit != fwd_offend || bwd_offit != bwd_offend) {
         std::pair<int, int> pos;
@@ -141,16 +154,18 @@ public:
     out.end_record();
   }
 
+  // Contains the summary information of an alignment of a pac-bio and a super read (named qname).
   struct coords_info {
-    int          rs, re;
-    int          qs, qe;
-    int          nb_mers;
-    unsigned int pb_cons, sr_cons;
-    unsigned int pb_cover, sr_cover;
-    size_t       ql;
-    bool         rn;
-    uint64_t     hash;
-    const char*  qname;
+    int              rs, re;
+    int              qs, qe;
+    int              nb_mers;
+    unsigned int     pb_cons, sr_cons;
+    unsigned int     pb_cover, sr_cover;
+    size_t           ql;
+    bool             rn;
+    uint64_t         hash;
+    const char*      qname;
+    std::vector<int> kmers_info; // Number of k-mers in k-unitigs and common between unitigs
     coords_info(const char* name, size_t l, int n) :
       nb_mers(n),
       pb_cons(0), sr_cons(0), pb_cover(mer_dna::k()), sr_cover(mer_dna::k()),
@@ -165,26 +180,96 @@ public:
     }
   };
 
+  // Helper class that computes the number of k-mers in each k-unitigs
+  // and that are shared between the k-unitigs. It handles errors
+  // gracefully (the kmers_info array is then empty) and can be a NOOP
+  // if the super read name is empty.
+  template<typename AlignerT>
+  struct compute_kmers_info {
+    std::vector<int>&                info_;
+    std::unique_ptr<super_read_name> sr_name_;
+    unsigned int                     cunitig_;
+    unsigned int                     cend_;
+    const AlignerT&                  aligner_;
+
+    compute_kmers_info(std::vector<int>& info, const std::string& name, const AlignerT& aligner) :
+      info_(info), sr_name_(aligner.k_len_ && name.size() ? new super_read_name(name) : 0),
+      cunitig_(0), cend_(0), aligner_(aligner)
+    {
+      if(sr_name_) {
+        const auto unitig_id = sr_name_->unitig_id(0);
+        if(unitig_id != super_read_name::invalid && unitig_id < aligner_.unitigs_lengths_->size()) {
+          info_.resize(2 * sr_name_->size() - 1, 0);
+          cend_ = unitigs_lengths(unitig_id);
+        } else { // error
+          sr_name_.reset();
+        }
+      }
+    }
+
+    int unitigs_lengths(long int id) const { return (*aligner_.unitigs_lengths_)[id]; }
+    size_t nb_unitigs() const { return aligner_.unitigs_lengths_->size(); }
+    unsigned int k_len() const { return aligner_.k_len_; }
+
+    void add_mer(const int pos) {
+      if(!sr_name_) return;
+
+      unsigned int       cendi;
+      const unsigned int sr_pos = abs(pos);
+      while(sr_pos + mer_dna::k() > cend_ + 1) {
+        const auto unitig_id = sr_name_->unitig_id(++cunitig_);
+        if(unitig_id != super_read_name::invalid && unitig_id < nb_unitigs())
+          cend_ += unitigs_lengths(unitig_id) - k_len();
+        else
+          goto error;
+      }
+      ++info_[2 * cunitig_];
+      cendi = cend_;
+      for(unsigned int i = cunitig_; (i < sr_name_->size() - 1) && (sr_pos + k_len() > cendi); ++i) {
+        ++info_[2 * i + 1];
+        ++info_[2 * i + 2];
+        const auto unitig_id = sr_name_->unitig_id(i + 1);
+        if(unitig_id != super_read_name::invalid && unitig_id < nb_unitigs())
+          cendi += unitigs_lengths(unitig_id) - k_len();
+        else
+          goto error;
+      }
+      return;
+
+    error:
+      sr_name_.reset();
+      info_.resize(0);
+    }
+  };
+
+
+  // Compute the statistics of the matches in frags_pos (all the
+  // matches to a given pac-bio read)
   std::vector<coords_info> compute_coordinates(const frags_pos_type& frags_pos) {
     std::vector<coords_info> coords;
     for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
       const align_pb::mer_lists& ml          = it->second;
-      const auto                 fwd_nb_mers = std::distance(ml.fwd_lis.begin(), ml.fwd_lis.end());
-      const auto                 bwd_nb_mers = std::distance(ml.bwd_lis.begin(), ml.bwd_lis.end());
+      const auto                 fwd_nb_mers = std::distance(ml.fwd.lis.begin(), ml.fwd.lis.end());
+      const auto                 bwd_nb_mers = std::distance(ml.bwd.lis.begin(), ml.bwd.lis.end());
       const bool                 fwd_align   = fwd_nb_mers >= bwd_nb_mers;
       const auto                 nb_mers     = fwd_align ? fwd_nb_mers : bwd_nb_mers;
-      if(nb_mers < nmers_) continue; // Enough matching mers
+      if(nb_mers < nmers_) continue; // Enough matching mers?
 
       // Compute consecutive mers and covered bases. Compute hash of
-      // positions in pb read of aligned mers.
-      MurmurHash3A hasher;
-      coords_info info(ml.frag->name, ml.frag->len, nb_mers);
-      const std::vector<pb_sr_offsets>& offsets = fwd_align ? ml.fwd_offsets : ml.bwd_offsets;
-      const std::vector<unsigned int>&  lis     = fwd_align ? ml.fwd_lis : ml.bwd_lis;
+      // positions in pb read of aligned mers. If k_len_ > 0, also
+      // compute the number of k-mers aligned in each k-unitigs of the
+      // super-read. If an error occurs (unknown k-unitigs, k-unitigs
+      // too short, etc.), an empty vector is returned.
+      MurmurHash3A                      hasher;
+      coords_info                       info(ml.frag->name, ml.frag->len, nb_mers);
+      const std::vector<pb_sr_offsets>& offsets   = fwd_align ? ml.fwd.offsets : ml.bwd.offsets;
+      const std::vector<unsigned int>&  lis       = fwd_align ? ml.fwd.lis : ml.bwd.lis;
+      compute_kmers_info<align_pb>      kmers_info(info.kmers_info, ml.frag->name, *this);
       {
         auto                              lisit   = lis.cbegin();
         pb_sr_offsets                     prev    = offsets[*lisit];
         pb_sr_offsets                     cur;
+        kmers_info.add_mer(prev.second);
         for(++lisit; lisit != lis.cend(); prev = cur, ++lisit) {
           cur                         = offsets[*lisit];
           const unsigned int pb_diff  = cur.first - prev.first;
@@ -194,6 +279,7 @@ public:
           info.sr_cons               += sr_diff == 1;
           info.sr_cover              += std::min(mer_dna::k(), sr_diff);
           hasher.add((uint32_t)cur.first);
+          kmers_info.add_mer(cur.second);
         }
       }
       if(info.pb_cons < (unsigned int)consecutive_ && info.sr_cons < (unsigned int)consecutive_) continue;
@@ -233,15 +319,24 @@ public:
     for(auto it = coords.cbegin(), pit = it; it != coords.cend(); pit = it, ++it) {
       if(duplicated_ && it != pit && it->rs == pit->rs && it->re == pit->re && it->hash == pit->hash)
         continue;
+      std::string qname = it->rn ? reverse_super_read_name(it->qname) : it->qname;
       out << it->rs << " " << it->re << " " << it->qs << " " << it->qe << " "
           << it->nb_mers << " "
           << it->pb_cons << " " << it->sr_cons << " "
           << it->pb_cover << " " << it->sr_cover << " "
           << pb_size << " " << it->ql << " "
-          << pb_name << " " << (it->rn ? reverse_super_read_name(it->qname) : it->qname) << "\n";
+          << pb_name << " " << qname;
+      for(auto mit : it->kmers_info)
+        out << " " << mit;
+      out << "\n";
     }
     out.end_record();
   }
+
+  // For each k-unitigs in the super read qname, output its length, the number of k-mers
+  // void print_mers_in_unitigs(Multiplexer::ostream& out, const mer_lists* ml, const std::string qname) {
+  //   // super_read_name unitigs(qname);
+  // }
 
   static void process_read(const mer_pos_hash_type& ary, parse_sequence& parser,
                            frags_pos_type& frags_pos, lis_align::forward_list<lis_align::element<double> >& L,
@@ -255,9 +350,9 @@ public:
         ml.frag       = it->frag;
         const int offset = is_canonical ? it->offset : -it->offset;
         if(offset > 0)
-          ml.fwd_offsets.push_back(pb_sr_offsets(parser.offset + 1, offset));
+          ml.fwd.offsets.push_back(pb_sr_offsets(parser.offset + 1, offset));
         else
-          ml.bwd_offsets.push_back(pb_sr_offsets(parser.offset + 1, offset));
+          ml.bwd.offsets.push_back(pb_sr_offsets(parser.offset + 1, offset));
       }
     }
     if(frags_pos.empty()) return;
@@ -265,14 +360,14 @@ public:
     // Compute LIS forward and backward on every super reads.
     for(auto it = frags_pos.begin(); it != frags_pos.end(); ++it) {
       mer_lists& mer_list = it->second;
-      mer_list.fwd_lis.clear();
-      mer_list.bwd_lis.clear();
+      mer_list.fwd.lis.clear();
+      mer_list.bwd.lis.clear();
       L.clear();
-      lis_align::indices(mer_list.fwd_offsets.cbegin(), mer_list.fwd_offsets.cend(),
-                         L, mer_list.fwd_lis, a, b);
+      lis_align::indices(mer_list.fwd.offsets.cbegin(), mer_list.fwd.offsets.cend(),
+                         L, mer_list.fwd.lis, a, b);
       L.clear();
-      lis_align::indices(mer_list.bwd_offsets.cbegin(), mer_list.bwd_offsets.cend(),
-                         L, mer_list.bwd_lis, a, b);
+      lis_align::indices(mer_list.bwd.offsets.cbegin(), mer_list.bwd.offsets.cend(),
+                         L, mer_list.bwd.lis, a, b);
     }
   }
 
