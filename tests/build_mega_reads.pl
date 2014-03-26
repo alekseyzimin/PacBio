@@ -72,8 +72,8 @@ while(1){
 	$ext_flag=0;
 #here we look for the best extension for current mega-read, must overlap and have the highest score=amount of extension+k-mer coverage, only consider overlapping extensions
 	@extensions=();
-	$max_ext=0;
-	$max_ext_index=0;
+	$max_ext=-1000000000;
+	$max_ext_index=-1;
 	$max_overlap=0;
 	print "Looking for extensions for $mega_reads_last_pos[$mri] $mega_reads_last_sr[$mri]\n";
 	for($i=$mega_reads_last_index[$mri];$i<=$#sr;$i++){
@@ -83,7 +83,7 @@ while(1){
 	    $overlap=overlap_ext($mega_reads_last_sr[$mri],$sr[$i]);
 	    if($overlap>0){
 		$ext_score=$scores[$i]-$mega_reads_last_pos[$mri];#here we score the continuation
-		print "New extension $i $ext_score $starts[$i] $ends[$i]  $sr[$i]\n"; 
+		print "New extension $i $ext_score $starts[$i] $ends[$i]  $sr[$i] $mega_reads_last_pos[$mri] $scores[$i]\n"; 
 		push(@extensions,$i);
 		if($ext_score>$max_ext){
 		    $max_ext=$ext_score;
@@ -93,7 +93,7 @@ while(1){
 	    }
 	}
 	print "Candidate max extension $max_ext\nindex $max_ext_index\nsr $sr[$max_ext_index]\n";
-	if($max_ext>0){
+	if($max_ext_index>-1){
 	    $ext_flag=1;
 	    $used[$max_ext_index]=1;
 #now eliminate all containees
