@@ -85,6 +85,7 @@ public:
     return *this;
   }
   align_pb& unitigs_lengths(const std::vector<int>* m, unsigned int k_len) {
+    if(!forward_) throw std::logic_error("Forward flag must be used if passing unitigs lengths");
     unitigs_lengths_ = m;
     k_len_           = k_len;
     return *this;
@@ -164,9 +165,9 @@ public:
     size_t           ql;
     bool             rn;
     uint64_t         hash;
-    const char*      qname;
+    std::string      qname;
     std::vector<int> kmers_info; // Number of k-mers in k-unitigs and common between unitigs
-    coords_info(const char* name, size_t l, int n) :
+    coords_info(const std::string& name, size_t l, int n) :
       nb_mers(n),
       pb_cons(0), sr_cons(0), pb_cover(mer_dna::k()), sr_cover(mer_dna::k()),
       ql(l), rn(false), qname(name)
@@ -261,10 +262,11 @@ public:
       // super-read. If an error occurs (unknown k-unitigs, k-unitigs
       // too short, etc.), an empty vector is returned.
       MurmurHash3A                      hasher;
-      coords_info                       info(ml.frag->name, ml.frag->len, nb_mers);
+      coords_info                       info(forward_ && !fwd_align ? reverse_super_read_name(ml.frag->name) : ml.frag->name,
+                                             ml.frag->len, nb_mers);
       const std::vector<pb_sr_offsets>& offsets   = fwd_align ? ml.fwd.offsets : ml.bwd.offsets;
       const std::vector<unsigned int>&  lis       = fwd_align ? ml.fwd.lis : ml.bwd.lis;
-      compute_kmers_info<align_pb>      kmers_info(info.kmers_info, ml.frag->name, *this);
+      compute_kmers_info<align_pb>      kmers_info(info.kmers_info, info.qname, *this);
       {
         auto                              lisit   = lis.cbegin();
         pb_sr_offsets                     prev    = offsets[*lisit];
@@ -279,7 +281,7 @@ public:
           info.sr_cons               += sr_diff == 1;
           info.sr_cover              += std::min(mer_dna::k(), sr_diff);
           hasher.add((uint32_t)cur.first);
-          kmers_info.add_mer(cur.second);
+          kmers_info.add_mer(fwd_align ? cur.second : info.ql + cur.second - mer_dna::k() + 2);
         }
       }
       if(info.pb_cons < (unsigned int)consecutive_ && info.sr_cons < (unsigned int)consecutive_) continue;
@@ -319,13 +321,12 @@ public:
     for(auto it = coords.cbegin(), pit = it; it != coords.cend(); pit = it, ++it) {
       if(duplicated_ && it != pit && it->rs == pit->rs && it->re == pit->re && it->hash == pit->hash)
         continue;
-      std::string qname = it->rn ? reverse_super_read_name(it->qname) : it->qname;
       out << it->rs << " " << it->re << " " << it->qs << " " << it->qe << " "
           << it->nb_mers << " "
           << it->pb_cons << " " << it->sr_cons << " "
           << it->pb_cover << " " << it->sr_cover << " "
           << pb_size << " " << it->ql << " "
-          << pb_name << " " << qname;
+          << pb_name << " " << it->qname;
       for(auto mit : it->kmers_info)
         out << " " << mit;
       out << "\n";
@@ -414,7 +415,8 @@ public:
 void align_pb_reads(int threads, mer_pos_hash_type& hash, double stretch_const, double stretch_factor,
                     int consecutive, int nmers, bool compress, bool forward, bool duplicated,
                     const char* pb_path,
-                    const char* coords_path = 0, const char* details_path = 0) {
+                    const char* coords_path = 0, const char* details_path = 0,
+                    const int* lengths = 0, const int nb_unitigs = 0, const unsigned int k_len = 0) {
   output_file details, coords;
   if(coords_path) coords.open(coords_path, threads);
   if(details_path) details.open(details_path, threads);
@@ -425,6 +427,11 @@ void align_pb_reads(int threads, mer_pos_hash_type& hash, double stretch_const, 
                    consecutive, nmers, forward, compress, duplicated);
   if(coords_path) aligner.coords_multiplexer(coords.multiplexer(), true);
   if(details_path) aligner.details_multiplexer(details.multiplexer());
+  std::vector<int> unitigs_lengths;
+  if(nb_unitigs && lengths && k_len) {
+    unitigs_lengths.insert(unitigs_lengths.begin(), lengths, lengths + nb_unitigs);
+    aligner.unitigs_lengths(&unitigs_lengths, k_len);
+  }
   aligner.exec_join(threads);
 }
 
