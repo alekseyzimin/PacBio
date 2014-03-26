@@ -1,0 +1,106 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+my (@minOffsets, @maxOffsets, @superReadLengths, @beginSupers, @endSupers, @mersCounts, @nodes);
+my $pacbioName;
+my $nb_sr = 0;
+
+while(my $line = <STDIN>) {
+  chomp ($line);
+  my @flds = split (" ", $line);
+  push (@minOffsets, $flds[0]);
+  push (@maxOffsets, $flds[1]);
+  push (@superReadLengths, $flds[10]);
+  if (defined ($pacbioName)) {
+    if ($flds[11] ne $pacbioName) {
+      print "You screwed up! Only use for ONE (1) pacbio read at a time. Bye!\n";
+      exit (1); }
+  } else {
+    $pacbioName = $flds[11];
+  }
+  if ($flds[2] > $flds[3]) {
+    $flds[2] = $flds[10] + 1 - $flds[2];
+    $flds[3] = $flds[10] + 1 - $flds[3];
+  }
+  my $id = @nodes;
+  push(@nodes, { ID => $id, NAME => $flds[12], NMERS => $flds[4], NEIGHS => [], LPATH => 0, LPREV => undef, INDEG => 0 });
+
+  push (@beginSupers, $flds[2]);
+  push (@endSupers, $flds[3]);
+  splice(@flds, 0, 13);
+  push (@mersCounts, \@flds);
+}
+
+# A node has { ID => i, NMERS => n, NEIGHS => [], LPATH => length,
+# LPREV => prev_node } A edge is a pair [v, w] where v is the index of
+# the id of the node and w is the weight (number of shared mers
+# between nodes).
+
+for (my $i=0; $i< @nodes; ++$i) {
+  my $minOffset = $minOffsets[$i];
+  my $maxOffset = $maxOffsets[$i];
+  my $super = $nodes[$i]{NAME};
+  my @tflds = split (/_/, $super);
+  my $lastKUni = $tflds[-1];
+  for (my $j=$i+1; $j< @nodes; ++$j) {
+    last if ($minOffsets[$j] >= $maxOffset);
+    my $localSuperReadName = $nodes[$j]{NAME};
+    my $index = index ($localSuperReadName, $lastKUni);
+    next unless ($index >= 0);
+    my $lenOfSubstring = $index + length ($lastKUni);
+    my $lastToFind = substr ($super, -$lenOfSubstring);
+    $index = index ($localSuperReadName, $lastToFind);
+    next unless ($index == 0);
+    my @unitigs = split(/_/, $lastToFind); # k-unitigs in common between nodes
+    my $mers_shared = 0;
+    my $mers_info = $mersCounts[$j];
+    for(my $k = 0; $k < @unitigs; ++$k) {
+      $mers_shared += $$mers_info[2 * $k];
+      $mers_shared -= $$mers_info[2 * $k - 1] if $k > 0;
+    }
+    push(@{$nodes[$i]{NEIGHS}}, [$j, $mers_shared, scalar(@unitigs)]);
+    $nodes[$j]{INDEG}++;
+  }
+}
+
+my $longest_path = 0;
+my $longest_node = undef;
+sub traverse_tree {
+  my ($id, $path_len, $prev) = @_;
+  my $v = $nodes[$id];
+
+  return if($path_len < $$v{LPATH});
+  $$v{LPATH} = $path_len;
+  $$v{LPREV} = $prev;
+
+  my $out_degree = scalar(@{$$v{NEIGHS}});
+  if($out_degree == 0) {
+    if($path_len > $longest_path) {
+      $longest_path = $path_len;
+      $longest_node = $id;
+    }
+    return;
+  }
+
+  foreach my $n (@{$$v{NEIGHS}}) {
+    my $w = $nodes[$$n[0]];
+    traverse_tree($$n[0], $path_len + $$w{NMERS} - $$n[1], $id);
+  }
+}
+
+foreach my $v (@nodes) {
+  if($$v{INDEG} == 0) {
+    traverse_tree($$v{ID}, $$v{NMERS}, undef);
+  }
+}
+
+my @path;
+while(defined($longest_node)) {
+  push(@path, $longest_node);
+  $longest_node = $nodes[$longest_node]{LPREV};
+}
+for(my $i = $#path; $i >= 0; $i--) {
+  print($path[$i], " ", $nodes[$path[$i]]{NAME}, "\n");
+}
