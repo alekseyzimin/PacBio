@@ -1,7 +1,14 @@
 #!/usr/bin/env perl
-while ($line = <STDIN>) {
+
+use strict;
+use warnings;
+
+my (@minOffsets, @maxOffsets, @numKMers, @superReadLengths, @beginSupers, @endSupers, @superReadNames);
+my $pacbioName;
+
+while(my $line = <STDIN>) {
     chomp ($line);
-    @flds = split (" ", $line);
+    my @flds = split (" ", $line);
     push (@minOffsets, $flds[0]);
     push (@maxOffsets, $flds[1]);
     push (@numKMers, $flds[4]);
@@ -13,7 +20,7 @@ while ($line = <STDIN>) {
     }
     else {
 	$pacbioName = $flds[-2]; }
-    $superReadName = $flds[-1];
+    my $superReadName = $flds[-1];
     if ($flds[2] > $flds[3]) {
 	$superReadName = &reverseSuperReadName ($superReadName); 
 	$flds[2] = $flds[10] + 1 - $flds[2];
@@ -26,24 +33,24 @@ while ($line = <STDIN>) {
 
 print "digraph \"$pacbioName\" {\n";
 print "node [fontsize=10];\n";
-for ($i=0; $i<=$#superReadNames; ++$i) {
+for (my $i=0; $i< @superReadNames; ++$i) {
 #    print "$i $minOffsets[$i] $maxOffsets[$i] $superReadNames[$i]\n";
     print "$i [tooltip=\"$superReadNames[$i]\",label=\"($i) L$superReadLengths[$i] #$numKMers[$i]\\nP ($minOffsets[$i],$maxOffsets[$i])\\nS ($beginSupers[$i],$endSupers[$i])\"];\n";
 }
 
-for ($i=0; $i<=$#superReadNames; ++$i) {
-    $minOffset = $minOffsets[$i];
-    $maxOffset = $maxOffsets[$i];
-    $super = $superReadNames[$i];
-    @tflds = split (/_/, $super);
-    $lastKUni = $tflds[-1];
-    for ($j=$i+1; $j<=$#superReadNames; ++$j) {
+for (my $i=0; $i< @superReadNames; ++$i) {
+    my $minOffset = $minOffsets[$i];
+    my $maxOffset = $maxOffsets[$i];
+    my $super = $superReadNames[$i];
+    my @tflds = split (/_/, $super);
+    my $lastKUni = $tflds[-1];
+    for (my $j=$i+1; $j< @superReadNames; ++$j) {
 	last if ($minOffsets[$j] >= $maxOffset);
-	$localSuperReadName = $superReadNames[$j];
-	$index = index ($localSuperReadName, $lastKUni);
+	my $localSuperReadName = $superReadNames[$j];
+	my $index = index ($localSuperReadName, $lastKUni);
 	next unless ($index >= 0);
-	$lenOfSubstring = $index + length ($lastKUni);
-	$lastToFind = substr ($super, -$lenOfSubstring);
+	my $lenOfSubstring = $index + length ($lastKUni);
+	my $lastToFind = substr ($super, -$lenOfSubstring);
 	$index = index ($localSuperReadName, $lastToFind);
 	next unless ($index == 0);
 	print "$i -> ${j} [tooltip=\"$lastToFind\"];\n";
@@ -55,12 +62,11 @@ print "}\n";
 sub reverseSuperReadName
 {
     my ($super) = @_;
-    my (@flds, $superOut, $i, $fld);
 
-    @flds = split (/_/, $super);
-    $superOut = "";
-    for ($i=$#flds; $i>=0; --$i) {
-	$fld = $flds[$i];
+    my @flds = split (/_/, $super);
+    my $superOut = "";
+    for (my $i=$#flds; $i>=0; --$i) {
+        my $fld = $flds[$i];
 	$fld =~ tr/FR/RF/;
 	if ($i != $#flds) {
 	    $superOut .= "_"; }
