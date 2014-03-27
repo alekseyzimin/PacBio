@@ -29,6 +29,13 @@ while($line=<STDIN>){
         }
         $start=$f[0];
     }
+#compute implied matching length
+    $mtchstart=$f[0]-$f[2];
+    $mtchend=$f[1]+$f[10]-$f[3];
+    $mtchstart=0 if($mtchstart<0);
+    $mtchend=$f[9] if($mtchend>$f[9]);
+    $mtchspan=$mtchend-$mtchstart;
+    next if(($f[3]-$f[2])/$mtchspan<0.4);#not interested if match span is less that 50% of the implied matching length
     push(@bestmtch,$line) if(check_match($f[0],$f[1],$end,$f[12])); 
 }
 #last one!!!

@@ -8,7 +8,7 @@ EXEPATH=`dirname $0`
 $EXEPATH/filter_matches.pl < $FILENAME  > $FILENAME.filtered
 wc -l $FILENAME.filtered
 #cat $FILENAME.filtered | $EXEPATH/findPathAcrossPacbioRead.perl| dot  -T svg -o $FILENAME.filtered.svg
-cat $FILENAME.filtered | $EXEPATH/build_mega_reads.pl 1> $FILENAME.debug.out 2>$FILENAME.megareads; 
+cat $FILENAME.filtered | $EXEPATH/build_mega_reads_kmerscore.pl 1> $FILENAME.debug.out 2>$FILENAME.megareads; 
 grep ^used $FILENAME.debug.out | perl -ane '{print join(" ",@F[1..$#F]),"\n"}' > $FILENAME.filtered2
 #cat $FILENAME.filtered2 | $EXEPATH/findPathAcrossPacbioRead.perl| dot  -T svg -o $FILENAME.filtered2.svg
 if [ -L /genome7/raid/alekseyz/PB_ScerW303/assembly/work1 ];then
