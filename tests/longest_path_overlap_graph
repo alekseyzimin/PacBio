@@ -2,6 +2,23 @@
 
 use strict;
 use warnings;
+use Getopt::Long;
+# use UnionFind;
+
+my ($list_sr, $help);
+GetOptions("l|list" => \$list_sr,
+           "h|help" => \$help) or die;
+
+if(defined($help)) {
+  print(<<EOS);
+Find the longest (with most k-mers) path in the super-read overlap graph
+
+ -l,--list     List the super-reads
+ -h,--help     This message
+EOS
+# ;
+exit(0);
+}
 
 my (@minOffsets, @maxOffsets, @superReadLengths, @beginSupers, @endSupers, @mersCounts, @nodes);
 my $pacbioName;
@@ -101,6 +118,25 @@ while(defined($longest_node)) {
   push(@path, $longest_node);
   $longest_node = $nodes[$longest_node]{LPREV};
 }
-for(my $i = $#path; $i >= 0; $i--) {
-  print($path[$i], " ", $nodes[$path[$i]]{NAME}, "\n");
+
+if(defined($list_sr)) {
+  for(my $i = $#path; $i >= 0; $i--) {
+    print($path[$i], " ", $nodes[$path[$i]]{NAME}, "\n");
+  }
+}
+
+if(@path) {
+  print($nodes[$path[-1]]{NAME});
+  for(my $i = $#path; $i > 0; $i--) {
+    my $v = $nodes[$path[$i]];
+    foreach my $n (@{$$v{NEIGHS}}) {
+      next unless $$n[0] == $path[$i - 1];
+      my $w = $nodes[$path[$i - 1]];
+      my @srs = split(/_/, $$w{NAME});
+      splice(@srs, 0, $$n[2]);
+      print("_", join("_", @srs));
+      last;
+    }
+  }
+  print("\n");
 }
