@@ -3,16 +3,24 @@
 use strict;
 use warnings;
 use Getopt::Long;
-# use UnionFind;
+use FindBin;
+use lib "$FindBin::RealBin";
+use UnionFind;
 
 my ($list_sr, $help);
+my $min_sr = 2; # Minimum # of super read in a mega read
+my $min_density = 0.1;
 GetOptions("l|list" => \$list_sr,
+           "m|min=i" => \$min_sr,
+           "d|density=f" => \$min_density,
            "h|help" => \$help) or die;
 
 if(defined($help)) {
   print(<<EOS);
 Find the longest (with most k-mers) path in the super-read overlap graph
 
+ -m,--min      Minimum number of super reads in a mega read ($min_sr)
+ -d,--density  Minimum denity of k-mers ($min_density)
  -l,--list     List the super-reads
  -h,--help     This message
 EOS
@@ -20,16 +28,12 @@ EOS
 exit(0);
 }
 
-my (@minOffsets, @maxOffsets, @superReadLengths, @beginSupers, @endSupers, @mersCounts, @nodes);
+my (@nodes);
 my $pacbioName;
-my $nb_sr = 0;
 
 while(my $line = <STDIN>) {
   chomp ($line);
   my @flds = split (" ", $line);
-  push (@minOffsets, $flds[0]);
-  push (@maxOffsets, $flds[1]);
-  push (@superReadLengths, $flds[10]);
   if (defined ($pacbioName)) {
     if ($flds[11] ne $pacbioName) {
       print "You screwed up! Only use for ONE (1) pacbio read at a time. Bye!\n";
@@ -37,32 +41,24 @@ while(my $line = <STDIN>) {
   } else {
     $pacbioName = $flds[11];
   }
-  if ($flds[2] > $flds[3]) {
-    $flds[2] = $flds[10] + 1 - $flds[2];
-    $flds[3] = $flds[10] + 1 - $flds[3];
-  }
   my $id = @nodes;
-  push(@nodes, { ID => $id, NAME => $flds[12], NMERS => $flds[4], NEIGHS => [], LPATH => 0, LPREV => undef, INDEG => 0 });
-
-  push (@beginSupers, $flds[2]);
-  push (@endSupers, $flds[3]);
-  splice(@flds, 0, 13);
-  push (@mersCounts, \@flds);
+  my @info = splice(@flds, 0, 13);
+  push(@nodes, { ID => $id, NAME => $info[12], NMERS => $info[4], NEIGHS => [], LPATH => 0, LPREV => undef, INDEG => 0,
+                 MINOFFSET => $info[0], MAXOFFSET => $info[1], LEN => $info[10], MERCOUNTS => \@flds });
 }
 
 # A node has { ID => i, NMERS => n, NEIGHS => [], LPATH => length,
 # LPREV => prev_node } A edge is a pair [v, w] where v is the index of
 # the id of the node and w is the weight (number of shared mers
 # between nodes).
-
-for (my $i=0; $i< @nodes; ++$i) {
-  my $minOffset = $minOffsets[$i];
-  my $maxOffset = $maxOffsets[$i];
+my $components = UnionFind->new();
+for(my $i=0; $i< @nodes; ++$i) {
+  my $maxOffset = $nodes[$i]{MAXOFFSET};
   my $super = $nodes[$i]{NAME};
   my @tflds = split (/_/, $super);
   my $lastKUni = $tflds[-1];
   for (my $j=$i+1; $j< @nodes; ++$j) {
-    last if ($minOffsets[$j] >= $maxOffset);
+    last if ($nodes[$j]{MINOFFSET} >= $maxOffset);
     my $localSuperReadName = $nodes[$j]{NAME};
     my $index = index ($localSuperReadName, $lastKUni);
     next unless ($index >= 0);
@@ -72,18 +68,19 @@ for (my $i=0; $i< @nodes; ++$i) {
     next unless ($index == 0);
     my @unitigs = split(/_/, $lastToFind); # k-unitigs in common between nodes
     my $mers_shared = 0;
-    my $mers_info = $mersCounts[$j];
+    my $mers_info = $nodes[$j]{MERCOUNTS};
     for(my $k = 0; $k < @unitigs; ++$k) {
       $mers_shared += $$mers_info[2 * $k];
       $mers_shared -= $$mers_info[2 * $k - 1] if $k > 0;
     }
     push(@{$nodes[$i]{NEIGHS}}, [$j, $mers_shared, scalar(@unitigs)]);
     $nodes[$j]{INDEG}++;
+    $components->union($i, $j);
   }
 }
 
-my $longest_path = 0;
-my $longest_node = undef;
+# One longest path per weakly connected component. Contains { LEN => nmers, OSTART => x, OEND => x TERM => node }
+my %longest_path;
 sub traverse_tree {
   my ($id, $path_len, $prev) = @_;
   my $v = $nodes[$id];
@@ -94,9 +91,13 @@ sub traverse_tree {
 
   my $out_degree = scalar(@{$$v{NEIGHS}});
   if($out_degree == 0) {
-    if($path_len > $longest_path) {
-      $longest_path = $path_len;
-      $longest_node = $id;
+    my $comp = $components->find($id);
+    my $lp = $longest_path{$comp};
+    $lp = $longest_path{$comp} = { LEN => 0, OSTART => $$v{MINOFFSET} } unless defined($lp);
+    if($path_len > $$lp{LEN}) {
+      $$lp{LEN}  = $path_len;
+      $$lp{TERM} = $id;
+      $$lp{OEND} = $$v{MAXOFFSET};
     }
     return;
   }
@@ -113,19 +114,27 @@ foreach my $v (@nodes) {
   }
 }
 
-my @path;
-while(defined($longest_node)) {
-  push(@path, $longest_node);
-  $longest_node = $nodes[$longest_node]{LPREV};
-}
-
-if(defined($list_sr)) {
-  for(my $i = $#path; $i >= 0; $i--) {
-    print($path[$i], " ", $nodes[$path[$i]]{NAME}, "\n");
+print("Rstart Rend Nmers Density MegaRead\n");
+while(my ($comp, $lp) = each %longest_path) {
+  my @path;
+  my $term_node = $$lp{TERM};
+  while(defined($term_node)) {
+    push(@path, $term_node);
+    $term_node = $nodes[$term_node]{LPREV};
   }
-}
 
-if(@path) {
+  next if(@path < $min_sr);
+  my $density = $$lp{LEN} / ($$lp{OEND} - $$lp{OSTART} + 1);
+  next if($density < $min_density);
+
+  if(defined($list_sr)) {
+    for(my $i = $#path; $i >= 0; $i--) {
+      print($path[$i], " ", $nodes[$path[$i]]{NAME}, "\n");
+    }
+  }
+
+  printf("%d %d %d %.2g ", $$lp{OSTART}, $$lp{OEND}, $$lp{LEN}, $density);
+
   print($nodes[$path[-1]]{NAME});
   for(my $i = $#path; $i > 0; $i--) {
     my $v = $nodes[$path[$i]];
