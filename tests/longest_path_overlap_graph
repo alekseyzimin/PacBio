@@ -43,7 +43,8 @@ while(my $line = <STDIN>) {
   }
   my $id = @nodes;
   my @info = splice(@flds, 0, 13);
-  push(@nodes, { ID => $id, NAME => $info[12], NMERS => $info[4], NEIGHS => [], LPATH => 0, LPREV => undef, INDEG => 0,
+  push(@nodes, { ID => $id, NAME => $info[12], NMERS => $info[4], NEIGHS => [], LPATH => 0, LPREV => undef, LNEXT => undef,
+                 INDEG => 0,
                  MINOFFSET => $info[0], MAXOFFSET => $info[1], LEN => $info[10], MERCOUNTS => \@flds });
 }
 
@@ -79,32 +80,48 @@ for(my $i=0; $i< @nodes; ++$i) {
   }
 }
 
-# One longest path per weakly connected component. Contains { LEN => nmers, OSTART => x, OEND => x TERM => node }
+# One longest path per weakly connected component. Contains { LEN => nmers, OSTART => x, OEND => x, TERM => node, NSTART => node }
 my %longest_path;
 sub traverse_tree {
-  my ($id, $path_len, $prev) = @_;
-  my $v = $nodes[$id];
+  my @stack;
+  push(@stack, \@_);
 
-  return if($path_len < $$v{LPATH});
-  $$v{LPATH} = $path_len;
-  $$v{LPREV} = $prev;
+  while(@stack) {
+    my ($id, $path_len, $prev) = @{pop(@stack)};
+    my $v = $nodes[$id];
+#    print("$id $path_len ", defined($prev) ? $prev : "-", " ", $$v{LPATH}, " ", scalar(@stack), "\n");
 
-  my $out_degree = scalar(@{$$v{NEIGHS}});
-  if($out_degree == 0) {
-    my $comp = $components->find($id);
-    my $lp = $longest_path{$comp};
-    $lp = $longest_path{$comp} = { LEN => 0, OSTART => $$v{MINOFFSET} } unless defined($lp);
-    if($path_len > $$lp{LEN}) {
-      $$lp{LEN}  = $path_len;
-      $$lp{TERM} = $id;
-      $$lp{OEND} = $$v{MAXOFFSET};
+    next if($path_len <= $$v{LPATH});
+    $$v{LPATH} = $path_len;
+    $$v{LPREV} = $prev;
+
+    my $out_degree = scalar(@{$$v{NEIGHS}});
+    if($out_degree == 0) {
+      my $comp = $components->find($id);
+      my $lp = $longest_path{$comp};
+      $lp = $longest_path{$comp} = { LEN => 0, OSTART => $$v{MINOFFSET} } unless defined($lp);
+      if($path_len > $$lp{LEN}) {
+        $$lp{LEN}  = $path_len;
+        $$lp{TERM} = $id;
+        $$lp{OEND} = $$v{MAXOFFSET};
+
+        $$v{LNEXT} = undef;
+        my $nn = $id;
+        my $n = $$v{LPREV};
+        while(defined($n)) {
+          $nodes[$n]{LNEXT} = $nn;
+          $nn               = $n;
+          $n                = $nodes[$n]{LPREV};
+        }
+      }
+      next;
     }
-    return;
-  }
 
-  foreach my $n (@{$$v{NEIGHS}}) {
-    my $w = $nodes[$$n[0]];
-    traverse_tree($$n[0], $path_len + $$w{NMERS} - $$n[1], $id);
+    foreach my $n (@{$$v{NEIGHS}}) {
+      next if(defined($$v{LNEXT}) && $$v{LNEXT} != $$n[0]);
+      my $w = $nodes[$$n[0]];
+      push(@stack, [$$n[0], $path_len + $$w{NMERS} - $$n[1], $id]);
+    }
   }
 }
 
