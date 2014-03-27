@@ -42,6 +42,7 @@ option("H", "no-header") {
   off }
 option("l", "unitigs-lengths") {
   description "Length of k-unitigs"
+  imply "forward"
   c_string; typestr "path" }
 option("k", "k-mer") {
   description "Length of k-mer used to create k-unitigs"

@@ -267,46 +267,32 @@ TEST(ComputeKmersInfo, ComplexOverlap) {
 
   compute.add_mer(70);
   EXPECT_EQ(vi({1, 0, 0, 0, 0, 0, 0, 0, 0}), info);
-
   compute.add_mer(71);
   EXPECT_EQ(vi({2, 1, 1, 0, 0, 0, 0, 0, 0}), info);
-
   compute.add_mer(72);
   EXPECT_EQ(vi({3, 2, 2, 1, 1, 0, 0, 0, 0}), info);
-
   compute.add_mer(73);
   EXPECT_EQ(vi({4, 3, 3, 2, 2, 1, 1, 0, 0}), info);
-
   compute.add_mer(74);
   EXPECT_EQ(vi({5, 4, 4, 3, 3, 2, 2, 0, 0}), info);
-
   compute.add_mer(82);
   EXPECT_EQ(vi({6, 5, 5, 4, 4, 3, 3, 0, 0}), info);
-
   compute.add_mer(83);
   EXPECT_EQ(vi({7, 6, 6, 5, 5, 4, 4, 1, 1}), info);
-
   compute.add_mer(84);
   EXPECT_EQ(vi({8, 7, 7, 6, 6, 5, 5, 2, 2}), info);
-
   compute.add_mer(85);
   EXPECT_EQ(vi({8, 7, 8, 7, 7, 6, 6, 3, 3}), info);
-
   compute.add_mer(86);
   EXPECT_EQ(vi({8, 7, 8, 7, 8, 7, 7, 4, 4}), info);
-
   compute.add_mer(87);
   EXPECT_EQ(vi({8, 7, 8, 7, 8, 7, 8, 5, 5}), info);
-
   compute.add_mer(96);
   EXPECT_EQ(vi({8, 7, 8, 7, 8, 7, 9, 6, 6}), info);
-
   compute.add_mer(97);
   EXPECT_EQ(vi({8, 7, 8, 7, 8, 7, 9, 6, 7}), info);
-
   compute.add_mer(166);
   EXPECT_EQ(vi({8, 7, 8, 7, 8, 7, 9, 6, 8}), info);
-
   compute.add_mer(167);
   EXPECT_EQ(vi({}), info);
 } // ComputeKmersInfo.ComplexOverlap
