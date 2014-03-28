@@ -15,15 +15,16 @@ while($line=<STDIN>){
 		push(@pb_cover,0);
 	}
     }
-    push(@starts,$f[0]-$f[2]);
-    push(@ends,$f[1]+$f[10]-$f[3]);
+    
+    push(@starts,$f[0]);
+    push(@ends,$f[1]);
     push(@scores,$f[8]+$f[1]);#we include the last position and number of kmers MUST SUBTRACT THE PREVIOUS LAST COORDINATE
     push(@sr,$f[12]);
     push(@lines,$line);
     push(@contained,0);
     push(@used,0);
     push(@spur,0);
-    for($i=$f[0]-$f[2];$i<=$f[1]+$f[10]-$f[3];$i++){
+    for($i=$f[0];$i<=$f[1];$i++){
 	$pb_cover[$i]++;
     }
 }
@@ -42,12 +43,17 @@ while($spur_found){
 	    last if($t_ext>0);
 	}
 	if($j>$#sr){ #extension does not continue
-	    print "Found spur $i $sr[$i]\n";
+	    print "Found spur $i $pb_cover[$ends[$i]] $starts[$i] $ends[$i] $sr[$i]\n";
 	    $spur[$i]=1;
 	    $spur_found=1;
+
+	    for(my $k=$starts[$i];$k<=$ends[$i];$k++){
+        	$pb_cover[$k]--;
+    		}
 	}
     }
 }
+
 
 #find the first non-spur super-read 
 for($i=0;$i<$#sr;$i++){
@@ -55,6 +61,7 @@ for($i=0;$i<$#sr;$i++){
 }
 #create first mega-read
 push(@mega_reads,$sr[$i]);
+push(@mega_reads_first_pos,$starts[$i]);
 push(@mega_reads_last_sr,$sr[$i]);
 push(@mega_reads_last_pos,$ends[$i]);
 push(@mega_reads_last_index,$i);
@@ -85,7 +92,7 @@ while(1){
 		$ext_score=$scores[$i]-$mega_reads_last_pos[$mri];#here we score the continuation
 		print "New extension $i $ext_score $starts[$i] $ends[$i]  $sr[$i] $mega_reads_last_pos[$mri] $scores[$i]\n"; 
 		push(@extensions,$i);
-		if($ext_score>$max_ext){
+		if($ext_score>=$max_ext){
 		    $max_ext=$ext_score;
 		    $max_ext_index=$i;
 		    $max_overlap=$overlap;
@@ -124,6 +131,7 @@ while(1){
 	    $mri++;
 	    $contained[$i]=1;
 	    $used[$i]=1;
+	    push(@mega_reads_first_pos,$starts[$i]);
 	    push(@mega_reads,$sr[$i]);
 	    push(@mega_reads_last_sr,$sr[$i]);
 	    push(@mega_reads_last_pos,$ends[$i]);
@@ -147,7 +155,7 @@ for($i=0;$i<=$#lines;$i++){
 }
 
 for($i=0;$i<=$#mega_reads;$i++){
-    print STDERR "$mega_reads_num_sr[$i] $mega_reads[$i]\n";
+    print STDERR "$mega_reads_num_sr[$i] $mega_reads_first_pos[$i] $mega_reads_last_pos[$i] ",$mega_reads_last_pos[$i]-$mega_reads_first_pos[$i]," $mega_reads[$i]\n";
 }
 
 sub overlap_ext{

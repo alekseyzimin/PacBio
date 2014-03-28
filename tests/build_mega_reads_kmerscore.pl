@@ -15,17 +15,18 @@ while($line=<STDIN>){
 		push(@pb_cover,0);
 	}
     }
-    push(@starts,$f[0]-$f[2]);
-    push(@ends,$f[1]+$f[10]-$f[3]);
-    push(@scores,$f[8]+$f[1]);#we include the last position and number of kmers MUST SUBTRACT THE PREVIOUS LAST COORDINATE
+    push(@starts,$f[0]);
+    push(@ends,$f[1]);
     push(@sr,$f[12]);
     push(@lines,$line);
     push(@contained,0);
     push(@used,0);
     push(@spur,0);
-    for($i=$f[0]-$f[2];$i<=$f[1]+$f[10]-$f[3];$i++){
+    
+    for(my $i=$f[0];$i<=$f[1];$i++){
 	$pb_cover[$i]++;
     }
+
     push(@kmers,join(" ",@f[13..$#f]));
 	
 }
@@ -44,9 +45,12 @@ while($spur_found){
 	    last if($t_ext>0);
 	}
 	if($j>$#sr){ #extension does not continue
-	    print "Found spur $i $sr[$i]\n";
+	    print "Found spur $i $pb_cover[$ends[$i]] $sr[$i]\n";
 	    $spur[$i]=1;
 	    $spur_found=1;
+	    for(my $k=$starts[$i];$k<=$ends[$i];$k++){
+        	$pb_cover[$k]--;
+    		}
 	}
     }
 }
@@ -74,7 +78,7 @@ while(1){
 	$ext_flag=0;
 #here we look for the best extension for current mega-read, must overlap and have the highest score=amount of extension+k-mer coverage, only consider overlapping extensions
 	@extensions=();
-	$max_ext=0;
+	$max_ext=-1;
 	$max_ext_index=-1;
 	$max_overlap=0;
 	print "Looking for extensions for $mega_reads_last_pos[$mri] $mega_reads_last_sr[$mri]\n";
@@ -91,7 +95,7 @@ while(1){
 		}#here we score the continuation
 		print "New extension $i $ext_score $starts[$i] $ends[$i]  $sr[$i] $kmers[$i]\n"; 
 		push(@extensions,$i);
-		if($ext_score>$max_ext){
+		if($ext_score>=$max_ext){
 		    $max_ext=$ext_score;
 		    $max_ext_index=$i;
 		    $max_overlap=$overlap;

@@ -35,7 +35,7 @@ while($line=<STDIN>){
     $mtchstart=0 if($mtchstart<0);
     $mtchend=$f[9] if($mtchend>$f[9]);
     $mtchspan=$mtchend-$mtchstart;
-    next if(($f[3]-$f[2])/$mtchspan<0.4);#not interested if match span is less that 50% of the implied matching length
+    next if(($f[3]-$f[2])/$mtchspan<0.2);#not interested if match span is less that 20% of the implied matching length
     push(@bestmtch,$line) if(check_match($f[0],$f[1],$end,$f[12])); 
 }
 #last one!!!
@@ -58,9 +58,8 @@ while($line=<STDIN>){
 
 sub check_match{
     my ($first_coord,$last_coord,$last_end,$name)=@_;
-    my $flag=0;
-    if($last_coord>=$last_end){
-            $flag=1;
+    my $flag=1;
+    if($last_coord>=$last_endi && scalar(@current_matches)>0){
 	    for(my $i=0;$i<=$#current_matches;$i++){
 		if($current_ends[$i]>$first_coord+$min_overlap){
 		    $flag=0;
