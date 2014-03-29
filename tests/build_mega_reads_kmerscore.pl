@@ -61,6 +61,7 @@ for($i=0;$i<$#sr;$i++){
 }
 #create first mega-read
 push(@mega_reads,$sr[$i]);
+push(@mega_reads_first_pos,$starts[$i]);
 push(@mega_reads_last_sr,$sr[$i]);
 push(@mega_reads_last_pos,$ends[$i]);
 push(@mega_reads_last_index,$i);
@@ -136,6 +137,7 @@ while(1){
 	    $used[$i]=1;
 	    push(@mega_reads,$sr[$i]);
 	    push(@mega_reads_last_sr,$sr[$i]);
+	    push(@mega_reads_first_pos,$starts[$i]);
 	    push(@mega_reads_last_pos,$ends[$i]);
 	    push(@mega_reads_last_index,$i);
 	    push(@mega_reads_num_sr,1);
@@ -157,7 +159,7 @@ for($i=0;$i<=$#lines;$i++){
 }
 
 for($i=0;$i<=$#mega_reads;$i++){
-    print STDERR "$mega_reads_num_sr[$i] $mega_reads[$i]\n";
+	print STDERR "$mega_reads_num_sr[$i] $mega_reads_first_pos[$i] $mega_reads_last_pos[$i] ",$mega_reads_last_pos[$i]-$mega_reads_first_pos[$i]," $mega_reads[$i]\n";
 }
 
 sub overlap_ext{

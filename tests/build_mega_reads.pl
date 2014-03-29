@@ -15,7 +15,9 @@ while($line=<STDIN>){
 		push(@pb_cover,0);
 	}
     }
-    
+   
+    push(@istarts,$f[0]-$f[2]);
+    push(@iends,$f[1]+$f[10]-$f[3]); 
     push(@starts,$f[0]);
     push(@ends,$f[1]);
     push(@scores,$f[8]+$f[1]);#we include the last position and number of kmers MUST SUBTRACT THE PREVIOUS LAST COORDINATE
@@ -59,11 +61,13 @@ while($spur_found){
 for($i=0;$i<$#sr;$i++){
     last if(not($spur[$i]));
 }
+exit if($i>$#sr);
 #create first mega-read
 push(@mega_reads,$sr[$i]);
-push(@mega_reads_first_pos,$starts[$i]);
+push(@mega_reads_first_pos,$istarts[$i]);
 push(@mega_reads_last_sr,$sr[$i]);
 push(@mega_reads_last_pos,$ends[$i]);
+push(@mega_reads_last_ipos,$iends[$i]);
 push(@mega_reads_last_index,$i);
 push(@mega_reads_num_sr,1);
 $contained[$i]=1;
@@ -111,6 +115,7 @@ while(1){
 	    $mega_reads_num_sr[$mri]++;
 	    print "Extended mega read $mega_reads[$mri]\n";
 	    print "Checking containees\n";
+	    $mega_reads_last_ipos[$mri]=$iends[$max_ext_index];
 	    $mega_reads_last_pos[$mri]=$ends[$max_ext_index];
 	    $mega_reads_last_sr[$mri]=$sr[$max_ext_index];
 	    $mega_reads_last_index[$mri]=$max_ext_index;
@@ -131,8 +136,9 @@ while(1){
 	    $mri++;
 	    $contained[$i]=1;
 	    $used[$i]=1;
-	    push(@mega_reads_first_pos,$starts[$i]);
+	    push(@mega_reads_first_pos,$istarts[$i]);
 	    push(@mega_reads,$sr[$i]);
+	    push(@mega_reads_last_ipos,$iends[$i]);
 	    push(@mega_reads_last_sr,$sr[$i]);
 	    push(@mega_reads_last_pos,$ends[$i]);
 	    push(@mega_reads_last_index,$i);
@@ -155,7 +161,7 @@ for($i=0;$i<=$#lines;$i++){
 }
 
 for($i=0;$i<=$#mega_reads;$i++){
-    print STDERR "$mega_reads_num_sr[$i] $mega_reads_first_pos[$i] $mega_reads_last_pos[$i] ",$mega_reads_last_pos[$i]-$mega_reads_first_pos[$i]," $mega_reads[$i]\n";
+    print STDERR "$mega_reads_num_sr[$i] $mega_reads_first_pos[$i] $mega_reads_last_ipos[$i] ",$mega_reads_last_ipos[$i]-$mega_reads_first_pos[$i]," $mega_reads[$i]\n";
 }
 
 sub overlap_ext{
