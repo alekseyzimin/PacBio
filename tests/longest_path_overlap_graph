@@ -2,167 +2,179 @@
 
 use strict;
 use warnings;
-use Getopt::Long;
+use Getopt::Long qw(:config no_ignore_case bundling);
 use FindBin;
 use lib "$FindBin::RealBin";
 use UnionFind;
 
-my ($list_sr, $help);
+my ($no_header, $help);
 my $min_sr = 2; # Minimum # of super read in a mega read
 my $min_density = 0.1;
-GetOptions("l|list" => \$list_sr,
-           "m|min=i" => \$min_sr,
+GetOptions("m|min=i"     => \$min_sr,
            "d|density=f" => \$min_density,
-           "h|help" => \$help) or die;
+           "H|no-header" => \$no_header,
+           "h|help"      => \$help) or die;
 
 if(defined($help)) {
   print(<<EOS);
 Find the longest (with most k-mers) path in the super-read overlap graph
 
- -m,--min      Minimum number of super reads in a mega read ($min_sr)
- -d,--density  Minimum denity of k-mers ($min_density)
- -l,--list     List the super-reads
- -h,--help     This message
+ -m,--min        Minimum number of super reads in a mega read ($min_sr)
+ -d,--density    Minimum denity of k-mers ($min_density)
+ -H,--no-header  Do not print line headers
+ -h,--help       This message
 EOS
 # ;
 exit(0);
 }
 
-my (@nodes);
-my $pacbioName;
+my @nodes;
+my $pacbioName = "";
 
+print("Rstart Rend Nmers Density PB MegaRead\n") unless $no_header;
 while(my $line = <STDIN>) {
   chomp ($line);
   my @flds = split (" ", $line);
-  if (defined ($pacbioName)) {
-    if ($flds[11] ne $pacbioName) {
-      print "You screwed up! Only use for ONE (1) pacbio read at a time. Bye!\n";
-      exit (1); }
-  } else {
+
+  if($pacbioName ne $flds[11]) {
+    handle_graph(\@nodes, $pacbioName);
+    @nodes = ();
     $pacbioName = $flds[11];
   }
+
   my $id = @nodes;
   my @info = splice(@flds, 0, 13);
-  push(@nodes, { ID => $id, NAME => $info[12], NMERS => $info[4], NEIGHS => [], LPATH => 0, LPREV => undef, LNEXT => undef,
-                 INDEG => 0,
-                 MINOFFSET => $info[0], MAXOFFSET => $info[1], LEN => $info[10], MERCOUNTS => \@flds });
+  # LPATH -> Number of mers in longest path up to this node. LPREV ->
+  # Previous node in longest path. LSTART -> starting node in longest
+  # path. LCOUNT -> Number of nodes in longest path.
+  push(@nodes, { ID => $id, NAME => $info[12], NMERS => $info[4], NEIGHS => [], INDEG => 0,
+                 MINOFFSET => $info[0], MAXOFFSET => $info[1], LEN => $info[10], MERCOUNTS => \@flds ,
+                 LPATH => 0, LPREV => undef, LSTART => undef, LCOUNT => 1 });
 }
+handle_graph(\@nodes, $pacbioName);
 
-# A node has { ID => i, NMERS => n, NEIGHS => [], LPATH => length,
-# LPREV => prev_node } A edge is a pair [v, w] where v is the index of
+# Create the edges between the nodes. Returns the connected
+# components.
+sub create_edges {
+  my ($nodes) = @_;
+
+# An edge is a triplet [v, w, z] where v is the index of
 # the id of the node and w is the weight (number of shared mers
-# between nodes).
-my $components = UnionFind->new();
-for(my $i=0; $i< @nodes; ++$i) {
-  my $maxOffset = $nodes[$i]{MAXOFFSET};
-  my $super = $nodes[$i]{NAME};
-  my @tflds = split (/_/, $super);
-  my $lastKUni = $tflds[-1];
-  for (my $j=$i+1; $j< @nodes; ++$j) {
-    last if ($nodes[$j]{MINOFFSET} >= $maxOffset);
-    my $localSuperReadName = $nodes[$j]{NAME};
-    my $index = index ($localSuperReadName, $lastKUni);
-    next unless ($index >= 0);
-    my $lenOfSubstring = $index + length ($lastKUni);
-    my $lastToFind = substr ($super, -$lenOfSubstring);
-    $index = index ($localSuperReadName, $lastToFind);
-    next unless ($index == 0);
-    my @unitigs = split(/_/, $lastToFind); # k-unitigs in common between nodes
-    my $mers_shared = 0;
-    my $mers_info = $nodes[$j]{MERCOUNTS};
-    for(my $k = 0; $k < @unitigs; ++$k) {
-      $mers_shared += $$mers_info[2 * $k];
-      $mers_shared -= $$mers_info[2 * $k - 1] if $k > 0;
+# between nodes), and z is the number of shared k-unitigs.
+  my $components = UnionFind->new();
+  for(my $i=0; $i < @$nodes; ++$i) {
+    my $maxOffset = $$nodes[$i]{MAXOFFSET};
+    my $super = $$nodes[$i]{NAME};
+    my @tflds = split (/_/, $super);
+    my $lastKUni = $tflds[-1];
+    for (my $j=$i+1; $j < @$nodes; ++$j) {
+      last if ($$nodes[$j]{MINOFFSET} >= $maxOffset);
+      my $localSuperReadName = $$nodes[$j]{NAME};
+      my $index = index ($localSuperReadName, $lastKUni);
+      next unless ($index >= 0);
+      my $lenOfSubstring = $index + length ($lastKUni);
+      my $lastToFind = substr ($super, -$lenOfSubstring);
+      $index = index ($localSuperReadName, $lastToFind);
+      next unless ($index == 0);
+      my @unitigs = split(/_/, $lastToFind); # k-unitigs in common between nodes
+      my $mers_shared = 0;
+      my $mers_info = $$nodes[$j]{MERCOUNTS};
+      for(my $k = 0; $k < @unitigs; ++$k) {
+        $mers_shared += $$mers_info[2 * $k];
+        $mers_shared -= $$mers_info[2 * $k - 1] if $k > 0;
+      }
+      push(@{$$nodes[$i]{NEIGHS}}, [$j, $mers_shared, scalar(@unitigs)]);
+      $$nodes[$j]{INDEG}++;
+      $components->union($i, $j);
     }
-    push(@{$nodes[$i]{NEIGHS}}, [$j, $mers_shared, scalar(@unitigs)]);
-    $nodes[$j]{INDEG}++;
-    $components->union($i, $j);
   }
+
+  return $components;
 }
 
-# One longest path per weakly connected component. Contains { LEN => nmers, OSTART => x, OEND => x, TERM => node, NSTART => node }
-my %longest_path;
-sub traverse_tree {
-  my @stack;
-  push(@stack, \@_);
+# Find the longest paths in the graph, for the set of nodes and
+# connected components. Returns a hash with for each connected
+# component, a reference the the last node of the longest path.
+sub find_longest_paths {
+  my ($nodes, $components) = @_;
+# One longest path per weakly connected component. Reference to
+# terminal node of path.
+  my %longest_paths;
 
-  while(@stack) {
-    my ($id, $path_len, $prev) = @{pop(@stack)};
-    my $v = $nodes[$id];
-#    print("$id $path_len ", defined($prev) ? $prev : "-", " ", $$v{LPATH}, " ", scalar(@stack), "\n");
+# The nodes have been created in topological order, because the
+# coordinates are sorted according to PacBIO read position. So we can
+# find the longest path by visiting each node in order once.
+  foreach my $v (@$nodes) {
+    # Bootstrap for starting nodes
+    if($$v{INDEG} == 0) {
+      $$v{LPATH}  = $$v{NMERS};
+      $$v{LSTART} = $v;
+    }
+    my $cpath = $$v{LPATH};
 
-    next if($path_len <= $$v{LPATH});
-    $$v{LPATH} = $path_len;
-    $$v{LPREV} = $prev;
-
-    my $out_degree = scalar(@{$$v{NEIGHS}});
-    if($out_degree == 0) {
-      my $comp = $components->find($id);
-      my $lp = $longest_path{$comp};
-      $lp = $longest_path{$comp} = { LEN => 0, OSTART => $$v{MINOFFSET} } unless defined($lp);
-      if($path_len > $$lp{LEN}) {
-        $$lp{LEN}  = $path_len;
-        $$lp{TERM} = $id;
-        $$lp{OEND} = $$v{MAXOFFSET};
-
-        $$v{LNEXT} = undef;
-        my $nn = $id;
-        my $n = $$v{LPREV};
-        while(defined($n)) {
-          $nodes[$n]{LNEXT} = $nn;
-          $nn               = $n;
-          $n                = $nodes[$n]{LPREV};
-        }
-      }
+    # Record longest path for ending nodes
+    if(@{$$v{NEIGHS}} == 0) {
+      my $comp = $components->find($$v{ID});
+      my $lp   = $longest_paths{$comp};
+      $longest_paths{$comp} = $v if !defined($lp) || $cpath > $$lp{LPATH};
       next;
     }
-
-    foreach my $n (@{$$v{NEIGHS}}) {
-      next if(defined($$v{LNEXT}) && $$v{LNEXT} != $$n[0]);
-      my $w = $nodes[$$n[0]];
-      push(@stack, [$$n[0], $path_len + $$w{NMERS} - $$n[1], $id]);
+    
+    # For interior nodes, updates neighbors
+    foreach my $e (@{$$v{NEIGHS}}) {
+      my $nv     = $$nodes[$$e[0]];
+      my $ncp    = $cpath + $$nv{NMERS} - $$e[1];
+      if($ncp > $$nv{LPATH}) {
+        $$nv{LPATH}  = $ncp;
+        $$nv{LSTART} = $$v{LSTART};
+        $$nv{LPREV}  = $v;
+        $$nv{LCOUNT} = $$v{LCOUNT} + 1;
+      }
     }
+  }
+  return %longest_paths
+}
+
+# Print the longest paths
+sub print_longest_paths {
+  my ($longest_paths, $pbname) = @_;
+
+  while(my ($comp, $lp) = each %$longest_paths) {
+    next if $$lp{LCOUNT} < $min_sr;
+    my $lp_ostart = $$lp{LSTART}{MINOFFSET};
+    my $lp_oend   = $$lp{MAXOFFSET};
+    my $density = $$lp{LPATH} / ($lp_oend - $lp_ostart + 1);
+    next if($density < $min_density);
+
+    my @path;
+    my $term_node = $lp;
+    while(defined($term_node)) {
+      push(@path, $term_node);
+      $term_node = $$term_node{LPREV};
+    }
+
+    printf("%d %d %d %.2g %s ", $lp_ostart, $lp_oend, $$lp{LPATH}, $density, $pbname);
+
+    print($path[-1]{NAME});
+    for(my $i = $#path; $i > 0; $i--) {
+      my $v = $path[$i];
+      foreach my $n (@{$$v{NEIGHS}}) {
+        next unless $$n[0] == $path[$i - 1]{ID};
+        my $w = $path[$i - 1];
+        my @srs = split(/_/, $$w{NAME});
+        splice(@srs, 0, $$n[2]);
+        print("_", join("_", @srs));
+        last;
+      }
+    }
+    print("\n");
   }
 }
 
-foreach my $v (@nodes) {
-  if($$v{INDEG} == 0) {
-    traverse_tree($$v{ID}, $$v{NMERS}, undef);
-  }
-}
-
-print("Rstart Rend Nmers Density MegaRead\n");
-while(my ($comp, $lp) = each %longest_path) {
-  my @path;
-  my $term_node = $$lp{TERM};
-  while(defined($term_node)) {
-    push(@path, $term_node);
-    $term_node = $nodes[$term_node]{LPREV};
-  }
-
-  next if(@path < $min_sr);
-  my $density = $$lp{LEN} / ($$lp{OEND} - $$lp{OSTART} + 1);
-  next if($density < $min_density);
-
-  if(defined($list_sr)) {
-    for(my $i = $#path; $i >= 0; $i--) {
-      print($path[$i], " ", $nodes[$path[$i]]{NAME}, "\n");
-    }
-  }
-
-  printf("%d %d %d %.2g ", $$lp{OSTART}, $$lp{OEND}, $$lp{LEN}, $density);
-
-  print($nodes[$path[-1]]{NAME});
-  for(my $i = $#path; $i > 0; $i--) {
-    my $v = $nodes[$path[$i]];
-    foreach my $n (@{$$v{NEIGHS}}) {
-      next unless $$n[0] == $path[$i - 1];
-      my $w = $nodes[$path[$i - 1]];
-      my @srs = split(/_/, $$w{NAME});
-      splice(@srs, 0, $$n[2]);
-      print("_", join("_", @srs));
-      last;
-    }
-  }
-  print("\n");
+sub handle_graph {
+  my ($nodes, $pbname) = @_;
+  return unless @$nodes;
+  my $components = create_edges($nodes);
+  my %longest_paths = find_longest_paths($nodes, $components);
+  print_longest_paths(\%longest_paths, $pbname);
 }
