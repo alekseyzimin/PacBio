@@ -23,4 +23,4 @@ fi
 touch $FILENAME.megareads.fa
 paste $FILENAME.megareads <(grep -v '>' $FILENAME.megareads.fa) > $FILENAME.megareads.wseq
 sort -nrk4,4 $FILENAME.megareads.wseq | $EXEPATH/reconciliate_mega_reads.pl $NAMESEQFILE $EXEPATH | sort -nk2,2 > $FILENAME.megareads.sorted.wseq
-
+#sort -nrk4,4 $FILENAME.megareads.wseq | $EXEPATH/reconciliate_mega_reads.pl $NAMESEQFILE $EXEPATH > $FILENAME.megareads.sorted.wseq

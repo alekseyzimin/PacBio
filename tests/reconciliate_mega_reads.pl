@@ -14,15 +14,17 @@ close(FILE);
 @mr=();
 @nsr=();
 @mrseq=();
-$max_overlap=100;
+$max_overlap=69;
 
 while($line=<STDIN>){
 chomp($line);
 ($nsr,$bgn,$end,$len,$mr,$mrseq)=split(/\s+/,$line);
 $coords=`$exedir/swalign $pbseq $mrseq`;#refine coordinates with smith-waterman
 @c=split(/\s+/,$coords);
-$bgn=$c[2]-$c[0];
-$end=$c[3]-$c[0];
+#print "old coords  $bgn $end\n";
+#$bgn=$c[2]-$c[0];
+#$end=$c[3]-$c[0];
+#print "new coords  $bgn $end\n";
 
 for($i=0;$i<=$#interval_bgn;$i++){
 if($bgn>=$interval_bgn[$i] && $bgn<=$interval_end[$i]){

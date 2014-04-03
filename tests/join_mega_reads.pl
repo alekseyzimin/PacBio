@@ -23,7 +23,7 @@ while($line=<STDIN>){
     chomp($line);
     if($line =~ /^>/){
 	if(not($outread eq "")){
-	    $outread=substr($outread,0,length($pbseq{$rn})) if(length($outread)>length($pbseq{$rn})); #trim if longer than pb read
+	    $outread=substr($outread,0,length($outread)-($last_coord-length($pbseq{$rn}))) if($last_coord>length($pbseq{$rn})); #trim if longer than pb read
 	    $indx=0;
 	    @f=split(/(N)\1+/,$outread);
 	    for($i=0;$i<=$#f;$i+=2){
@@ -39,16 +39,16 @@ while($line=<STDIN>){
 	@f=split(/\s+/,$line);
 	if($outread eq ""){
 	    if($f[1]<0){#trim the front if sticking out of pb read
-		$outread.=substr($f[4],-1*$f[1]);
+		$outread=substr($f[4],-1*$f[1]);
 	    }else{
-		$outread.=$f[4];
+		$outread=$f[4];
 	    }
 	}else{
 	    if($f[1]>$last_coord){
 		if($f[1]-$last_coord>$max_gap){#then put N's and later split
 		$outread.=("N" x ($f[1]-$last_coord));
 		}else{
-		$outread.=lc(substr($pbseq{$rn},$last_coord,$f[1]-$last_coord));
+		$outread.=lc(substr($pbseq{$rn},$last_coord+1,$f[1]-$last_coord-1));
 		}
 		$outread.=$f[4];
 	    }else{
