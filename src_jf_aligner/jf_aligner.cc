@@ -52,6 +52,7 @@ int main(int argc, char *argv[])
   if(args.details_given) aligner.details_multiplexer(details.multiplexer());
   if(args.coords_given) aligner.coords_multiplexer(coords.multiplexer(), !args.no_header_flag);
   if(unitigs_lengths) aligner.unitigs_lengths(unitigs_lengths.get(), args.k_mer_arg);
+  aligner.max_mer_count(args.max_count_arg);
 
   // Output matches
   aligner.exec_join(args.threads_arg);
