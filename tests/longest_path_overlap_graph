@@ -48,7 +48,8 @@ while(my $line = <STDIN>) {
   # Previous node in longest path. LSTART -> starting node in longest
   # path. LCOUNT -> Number of nodes in longest path.
   push(@nodes, { ID => $id, NAME => $info[12], NMERS => $info[4], NEIGHS => [], INDEG => 0,
-                 MINOFFSET => $info[0], MAXOFFSET => $info[1], LEN => $info[10], MERCOUNTS => \@flds ,
+                 RSTART => $info[0], REND => $info[1], QSTART => $info[2], QEND => $info[3],
+                 RLEN => $info[9], QLEN => $info[10], MERCOUNTS => \@flds ,
                  LPATH => 0, LPREV => undef, LSTART => undef, LCOUNT => 1 });
 }
 handle_graph(\@nodes, $pacbioName);
@@ -63,12 +64,12 @@ sub create_edges {
 # between nodes), and z is the number of shared k-unitigs.
   my $components = UnionFind->new();
   for(my $i=0; $i < @$nodes; ++$i) {
-    my $maxOffset = $$nodes[$i]{MAXOFFSET};
+    my $maxOffset = $$nodes[$i]{REND};
     my $super = $$nodes[$i]{NAME};
     my @tflds = split (/_/, $super);
     my $lastKUni = $tflds[-1];
     for (my $j=$i+1; $j < @$nodes; ++$j) {
-      last if ($$nodes[$j]{MINOFFSET} >= $maxOffset);
+      last if ($$nodes[$j]{RSTART} >= $maxOffset);
       my $localSuperReadName = $$nodes[$j]{NAME};
       my $index = index ($localSuperReadName, $lastKUni);
       next unless ($index >= 0);
@@ -141,9 +142,12 @@ sub print_longest_paths {
 
   while(my ($comp, $lp) = each %$longest_paths) {
     next if $$lp{LCOUNT} < $min_sr;
-    my $lp_ostart = $$lp{LSTART}{MINOFFSET};
-    my $lp_oend   = $$lp{MAXOFFSET};
-    my $density = $$lp{LPATH} / ($lp_oend - $lp_ostart + 1);
+    my $start_n   = $$lp{LSTART};
+    my $lp_ostart = $$start_n{RSTART} - $$start_n{QSTART} + 1; # Implied start in PB read
+    $lp_ostart    = 1 if $lp_ostart < 1;
+    my $lp_oend   = $$lp{REND} + $$lp{QLEN} - $$lp{QEND};
+    $lp_oend      = $$lp{RLEN} if $lp_oend > $$lp{RLEN};
+    my $density   = $$lp{LPATH} / ($lp_oend - $lp_ostart + 1);
     next if($density < $min_density);
 
     my @path;

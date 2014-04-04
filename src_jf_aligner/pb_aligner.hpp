@@ -33,6 +33,7 @@ class align_pb : public jellyfish::thread_exec {
   Multiplexer*             coords_multiplexer_;
   const std::vector<int>*  unitigs_lengths_; // Lengths of unitigs
   unsigned int             k_len_; // k-mer length used for creating k-unitigs
+  int                      max_mer_count_; // max mer count to be used for alignment
 
 
   typedef const mer_pos_hash_type::mapped_type list_type;
@@ -71,7 +72,8 @@ public:
     duplicated_(duplicated),
     details_multiplexer_(0),
     coords_multiplexer_(0),
-    unitigs_lengths_(0), k_len_(0)
+    unitigs_lengths_(0), k_len_(0),
+    max_mer_count_(0)
   { }
 
   align_pb& details_multiplexer(Multiplexer* m) { details_multiplexer_ = m; return *this; }
@@ -90,6 +92,8 @@ public:
     k_len_           = k_len;
     return *this;
   }
+
+  align_pb& max_mer_count(int m) { max_mer_count_ = m; return *this; }
 
   virtual void start(int thid) {
     mer_dna         tmp_m;
@@ -110,7 +114,7 @@ public:
         name = job->data[i].header.substr(0, name_end);
         parser.reset(job->data[i].seq);
         frags_pos.clear();
-        process_read(ary_, parser, frags_pos, L, stretch_constant_, stretch_factor_);
+        process_read(ary_, parser, frags_pos, L, stretch_constant_, stretch_factor_, max_mer_count_);
         if(details) print_details(*details, name, frags_pos);
         if(coords) print_coords(*coords, name, job->data[i].seq.size(), frags_pos);
       }
@@ -341,11 +345,11 @@ public:
 
   static void process_read(const mer_pos_hash_type& ary, parse_sequence& parser,
                            frags_pos_type& frags_pos, lis_align::forward_list<lis_align::element<double> >& L,
-                           double a, double b) {
+                           double a, double b, const int max_mer_count = 0) {
     while(parser.next()) { // Process each k-mer
-      if(parser.m.is_homopolymer()) continue;
       const bool is_canonical = parser.m < parser.rm;
       auto it = ary.find_pos(is_canonical ? parser.m : parser.rm);
+      if(max_mer_count && std::distance(it, ary.pos_end()) > max_mer_count) continue;
       for( ; it != ary.pos_end(); ++it) {
         mer_lists& ml = frags_pos[it->frag->name];
         ml.frag       = it->frag;

@@ -40,6 +40,9 @@ option("coords") {
 option("H", "no-header") {
   description "Do not output header"
   off }
+option("max-count") {
+  description "Maximum mer count in super read to be used for alignment"
+  uint32; default 200 }
 option("l", "unitigs-lengths") {
   description "Length of k-unitigs"
   imply "forward"
