@@ -34,6 +34,7 @@ class align_pb : public jellyfish::thread_exec {
   const std::vector<int>*  unitigs_lengths_; // Lengths of unitigs
   unsigned int             k_len_; // k-mer length used for creating k-unitigs
   int                      max_mer_count_; // max mer count to be used for alignment
+  bool                     compact_format_;
 
 
   typedef const mer_pos_hash_type::mapped_type list_type;
@@ -73,7 +74,7 @@ public:
     details_multiplexer_(0),
     coords_multiplexer_(0),
     unitigs_lengths_(0), k_len_(0),
-    max_mer_count_(0)
+    max_mer_count_(0), compact_format_(false)
   { }
 
   align_pb& details_multiplexer(Multiplexer* m) { details_multiplexer_ = m; return *this; }
@@ -81,7 +82,10 @@ public:
     coords_multiplexer_ = m;
     if(header) {
       Multiplexer::ostream o(coords_multiplexer_); // Write header
-      o << "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Rname Qname\n";
+      o << "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen";
+      if(!compact_format_)
+        o << " Rname";
+      o << " Qname\n";
       o.end_record();
     }
     return *this;
@@ -94,6 +98,7 @@ public:
   }
 
   align_pb& max_mer_count(int m) { max_mer_count_ = m; return *this; }
+  align_pb& compact_format(bool c) { compact_format_ = c; return *this; }
 
   virtual void start(int thid) {
     mer_dna         tmp_m;
@@ -320,8 +325,12 @@ public:
 
   void print_coords(Multiplexer::ostream& out, const std::string& pb_name, size_t pb_size, const frags_pos_type& frags_pos) {
     std::vector<coords_info> coords = compute_coordinates(frags_pos);
+    auto nb_lines = std::distance(coords.cbegin(), coords.cend());
+    if(nb_lines == 0) return;
 
     std::sort(coords.begin(), coords.end());
+    if(compact_format_)
+      out << ">" << nb_lines << " " << pb_name << "\n";
     for(auto it = coords.cbegin(), pit = it; it != coords.cend(); pit = it, ++it) {
       if(duplicated_ && it != pit && it->rs == pit->rs && it->re == pit->re && it->hash == pit->hash)
         continue;
@@ -329,8 +338,10 @@ public:
           << it->nb_mers << " "
           << it->pb_cons << " " << it->sr_cons << " "
           << it->pb_cover << " " << it->sr_cover << " "
-          << pb_size << " " << it->ql << " "
-          << pb_name << " " << it->qname;
+          << pb_size << " " << it->ql;
+      if(!compact_format_)
+        out << " " << pb_name;
+      out << " " << it->qname;
       for(auto mit : it->kmers_info)
         out << " " << mit;
       out << "\n";
