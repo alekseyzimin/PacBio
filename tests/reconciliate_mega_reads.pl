@@ -4,11 +4,7 @@
 #
 #
 #assume input sorted by mega-read size
-$exedir=$ARGV[1];
-open(FILE,$ARGV[0]);
-$line=<FILE>;
-($pbn,$pbseq)=split(/\s+/,$line);
-close(FILE);
+
 @interval_bgn=();
 @interval_end=();
 @mr=();
@@ -18,14 +14,10 @@ $max_overlap=69;
 
 while($line=<STDIN>){
 chomp($line);
-($nsr,$bgn,$end,$len,$mr,$mrseq)=split(/\s+/,$line);
-$coords=`$exedir/swalign $pbseq $mrseq`;#refine coordinates with smith-waterman
-@c=split(/\s+/,$coords);
-#print "old coords  $bgn $end\n";
-#$bgn=$c[2]-$c[0];
-#$end=$c[3]-$c[0];
-#print "new coords  $bgn $end\n";
-
+($pbgn,$pend,$mbgn,$mend,$qlt,$pb,$mrseq)=split(/\s+/,$line);
+$mrseq=substr($mrseq,$mbgn-1,$mend-$mbgn+1);
+$bgn=$pbgn;
+$end=$pend;
 for($i=0;$i<=$#interval_bgn;$i++){
 if($bgn>=$interval_bgn[$i] && $bgn<=$interval_end[$i]){
 $bgn_inside=1;
@@ -49,13 +41,11 @@ last if($end-$interval_bgn[$i]>$max_overlap);
 if($i>$#interval_bgn){#not contained anywhere
 push(@interval_bgn,$bgn);
 push(@interval_end,$end);
-push(@mr,$mr);
-push(@nsr,$nsr);
 push(@mrseq,$mrseq);
 }
 }
 
 for($i=0;$i<=$#interval_bgn;$i++){
-print "$nsr[$i] $interval_bgn[$i] $interval_end[$i] $mr[$i] $mrseq[$i]\n";
+print "$interval_bgn[$i] $interval_end[$i] $pb $mrseq[$i]\n";
 }
 

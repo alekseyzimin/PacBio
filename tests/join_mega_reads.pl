@@ -36,19 +36,19 @@ while($line=<STDIN>){
 	$rn=substr($line,1);
 
     }else{
-	@f=split(/\s+/,$line);
+	($bgn,$end,$pb,$seq)=split(/\s+/,$line);
 	if($outread eq ""){
-	    if($f[1]<0){#trim the front if sticking out of pb read
-		$outread=substr($f[4],-1*$f[1]);
+	    if($bgn<0){#trim the front if sticking out of pb read
+		$outread=substr($,-1*$bgn);
 	    }else{
-		$outread=$f[4];
+		$outread=$seq;
 	    }
 	}else{
-	    if($f[1]>$last_coord){
-		if($f[1]-$last_coord>$max_gap){#then put N's and later split
-		$outread.=("N" x ($f[1]-$last_coord));
+	    if($bgn>$last_coord){
+		if($bgn-$last_coord>$max_gap){#then put N's and later split
+		$outread.=("N" x ($f[0]-$last_coord));
 		}else{
-		$outread.=lc(substr($pbseq{$rn},$last_coord+1,$f[1]-$last_coord-1));
+		$outread.=lc(substr($pbseq{$rn},$last_coord+1,$f[0]-$last_coord-1));
 		}
 		$outread.=$f[4];
 	    }else{
@@ -56,7 +56,7 @@ while($line=<STDIN>){
 	    #$outread.=$f[4];
 	    }
 	}
-	$last_coord=$f[2];
+	$last_coord=$end;
     }
 }
 #output the last one
