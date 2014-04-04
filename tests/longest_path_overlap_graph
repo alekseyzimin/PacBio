@@ -6,53 +6,90 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use FindBin;
 use lib "$FindBin::RealBin";
 use UnionFind;
+use threads;
+use Thread::Queue;
 
-my ($no_header, $help);
-my $min_sr = 2; # Minimum # of super read in a mega read
+my ($no_header, $compact, $help);
+my $nb_threads  = 1;
+my $min_sr      = 2; # Minimum # of super read in a mega read
 my $min_density = 0.1;
+my $output      = "mega_reads";
 GetOptions("m|min=i"     => \$min_sr,
            "d|density=f" => \$min_density,
            "H|no-header" => \$no_header,
+           "t|thread=i"  => \$nb_threads,
+           "o|output=s"  => \$output,
+           "c|compact"   => \$compact,
            "h|help"      => \$help) or die;
 
 if(defined($help)) {
   print(<<EOS);
 Find the longest (with most k-mers) path in the super-read overlap graph
 
- -m,--min        Minimum number of super reads in a mega read ($min_sr)
- -d,--density    Minimum denity of k-mers ($min_density)
- -H,--no-header  Do not print line headers
- -h,--help       This message
+ -m,--min INT        Minimum number of super reads in a mega read ($min_sr)
+ -d,--density FLOAT  Minimum denity of k-mers ($min_density)
+ -H,--no-header      Do not print line headers
+ -t,--thread INT     Number of threads ($nb_threads)
+ -o,--output PATH    Output prefix file ($output)
+ -c,--compact        Compact output
+ -h,--help           This message
 EOS
 # ;
 exit(0);
 }
 
-my @nodes;
-my $pacbioName = "";
+# Start threads
+my $input_queue = Thread::Queue->new();
+for(my $i = 0; $i < $nb_threads; $i++) { threads->create(\&thread_main); }
 
-print("Rstart Rend Nmers Density PB MegaRead\n") unless $no_header;
-while(my $line = <STDIN>) {
-  chomp ($line);
-  my @flds = split (" ", $line);
-
-  if($pacbioName ne $flds[11]) {
-    handle_graph(\@nodes, $pacbioName);
-    @nodes = ();
-    $pacbioName = $flds[11];
+# Read input for worker threads
+while(<>) {
+  next unless /^>(\d+) (\S+)/;
+  my ($nb_lines, $pb) = ($1, $2);
+  my @lines :shared;
+  for(my $i = 0; $i < $nb_lines; $i++) {
+    my $line :shared = <>;
+    push(@lines, \$line);
   }
-
-  my $id = @nodes;
-  my @info = splice(@flds, 0, 13);
-  # LPATH -> Number of mers in longest path up to this node. LPREV ->
-  # Previous node in longest path. LSTART -> starting node in longest
-  # path. LCOUNT -> Number of nodes in longest path.
-  push(@nodes, { ID => $id, NAME => $info[12], NMERS => $info[4], NEIGHS => [], INDEG => 0,
-                 RSTART => $info[0], REND => $info[1], QSTART => $info[2], QEND => $info[3],
-                 RLEN => $info[9], QLEN => $info[10], MERCOUNTS => \@flds ,
-                 LPATH => 0, LPREV => undef, LSTART => undef, LCOUNT => 1 });
+  push(@lines, $pb);
+  $input_queue->enqueue(\@lines);
 }
-handle_graph(\@nodes, $pacbioName);
+
+# Terminate. Because '$input_queue->end()' does not exists in old
+# versions of Perl, we send a sentinel value (an empty array)
+foreach my $th (threads->list) { my @sentinel :shared; $input_queue->enqueue(\@sentinel); }
+foreach my $th (threads->list) { $th->join; }
+
+
+sub thread_main {
+  my $output_file = $output . "_" . threads->tid();
+  open(my $out, ">", $output_file) or die "Can't open output file '$output_file': $!";
+
+  unless($no_header) {
+    print($out "Rstart Rend Nmers Density");
+    print($out " PB") unless $compact;
+    print($out " MegaRead\n") unless $no_header;
+  }
+  while(my $lines = $input_queue->dequeue) {
+    last unless @$lines;
+    my $pbName = pop(@$lines);
+    my @nodes;
+    foreach my $line (@$lines) {
+      my @flds = split (" ", $$line);
+      my $id = @nodes;
+      my @info = splice(@flds, 0, 12);
+      # LPATH -> Number of mers in longest path up to this node. LPREV ->
+      # Previous node in longest path. LSTART -> starting node in longest
+      # path. LCOUNT -> Number of nodes in longest path.
+      push(@nodes, { ID => $id, NAME => $info[11], NMERS => $info[4], NEIGHS => [], INDEG => 0,
+                     RSTART => $info[0], REND => $info[1], QSTART => $info[2], QEND => $info[3],
+                     RLEN => $info[9], QLEN => $info[10], MERCOUNTS => \@flds ,
+                     LPATH => 0, LPREV => undef, LSTART => undef, LCOUNT => 1 });
+    }
+    handle_graph(\@nodes, $pbName, $out);
+  }
+  close($out);
+}
 
 # Create the edges between the nodes. Returns the connected
 # components.
@@ -138,8 +175,9 @@ sub find_longest_paths {
 
 # Print the longest paths
 sub print_longest_paths {
-  my ($longest_paths, $pbname) = @_;
+  my ($longest_paths, $pbname, $out) = @_;
 
+  print($out ">$pbname\n");
   while(my ($comp, $lp) = each %$longest_paths) {
     next if $$lp{LCOUNT} < $min_sr;
     my $start_n   = $$lp{LSTART};
@@ -157,9 +195,10 @@ sub print_longest_paths {
       $term_node = $$term_node{LPREV};
     }
 
-    printf("%d %d %d %.2g %s ", $lp_ostart, $lp_oend, $$lp{LPATH}, $density, $pbname);
+    printf($out "%d %d %d %.2g ", $lp_ostart, $lp_oend, $$lp{LPATH}, $density);
+    print($out "$pbname ") unless($compact);
 
-    print($path[-1]{NAME});
+    print($out $path[-1]{NAME});
     for(my $i = $#path; $i > 0; $i--) {
       my $v = $path[$i];
       foreach my $n (@{$$v{NEIGHS}}) {
@@ -167,18 +206,18 @@ sub print_longest_paths {
         my $w = $path[$i - 1];
         my @srs = split(/_/, $$w{NAME});
         splice(@srs, 0, $$n[2]);
-        print("_", join("_", @srs));
+        print($out "_", join("_", @srs));
         last;
       }
     }
-    print("\n");
+    print($out "\n");
   }
 }
 
 sub handle_graph {
-  my ($nodes, $pbname) = @_;
+  my ($nodes, $pbname, $out) = @_;
   return unless @$nodes;
   my $components = create_edges($nodes);
   my %longest_paths = find_longest_paths($nodes, $components);
-  print_longest_paths(\%longest_paths, $pbname);
+  print_longest_paths(\%longest_paths, $pbname, $out);
 }
