@@ -50,40 +50,24 @@ open(lengths_file) { |fd|
 
 fontsize = 14
 
-puts(<<EOS)
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1">
-  <defs
-     id="defs4">
-    <marker
-       refX="0"
-       refY="0"
-       orient="auto"
-       id="Arrow1Mstart"
-       style="overflow:visible">
-      <path
-         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
-         transform="matrix(0.4,0,0,0.4,4,0)"
-         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt" />
-    </marker>
-    <marker
-       refX="0"
-       refY="0"
-       orient="auto"
-       id="Arrow1Mend"
-       style="overflow:visible">
-      <path
-         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
-         transform="matrix(-0.4,0,0,-0.4,-4,0)"
-         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt" />
-    </marker>
-  </defs>
-EOS
-
 $extra_offset = 0
 $kmers_offset = 0
 
-def xc x; $opts[:lmargin] + $opts[:ppb] * ($kmers_offset + x); end
-def yc i; $extra_offset + $opts[:tmargin] + i * $opts[:space]; end
+$max_x = $min_x = nil
+$max_y = $min_y = nil
+
+def xc x
+  res = $opts[:lmargin] + $opts[:ppb] * ($kmers_offset + x)
+  $max_x = res if $max_x.nil? || $max_x < res
+  $min_x = res if $min_x.nil? || $min_x > res
+  res
+end
+def yc i
+  res = $extra_offset + $opts[:tmargin] + i * $opts[:space]
+  $max_y = res if $max_y.nil? || $max_y < res
+  $min_y = res if $min_y.nil? || $min_y > res
+  res
+end
 def marker ori; ori ? "marker-end=\"url(#Arrow1Mend)\"" : "marker-start=\"url(#Arrow1Mstart)\""; end
 
 vertical_lines = ""
@@ -178,6 +162,37 @@ unitigs.each_with_index { |ur, i|
   midpoint = (cstart + cend) / 2
   sr_lines += "<text x=\"#{xc(midpoint)}\" y=\"#{yc(i)}\" text-anchor=\"middle\">#{unitig}</text>\n"
 }
+
+puts(<<EOS)
+<svg width="#{($max_x - $min_x) + 1}pt\" height=\"#{($max_y - $min_y) + 1}pt"
+          xmlns="http://www.w3.org/2000/svg" version="1.1">
+  <defs
+     id="defs4">
+    <marker
+       refX="0"
+       refY="0"
+       orient="auto"
+       id="Arrow1Mstart"
+       style="overflow:visible">
+      <path
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         transform="matrix(0.4,0,0,0.4,4,0)"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt" />
+    </marker>
+    <marker
+       refX="0"
+       refY="0"
+       orient="auto"
+       id="Arrow1Mend"
+       style="overflow:visible">
+      <path
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt" />
+    </marker>
+  </defs>
+EOS
+
 
 puts(vertical_lines, match_lines, kmer_lines, sr_lines)
 puts('</svg>')

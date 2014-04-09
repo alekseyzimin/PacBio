@@ -49,10 +49,12 @@ int main(int argc, char *argv[])
   stream_manager streams(args.pacbio_arg.cbegin(), args.pacbio_arg.cend());
   align_pb aligner(args.threads_arg, hash, streams, args.stretch_constant_arg, args.stretch_factor_arg,
                    args.consecutive_arg, args.nmers_arg, args.forward_flag, args.compress_flag, args.duplicated_flag);
+  aligner
+    .max_mer_count(args.max_count_arg)
+    .compact_format(args.compact_flag);
   if(args.details_given) aligner.details_multiplexer(details.multiplexer());
   if(args.coords_given) aligner.coords_multiplexer(coords.multiplexer(), !args.no_header_flag);
   if(unitigs_lengths) aligner.unitigs_lengths(unitigs_lengths.get(), args.k_mer_arg);
-  aligner.max_mer_count(args.max_count_arg);
 
   // Output matches
   aligner.exec_join(args.threads_arg);
