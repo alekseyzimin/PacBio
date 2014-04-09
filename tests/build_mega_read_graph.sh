@@ -1,12 +1,10 @@
 #!/bin/bash
 
-FILENAME=$1  #filename of a coords file for matches of SINGLE pacbio read to the super-reads
+FILENAME=$1  #filename of a megareads file for matches of SINGLE pacbio read to the super-reads
 NAMESEQFILE=$2 #file containing pb read "name sequence"
 EXEPATH=`dirname $0`
 
-#will fail if there is a gap in pacBio read coverage
-
-perl -ane '{$ms=$F[0]-$F[2];$me=$F[1]+$F[10]-$F[3]; print "$ms $me ",join(" ",@F[2..$#F]),"\n"}' $FILENAME | $EXEPATH/longest_path_overlap_graph -m 1 -H -d 0.05 | sort -nrk3,3 > $FILENAME.megareads
+sort -nrk3,3 ${FILENAME} > $FILENAME.megareads
 if [ -L /genome7/raid/alekseyz/PB_ScerW303/assembly/work1 ];then
 ln -s /genome7/raid/alekseyz/PB_ScerW303/assembly/work1
 fi
