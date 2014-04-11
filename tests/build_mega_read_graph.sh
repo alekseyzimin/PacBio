@@ -13,10 +13,10 @@ if [ -s $FILENAME.megareads ];then
 /home/alekseyz/myprogs/MaSuRCA/build/inst/bin/createFastaSuperReadSequences work1 <(awk '{print "1 "$6}' $FILENAME.megareads) -seqdiffmax 0 -min-ovl-len 69 -minreadsinsuperread 1  -good-sr-filename $FILENAME.megareads.names  -kunitigsfile /genome7/raid/alekseyz/PB_ScerW303/assembly/guillaumeKUnitigsAtLeast32bases_all.fasta -good-sequence-output-file $FILENAME.megareads.fa -super-read-name-and-lengths-file $FILENAME.megareads.sizes -rename-super-reads  2> work1/createFastaSuperReadSequences.errors.txt
 
 awk -F ',' '{print ">"$1"\n"$2}'  $NAMESEQFILE > $NAMESEQFILE.fa
-nucmer --maxmatch -d 0.25 -f -g 200 -l 13 -b 1000 -p $FILENAME $NAMESEQFILE.fa $FILENAME.megareads.fa 1>/dev/null 2>&1
-
+nucmer  -d 0.3 -f -g 300 -l 15 -b 1000 -p $FILENAME $NAMESEQFILE.fa $FILENAME.megareads.fa 1>/dev/null 2>&1
+delta-filter -1 -o 20 $FILENAME.delta > $FILENAME.f.delta
 #show-coords -lcHr -I 75 $FILENAME.delta | $EXEPATH/extract_best_match_coords.pl > $FILENAME.f.ncoords
-show-coords -lcHr -I 75 $FILENAME.delta > $FILENAME.f.ncoords
+show-coords -lcHr -I 75 $FILENAME.f.delta | /home/alekseyz/myprogs/merge_matches_coords_file.pl > $FILENAME.f.ncoords
 
 perl -e '{
 open(FILE,$ARGV[0]);

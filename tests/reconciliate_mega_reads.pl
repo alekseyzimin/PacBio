@@ -47,7 +47,7 @@ $overlap=1;
 }
 }
 
-if($i>$#interval_bgn){#not contained anywhere
+if($i>$#interval_g_bgn){#not contained anywhere
 if($overlap==0){
 push(@interval_g_bgn,$bgn);
 push(@interval_g_end,$end);
