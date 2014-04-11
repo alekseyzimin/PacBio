@@ -100,29 +100,34 @@ sub create_edges {
 # the id of the node and w is the weight (number of shared mers
 # between nodes), and z is the number of shared k-unitigs.
   my $components = UnionFind->new();
-  for(my $i=0; $i < @$nodes; ++$i) {
-    my $maxOffset = $$nodes[$i]{REND};
-    my $super = $$nodes[$i]{NAME};
-    my @tflds = split (/_/, $super);
-    my $lastKUni = $tflds[-1];
+  for(my $i       = 0; $i < @$nodes; ++$i) {
+    my $node_i    = $$nodes[$i];
+    my $i_imp_end = $$node_i{REND} + $$node_i{QLEN} - $$node_i{QEND};
+    $i_imp_end    = $$node_i{REND} if $i_imp_end > $$node_i{REND};
+    my $super     = $$node_i{NAME};
+    my @tflds     = split (/_/, $super);
+    my $lastKUni  = $tflds[-1];
     for (my $j=$i+1; $j < @$nodes; ++$j) {
-      last if ($$nodes[$j]{RSTART} >= $maxOffset);
-      my $localSuperReadName = $$nodes[$j]{NAME};
-      my $index = index ($localSuperReadName, $lastKUni);
+      my $node_j      = $$nodes[$j];
+      my $j_imp_start = $$node_j{RSTART} - $$node_j{QSTART} + 1;
+      $j_imp_start    = 1 if $j_imp_start < 1;
+      last if $j_imp_start > $i_imp_end;
+      my $j_name = $$node_j{NAME};
+      my $index  = index ($j_name, $lastKUni);
       next unless ($index >= 0);
       my $lenOfSubstring = $index + length ($lastKUni);
       my $lastToFind = substr ($super, -$lenOfSubstring);
-      $index = index ($localSuperReadName, $lastToFind);
+      $index = index ($j_name, $lastToFind);
       next unless ($index == 0);
       my @unitigs = split(/_/, $lastToFind); # k-unitigs in common between nodes
       my $mers_shared = 0;
-      my $mers_info = $$nodes[$j]{MERCOUNTS};
+      my $mers_info = $$node_j{MERCOUNTS};
       for(my $k = 0; $k < @unitigs; ++$k) {
         $mers_shared += $$mers_info[2 * $k];
         $mers_shared -= $$mers_info[2 * $k - 1] if $k > 0;
       }
-      push(@{$$nodes[$i]{NEIGHS}}, [$j, $mers_shared, scalar(@unitigs)]);
-      $$nodes[$j]{INDEG}++;
+      push(@{$$node_i{NEIGHS}}, [$j, $mers_shared, scalar(@unitigs)]);
+      $$node_j{INDEG}++;
       $components->union($i, $j);
     }
   }
