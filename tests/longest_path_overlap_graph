@@ -104,8 +104,8 @@ sub create_edges {
     my $node_i    = $$nodes[$i];
     my $i_imp_end = $$node_i{REND} + $$node_i{QLEN} - $$node_i{QEND};
     $i_imp_end    = $$node_i{REND} if $i_imp_end > $$node_i{REND};
-    my $super     = $$node_i{NAME};
-    my @tflds     = split (/_/, $super);
+    my $i_name    = $$node_i{NAME};
+    my @tflds     = split (/_/, $i_name);
     my $lastKUni  = $tflds[-1];
     for (my $j=$i+1; $j < @$nodes; ++$j) {
       my $node_j      = $$nodes[$j];
@@ -113,13 +113,11 @@ sub create_edges {
       $j_imp_start    = 1 if $j_imp_start < 1;
       last if $j_imp_start > $i_imp_end;
       my $j_name = $$node_j{NAME};
-      my $index  = index ($j_name, $lastKUni);
-      next unless ($index >= 0);
-      my $lenOfSubstring = $index + length ($lastKUni);
-      my $lastToFind = substr ($super, -$lenOfSubstring);
-      $index = index ($j_name, $lastToFind);
-      next unless ($index == 0);
-      my @unitigs = split(/_/, $lastToFind); # k-unitigs in common between nodes
+      next unless $j_name =~ /(?:^|_)($lastKUni)(?:_|$)/;
+      my $common_len     = $+[1];
+      my $common_unitigs = substr($i_name, -$common_len);
+      next unless $common_unitigs eq substr($j_name, 0, $common_len);
+      my @unitigs = split(/_/, $common_unitigs); # k-unitigs in common between nodes
       my $mers_shared = 0;
       my $mers_info = $$node_j{MERCOUNTS};
       for(my $k = 0; $k < @unitigs; ++$k) {
