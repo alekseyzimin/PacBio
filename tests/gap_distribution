@@ -1,0 +1,69 @@
+#! /usr/bin/env perl
+
+use strict;
+use warnings;
+use Getopt::Long;
+
+my ($help, $output_gaps);
+my $usage = <<EOS;
+Usage: $0 [options] mega_reads_file ...
+
+  -g,--gaps FILE     Output super reads pair flanking gaps in FILE
+  -h,--help          This message
+EOS
+    ;
+
+GetOptions("h|help"   => \$help,
+           "g|gaps=s" => \$output_gaps) or die("Error parsing options: $!");
+
+if($help) {
+  print($usage);
+  exit(0);
+}
+
+my $gap_io;
+if($output_gaps) {
+  open($gap_io, ">", $output_gaps) or
+      die("Can't output file '$output_gaps': $!");
+}
+
+sub process_lines {
+  my ($pbr, $lines, $gaps) = @_;
+  return unless @$lines > 1;
+  my @slines = sort { $$a[0] <=> $$b[0] } @$lines;
+
+  my $first  = shift(@slines);
+  my $max    = $$first[1] + 1;
+  my $max_mr = $$first[2];
+  foreach my $v (@slines) {
+    if($$v[0] > $max) {
+      print($gap_io "$max ", $$v[0] - 1, " $pbr $max_mr $$v[2]\n") if $gap_io;
+      $$gaps[$$v[0] - $max]++;
+      $max = $$v[1] + 1;
+    } elsif($$v[1] > $max) {
+      $max    = $$v[1] + 1;
+      $max_mr = $$v[2];
+    }
+  }
+}
+
+my @lines;
+my @gaps;
+my $pbr;
+while(<>) {
+  next if /^Rstart/; # header
+  if(/^>(\S+)/) {
+    process_lines($pbr, \@lines, \@gaps) if $pbr;
+    $pbr   = $1;
+    @lines = ();
+    next;
+  }
+  my ($rstart, $rend, $nmers, $density, $mr) = split;
+  push(@lines, [$rstart, $rend, $mr]);
+}
+process_lines($pbr, \@lines, \@gaps) if $pbr;
+close($gap_io) if $gap_io;
+
+for(my $i = 0; $i < @gaps; $i++) {
+  print("$i $gaps[$i]\n") if defined($gaps[$i]);
+}
