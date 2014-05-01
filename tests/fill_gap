@@ -1,0 +1,169 @@
+#! /usr/bin/env perl
+
+use strict;
+use warnings;
+use Getopt::Long;
+
+my @unitig_len;
+my @unitig_sr;
+my $max_gap = 2;
+my $usage = "$0 unitig_len super_read.fa mer_len [gap_info ...]";
+if(@ARGV < 3) {
+  print(STDERR $usage);
+  exit(1);
+}
+
+my $unitig_len_file = shift @ARGV;
+my $super_read_file = shift @ARGV;
+my $mer_len         = shift @ARGV;
+
+# Read unitig lengths
+open(my $ul_io, "<", $unitig_len_file) or
+    die "Can't open file '$unitig_len_file': $!";
+while(<$ul_io>) {
+  my ($index, $len) = split;
+  push(@unitig_len, $len);
+}
+close($ul_io);
+
+# Read super read fasta file
+open(my $sr_io, "<", $super_read_file) or
+    die "Can't open file '$super_read_file': $!";
+while(<$sr_io>) {
+  next unless /^>(\S+)/;
+  my $sr_name = $1;
+  my @unitigs = split(/_/, $sr_name);
+  foreach my $unitig (@unitigs) {
+    push(@{$unitig_sr[substr($unitig, 0, -1)]}, $sr_name);
+  }
+}
+close($sr_io);
+
+# Reverse a super read name
+sub reverse_sr {
+  my $r = join("_", reverse(split(/_/, $_[0])));
+  $r =~ y/FR/RF/;
+  $r
+}
+
+# Given two super read name sr1 sr2, it returns the unitigs in the
+# overlap between sr1 and sr2, or undef if there is no overlap. The
+# last unitig of sr1 can be passed as the last argument.
+sub unitig_overlap {
+  my ($sr1, $sr2, $last_unitig1) = @_;
+  if(!defined($last_unitig1)) {
+    $sr1 =~ /(?:^|_)([^_]+)$/;
+    $last_unitig1 = $1;
+    return undef unless defined($last_unitig1);
+  }
+  return undef unless $sr2 =~ /(?:^|_)($last_unitig1)(?:_|$)/;
+  my $common_len     = $+[1];
+  my $common_unitigs = substr($sr1, -$common_len);
+  return undef unless $common_unitigs eq substr($sr2, 0, $common_len);
+  return $common_unitigs;
+}
+
+sub length_sr {
+  my ($sr)    = @_;
+  my @unitigs = split(/_/, $sr);
+  my $len     = 0;
+  $len += $unitig_len[substr($_, 0, -1)] foreach (@unitigs);
+  $len - (@unitigs - 1) * $mer_len;
+}
+
+sub print_path {
+  my ($pbr, $sr_path, $len) = @_;
+  print("$pbr $len");
+  print(" $_") foreach (@$sr_path);
+  print("\n");
+}
+
+sub print_candidates {
+  my ($pbr, $start_sr, $end_sr, $candidates) = @_;
+  my %unique_path;
+
+  foreach my $cpath (@$candidates) {
+    my ($sr_path, $len) = @$cpath;
+    my $prev_sr = shift(@$sr_path);
+    my $start_overlap = unitig_overlap($start_sr, $prev_sr);
+    my $path = substr($prev_sr, length($start_overlap) + 1);
+    foreach my $sr (@$sr_path) {
+      my $overlap = unitig_overlap($prev_sr, $sr);
+      $path       = $path . substr($sr, length($overlap));
+      $prev_sr    = $sr;
+    }
+    my $end_overlap = unitig_overlap($prev_sr, $end_sr);
+    $path = substr($path, 0, -(length($end_overlap) + 1));
+    $unique_path{$path} = $len;
+  }
+
+  while(my ($path, $len) = each %unique_path) {
+    print("$pbr $len $start_sr $path $end_sr\n");
+  }
+}
+
+sub fill_gap {
+  my ($pbr, $start_sr, $end_sr, $gap_len) = @_;
+  my %seen;
+  my @candidates; # Possible paths found
+
+# Queue contains pairs of (super_read, length of path)
+  my @queue;
+  push(@queue, [[$start_sr], 1]);
+
+  while(@queue) {
+    return if(@queue > 100);
+    my ($sr_path, $len) = @{shift(@queue)};
+    my $sr              = $$sr_path[-1];
+    my @unitigs         = split(/_/, $sr);
+
+
+    my $common_unitigs = unitig_overlap($sr, $end_sr, $unitigs[-1]);
+    if($common_unitigs) { # Found and overlap with target. Print and done.
+      $len -= length_sr($common_unitigs) - $mer_len;
+      if($max_gap * $gap_len >= $len) {
+        my @found_path = @$sr_path;
+#        push(@found_path, $end_sr);
+        shift(@found_path); # remove first super read. It is always $start_sr
+        push(@candidates, [\@found_path, $len]);
+      }
+      next;
+    }
+    next if $len > $max_gap * $gap_len; # Length already too much, give up
+
+    # Find all the possible non-containing overlaps with other super reads (or their
+    # reverse complement), and append to the end of the queue
+    for(my $i = 1; $i < @unitigs; $i++) {
+      my $unitig_id = substr($unitigs[$i], 0, -1);
+      foreach my $nsr (@{$unitig_sr[$unitig_id]}) {
+        next if $seen{$nsr};
+        $seen{$nsr} = 1;
+        $common_unitigs = unitig_overlap($sr, $nsr, $unitigs[-1]);
+        unless($common_unitigs) {
+          $nsr            = reverse_sr($nsr);
+          $common_unitigs = unitig_overlap($sr, reverse_sr($nsr), $unitigs[-1]);
+        }
+        next unless $common_unitigs;
+        next if length($common_unitigs) == length($nsr);
+
+        my $add_unitigs = substr($nsr, length($common_unitigs) + 1);
+        my $nlen        = $len - $mer_len + length_sr($add_unitigs);
+        push(@queue, [[@$sr_path, $nsr], $nlen]);
+      }
+    }
+  }
+
+  return @candidates;
+}
+
+while(<>) {
+  my ($start_gap, $end_gap, $pbr, $start_sr, $end_sr) = split;
+  my $gap_len = $end_gap - $start_gap + 1;
+  my @candidates = fill_gap($pbr, $start_sr, $end_sr, $gap_len);
+
+  print(STDERR scalar(@candidates), "\n");
+  print_candidates($pbr, $start_sr, $end_sr, \@candidates);
+  # foreach my $cpath (@candidates) {
+  #   print_path($pbr, $$cpath[0], $$cpath[1]);
+  # }
+}
