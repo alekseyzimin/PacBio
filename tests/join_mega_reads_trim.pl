@@ -35,13 +35,13 @@ while($line=<STDIN>){
 	$rn=substr($line,1);
 
     }else{
-	($bgn,$end,$pb,$seq)=split(/\s+/,$line);
+	($bgn,$end,$pb,$seq,$name)=split(/\s+/,$line);
 	if($outread eq ""){
 		$outread=$seq;
 	}else{
 	    if($bgn>$last_coord){
 		my $min_len=length($outread)<length($seq)?length($outread):length($seq);
-		my $max_gap_local=int($min_len*.1);
+		my $max_gap_local=int($min_len*.15);
 		$max_gap_local=$max_gap if($max_gap_local>$max_gap);
 		$max_gap_local=5 if($max_gap_local<5);
 		if($bgn-$last_coord>$max_gap_local){#then put N's and later split

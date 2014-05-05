@@ -14,7 +14,7 @@ if [ -s $FILENAME.megareads ];then
 
 awk -F ',' '{print ">"$1"\n"$2}'  $NAMESEQFILE > $NAMESEQFILE.fa
 nucmer  -d 0.3 -f -g 300 -l 15 -b 1000 -p $FILENAME $NAMESEQFILE.fa $FILENAME.megareads.fa 1>/dev/null 2>&1
-delta-filter -1 -o 20 $FILENAME.delta > $FILENAME.f.delta
+delta-filter -1 $FILENAME.delta > $FILENAME.f.delta
 #show-coords -lcHr -I 75 $FILENAME.delta | $EXEPATH/extract_best_match_coords.pl > $FILENAME.f.ncoords
 show-coords -lcHr -I 75 $FILENAME.f.delta | /home/alekseyz/myprogs/merge_matches_coords_file.pl > $FILENAME.f.ncoords
 
@@ -23,8 +23,9 @@ open(FILE,$ARGV[0]);
 $n=0;
 while($line=<FILE>){
 	chomp($line);
-	($srn,$srl)=split(/\s+/,$line);
-	$srn{$srn}=$n;
+	($srname,$srl)=split(/\s+/,$line);
+	$srn{$srname}=$n;
+	push(@srnames,$srname);
 	$n++;
 }
 open(FILE,$ARGV[1]);
@@ -52,7 +53,7 @@ while($line=<STDIN>){
 	$score=int($f[7]*$f[9]/100);
 	if($score>$scores[$f[-1]]){
 	$scores[$f[-1]]=$score;
-	$outline[$f[-1]]="$f[0] $f[1] $f[3] $f[4] ".($f[1]-$f[0])." $pbn[$f[-1]] $seq[$f[-1]]\n";
+	$outline[$f[-1]]="$f[0] $f[1] $f[3] $f[4] ".($f[1]-$f[0])." $pbn[$f[-1]] $seq[$f[-1]] $srnames[$f[-1]]\n";
 	}
 
 }

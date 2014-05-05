@@ -13,11 +13,12 @@
 @mr=();
 @nsr=();
 @mrseq=();
+@mrname=();
 $max_overlap=100;
 
 while($line=<STDIN>){
 chomp($line);
-($pbgn,$pend,$mbgn,$mend,$qlt,$pb,$mrseq)=split(/\s+/,$line);
+($pbgn,$pend,$mbgn,$mend,$qlt,$pb,$mrseq,$mrname)=split(/\s+/,$line);
 $mrseq=substr($mrseq,$mbgn-1,$mend-$mbgn+1);
 $bgn=$pbgn;
 $end=$pend;
@@ -55,10 +56,11 @@ push(@interval_g_end,$end);
 push(@interval_bgn,$bgn);
 push(@interval_end,$end);
 push(@mrseq,$mrseq);
+push(@mrnames,$mrname);
 }
 }
 
 for($i=0;$i<=$#interval_bgn;$i++){
-print "$interval_bgn[$i] $interval_end[$i] $pb $mrseq[$i]\n";
+print "$interval_bgn[$i] $interval_end[$i] $pb $mrseq[$i] $mrnames[$i]\n";
 }
 
