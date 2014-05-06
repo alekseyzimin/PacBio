@@ -22,14 +22,13 @@ public:
   const std::string& name() const { return name_; }
 
   unitig operator[](size_t i) const {
-    if(i >= nb_unitigs()) return { std::numeric_limits<unsigned long>::max(), '\0' };
-    return { std::stoul(name_.substr(unitigs_[i], unitigs_[i + 1] - unitigs_[i] - 2)), name_[unitigs_[i + 1] - 2] };
+    if(i < nb_unitigs())
+      return { std::stoul(name_.substr(unitigs_[i], unitigs_[i + 1] - unitigs_[i] - 2)), name_[unitigs_[i + 1] - 2] };
+    return { invalid, '\0' };
   }
 
   unsigned long unitig_id(size_t i) const {
-    if(i < nb_unitigs())
-      return std::stoul(name_.substr(unitigs_[i], unitigs_[i + 1] - unitigs_[i] - 2));
-    return std::numeric_limits<unsigned long>::max();
+    return this->operator[](i).id;
   }
 
   static char reverse_ori(char ori) {
@@ -57,7 +56,7 @@ protected:
     std::vector<size_t> res;
     res.push_back(0);
     if(!name.empty()) {
-      for(size_t n = name.find_first_of('_');  n != std::string::npos; n = name.find_first_of('_', n + 1))
+      for(size_t n = name.find_first_of('_'); n != std::string::npos; n = name.find_first_of('_', n + 1))
         res.push_back(n + 1);
       res.push_back(name.size() + 1);
     }

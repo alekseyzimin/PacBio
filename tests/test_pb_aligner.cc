@@ -217,7 +217,7 @@ struct mock_align_pb {
 TEST(ComputeKmersInfo, SimpleOverlap) {
   mer_dna::k(17);
   mock_align_pb aligner;
-  aligner.k_len_ = 30;
+  aligner.k_len_ = 31;
   aligner.unitigs_lengths_.reset(new vi({ 100, 100, 100 }));
   const std::string bad_name = "0F_1R_3F";
   const std::string good_name = "0F_1R_2F";
@@ -257,7 +257,7 @@ TEST(ComputeKmersInfo, SimpleOverlap) {
 TEST(ComputeKmersInfo, ComplexOverlap) {
   mer_dna::k(17);
   mock_align_pb aligner;
-  aligner.k_len_ = 30;
+  aligner.k_len_ = 31;
   aligner.unitigs_lengths_.reset(new vi({ 100, 31, 31, 40, 100 }));
   const std::string name = "0F_1R_2F_3R_4F";
 

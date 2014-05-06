@@ -208,12 +208,11 @@ public:
     {
       if(sr_name_) {
         const auto unitig_id = sr_name_->unitig_id(0);
-        if(unitig_id != super_read_name::invalid && unitig_id < aligner_.unitigs_lengths_->size()) {
+        if(unitig_id != super_read_name::invalid && unitig_id < nb_unitigs()) {
           info_.resize(2 * sr_name_->size() - 1, 0);
           cend_ = unitigs_lengths(unitig_id);
-        } else { // error
+        } else // error
           sr_name_.reset();
-        }
       }
     }
 
@@ -229,20 +228,21 @@ public:
       while(sr_pos + mer_dna::k() > cend_ + 1) {
         const auto unitig_id = sr_name_->unitig_id(++cunitig_);
         if(unitig_id != super_read_name::invalid && unitig_id < nb_unitigs())
-          cend_ += unitigs_lengths(unitig_id) - k_len();
+          cend_ += unitigs_lengths(unitig_id) - k_len() + 1;
         else
           goto error;
       }
       ++info_[2 * cunitig_];
       cendi = cend_;
-      for(unsigned int i = cunitig_; (i < sr_name_->size() - 1) && (sr_pos + k_len() > cendi); ++i) {
+      for(unsigned int i = cunitig_; (i < sr_name_->size() - 1) && (sr_pos + k_len() - 1 > cendi); ++i) {
         ++info_[2 * i + 1];
         ++info_[2 * i + 2];
         const auto unitig_id = sr_name_->unitig_id(i + 1);
         if(unitig_id != super_read_name::invalid && unitig_id < nb_unitigs())
-          cendi += unitigs_lengths(unitig_id) - k_len();
-        else
+          cendi += unitigs_lengths(unitig_id) - k_len() + 1;
+        else {
           goto error;
+        }
       }
       return;
 
@@ -342,6 +342,10 @@ public:
       if(!compact_format_)
         out << " " << pb_name;
       out << " " << it->qname;
+      if(k_len_ != 0 && it->kmers_info.empty()) {
+        std::cerr << "Error while finding k-mers matching in k-unitigs. Most likely the lengths of k-unitigs are wrong or the super-read sequences are messed up.";
+        exit(1);
+      }
       for(auto mit : it->kmers_info)
         out << " " << mit;
       out << "\n";
