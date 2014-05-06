@@ -24,7 +24,7 @@ void create_sequence(const char* path) {
 }
 
 TEST(SuperReadParser, OneRead) {
-  remove_file file("/tmp/superread.fa");
+  remove_file file(".one_superread.fa");
   create_sequence(file.path);
 
   mer_dna::k(17);
@@ -77,7 +77,7 @@ T ceil_div(T x, T y) {
 }
 
 TEST(SuperReadParser, ManyReads) {
-  remove_file file("/tmp/superread.fa");
+  remove_file file(".many_superread.fa");
   static const int nb_reads   = 21;
   static const int nb_threads = 5;
   static const int seq_len    = 1000;

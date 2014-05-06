@@ -357,8 +357,8 @@ static const int unitig_lengths[8] = {
 class AlignerOutput : public ::testing::Test {
 public:
   AlignerOutput() :
-    sr_file("/tmp/superreads.fa"), pb_file("/tmp/pb.fa"),
-    coords_file("/tmp/test.coords"), details_file("/tmp/test.details") { coords_file.do_unlink = false; details_file.do_unlink = false; }
+    sr_file(".aligner_superreads.fa"), pb_file(".aligner_pb.fa"),
+    coords_file(".aligner_test.coords"), details_file(".aligner_test.details") { coords_file.do_unlink = false; details_file.do_unlink = false; }
 
 protected:
   remove_file sr_file, pb_file, coords_file, details_file;

@@ -25,5 +25,5 @@ LDFLAGS += $(JELLYFISH_LIBS)
 # LDFLAGS_test_pb_aligner += $(JELLYFISH_LIBS)
 
 : foreach $(TESTS) | libgtest_main.a ../lib/libcommon.a |> !cxxld |> {all_tests}
-: foreach {all_tests} |> ./%f > %o |> %f.log
+: foreach {all_tests} |> ./%f > %o 2>&1 |> %f.log
 

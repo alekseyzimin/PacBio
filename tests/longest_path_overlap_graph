@@ -81,11 +81,19 @@ sub thread_main {
       # LPATH -> Number of mers in longest path up to this node. LPREV ->
       # Previous node in longest path. LSTART -> starting node in longest
       # path. LCOUNT -> Number of nodes in longest path.
-      push(@nodes, { ID => $id, NAME => $info[11], NMERS => $info[4], NEIGHS => [], INDEG => 0,
-                     RSTART => $info[0], REND => $info[1], QSTART => $info[2], QEND => $info[3],
-                     RLEN => $info[9], QLEN => $info[10], MERCOUNTS => \@flds ,
-                     LPATH => 0, LPREV => undef, LSTART => undef, LCOUNT => 1 });
+      my $node = { ID => $id, NAME => $info[11], NMERS => $info[4], NEIGHS => [], INDEG => 0,
+                   RSTART => $info[0], REND => $info[1], QSTART => $info[2], QEND => $info[3],
+                   RLEN => $info[9], QLEN => $info[10], MERCOUNTS => \@flds,
+                   LPATH => 0, LPREV => undef, LSTART => undef, LCOUNT => 1 };
+      my $imp_start     = $$node{RSTART} - $$node{QSTART} + 1;
+      $imp_start        = 1 if $imp_start < 1;
+      my $imp_end       = $$node{REND} + $$node{QLEN} - $$node{QEND};
+      $imp_end          = $$node{RLEN} if $imp_end > $$node{RLEN};
+      $$node{IMP_START} = $imp_start;
+      $$node{IMP_END}   = $imp_end;
+      push(@nodes, $node);
     }
+    @nodes = sort { $$a{IMP_START} <=> $$b{IMP_START} } @nodes;
     handle_graph(\@nodes, $pbName, $out);
   }
   close($out);
@@ -102,16 +110,12 @@ sub create_edges {
   my $components = UnionFind->new();
   for(my $i       = 0; $i < @$nodes; ++$i) {
     my $node_i    = $$nodes[$i];
-    my $i_imp_end = $$node_i{REND} + $$node_i{QLEN} - $$node_i{QEND};
-    $i_imp_end    = $$node_i{REND} if $i_imp_end > $$node_i{REND};
     my $i_name    = $$node_i{NAME};
     my @tflds     = split (/_/, $i_name);
     my $lastKUni  = $tflds[-1];
     for (my $j=$i+1; $j < @$nodes; ++$j) {
       my $node_j      = $$nodes[$j];
-      my $j_imp_start = $$node_j{RSTART} - $$node_j{QSTART} + 1;
-      $j_imp_start    = 1 if $j_imp_start < 1;
-      last if $j_imp_start > $i_imp_end;
+      last if $$node_j{IMP_START} > $$node_i{IMP_END};
       my $j_name = $$node_j{NAME};
       next unless $j_name =~ /(?:^|_)($lastKUni)(?:_|$)/;
       my $common_len     = $+[1];
