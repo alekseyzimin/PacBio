@@ -14,7 +14,7 @@ if [ -s $FILENAME.megareads ];then
 
 awk -F ',' '{print ">"$1"\n"$2}'  $NAMESEQFILE > $NAMESEQFILE.fa
 nucmer  -d 0.3 -f -g 300 -l 15 -b 1000 -p $FILENAME $NAMESEQFILE.fa $FILENAME.megareads.fa 1>/dev/null 2>&1
-delta-filter -1 -o 20 $FILENAME.delta > $FILENAME.f.delta
+delta-filter -1 $FILENAME.delta > $FILENAME.f.delta
 #show-coords -lcHr -I 75 $FILENAME.delta | $EXEPATH/extract_best_match_coords.pl > $FILENAME.f.ncoords
 show-coords -lcHr -I 75 $FILENAME.f.delta | /home/alekseyz/myprogs/merge_matches_coords_file.pl > $FILENAME.f.ncoords
 
