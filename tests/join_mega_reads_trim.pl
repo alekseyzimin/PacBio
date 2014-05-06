@@ -32,6 +32,7 @@ while($line=<STDIN>){
 	}
 	$outread="";
 	$last_coord =-1000000000;
+	$last_mr_len=0;
 	$rn=substr($line,1);
 
     }else{
@@ -41,7 +42,8 @@ while($line=<STDIN>){
 	}else{
 	    if($bgn>$last_coord){
 		my $min_len=length($outread)<length($seq)?length($outread):length($seq);
-		my $max_gap_local=int($min_len*.15);
+		#my $min_len= $last_mr_len+length($seq);
+		my $max_gap_local=int($min_len*.1);
 		$max_gap_local=$max_gap if($max_gap_local>$max_gap);
 		$max_gap_local=5 if($max_gap_local<5);
 		if($bgn-$last_coord>$max_gap_local){#then put N's and later split
@@ -55,6 +57,7 @@ while($line=<STDIN>){
 	    }
 	}
     $last_coord=$end;
+    $last_mr_len=length($seq);
     }
 }
 #output the last one
