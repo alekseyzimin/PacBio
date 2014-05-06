@@ -94,8 +94,8 @@ struct remove_file {
 
 TEST(PbAligner, FakeSequences) {
   mer_dna::k(15);
-  remove_file pb_file("/tmp/pacbio.fa", false);
-  remove_file sr_file("/tmp/superreads.fa", false);
+  remove_file pb_file(".pacbio.fa", false);
+  remove_file sr_file(".superreads.fa", false);
   std::string pacbio_sequence = generate_sequences(pb_file.path, sr_file.path);
 
   mer_pos_hash_type hash(2048);

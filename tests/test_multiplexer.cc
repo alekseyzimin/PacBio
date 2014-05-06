@@ -14,7 +14,7 @@ struct remove_file {
 };
 
 TEST(Multiplexer, OneThread) {
-  remove_file tmp("/tmp/output");
+  remove_file tmp(".multiplexer_output");
   tmp.do_unlink = false;
 
   {
@@ -56,7 +56,7 @@ void output_lines(int id, Multiplexer* m, const int nb_lines) {
 TEST(Multiplexer, ManyThreads) {
   static const int nb_threads = 10;
   static const int lines_per_thread = 1000;
-  remove_file tmp("/tmp/manythreads_output");
+  remove_file tmp(".manythreads_output");
   tmp.do_unlink = false;
 
   {
