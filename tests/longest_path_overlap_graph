@@ -9,7 +9,7 @@ use UnionFind;
 use threads;
 use Thread::Queue;
 
-my ($no_header, $compact, $help);
+my ($no_header, $compact, $dot_file, $help);
 my $nb_threads  = 1;
 my $min_sr      = 2; # Minimum # of super read in a mega read
 my $min_density = 0.1;
@@ -20,6 +20,7 @@ GetOptions("m|min=i"     => \$min_sr,
            "t|thread=i"  => \$nb_threads,
            "o|output=s"  => \$output,
            "c|compact"   => \$compact,
+           "dot=s"       => \$dot_file,
            "h|help"      => \$help) or die;
 
 if(defined($help)) {
@@ -76,24 +77,24 @@ sub thread_main {
     my @nodes;
     foreach my $line (@$lines) {
       my @flds = split (" ", $$line);
-      my $id = @nodes;
       my @info = splice(@flds, 0, 12);
       # LPATH -> Number of mers in longest path up to this node. LPREV ->
       # Previous node in longest path. LSTART -> starting node in longest
       # path. LCOUNT -> Number of nodes in longest path.
-      my $node = { ID => $id, NAME => $info[11], NMERS => $info[4], NEIGHS => [], INDEG => 0,
+      my $node = { NAME => $info[11], NMERS => $info[4], NEIGHS => [], INDEG => 0,
                    RSTART => $info[0], REND => $info[1], QSTART => $info[2], QEND => $info[3],
                    RLEN => $info[9], QLEN => $info[10], MERCOUNTS => \@flds,
                    LPATH => 0, LPREV => undef, LSTART => undef, LCOUNT => 1 };
       my $imp_start     = $$node{RSTART} - $$node{QSTART} + 1;
-      $imp_start        = 1 if $imp_start < 1;
+      $$node{IMP_START} = $imp_start < 1 ? 1 : $imp_start;
       my $imp_end       = $$node{REND} + $$node{QLEN} - $$node{QEND};
-      $imp_end          = $$node{RLEN} if $imp_end > $$node{RLEN};
-      $$node{IMP_START} = $imp_start;
-      $$node{IMP_END}   = $imp_end;
+      $$node{IMP_END}   = $imp_end > $$node{RLEN} ? $$node{RLEN} : $imp_end;
       push(@nodes, $node);
     }
     @nodes = sort { $$a{IMP_START} <=> $$b{IMP_START} } @nodes;
+    for(my $i = 0; $i < @nodes; $i++) {
+      $nodes[$i]{ID} = $i;
+    }
     handle_graph(\@nodes, $pbName, $out);
   }
   close($out);
@@ -135,6 +136,28 @@ sub create_edges {
   }
 
   return $components;
+}
+
+sub write_dot {
+  my ($nodes, $pbName, $file) = @_;
+
+  open(my $io, ">", $file) or
+      die "Failed to open dot file '$file': $!";
+  print($io "digraph \"$pbName\" {\n");
+  print($io "  node [fontsize=10];\n");
+  foreach my $n (@$nodes) {
+    print($io "  $$n{ID} [tooltip=\"$$n{NAME}\", label=\"$$n{ID} L$$n{QLEN} #$$n{NMERS}\\nP($$n{RSTART},$$n{REND})\\nS($$n{QSTART},$$n{QEND})\"];\n");
+  }
+
+  foreach my $n (@$nodes) {
+    my @unitigs = split(/_/, $$n{NAME});
+    foreach my $e (@{$$n{NEIGHS}}) {
+      my $common = join("_", @unitigs[-$$e[2]..-1]);
+      print($io "  $$n{ID} -> $$e[0] [tooltip=\"$common\", label=\"$$e[1]\"];\n");
+    }
+  }
+  print($io "}\n");
+  close($io);
 }
 
 # Find the longest paths in the graph, for the set of nodes and
@@ -225,6 +248,11 @@ sub handle_graph {
   my ($nodes, $pbname, $out) = @_;
   return unless @$nodes;
   my $components = create_edges($nodes);
+  if(defined($dot_file)) {
+    my $file = $pbname;
+    $file =~ s|/|_|g;
+    write_dot($nodes, $pbname, $dot_file . $file . ".dot");
+  }
   my %longest_paths = find_longest_paths($nodes, $components);
   print_longest_paths(\%longest_paths, $pbname, $out);
 }
