@@ -1,6 +1,7 @@
 #ifndef _PB_ALIGNER_HPP_
 #define _PB_ALIGNER_HPP_
 
+#include <cmath>
 #include <unordered_map>
 
 #include <src_jf_aligner/jf_aligner.hpp>
@@ -82,7 +83,7 @@ public:
     coords_multiplexer_ = m;
     if(header) {
       Multiplexer::ostream o(coords_multiplexer_); // Write header
-      o << "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen";
+      o << "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Mean Stdev";
       if(!compact_format_)
         o << " Rname";
       o << " Qname\n";
@@ -176,10 +177,12 @@ public:
     uint64_t         hash;
     std::string      qname;
     std::vector<int> kmers_info; // Number of k-mers in k-unitigs and common between unitigs
+    double           mean, stdev;
     coords_info(const std::string& name, size_t l, int n) :
       nb_mers(n),
       pb_cons(0), sr_cons(0), pb_cover(mer_dna::k()), sr_cover(mer_dna::k()),
-      ql(l), rn(false), qname(name)
+      ql(l), rn(false), qname(name),
+      mean(0), stdev(0)
     { }
 
     bool operator<(const coords_info& rhs) const {
@@ -273,9 +276,12 @@ public:
       MurmurHash3A                      hasher;
       coords_info                       info(forward_ && !fwd_align ? reverse_super_read_name(ml.frag->name) : ml.frag->name,
                                              ml.frag->len, nb_mers);
-      const std::vector<pb_sr_offsets>& offsets   = fwd_align ? ml.fwd.offsets : ml.bwd.offsets;
-      const std::vector<unsigned int>&  lis       = fwd_align ? ml.fwd.lis : ml.bwd.lis;
+      const std::vector<pb_sr_offsets>& offsets = fwd_align ? ml.fwd.offsets : ml.bwd.offsets;
+      const std::vector<unsigned int>&  lis     = fwd_align ? ml.fwd.lis : ml.bwd.lis;
       compute_kmers_info<align_pb>      kmers_info(info.kmers_info, info.qname, *this);
+      double                            mean    = 0;
+      double                            M2      = 0;
+      int                               n       = 1;
       {
         auto                              lisit   = lis.cbegin();
         pb_sr_offsets                     prev    = offsets[*lisit];
@@ -290,7 +296,14 @@ public:
           info.sr_cons               += sr_diff == 1;
           info.sr_cover              += std::min(mer_dna::k(), sr_diff);
           hasher.add((uint32_t)cur.first);
-          kmers_info.add_mer(fwd_align ? cur.second : info.ql + cur.second - mer_dna::k() + 2);
+          const int pos               = fwd_align ? cur.second : info.ql + cur.second - mer_dna::k() + 2;
+          kmers_info.add_mer(pos);
+          ++n;
+          const int    x      = cur.first - pos + 1; // Estimated position of start of super read
+          std::cerr << "first: " << cur.first << " second:" << cur.second << " pos:" << pos << " x:" << x << std::endl;
+          const double delta  = x - mean;
+          mean               += delta / n;
+          M2                 += delta * (x - mean);
         }
       }
       if(info.pb_cons < (unsigned int)consecutive_ && info.sr_cons < (unsigned int)consecutive_) continue;
@@ -316,6 +329,11 @@ public:
       } else {
         info.qe += mer_dna::k() - 1;
       }
+      if(n > 0) {
+        info.mean = mean;
+        if(n > 1)
+          info.stdev = sqrt(M2 / (n - 1));
+      }
 
       coords.push_back(info);
     }
@@ -338,7 +356,8 @@ public:
           << it->nb_mers << " "
           << it->pb_cons << " " << it->sr_cons << " "
           << it->pb_cover << " " << it->sr_cover << " "
-          << pb_size << " " << it->ql;
+          << pb_size << " " << it->ql
+          << " " << it->mean << " " << it->stdev;
       if(!compact_format_)
         out << " " << pb_name;
       out << " " << it->qname;

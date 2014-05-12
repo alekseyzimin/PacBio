@@ -174,21 +174,21 @@ static const char* const super_reads =
   "\n";
 
 static const char* normal_coords[4] = {
-  "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Rname Qname",
+  "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Mean Stdev Rname Qname",
   "303 877 3051 3597 90 79 79 263 262 1287 3668 pb 1R_3F",
   "303 1150 1420 613 107 93 93 328 327 1287 3000 pb 5F_4R_2F",
   "303 1150 1280 473 107 93 93 328 327 1287 2800 pb 7R_2F"
 };
 
 static const char* forward_coords[4] = {
-  "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Rname Qname",
+  "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Mean Stdev Rname Qname",
   "303 877 3051 3597 90 79 79 263 262 1287 3668 pb 1R_3F",
   "303 1150 1581 2388 107 93 93 328 327 1287 3000 pb 2R_4F_5R",
   "303 1150 1521 2328 107 93 93 328 327 1287 2800 pb 2R_7F"
 };
 
 static const char* merinfo_coords[4] = {
-  "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Rname Qname",
+  "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Mean Stdev Rname Qname",
   "303 877 3051 3597 90 79 79 263 262 1287 3668 pb 1R_3F 0 0 90",
   "303 1150 1581 2388 107 93 93 328 327 1287 3000 pb 2R_4F_5R 0 0 82 5 30",
   "303 1150 1521 2328 107 93 93 328 327 1287 2800 pb 2R_7F 0 0 107"
@@ -240,7 +240,7 @@ static const char* normal_details[3] = {
 };
 
 static const char* comp_coords[4] = {
-  "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Rname Qname",
+  "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Mean Stdev Rname Qname",
   "277 928 3023 3647 198 124 125 459 454 1287 3668 pb 1R_3F",
   "277 1167 1452 601 294 185 198 647 622 1287 3000 pb 5F_4R_2F",
   "277 1167 1312 461 294 185 198 647 622 1287 2800 pb 7R_2F"
