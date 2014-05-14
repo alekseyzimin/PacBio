@@ -11,7 +11,9 @@ export PKG_CONFIG_PATH
 CXXFLAGS += -I..
 LDFLAGS += -pthread -L$(TUP_CWD) -lgtest_main -L../lib
 LDLIBS_test_MurmurHash3 = -lcommon
-TESTS = test_lis.cc test_lf_forward_list.cc test_mer_pos_hash.cc test_superread_parser.cc test_pb_aligner.cc test_lis_align.cc test_parsesequence.cc test_aligner_output.cc test_multiplexer.cc test_MurmurHash3.cc test_super_read_name.cc
+TESTS  = test_lis.cc test_lf_forward_list.cc test_mer_pos_hash.cc test_superread_parser.cc
+TESTS += test_pb_aligner.cc test_lis_align.cc test_parsesequence.cc test_aligner_output.cc
+TESTS += test_multiplexer.cc test_MurmurHash3.cc test_super_read_name.cc test_least_square_2d.cc
 
 # Flags specific to some tests
 CXXFLAGS += $(JELLYFISH_CFLAGS) -I../include

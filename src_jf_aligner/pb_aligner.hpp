@@ -6,6 +6,7 @@
 
 #include <src_jf_aligner/jf_aligner.hpp>
 #include <src_jf_aligner/super_read_name.hpp>
+#include <src_jf_aligner/least_square_2d.hpp>
 #include <src_lis/lis_align.hpp>
 #include <jellyfish/thread_exec.hpp>
 #include <MurmurHash3.h>
@@ -83,7 +84,7 @@ public:
     coords_multiplexer_ = m;
     if(header) {
       Multiplexer::ostream o(coords_multiplexer_); // Write header
-      o << "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Mean Stdev";
+      o << "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Stretch Offset Err";
       if(!compact_format_)
         o << " Rname";
       o << " Qname\n";
@@ -177,12 +178,12 @@ public:
     uint64_t         hash;
     std::string      qname;
     std::vector<int> kmers_info; // Number of k-mers in k-unitigs and common between unitigs
-    double           mean, stdev;
+    double           stretch, offset, avg_err; // Least square stretch, offset and average error
     coords_info(const std::string& name, size_t l, int n) :
       nb_mers(n),
       pb_cons(0), sr_cons(0), pb_cover(mer_dna::k()), sr_cover(mer_dna::k()),
       ql(l), rn(false), qname(name),
-      mean(0), stdev(0)
+      stretch(0), offset(0), avg_err(0)
     { }
 
     bool operator<(const coords_info& rhs) const {
@@ -279,14 +280,14 @@ public:
       const std::vector<pb_sr_offsets>& offsets = fwd_align ? ml.fwd.offsets : ml.bwd.offsets;
       const std::vector<unsigned int>&  lis     = fwd_align ? ml.fwd.lis : ml.bwd.lis;
       compute_kmers_info<align_pb>      kmers_info(info.kmers_info, info.qname, *this);
-      double                            mean    = 0;
-      double                            M2      = 0;
-      int                               n       = 1;
+      least_square_2d                   least_square;
       {
-        auto                              lisit   = lis.cbegin();
-        pb_sr_offsets                     prev    = offsets[*lisit];
-        pb_sr_offsets                     cur;
-        kmers_info.add_mer(fwd_align ? prev.second : info.ql + prev.second - mer_dna::k() + 2);
+        auto          lisit = lis.cbegin();
+        pb_sr_offsets prev  = offsets[*lisit];
+        pb_sr_offsets cur;
+        const int     pos   = fwd_align ? prev.second : info.ql + prev.second - mer_dna::k() + 2;
+        kmers_info.add_mer(pos);
+        least_square.add(prev.second, prev.first);
         for(++lisit; lisit != lis.cend(); prev = cur, ++lisit) {
           cur                         = offsets[*lisit];
           const unsigned int pb_diff  = cur.first - prev.first;
@@ -298,15 +299,22 @@ public:
           hasher.add((uint32_t)cur.first);
           const int pos               = fwd_align ? cur.second : info.ql + cur.second - mer_dna::k() + 2;
           kmers_info.add_mer(pos);
-          ++n;
-          const int    x      = cur.first - pos + 1; // Estimated position of start of super read
-          std::cerr << "first: " << cur.first << " second:" << cur.second << " pos:" << pos << " x:" << x << std::endl;
-          const double delta  = x - mean;
-          mean               += delta / n;
-          M2                 += delta * (x - mean);
+          least_square.add(cur.second, cur.first);
         }
       }
       if(info.pb_cons < (unsigned int)consecutive_ && info.sr_cons < (unsigned int)consecutive_) continue;
+
+      // Compute average error
+      double e = 0;
+      if(least_square.n > 0){
+        const double a = least_square.a();
+        const double b = least_square.b();
+        for(auto v : lis) {
+          auto& c = offsets[v];
+          e += abs(a * c.second + b - c.first);
+        }
+        e = e / least_square.n;
+      }
 
       uint64_t r1, r2;
       hasher.finalize(r1, r2);
@@ -318,21 +326,23 @@ public:
 
       info.qs = first.second;
       info.qe = last.second;
+      info.stretch = least_square.a();
+      info.offset  = least_square.b();
+      info.avg_err = e;
       if(info.qs < 0) {
-        info.qs = -info.qs + mer_dna::k() - 1;
-        info.qe = -info.qe;
         if(forward_) {
-          info.qs      = info.ql - info.qs + 1;
-          info.qe      = info.ql - info.qe + 1;
+          info.qs      = info.ql + info.qs - mer_dna::k() + 2;
+          info.qe      = info.ql + info.qe + 1;
           info.rn      = true;
+          info.offset -= info.stretch * (info.ql + 1) - mer_dna::k();
+        } else {
+          info.qs       = -info.qs + mer_dna::k() - 1;
+          info.qe       = -info.qe;
+          info.stretch  = -info.stretch;
+          info.offset  += mer_dna::k() - 1;
         }
       } else {
         info.qe += mer_dna::k() - 1;
-      }
-      if(n > 0) {
-        info.mean = mean;
-        if(n > 1)
-          info.stdev = sqrt(M2 / (n - 1));
       }
 
       coords.push_back(info);
@@ -357,7 +367,7 @@ public:
           << it->pb_cons << " " << it->sr_cons << " "
           << it->pb_cover << " " << it->sr_cover << " "
           << pb_size << " " << it->ql
-          << " " << it->mean << " " << it->stdev;
+          << " " << it->stretch << " " << it->offset << " " << it->avg_err;
       if(!compact_format_)
         out << " " << pb_name;
       out << " " << it->qname;
