@@ -6,4 +6,5 @@ CXXFLAGS += -I.. $(JELLYFISH_CFLAGS) -I../include
 LDFLAGS += $(JELLYFISH_LIBS)
 
 : jf_aligner_cmdline.yaggo |> !yaggo |>
-: jf_aligner.cc | jf_aligner_cmdline.hpp |> !cxxld |>
+: foreach jf_aligner.cc pb_aligner.cc superread_parser.cc | jf_aligner_cmdline.hpp |> !cxx |> {jf_aligner}
+: {jf_aligner} |> !lxxd |> jf_aligner
