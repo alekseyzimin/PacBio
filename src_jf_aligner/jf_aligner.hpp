@@ -12,6 +12,7 @@
 #include <jellyfish/stream_manager.hpp>
 #include <jellyfish/whole_sequence_parser.hpp>
 
+namespace err = jellyfish::err;
 using jellyfish::mer_dna;
 typedef mer_pos_hash<frag_lists::frag_info, mer_dna> mer_pos_hash_type;
 typedef std::vector<const char*> file_vector;
@@ -76,7 +77,7 @@ public:
   void open(const char* path, int threads) {
     file_.reset(new std::ofstream(path));
     if(!file_->good())
-      eraise(std::runtime_error) << "Failed to open file '" << path << "'";
+      throw std::runtime_error(err::msg() << "Failed to open file '" << path << "'");
     multiplexer_.reset(new Multiplexer(*file_.get(), 1024 * 1024, 10 * 1024 * 1024));
   }
   std::ostream& file() { return *file_; }
