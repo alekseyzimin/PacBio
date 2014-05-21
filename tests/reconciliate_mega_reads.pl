@@ -14,12 +14,14 @@
 @nsr=();
 @mrseq=();
 @mrname=();
-$max_overlap=100;
+#max overlap is in percentage of size
+$max_overlap_pct=$ARGV[0];
 
 while($line=<STDIN>){
 chomp($line);
 ($pbgn,$pend,$mbgn,$mend,$qlt,$pb,$mrseq,$mrname)=split(/\s+/,$line);
 $mrseq=substr($mrseq,$mbgn-1,$mend-$mbgn+1);
+$max_overlap=length($mrseq)*$max_overlap_pct/100;
 $bgn=$pbgn;
 $end=$pend;
 $overlap=0;

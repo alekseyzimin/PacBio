@@ -10,6 +10,7 @@ use threads;
 use Thread::Queue;
 
 my ($no_header, $compact, $dot_file, $help);
+my $fatten	= 1.5;
 my $nb_threads  = 1;
 my $min_sr      = 2; # Minimum # of super read in a mega read
 my $min_density = 0.1;
@@ -19,6 +20,7 @@ GetOptions("m|min=i"     => \$min_sr,
            "H|no-header" => \$no_header,
            "t|thread=i"  => \$nb_threads,
            "o|output=s"  => \$output,
+           "f|fatten=f"  => \$fatten,
            "c|compact"   => \$compact,
            "dot=s"       => \$dot_file,
            "h|help"      => \$help) or die;
@@ -30,6 +32,7 @@ Find the longest (with most k-mers) path in the super-read overlap graph
  -m,--min INT        Minimum number of super reads in a mega read ($min_sr)
  -d,--density FLOAT  Minimum denity of k-mers ($min_density)
  -H,--no-header      Do not print line headers
+ -f,--fatten FLOAT   fatten the position to better detect overlaps
  -t,--thread INT     Number of threads ($nb_threads)
  -o,--output PATH    Output prefix file ($output)
  -c,--compact        Compact output
@@ -85,9 +88,9 @@ sub thread_main {
                    RSTART => $info[0], REND => $info[1], QSTART => $info[2], QEND => $info[3],
                    RLEN => $info[9], QLEN => $info[10], MERCOUNTS => \@flds,
                    LPATH => 0, LPREV => undef, LSTART => undef, LCOUNT => 1 };
-      my $imp_start     = $$node{RSTART} - $$node{QSTART} + 1;
+      my $imp_start     = $$node{RSTART} - ($$node{QSTART} + 1)*$fatten;
       $$node{IMP_START} = $imp_start < 1 ? 1 : $imp_start;
-      my $imp_end       = $$node{REND} + $$node{QLEN} - $$node{QEND};
+      my $imp_end       = $$node{REND} + ($$node{QLEN} - $$node{QEND})*$fatten;
       $$node{IMP_END}   = $imp_end > $$node{RLEN} ? $$node{RLEN} : $imp_end;
       push(@nodes, $node);
     }

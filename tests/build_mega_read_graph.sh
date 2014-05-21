@@ -7,16 +7,21 @@ let KM1=$KMER-1
 EXEPATH=`dirname $0`
 
 sort -nrk3,3 ${FILENAME} > $FILENAME.megareads
+rm -f $FILENAME.megareads.sorted.wseq
+touch $FILENAME.megareads.sorted.wseq
 
 #wc -l $FILENAME.megareads
 if [ -s $FILENAME.megareads ];then
-/home/alekseyz/myprogs/MaSuRCA/build/inst/bin/createFastaSuperReadSequences work1 <(awk '{print "1 "$6}' $FILENAME.megareads) -seqdiffmax 0 -min-ovl-len $KM1 -minreadsinsuperread 1  -good-sr-filename $FILENAME.megareads.names  -kunitigsfile /genome7/raid/alekseyz/PB_ScerW303/assembly_k${KMER}/guillaumeKUnitigsAtLeast32bases_all.fasta -good-sequence-output-file $FILENAME.megareads.fa -super-read-name-and-lengths-file $FILENAME.megareads.sizes -rename-super-reads  2>/dev/null
+/home/alekseyz/myprogs/MaSuRCA/build/inst/bin/createFastaSuperReadSequences work1 <(awk '{print "1 "$6}' $FILENAME.megareads| head -n 25) -seqdiffmax 0 -min-ovl-len $KM1 -minreadsinsuperread 1  -good-sr-filename $FILENAME.megareads.names  -kunitigsfile /genome7/raid/alekseyz/PB_ScerW303/assembly_k${KMER}/guillaumeKUnitigsAtLeast32bases_all.fasta -good-sequence-output-file $FILENAME.megareads.all.fa -super-read-name-and-lengths-file $FILENAME.megareads.sizes -rename-super-reads  2>/dev/null
 
+perl -e 'while($line=<STDIN>){$s=$line;$line=<STDIN>;print "$s$line" if(length($line)>125);}' < $FILENAME.megareads.all.fa > $FILENAME.megareads.fa
+if [ ! -s $FILENAME.megareads.fa ];then exit; fi
 awk -F ',' '{print ">"$1"\n"$2}'  $NAMESEQFILE > $NAMESEQFILE.fa
-nucmer  -d 0.3 -f -g 300 -l 15 -b 1000 -p $FILENAME $NAMESEQFILE.fa $FILENAME.megareads.fa 1>/dev/null 2>&1
-delta-filter -1 $FILENAME.delta > $FILENAME.f.delta
-#show-coords -lcHr -I 75 $FILENAME.delta | $EXEPATH/extract_best_match_coords.pl > $FILENAME.f.ncoords
+nucmer  -d 0.2 -f -g 200 -l 15 -b 200 -p $FILENAME $NAMESEQFILE.fa $FILENAME.megareads.fa 1>/dev/null 2>&1
+if [ ! -s $FILENAME.delta ];then exit; fi
+delta-filter -g -o 20 $FILENAME.delta > $FILENAME.f.delta
 show-coords -lcHr -I 75 $FILENAME.f.delta | /home/alekseyz/myprogs/merge_matches_coords_file.pl > $FILENAME.f.ncoords
+if [ ! -s $FILENAME.f.ncoords ];then exit; fi
 
 perl -e '{
 open(FILE,$ARGV[0]);
@@ -40,6 +45,7 @@ open(FILE,$ARGV[2]);
 while($line=<FILE>){
 	chomp($line);
 	@f=split(/\s+/,$line);
+	next if (not(defined($srn{$f[-1]})));
 	$scores[$srn{$f[-1]}]=$f[2];
 	$coords_pb[$srn{$f[-1]}]="$f[0] $f[1]";
 	$pbn[$srn{$f[-1]}]=$f[4];
@@ -50,12 +56,7 @@ while($line=<STDIN>){
 	@f=split(/\s+/,$line);
 	@c=split(/\s+/,$coords_pb[$f[-1]]);
         next if(($f[0]>$c[1] && $f[1]>$c[1])||($f[0]<$c[0] && $f[1]<$c[0]));
-	$score=int($f[7]*$f[9]/100);
-	if($score>$scores[$f[-1]]){
-	$scores[$f[-1]]=$score;
-	$outline[$f[-1]]="$f[0] $f[1] $f[3] $f[4] ".($f[1]-$f[0])." $pbn[$f[-1]] $seq[$f[-1]] $srnames[$f[-1]]\n";
-	}
-
+	$outline[$f[-1]].="$f[0] $f[1] $f[3] $f[4] ".$scores[$f[-1]]." $pbn[$f[-1]] $seq[$f[-1]] $srnames[$f[-1]]\n";
 }
 foreach $l(@outline){
 print $l;
@@ -63,5 +64,5 @@ print $l;
 }' $FILENAME.megareads.sizes $FILENAME.megareads.fa $FILENAME.megareads < $FILENAME.f.ncoords  | sort -nrk5,5 > $FILENAME.megareads.wseq
 
 
-$EXEPATH/reconciliate_mega_reads.pl < $FILENAME.megareads.wseq | sort -nk1,1 > $FILENAME.megareads.sorted.wseq
+$EXEPATH/reconciliate_mega_reads.pl 20 < $FILENAME.megareads.wseq | sort -nk1,1 > $FILENAME.megareads.sorted.wseq
 fi

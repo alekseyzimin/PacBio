@@ -5,6 +5,8 @@
 #first we read in PB sequences
 my $pbseqfile=$ARGV[0];
 my $max_gap=$ARGV[1];
+my $allowed_gaps=$ARGV[2];
+
 my $rn="";
 my %pbseq;
 open(FILE,$pbseqfile);
@@ -16,6 +18,13 @@ while($line=<FILE>){
 	$pbseq{$rn}.=$line;
     }
 }
+
+open(FILE,$allowed_gaps);
+while($line=<FILE>){
+    chomp($line);
+    $allowed{$line}=1;
+}
+
 my $outread="";
 my $last_coord =-1000000000;
 #now we process the pb+mega-reads file
@@ -24,9 +33,9 @@ while($line=<STDIN>){
     if($line =~ /^>/){
 	if(not($outread eq "")){
 	    $indx=0;
-	    @f=split(/(N)\1+/,$outread);
-	    for($i=0;$i<=$#f;$i+=2){
-	    	print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>100);
+	    @f=split(/N/,$outread);
+	    for($i=0;$i<=$#f;$i++){
+	    	print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>400);
 		$indx++;
 	    }
 	}
@@ -40,24 +49,42 @@ while($line=<STDIN>){
 	if($outread eq ""){
 		$outread=$seq;
 	}else{
-	    if($bgn>$last_coord){
+	    #first we figure out if we can allow this join.  
+	    if($last_mr eq $name && $bgn<$last_coord){
+		$join_allowed=1;
+	    }else{
+            my @k1s=split(/_/,$last_mr);
+            my @k2s=split(/_/,$name);
+	    $join_allowed=0;
+	    $k1s[$#k1s] =substr($k1s[$#k1s],0,-1);
+            $k2s[0] = substr($k2s[0],0,-1);
+            $str="$k1s[$#k1s] $k2s[0]";
+            $str="$k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
+            $join_allowed=1 if($allowed{$str});
+	    }
+
+           # print "DEBUG $join_allowed $str\n";
+	    if($bgn>$last_coord){#if gap -- check if the closure is allowed
 		my $min_len=length($outread)<length($seq)?length($outread):length($seq);
-		#my $min_len= $last_mr_len+length($seq);
-		my $max_gap_local=int($min_len*.1);
+		$max_gap_local=int($min_len*.2);
 		$max_gap_local=$max_gap if($max_gap_local>$max_gap);
-		$max_gap_local=5 if($max_gap_local<5);
-		if($bgn-$last_coord>$max_gap_local){#then put N's and later split
-		$outread.=("N" x ($bgn-$last_coord));
+		$max_gap_local=20 if($max_gap_local<20);
+		if($bgn-$last_coord<$max_gap_local && $join_allowed){#then put N's and later split
+		$outread.=lc(substr($pbseq{$rn},$last_coord+1,$bgn-$last_coord)).$seq;
 		}else{
-		$outread.=lc(substr($pbseq{$rn},$last_coord+1,$bgn-$last_coord));
+		$outread.="N".$seq;
 		}
-		$outread.=$seq;
 	    }else{#overlapping
+	    if(1){
  	    $outread.=substr($seq,$last_coord-$bgn+1);
+            }else{
+            $outread.="N".$seq;
+            }
 	    }
 	}
     $last_coord=$end;
     $last_mr_len=length($seq);
+    $last_mr=$name;
     }
 }
 #output the last one
