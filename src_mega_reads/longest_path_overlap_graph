@@ -214,20 +214,21 @@ sub print_longest_paths {
   my ($longest_paths, $pbname, $out) = @_;
 
   print($out ">$pbname\n") if $compact;
-  while(my ($comp, $lp) = each %$longest_paths) {
-    next if $$lp{LCOUNT} < $min_sr;
-    my $start_n   = $$lp{LSTART};
-    my $density   = $$lp{LPATH} / ($$start_n{IMP_END} - $$start_n{IMP_START} + 1);
+# For each connected component, get the longest path (given by its last node $end_n).
+  while(my ($comp, $end_n) = each %$longest_paths) {
+    next if $$end_n{LCOUNT} < $min_sr;
+    my $start_n   = $$end_n{LSTART};
+    my $density   = $$end_n{LPATH} / ($$end_n{IMP_END} - $$start_n{IMP_START} + 1);
     next if($density < $min_density);
 
     my @path;
-    my $term_node = $lp;
-    while(defined($term_node)) {
-      push(@path, $term_node);
-      $term_node = $$term_node{LPREV};
+    my $cur_n = $end_n;
+    while(defined($cur_n)) {
+      push(@path, $cur_n);
+      $cur_n = $$cur_n{LPREV};
     }
 
-    printf($out "%d %d %d %.2g ", $$start_n{IMP_START}, $$start_n{IMP_END}, $$lp{LPATH}, $density);
+    printf($out "%d %d %d %.2g ", $$start_n{IMP_START}, $$end_n{IMP_END}, $$end_n{LPATH}, $density);
     print($out "$pbname ") unless($compact);
 
     print($out $path[-1]{NAME});
