@@ -63,7 +63,7 @@ private:
   std::mutex    mutex_;
 };
 
-Multiplexer::ostream& endr(Multiplexer::ostream& os) {
+inline Multiplexer::ostream& endr(Multiplexer::ostream& os) {
   os.end_record();
   return os;
 }

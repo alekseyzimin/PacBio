@@ -1,2 +1,7 @@
 build-*
 .tup
+lib*.a
+*.o
+test_*.log
+*~
+*#
