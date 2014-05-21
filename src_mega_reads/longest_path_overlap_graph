@@ -90,7 +90,7 @@ sub thread_main {
                    RSTART => $info[0], REND => $info[1], QSTART => $info[2], QEND => $info[3],
                    RLEN => $info[9], QLEN => $info[10], MERCOUNTS => \@flds,
                    LPATH => 0, LPREV => undef, LSTART => undef, LCOUNT => 1 };
-      my ($stretch, $offset, $avg_err) = @flds[11, 3];
+      my ($stretch, $offset, $avg_err) = @info[11..13];
       my $imp_start     = $stretch * $$node{QSTART} + $offset - $nb_errors * $avg_err;
       $$node{IMP_START} = $imp_start < 1 ? 1 : $imp_start;
       my $imp_end       = $stretch * $$node{QEND} + $offset + $nb_errors * $avg_err;
@@ -213,7 +213,7 @@ sub find_longest_paths {
 sub print_longest_paths {
   my ($longest_paths, $pbname, $out) = @_;
 
-  print($out ">$pbname\n");
+  print($out ">$pbname\n") if $compact;
   while(my ($comp, $lp) = each %$longest_paths) {
     next if $$lp{LCOUNT} < $min_sr;
     my $start_n   = $$lp{LSTART};
@@ -227,7 +227,7 @@ sub print_longest_paths {
       $term_node = $$term_node{LPREV};
     }
 
-    printf($out "%d %d %d %.2g ", $lp_ostart, $lp_oend, $$lp{LPATH}, $density);
+    printf($out "%d %d %d %.2g ", $$start_n{IMP_START}, $$start_n{IMP_END}, $$lp{LPATH}, $density);
     print($out "$pbname ") unless($compact);
 
     print($out $path[-1]{NAME});
