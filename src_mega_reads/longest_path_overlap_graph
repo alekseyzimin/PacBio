@@ -13,6 +13,7 @@ my ($no_header, $compact, $dot_file, $help);
 my $nb_threads  = 1;
 my $min_sr      = 2; # Minimum # of super read in a mega read
 my $min_density = 0.1;
+my $nb_errors   = 3;
 my $output      = "mega_reads";
 GetOptions("m|min=i"     => \$min_sr,
            "d|density=f" => \$min_density,
@@ -20,6 +21,7 @@ GetOptions("m|min=i"     => \$min_sr,
            "t|thread=i"  => \$nb_threads,
            "o|output=s"  => \$output,
            "c|compact"   => \$compact,
+           "e|errors=f"  => \$nb_errors,
            "dot=s"       => \$dot_file,
            "h|help"      => \$help) or die;
 
@@ -33,11 +35,14 @@ Find the longest (with most k-mers) path in the super-read overlap graph
  -t,--thread INT     Number of threads ($nb_threads)
  -o,--output PATH    Output prefix file ($output)
  -c,--compact        Compact output
+ -e,--errors FLOAT   Number of average errors slack for implied position
  -h,--help           This message
 EOS
 # ;
 exit(0);
 }
+
+sub round { int($_[0] + $_[0]/abs($_[0] * 2)); }
 
 # Start threads
 my $input_queue = Thread::Queue->new();
@@ -77,17 +82,18 @@ sub thread_main {
     my @nodes;
     foreach my $line (@$lines) {
       my @flds = split (" ", $$line);
-      my @info = splice(@flds, 0, 12);
+      my @info = splice(@flds, 0, 15);
       # LPATH -> Number of mers in longest path up to this node. LPREV ->
       # Previous node in longest path. LSTART -> starting node in longest
       # path. LCOUNT -> Number of nodes in longest path.
-      my $node = { NAME => $info[11], NMERS => $info[4], NEIGHS => [], INDEG => 0,
+      my $node = { NAME => $info[14], NMERS => $info[4], NEIGHS => [], INDEG => 0,
                    RSTART => $info[0], REND => $info[1], QSTART => $info[2], QEND => $info[3],
                    RLEN => $info[9], QLEN => $info[10], MERCOUNTS => \@flds,
                    LPATH => 0, LPREV => undef, LSTART => undef, LCOUNT => 1 };
-      my $imp_start     = $$node{RSTART} - $$node{QSTART} + 1;
+      my ($stretch, $offset, $avg_err) = @flds[11, 3];
+      my $imp_start     = $stretch * $$node{QSTART} + $offset - $nb_errors * $avg_err;
       $$node{IMP_START} = $imp_start < 1 ? 1 : $imp_start;
-      my $imp_end       = $$node{REND} + $$node{QLEN} - $$node{QEND};
+      my $imp_end       = $stretch * $$node{QEND} + $offset + $nb_errors * $avg_err;
       $$node{IMP_END}   = $imp_end > $$node{RLEN} ? $$node{RLEN} : $imp_end;
       push(@nodes, $node);
     }
@@ -211,11 +217,7 @@ sub print_longest_paths {
   while(my ($comp, $lp) = each %$longest_paths) {
     next if $$lp{LCOUNT} < $min_sr;
     my $start_n   = $$lp{LSTART};
-    my $lp_ostart = $$start_n{RSTART} - $$start_n{QSTART} + 1; # Implied start in PB read
-    $lp_ostart    = 1 if $lp_ostart < 1;
-    my $lp_oend   = $$lp{REND} + $$lp{QLEN} - $$lp{QEND};
-    $lp_oend      = $$lp{RLEN} if $lp_oend > $$lp{RLEN};
-    my $density   = $$lp{LPATH} / ($lp_oend - $lp_ostart + 1);
+    my $density   = $$lp{LPATH} / ($$start_n{IMP_END} - $$start_n{IMP_START} + 1);
     next if($density < $min_density);
 
     my @path;
