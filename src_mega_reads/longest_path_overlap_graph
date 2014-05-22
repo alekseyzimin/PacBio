@@ -36,6 +36,7 @@ Find the longest (with most k-mers) path in the super-read overlap graph
  -o,--output PATH    Output prefix file ($output)
  -c,--compact        Compact output
  -e,--errors FLOAT   Number of average errors slack for implied position
+    --dot PREFIX     Write an overlap graph (dot file) for each PacBio read
  -h,--help           This message
 EOS
 # ;
@@ -152,14 +153,19 @@ sub write_dot {
   print($io "digraph \"$pbName\" {\n");
   print($io "  node [fontsize=10];\n");
   foreach my $n (@$nodes) {
-    print($io "  $$n{ID} [tooltip=\"$$n{NAME}\", label=\"$$n{ID} L$$n{QLEN} #$$n{NMERS}\\nP($$n{RSTART},$$n{REND})\\nS($$n{QSTART},$$n{QEND})\"];\n");
+    my $start_n   = $$n{LSTART};
+    my $lp_len    = $$n{IMP_END} - $$start_n{IMP_START} + 1;
+    my $density   = $$n{LPATH} / $lp_len;
+    printf($io "  $$n{ID} [tooltip=\"$$n{NAME}\", label=\"$$n{ID} L$$n{QLEN} #$$n{NMERS}\\nP($$n{RSTART},$$n{REND})\\nS($$n{QSTART},$$n{QEND})\\nLP #$$n{LPATH} L%.1f d%.2g\"];\n", $lp_len, $density);
   }
 
   foreach my $n (@$nodes) {
     my @unitigs = split(/_/, $$n{NAME});
     foreach my $e (@{$$n{NEIGHS}}) {
+      my $color = "";
+      $color = ", color=\"red\"" if $$n{ON_LPATH} && $$nodes[$$e[0]]{ON_LPATH};
       my $common = join("_", @unitigs[-$$e[2]..-1]);
-      print($io "  $$n{ID} -> $$e[0] [tooltip=\"$common\", label=\"$$e[1]\"];\n");
+      print($io "  $$n{ID} -> $$e[0] [tooltip=\"$common\", label=\"$$e[1]\"$color];\n");
     }
   }
   print($io "}\n");
@@ -224,6 +230,7 @@ sub print_longest_paths {
     my @path;
     my $cur_n = $end_n;
     while(defined($cur_n)) {
+      $$cur_n{ON_LPATH} = 1;
       push(@path, $cur_n);
       $cur_n = $$cur_n{LPREV};
     }
@@ -251,11 +258,11 @@ sub handle_graph {
   my ($nodes, $pbname, $out) = @_;
   return unless @$nodes;
   my $components = create_edges($nodes);
+  my %longest_paths = find_longest_paths($nodes, $components);
+  print_longest_paths(\%longest_paths, $pbname, $out);
   if(defined($dot_file)) {
     my $file = $pbname;
     $file =~ s|/|_|g;
     write_dot($nodes, $pbname, $dot_file . $file . ".dot");
   }
-  my %longest_paths = find_longest_paths($nodes, $components);
-  print_longest_paths(\%longest_paths, $pbname, $out);
 }
