@@ -48,7 +48,8 @@ int main(int argc, char *argv[])
   // Create aligner
   stream_manager streams(args.pacbio_arg.cbegin(), args.pacbio_arg.cend());
   align_pb aligner(args.threads_arg, hash, streams, args.stretch_constant_arg, args.stretch_factor_arg,
-                   args.consecutive_arg, args.nmers_arg, args.forward_flag, args.compress_flag, args.duplicated_flag);
+                   args.forward_flag, args.compress_flag, args.duplicated_flag,
+                   args.mers_matching_arg / 100.0, args.bases_matching_arg / 100.0);
   aligner
     .max_mer_count(args.max_count_arg)
     .compact_format(args.compact_flag);

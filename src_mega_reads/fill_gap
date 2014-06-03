@@ -4,10 +4,31 @@ use strict;
 use warnings;
 use Getopt::Long;
 
-my @unitig_len;
-my @unitig_sr;
-my $max_gap = 2;
-my $usage = "$0 unitig_len super_read.fa mer_len [gap_info ...]";
+my ($help);
+my $min_gap_len = 100;
+my $max_gap     = 2;
+
+GetOptions("m|min-gap=i" => \$min_gap_len,
+           "M|max-gap=f" => \$max_gap,
+           "h|help"      => \$help) or die;
+
+my $usage = <<EOS;
+$0 unitig_len super_read.fa mer_len
+
+In each PacBio read, for each gap, try to fill in the gap with super
+reads using only k-unitigs overlap.
+
+ -m,--min-gap-len LEN    Minimum gap len. Any smaller gap is assumed to be of size LEN ($min_gap_len)
+ -M,--max-gap FLOAT      How many times larger than gap size do we search
+ -h,--help               This message
+EOS
+    ;
+
+if(defined($help)) {
+  print($usage);
+  exit(0);
+}
+
 if(@ARGV < 3) {
   print(STDERR $usage);
   exit(1);
@@ -16,6 +37,9 @@ if(@ARGV < 3) {
 my $unitig_len_file = shift @ARGV;
 my $super_read_file = shift @ARGV;
 my $mer_len         = shift @ARGV;
+
+my @unitig_len;
+my @unitig_sr;
 
 # Read unitig lengths
 open(my $ul_io, "<", $unitig_len_file) or
@@ -46,14 +70,19 @@ sub reverse_sr {
   $r
 }
 
+# Given a super read name, returns the name of the last unitig
+sub last_unitig {
+  $_[0] =~ /(?:^|_)([^_]+)$/ and return $1;
+  return undef;
+}
+
 # Given two super read name sr1 sr2, it returns the unitigs in the
 # overlap between sr1 and sr2, or undef if there is no overlap. The
 # last unitig of sr1 can be passed as the last argument.
 sub unitig_overlap {
   my ($sr1, $sr2, $last_unitig1) = @_;
   if(!defined($last_unitig1)) {
-    $sr1 =~ /(?:^|_)([^_]+)$/;
-    $last_unitig1 = $1;
+    $last_unitig1 = last_unitig($sr1);
     return undef unless defined($last_unitig1);
   }
   return undef unless $sr2 =~ /(?:^|_)($last_unitig1)(?:_|$)/;
@@ -156,14 +185,25 @@ sub fill_gap {
   return @candidates;
 }
 
+my $pb_name;
+my @prev_line;
 while(<>) {
-  my ($start_gap, $end_gap, $pbr, $start_sr, $end_sr) = split;
-  my $gap_len = $end_gap - $start_gap + 1;
-  my @candidates = fill_gap($pbr, $start_sr, $end_sr, $gap_len);
-
-  print(STDERR scalar(@candidates), "\n");
-  print_candidates($pbr, $start_sr, $end_sr, \@candidates);
-  # foreach my $cpath (@candidates) {
-  #   print_path($pbr, $$cpath[0], $$cpath[1]);
-  # }
+  if(/^>(.+)$/) {
+    $pb_name   = $1;
+    @prev_line = ();
+    next;
+  }
+  # 0, 1 => position of match
+  # 2, 3 => pac bio read name and sequence of mega read
+  # 4    => mega read name
+  my @line = split;
+  if(@prev_line) {
+    my ($start_gap, $end_gap, $pbr, $start_sr, $end_sr) =
+        ($prev_line[1], $line[0], $pb_name, $prev_line[4], $line[4]);
+    my $gap_len = $end_gap - $start_gap + 1;
+    $gap_len = $min_gap_len if $gap_len < $min_gap_len;
+    my @candidates = fill_gap($pbr, $start_sr, $end_sr, $gap_len);
+    print_candidates($pbr, $start_sr, $end_sr, \@candidates);
+  }
+  @prev_line = @line;
 }

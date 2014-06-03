@@ -76,7 +76,6 @@ std::vector<align_pb::coords_info> align_pb::compute_coordinates(const frags_pos
     const auto                 bwd_nb_mers = std::distance(ml.bwd.lis.begin(), ml.bwd.lis.end());
     const bool                 fwd_align   = fwd_nb_mers >= bwd_nb_mers;
     const auto                 nb_mers     = fwd_align ? fwd_nb_mers : bwd_nb_mers;
-    if(nb_mers < nmers_) continue; // Enough matching mers?
 
     // Compute consecutive mers and covered bases. Compute hash of
     // positions in pb read of aligned mers. If k_len_ > 0, also
@@ -111,7 +110,6 @@ std::vector<align_pb::coords_info> align_pb::compute_coordinates(const frags_pos
         least_square.add(cur.second, cur.first);
       }
     }
-    if(info.pb_cons < (unsigned int)consecutive_ && info.sr_cons < (unsigned int)consecutive_) continue;
 
     // Compute average error
     double e = 0;
@@ -138,20 +136,18 @@ std::vector<align_pb::coords_info> align_pb::compute_coordinates(const frags_pos
     info.stretch = least_square.a();
     info.offset  = least_square.b();
     info.avg_err = e;
-    if(info.qs < 0) {
-      if(forward_) {
-        info.qs      = info.ql + info.qs - mer_dna::k() + 2;
-        info.qe      = info.ql + info.qe + 1;
-        info.rn      = true;
-        info.offset -= info.stretch * (info.ql + 1) - mer_dna::k();
-      } else {
-        info.qs       = -info.qs + mer_dna::k() - 1;
-        info.qe       = -info.qe;
-        info.stretch  = -info.stretch;
-        info.offset  += mer_dna::k() - 1;
-      }
-    } else {
-      info.qe += mer_dna::k() - 1;
+    info.canonicalize(forward_);
+
+    if(matching_mers_factor_ || matching_bases_factor_) {
+      const int imp_s = std::max((unsigned int)1,
+                                 std::min(ml.frag->len, (unsigned int)lrint(info.stretch * info.qs + info.offset)));
+      const int imp_e = std::max((unsigned int)1,
+                                 std::min(ml.frag->len, (unsigned int)lrint(info.stretch * info.qe + info.offset)));
+      const int imp_len = abs(lrint(imp_e - imp_s)) + 1;
+      if(matching_mers_factor_ && matching_mers_factor_ * (imp_len - mer_dna::k() + 1) > lis.size())
+        continue;
+      if(matching_bases_factor_ && matching_bases_factor_ * (imp_len - 2 * mer_dna::k()) > info.pb_cover)
+        continue;
     }
 
     coords.push_back(info);
@@ -227,10 +223,11 @@ void align_pb::process_read(const mer_pos_hash_type& ary, parse_sequence& parser
 
 
 void align_pb_reads(int threads, mer_pos_hash_type& hash, double stretch_const, double stretch_factor,
-                    int consecutive, int nmers, bool compress, bool forward, bool duplicated,
+                    bool compress, bool forward, bool duplicated,
                     const char* pb_path,
                     const char* coords_path, const char* details_path,
-                    const int* lengths, const int nb_unitigs, const unsigned int k_len) {
+                    const int* lengths, const int nb_unitigs, const unsigned int k_len,
+                    double matching_mers, double matching_bases) {
   output_file details, coords;
   if(coords_path) coords.open(coords_path, threads);
   if(details_path) details.open(details_path, threads);
@@ -238,7 +235,8 @@ void align_pb_reads(int threads, mer_pos_hash_type& hash, double stretch_const, 
   files.push_back(pb_path);
   stream_manager streams(files.cbegin(), files.cend());
   align_pb aligner(threads, hash, streams, stretch_const, stretch_factor,
-                   consecutive, nmers, forward, compress, duplicated);
+                   forward, compress, duplicated,
+                   matching_mers, matching_bases);
   if(coords_path) aligner.coords_multiplexer(coords.multiplexer(), true);
   if(details_path) aligner.details_multiplexer(details.multiplexer());
   std::vector<int> unitigs_lengths;

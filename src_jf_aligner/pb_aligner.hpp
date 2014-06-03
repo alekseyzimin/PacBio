@@ -25,11 +25,12 @@ public:
 class align_pb : public jellyfish::thread_exec {
   const mer_pos_hash_type& ary_;
   read_parser              parser_;
-  double                   stretch_constant_, stretch_factor_;
-  int                      consecutive_, nmers_;
+  double                   stretch_constant_, stretch_factor_; // Maximum stretch in LIS
   const bool               forward_;
   const bool               compress_;
   const bool               duplicated_;
+  double                   matching_mers_factor_;
+  double                   matching_bases_factor_;
 
   Multiplexer*             details_multiplexer_;
   Multiplexer*             coords_multiplexer_;
@@ -62,17 +63,18 @@ public:
   typedef std::map<const char*, mer_lists> frags_pos_type;
 
   align_pb(int nb_threads, const mer_pos_hash_type& ary, stream_manager& streams,
-           double stretch_constant, double stretch_factor, int consecutive, int nmers,
-           bool forward = false, bool compress = false, bool duplicated = false) :
+           double stretch_constant, double stretch_factor,
+           bool forward = false, bool compress = false, bool duplicated = false,
+           double matching_mers = 0.0, double matching_bases = 0.0) :
     ary_(ary),
     parser_(4 * nb_threads, 100, 1, streams),
     stretch_constant_(stretch_constant),
     stretch_factor_(stretch_factor),
-    consecutive_(consecutive),
-    nmers_(nmers),
     forward_(forward),
     compress_(compress),
     duplicated_(duplicated),
+    matching_mers_factor_(matching_mers),
+    matching_bases_factor_(matching_bases),
     details_multiplexer_(0),
     coords_multiplexer_(0),
     unitigs_lengths_(0), k_len_(0),
@@ -130,6 +132,28 @@ public:
                   (rs == rhs.rs && (re < rhs.re ||
                                     (re == rhs.re && (hash < rhs.hash ||
                                                       (hash == rhs.hash && ql < rhs.ql)))));
+    }
+
+    // Transform raw coordinates obtained from matching to final
+    // coordinates, encompassing the first and last bases matched (and
+    // not the first base of the kmer mathing), properly reverse the
+    // match if needed and forward is set to true.
+    void canonicalize(bool forward) {
+      if(qs < 0) {
+        if(forward) {
+          qs      = ql + qs - mer_dna::k() + 2;
+          qe      = ql + qe + 1;
+          rn      = true;
+          offset -= stretch * (ql + 1) - mer_dna::k();
+        } else {
+          qs       = -qs + mer_dna::k() - 1;
+          qe       = -qe;
+          stretch  = -stretch;
+          offset  += mer_dna::k() - 1;
+        }
+      } else {
+        qe += mer_dna::k() - 1;
+      }
     }
   };
 
@@ -224,9 +248,10 @@ public:
 };
 
 void align_pb_reads(int threads, mer_pos_hash_type& hash, double stretch_const, double stretch_factor,
-                    int consecutive, int nmers, bool compress, bool forward, bool duplicated,
+                    bool compress, bool forward, bool duplicated,
                     const char* pb_path,
                     const char* coords_path = 0, const char* details_path = 0,
-                    const int* lengths = 0, const int nb_unitigs = 0, const unsigned int k_len = 0);
+                    const int* lengths = 0, const int nb_unitigs = 0, const unsigned int k_len = 0,
+                    double matching_mers = 0.0, double matching_bases = 0.0);
 
 #endif /* _PB_ALIGNER_HPP_ */
