@@ -70,6 +70,12 @@ sub reverse_sr {
   $r
 }
 
+# Given a super read name, returns the name of the first unitig
+sub first_unitig {
+  $_[0] =~ /^([^_]+)(?:_|$)/ and return $1;
+  return undef;
+}
+
 # Given a super read name, returns the name of the last unitig
 sub last_unitig {
   $_[0] =~ /(?:^|_)([^_]+)$/ and return $1;
@@ -107,28 +113,30 @@ sub print_path {
   print("\n");
 }
 
-sub print_candidates {
-  my ($pbr, $start_sr, $end_sr, $candidates) = @_;
+sub get_distinct_candidates {
+  my ($start_sr, $end_sr, $candidates) = @_;
   my %unique_path;
 
   foreach my $cpath (@$candidates) {
     my ($sr_path, $len) = @$cpath;
-    my $prev_sr = shift(@$sr_path);
-    my $start_overlap = unitig_overlap($start_sr, $prev_sr);
-    my $path = substr($prev_sr, length($start_overlap) + 1);
-    foreach my $sr (@$sr_path) {
-      my $overlap = unitig_overlap($prev_sr, $sr);
-      $path       = $path . substr($sr, length($overlap));
-      $prev_sr    = $sr;
+    my $path;
+    if(@$sr_path) {
+      my $prev_sr = shift(@$sr_path);
+      my $start_overlap = unitig_overlap($start_sr, $prev_sr);
+      $path = substr($prev_sr, length($start_overlap) + 1);
+      foreach my $sr (@$sr_path) {
+        my $overlap = unitig_overlap($prev_sr, $sr);
+        $path       = $path . substr($sr, length($overlap));
+        $prev_sr    = $sr;
+      }
+      my $end_overlap = unitig_overlap($prev_sr, $end_sr);
+      $path = substr($path, 0, -(length($end_overlap) + 1));
+    } else {
+      $path = "";
     }
-    my $end_overlap = unitig_overlap($prev_sr, $end_sr);
-    $path = substr($path, 0, -(length($end_overlap) + 1));
     $unique_path{$path} = $len;
   }
-
-  while(my ($path, $len) = each %unique_path) {
-    print("$pbr $len $start_sr $path $end_sr\n");
-  }
+  return %unique_path;
 }
 
 sub fill_gap {
@@ -203,7 +211,16 @@ while(<>) {
     my $gap_len = $end_gap - $start_gap + 1;
     $gap_len = $min_gap_len if $gap_len < $min_gap_len;
     my @candidates = fill_gap($pbr, $start_sr, $end_sr, $gap_len);
-    print_candidates($pbr, $start_sr, $end_sr, \@candidates);
+    my %distinct_candidates = get_distinct_candidates($start_sr, $end_sr, \@candidates);
+    if(keys %distinct_candidates == 1) {
+      while(my ($path, $len) = each %distinct_candidates) {
+        print("+$pbr $start_gap $end_gap $len $path\n");
+      }
+    } else {
+      print("-$pbr $start_gap $end_gap ", join(" ", values(%distinct_candidates)), "\n");
+    }
+#    print("-> ", scalar(keys %distinct_candidates), "\n");
+    # print_candidates($pbr, $start_sr, $end_sr, \@candidates);
   }
   @prev_line = @line;
 }
