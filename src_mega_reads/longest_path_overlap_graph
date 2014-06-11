@@ -248,7 +248,7 @@ sub find_longest_paths {
     if(@{$$v{NEIGHS}} == 0) {
       # If both start and end node, single node in component, don't
       # record a longest path
-      next if $$v{INDEG} == 0;
+      #next if $$v{INDEG} == 0;
       my $comp = $components->find($$v{ID});
       my $lp   = $longest_paths{$comp};
       if(!defined($lp) || $cpath > $$lp[0]{LPATH}) {
