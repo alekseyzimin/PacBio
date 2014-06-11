@@ -20,7 +20,7 @@ awk -F ',' '{print ">"$1"\n"$2}'  $NAMESEQFILE > $NAMESEQFILE.fa
 nucmer  -d 0.2 -f -g 200 -l 15 -b 100 -p $FILENAME $NAMESEQFILE.fa $FILENAME.megareads.fa 1>/dev/null 2>&1
 if [ ! -s $FILENAME.delta ];then exit; fi
 delta-filter -g -o 20 $FILENAME.delta > $FILENAME.f.delta
-show-coords -lcHr $FILENAME.f.delta  > $FILENAME.f.ncoords
+show-coords -lcHr $FILENAME.f.delta  | ~alekseyz/myprogs/merge_matches_coords_file.pl  > $FILENAME.f.ncoords
 if [ ! -s $FILENAME.f.ncoords ];then exit; fi
 
 perl -e '{
