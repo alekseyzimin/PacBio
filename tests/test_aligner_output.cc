@@ -406,7 +406,7 @@ TEST_F(AlignerOutput, Normal) {
   mer_pos_hash_type hash(strlen(super_reads) * 2);
   frag_lists names(1);
   superread_parse(1, hash, names, sr_file.path);
-  align_pb_reads(1, hash, 10, 2, 4, 10, false, false, false, pb_file.path, coords_file.path, details_file.path);
+  align_pb_reads(1, hash, 10, 2, false, false, false, pb_file.path, coords_file.path, details_file.path);
   check_file(coords_file.path, normal_coords, sizeof(normal_coords) / sizeof(char*), 1);
   check_file(details_file.path, normal_details, sizeof(normal_details) / sizeof(char*), 0);
 } // AlignerOutput.Normal
@@ -416,7 +416,7 @@ TEST_F(AlignerOutput, Forward) {
   mer_pos_hash_type hash(strlen(super_reads) * 2);
   frag_lists names(1);
   superread_parse(1, hash, names, sr_file.path);
-  align_pb_reads(1, hash, 10, 2, 4, 10, false, true, false, pb_file.path, coords_file.path, details_file.path);
+  align_pb_reads(1, hash, 10, 2, false, true, false, pb_file.path, coords_file.path, details_file.path);
   check_file(coords_file.path, forward_coords, sizeof(forward_coords) / sizeof(char*), 1);
   check_file(details_file.path, normal_details, sizeof(normal_details) / sizeof(char*), 0);
 } // AlignerOutput.Forward
@@ -427,7 +427,7 @@ TEST_F(AlignerOutput, Compressed) {
   mer_pos_hash_type hash(strlen(super_reads) * 2);
   frag_lists names(1);
   superread_parse(1, hash, names, sr_file.path, true);
-  align_pb_reads(1, hash, 10, 2, 4, 10, true, false, false, pb_file.path, coords_file.path, details_file.path);
+  align_pb_reads(1, hash, 10, 2, true, false, false, pb_file.path, coords_file.path, details_file.path);
   check_file(coords_file.path, comp_coords, sizeof(comp_coords) / sizeof(char*), 1);
   check_file(details_file.path, comp_details, sizeof(comp_details) / sizeof(char*), 0);
 } // AlignerOutput.Compressed
@@ -437,7 +437,7 @@ TEST_F(AlignerOutput, Duplicated) {
   mer_pos_hash_type hash(strlen(super_reads) * 2);
   frag_lists names(1);
   superread_parse(1, hash, names, sr_file.path);
-  align_pb_reads(1, hash, 10, 2, 4, 10, false, false, true, pb_file.path, coords_file.path, details_file.path);
+  align_pb_reads(1, hash, 10, 2, false, false, true, pb_file.path, coords_file.path, details_file.path);
   const char* dup_coords[3] = { normal_coords[0], normal_coords[1], normal_coords[3] };
   check_file(coords_file.path, dup_coords, sizeof(dup_coords) / sizeof(char*), 1);
   check_file(details_file.path, normal_details, sizeof(normal_details) / sizeof(char*), 0);
@@ -449,10 +449,34 @@ TEST_F(AlignerOutput, MerInfo) {
   mer_pos_hash_type hash(strlen(super_reads) * 2);
   frag_lists names(1);
   superread_parse(1, hash, names, sr_file.path);
-  align_pb_reads(1, hash, 10, 2, 4, 10, false, true, false, pb_file.path, coords_file.path, details_file.path,
+  align_pb_reads(1, hash, 10, 2, false, true, false, pb_file.path, coords_file.path, details_file.path,
                  unitig_lengths, sizeof(unitig_lengths) / sizeof(int), mer_len);
   check_file(coords_file.path, merinfo_coords, sizeof(merinfo_coords) / sizeof(char*), 1);
   check_file(details_file.path, normal_details, sizeof(normal_details) / sizeof(char*), 0);
 } // AlignerOutput.Duplicated
+
+TEST_F(AlignerOutput, FilterMer) {
+  mer_dna::k(17);
+  const int mer_len = 65; // mer len for k-unitigs
+  mer_pos_hash_type hash(strlen(super_reads) * 2);
+  frag_lists names(1);
+  superread_parse(1, hash, names, sr_file.path);
+  align_pb_reads(1, hash, 10, 2, false, true, false, pb_file.path, coords_file.path, details_file.path,
+                 unitig_lengths, sizeof(unitig_lengths) / sizeof(int), mer_len,
+                 0.13);
+  check_file(coords_file.path, merinfo_coords, 2, 1);
+} // AlignerOutput.Filter
+
+TEST_F(AlignerOutput, FilterBases) {
+  mer_dna::k(17);
+  const int mer_len = 65; // mer len for k-unitigs
+  mer_pos_hash_type hash(strlen(super_reads) * 2);
+  frag_lists names(1);
+  superread_parse(1, hash, names, sr_file.path);
+  align_pb_reads(1, hash, 10, 2, false, true, false, pb_file.path, coords_file.path, details_file.path,
+                 unitig_lengths, sizeof(unitig_lengths) / sizeof(int), mer_len,
+                 0.0, 0.42);
+  check_file(coords_file.path, merinfo_coords, 2, 1);
+} // AlignerOutput.FilterBases
 
 } // namespace
