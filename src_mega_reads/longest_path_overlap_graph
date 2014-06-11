@@ -11,13 +11,11 @@ use Thread::Queue;
 
 my ($no_header, $compact, $dot_file, $length_unitigs_file, $unitigs_k, $help);
 my $nb_threads   = 1;
-my $min_sr       = 2; # Minimum # of super read in a mega read
 my $min_density  = 0.1;
 my $nb_errors    = 3;
 my $overlap_play = 0.2;
 my $output       = "mega_reads";
-GetOptions("m|min=i"            => \$min_sr,
-           "d|density=f"        => \$min_density,
+GetOptions("d|density=f"        => \$min_density,
            "H|no-header"        => \$no_header,
            "t|thread=i"         => \$nb_threads,
            "o|output=s"         => \$output,
@@ -33,7 +31,6 @@ if(defined($help)) {
   print(<<EOS);
 Find the longest (with most k-mers) path in the super-read overlap graph
 
- -m,--min INT              Minimum number of super reads in a mega read ($min_sr)
  -d,--density FLOAT        Minimum denity of k-mers ($min_density)
  -H,--no-header            Do not print line headers
  -t,--thread INT           Number of threads ($nb_threads)
