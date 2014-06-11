@@ -122,7 +122,7 @@ sub thread_main {
                    RSTART => $info[0], REND => $info[1], QSTART => $info[2], QEND => $info[3],
                    RLEN => $info[9], QLEN => $info[10], MERCOUNTS => \@flds,
                    STRETCH => $stretch, OFFSET => $offset, AVG_ERR => $avg_err,
-                   LPATH => 0, LPREV => undef, LSTART => undef, LCOUNT => 1 };
+                   LPATH => 0, LPREV => undef, LSTART => undef };
 #      my $imp_start     = $stretch * $$node{QSTART} + $offset - $nb_errors * $avg_err;
       my $imp_start     = $stretch + $offset - $nb_errors * $avg_err;
 #      $$node{IMP_START} = $imp_start < 1 ? 1 : $imp_start;
@@ -173,14 +173,12 @@ sub create_edges {
       for(my $k = 0; $k < @unitigs; ++$k) {
         $mers_shared += $$mers_info[2 * $k];
         $mers_shared -= $$mers_info[2 * $k - 1] if $k > 0;
-#        print(". $k $unitig_len[substr($unitigs[$k], 0, -1)] $overlap_len\n");
         $overlap_len += $unitig_len[substr($unitigs[$k], 0, -1)] if defined($overlap_len);
       }
       if(defined($overlap_len)) {
         $overlap_len -= (@unitigs - 1) * ($unitigs_k - 1);
 #        $overlap_len *= ($$node_i{STRETCH} + $$node_j{STRETCH}) / 2;
         my $position_len = $$node_i{IMP_END} - $$node_j{IMP_START} + 1;
-#        print("overlap_len $overlap_len position_len $position_len\n");
         if($overlap_len > (1 + $overlap_play) * $position_len ||
            $position_len > (1 + $overlap_play) * $overlap_len) {
           next;
@@ -251,9 +249,16 @@ sub find_longest_paths {
 
     # Record longest path for ending nodes
     if(@{$$v{NEIGHS}} == 0) {
+      # If both start and end node, single node in component, don't
+      # record a longest path
+      next if $$v{INDEG} == 0;
       my $comp = $components->find($$v{ID});
       my $lp   = $longest_paths{$comp};
-      $longest_paths{$comp} = $v if !defined($lp) || $cpath > $$lp{LPATH};
+      if(!defined($lp) || $cpath > $$lp[0]{LPATH}) {
+        $longest_paths{$comp} = [$v];
+      } elsif(defined($lp) && $cpath == $$lp[0]{LPATH}) {
+        push(@$lp, $v);
+      }
       next;
     }
     
@@ -261,11 +266,12 @@ sub find_longest_paths {
     foreach my $e (@{$$v{NEIGHS}}) {
       my $nv     = $$nodes[$$e[0]];
       my $ncp    = $cpath + $$nv{NMERS} - $$e[1];
-      if($ncp > $$nv{LPATH}) {
+      if(!defined($$nv{LSTART}) ||
+         $ncp > $$nv{LPATH} || 
+         ($ncp == $$nv{LPATH} && $$v{LSTART}{IMP_START} > $$nv{LSTART}{IMP_START})) {
         $$nv{LPATH}  = $ncp;
         $$nv{LSTART} = $$v{LSTART};
         $$nv{LPREV}  = $v;
-        $$nv{LCOUNT} = $$v{LCOUNT} + 1;
       }
     }
   }
@@ -277,27 +283,33 @@ sub print_longest_paths {
   my ($longest_paths, $pbname, $out) = @_;
 
   print($out ">$pbname\n") if $compact;
-# For each connected component, get the longest path (given by its last node $end_n).
-  while(my ($comp, $end_n) = each %$longest_paths) {
-    next if $$end_n{LCOUNT} < $min_sr;
-    my $start_n   = $$end_n{LSTART};
-    my $density   = $$end_n{LPATH} / (($$end_n{IMP_END} > $$end_n{RLEN} ? $$end_n{RLEN} : $$end_n{IMP_END}) -
+# For each connected component, get the longest paths (given by their last node $end_n).
+  while(my ($comp, $end_nodes) = each %$longest_paths) {
+    my ($max_end_n, $max_density) = (undef, 0);
+    foreach my $end_n (@$end_nodes) {
+      my $start_n = $$end_n{LSTART};
+      my $density = $$end_n{LPATH} / (($$end_n{IMP_END} > $$end_n{RLEN} ? $$end_n{RLEN} : $$end_n{IMP_END}) -
                                       ($$start_n{IMP_START} < 1 ? 1 : $$start_n{IMP_START}) + 1);
-    print("comp $$end_n{ID} density $density\n");
-    next if($density < $min_density);
+      if($density > $max_density) {
+        $max_density = $density;
+        $max_end_n = $end_n;
+      }
+    }
+    next if($max_density < $min_density);
 
     my @path;
-    my $cur_n = $end_n;
+    my $cur_n   = $max_end_n;
+    my $start_n = $$max_end_n{LSTART};
     while(defined($cur_n)) {
       $$cur_n{ON_LPATH} = 1;
       push(@path, $cur_n);
       $cur_n = $$cur_n{LPREV};
     }
 
-    printf($out "%d %d %d %.2g ", $$start_n{IMP_START}, $$end_n{IMP_END}, $$end_n{LPATH}, $density);
+    printf($out "%d %d %d %.2g ", $$start_n{IMP_START}, $$max_end_n{IMP_END}, $$max_end_n{LPATH}, $max_density);
     print($out "$pbname ") unless($compact);
 
-#    my $path_len = length_sr($path[-1]{NAME});
+    my $path_len = length_sr($path[-1]{NAME});
     print($out $path[-1]{NAME});
     for(my $i = $#path; $i > 0; $i--) {
       my $v = $path[$i];
@@ -306,12 +318,12 @@ sub print_longest_paths {
         my $w = $path[$i - 1];
         my @srs = split(/_/, $$w{NAME});
         splice(@srs, 0, $$n[2]);
-#        $path_len += length_sr(join("_", @srs)) - ($unitigs_k - 1);
+        $path_len += length_sr(join("_", @srs)) - ($unitigs_k - 1);
         print($out "_", join("_", @srs));
         last;
       }
     }
-    print($out "\n");
+    print($out " $path_len\n");
   }
 }
 
