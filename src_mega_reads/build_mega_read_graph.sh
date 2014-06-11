@@ -12,7 +12,7 @@ touch $FILENAME.megareads.sorted.wseq
 
 #wc -l $FILENAME.megareads
 if [ -s $FILENAME.megareads ];then
-/home/alekseyz/myprogs/MaSuRCA/build/inst/bin/createFastaSuperReadSequences work1 <(awk '{print "1 "$6}' $FILENAME.megareads| head -n 25) -seqdiffmax 0 -min-ovl-len $KM1 -minreadsinsuperread 1  -good-sr-filename $FILENAME.megareads.names  -kunitigsfile /genome7/raid/alekseyz/PB_ScerW303/assembly_k${KMER}/guillaumeKUnitigsAtLeast32bases_all.fasta -good-sequence-output-file $FILENAME.megareads.all.fa -super-read-name-and-lengths-file $FILENAME.megareads.sizes -rename-super-reads  2>/dev/null
+/home/alekseyz/myprogs/masurca-devel/build/inst/bin/createFastaSuperReadSequences work1 <(awk '{print "1 "$6}' $FILENAME.megareads| head -n 25) -seqdiffmax 0 -min-ovl-len $KM1 -minreadsinsuperread 1  -good-sr-filename $FILENAME.megareads.names  -kunitigsfile /genome7/raid/alekseyz/PB_ScerW303/assembly_k${KMER}/guillaumeKUnitigsAtLeast32bases_all.fasta -good-sequence-output-file $FILENAME.megareads.all.fa -super-read-name-and-lengths-file $FILENAME.megareads.sizes -rename-super-reads  2>/dev/null
 
 perl -e 'while($line=<STDIN>){$s=$line;$line=<STDIN>;print "$s$line" if(length($line)>125);}' < $FILENAME.megareads.all.fa > $FILENAME.megareads.fa
 if [ ! -s $FILENAME.megareads.fa ];then exit; fi
@@ -45,10 +45,10 @@ open(FILE,$ARGV[2]);
 while($line=<FILE>){
 	chomp($line);
 	@f=split(/\s+/,$line);
-	next if (not(defined($srn{$f[-1]})));
-	$scores[$srn{$f[-1]}]=$f[2];
-	$coords_pb[$srn{$f[-1]}]="$f[0] $f[1]";
-	$pbn[$srn{$f[-1]}]=$f[4];
+	next if (not(defined($srn{$f[5]})));
+	$scores[$srn{$f[5]}]=$f[2];
+	$coords_pb[$srn{$f[5]}]="$f[0] $f[1]";
+	$pbn[$srn{$f[5]}]=$f[4];
 }
 while($line=<STDIN>){
 	chomp($line);

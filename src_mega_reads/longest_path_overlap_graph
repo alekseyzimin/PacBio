@@ -11,9 +11,9 @@ use Thread::Queue;
 
 my ($no_header, $compact, $dot_file, $length_unitigs_file, $unitigs_k, $help);
 my $nb_threads   = 1;
-my $min_density  = 0.1;
+my $min_density  = 0.05;
 my $nb_errors    = 3;
-my $overlap_play = 0.2;
+my $overlap_play = 0.25;
 my $output       = "mega_reads";
 GetOptions("d|density=f"        => \$min_density,
            "H|no-header"        => \$no_header,
