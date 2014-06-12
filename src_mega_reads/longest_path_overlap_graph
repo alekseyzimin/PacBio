@@ -53,7 +53,7 @@ if(defined($length_unitigs_file) != defined($unitigs_k)) {
 
 sub round { int($_[0] + $_[0]/abs($_[0] * 2)); }
 
-my @unitig_len :shared;
+my @unitig_len;
 if(defined($length_unitigs_file)) {
   open(my $ul_io, "<", $length_unitigs_file) or
       die "Can't open file '$length_unitigs_file': $!";
@@ -109,7 +109,7 @@ sub thread_main {
     my $pbName = pop(@$lines);
     my @nodes;
     foreach my $line (@$lines) {
-      my @flds = split (" ", $$line);
+      my @flds = split (/\s/, $$line);
       my @info = splice(@flds, 0, 15);
       my ($stretch, $offset, $avg_err) = @info[11..13];
       # LPATH -> Number of mers in longest path up to this node. LPREV ->
@@ -152,17 +152,20 @@ sub create_edges {
     my $node_i    = $$nodes[$i];
     next if $$node_i{IMP_END} >= $$node_i{RLEN}; # Hanging off 3' end of PacBio read: no overlap
     my $i_name    = $$node_i{NAME};
-    my @tflds     = split (/_/, $i_name);
-    my $lastKUni  = $tflds[-1];
+    $i_name =~ /(^|_)(\d+(F|R))$/;
+    my $lastKUni  = $2;
     for (my $j=$i+1; $j < @$nodes; ++$j) {
       my $node_j      = $$nodes[$j];
+      my $position_len = $$node_i{IMP_END} - $$node_j{IMP_START} + 1;
       next if $$node_j{IMP_START} <= 1; # Hanging off 5' end of PacBio read: no overlap
-      last if $$node_j{IMP_START} > $$node_i{IMP_END};
+      last if $position_len < $unitigs_k/(1 + $overlap_play)-1;
+      #last if $$node_j{IMP_START} > $$node_i{IMP_END};
       my $j_name = $$node_j{NAME};
       next unless $j_name =~ /(?:^|_)($lastKUni)(?:_|$)/;
       my $common_len     = $+[1];
       my $common_unitigs = substr($i_name, -$common_len);
       next unless $common_unitigs eq substr($j_name, 0, $common_len);
+      $common_unitigs =~ s/(F|R)//g;
       my @unitigs     = split(/_/, $common_unitigs); # k-unitigs in common between nodes
       my $mers_shared = 0;
       my $mers_info   = $$node_j{MERCOUNTS};
@@ -170,12 +173,13 @@ sub create_edges {
       for(my $k = 0; $k < @unitigs; ++$k) {
         $mers_shared += $$mers_info[2 * $k];
         $mers_shared -= $$mers_info[2 * $k - 1] if $k > 0;
-        $overlap_len += $unitig_len[substr($unitigs[$k], 0, -1)] if defined($overlap_len);
+        $overlap_len += $unitig_len[$unitigs[$k]] if defined($overlap_len);
+	last if($overlap_len - ($k - 1) * ($unitigs_k - 1) >  (1 + $overlap_play) * $position_len);
       }
       if(defined($overlap_len)) {
         $overlap_len -= (@unitigs - 1) * ($unitigs_k - 1);
 #        $overlap_len *= ($$node_i{STRETCH} + $$node_j{STRETCH}) / 2;
-        my $position_len = $$node_i{IMP_END} - $$node_j{IMP_START} + 1;
+#        my $position_len = $$node_i{IMP_END} - $$node_j{IMP_START} + 1;
         if($overlap_len > (1 + $overlap_play) * $position_len ||
            $position_len > (1 + $overlap_play) * $overlap_len) {
           next;
