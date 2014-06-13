@@ -17,7 +17,7 @@ if [ -s $FILENAME.megareads ];then
 perl -e 'while($line=<STDIN>){$s=$line;$line=<STDIN>;print "$s$line" if(length($line)>125);}' < $FILENAME.megareads.all.fa > $FILENAME.megareads.fa
 if [ ! -s $FILENAME.megareads.fa ];then exit; fi
 awk -F ',' '{print ">"$1"\n"$2}'  $NAMESEQFILE > $NAMESEQFILE.fa
-nucmer  -d 0.2 -f -g 200 -l 15 -b 200 -p $FILENAME $NAMESEQFILE.fa $FILENAME.megareads.fa 1>/dev/null 2>&1
+nucmer  -d 0.2 -f -g 200 -l 15 -b 100 -p $FILENAME $NAMESEQFILE.fa $FILENAME.megareads.fa 1>/dev/null 2>&1
 if [ ! -s $FILENAME.delta ];then exit; fi
 delta-filter -g -o 20 $FILENAME.delta > $FILENAME.f.delta
 show-coords -lcHr $FILENAME.f.delta  |sort -nk19 -k1n |~/myprogs/merge_matches_coords_file.pl 1000 > $FILENAME.f.ncoords
