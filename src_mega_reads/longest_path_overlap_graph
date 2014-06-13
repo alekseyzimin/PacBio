@@ -9,41 +9,68 @@ use UnionFind;
 use threads;
 use Thread::Queue;
 
-my ($no_header, $compact, $dot_file, $help);
-my $nb_threads  = 1;
-my $min_sr      = 2; # Minimum # of super read in a mega read
-my $min_density = 0.1;
-my $nb_errors   = 3;
-my $output      = "mega_reads";
-GetOptions("m|min=i"     => \$min_sr,
-           "d|density=f" => \$min_density,
-           "H|no-header" => \$no_header,
-           "t|thread=i"  => \$nb_threads,
-           "o|output=s"  => \$output,
-           "c|compact"   => \$compact,
-           "e|errors=f"  => \$nb_errors,
-           "dot=s"       => \$dot_file,
-           "h|help"      => \$help) or die;
+my ($no_header, $compact, $dot_file, $length_unitigs_file, $unitigs_k, $help);
+my $nb_threads   = 1;
+my $min_density  = 0.05;
+my $nb_errors    = 3;
+my $overlap_play = 0.5;
+my $output       = "mega_reads";
+GetOptions("d|density=f"        => \$min_density,
+           "H|no-header"        => \$no_header,
+           "t|thread=i"         => \$nb_threads,
+           "o|output=s"         => \$output,
+           "c|compact"          => \$compact,
+           "e|errors=f"         => \$nb_errors,
+           "l|length-unitigs=s" => \$length_unitigs_file,
+           "k=i"                => \$unitigs_k,
+           "p|overlap-play=f"   => \$overlap_play,
+           "dot=s"              => \$dot_file,
+           "h|help"             => \$help) or die;
 
 if(defined($help)) {
   print(<<EOS);
 Find the longest (with most k-mers) path in the super-read overlap graph
 
- -m,--min INT        Minimum number of super reads in a mega read ($min_sr)
- -d,--density FLOAT  Minimum denity of k-mers ($min_density)
- -H,--no-header      Do not print line headers
- -t,--thread INT     Number of threads ($nb_threads)
- -o,--output PATH    Output prefix file ($output)
- -c,--compact        Compact output
- -e,--errors FLOAT   Number of average errors slack for implied position
-    --dot PREFIX     Write an overlap graph (dot file) for each PacBio read
- -h,--help           This message
+ -d,--density FLOAT        Minimum denity of k-mers ($min_density)
+ -H,--no-header            Do not print line headers
+ -t,--thread INT           Number of threads ($nb_threads)
+ -o,--output PATH          Output prefix file ($output)
+ -c,--compact              Compact output
+ -e,--errors FLOAT         Number of average errors slack for implied position
+ -l,--length-unitigs FILE  File containing unitigs length
+ -k                        Length of k-mer for creating k-unitigs in super reads
+ -p,--overlap-play FLOAT   Play in the overlap length difference between position and k-unitigs lengths
+    --dot PREFIX           Write an overlap graph (dot file) for each PacBio read
+ -h,--help                 This message
 EOS
 # ;
 exit(0);
 }
+if(defined($length_unitigs_file) != defined($unitigs_k)) {
+  print(STDERR "Switches --length-unitigs and -k must be supplied together.");
+  exit(1);
+}
 
 sub round { int($_[0] + $_[0]/abs($_[0] * 2)); }
+
+my @unitig_len;
+if(defined($length_unitigs_file)) {
+  open(my $ul_io, "<", $length_unitigs_file) or
+      die "Can't open file '$length_unitigs_file': $!";
+  while(<$ul_io>) {
+    my ($index, $len) = split;
+    push(@unitig_len, $len);
+  }
+  close($ul_io);
+}
+
+sub length_sr {
+  my ($sr)    = @_;
+  my @unitigs = split(/_/, $sr);
+  my $len     = 0;
+  $len += $unitig_len[substr($_, 0, -1)] foreach (@unitigs);
+  $len - (@unitigs - 1) * ($unitigs_k - 1);
+}
 
 # Start threads
 my $input_queue = Thread::Queue->new();
@@ -82,20 +109,25 @@ sub thread_main {
     my $pbName = pop(@$lines);
     my @nodes;
     foreach my $line (@$lines) {
-      my @flds = split (" ", $$line);
+      my @flds = split (/\s/, $$line);
       my @info = splice(@flds, 0, 15);
+      my ($stretch, $offset, $avg_err) = @info[11..13];
       # LPATH -> Number of mers in longest path up to this node. LPREV ->
       # Previous node in longest path. LSTART -> starting node in longest
       # path. LCOUNT -> Number of nodes in longest path.
       my $node = { NAME => $info[14], NMERS => $info[4], NEIGHS => [], INDEG => 0,
                    RSTART => $info[0], REND => $info[1], QSTART => $info[2], QEND => $info[3],
                    RLEN => $info[9], QLEN => $info[10], MERCOUNTS => \@flds,
-                   LPATH => 0, LPREV => undef, LSTART => undef, LCOUNT => 1 };
-      my ($stretch, $offset, $avg_err) = @info[11..13];
-      my $imp_start     = $stretch * $$node{QSTART} + $offset - $nb_errors * $avg_err;
-      $$node{IMP_START} = $imp_start < 1 ? 1 : $imp_start;
-      my $imp_end       = $stretch * $$node{QEND} + $offset + $nb_errors * $avg_err;
-      $$node{IMP_END}   = $imp_end > $$node{RLEN} ? $$node{RLEN} : $imp_end;
+                   STRETCH => $stretch, OFFSET => $offset, AVG_ERR => $avg_err,
+                   LPATH => 0, LPREV => undef, LSTART => undef };
+#      my $imp_start     = $stretch * $$node{QSTART} + $offset - $nb_errors * $avg_err;
+      my $imp_start     = $stretch + $offset - $nb_errors * $avg_err;
+#      $$node{IMP_START} = $imp_start < 1 ? 1 : $imp_start;
+      $$node{IMP_START} = $imp_start;
+#      my $imp_end       = $stretch * $$node{QEND} + $offset + $nb_errors * $avg_err;
+      my $imp_end       = $stretch * $$node{QLEN} + $offset + $nb_errors * $avg_err;
+#      $$node{IMP_END}   = $imp_end > $$node{RLEN} ? $$node{RLEN} : $imp_end;
+      $$node{IMP_END}   = $imp_end;
       push(@nodes, $node);
     }
     @nodes = sort { $$a{IMP_START} <=> $$b{IMP_START} } @nodes;
@@ -118,24 +150,42 @@ sub create_edges {
   my $components = UnionFind->new();
   for(my $i       = 0; $i < @$nodes; ++$i) {
     my $node_i    = $$nodes[$i];
+    next if $$node_i{IMP_END} >= $$node_i{RLEN}; # Hanging off 3' end of PacBio read: no overlap
     my $i_name    = $$node_i{NAME};
-    my @tflds     = split (/_/, $i_name);
-    my $lastKUni  = $tflds[-1];
+    $i_name =~ /(^|_)(\d+(F|R))$/;
+    my $lastKUni  = $2;
     for (my $j=$i+1; $j < @$nodes; ++$j) {
       my $node_j      = $$nodes[$j];
-      last if $$node_j{IMP_START} > $$node_i{IMP_END};
+      my $position_len = $$node_i{IMP_END} - $$node_j{IMP_START} + 1;
+      next if $$node_j{IMP_START} <= 1; # Hanging off 5' end of PacBio read: no overlap
+      last if $position_len < $unitigs_k/(1 + $overlap_play)-1;
+      #last if $$node_j{IMP_START} > $$node_i{IMP_END};
       my $j_name = $$node_j{NAME};
       next unless $j_name =~ /(?:^|_)($lastKUni)(?:_|$)/;
       my $common_len     = $+[1];
       my $common_unitigs = substr($i_name, -$common_len);
       next unless $common_unitigs eq substr($j_name, 0, $common_len);
-      my @unitigs = split(/_/, $common_unitigs); # k-unitigs in common between nodes
+      $common_unitigs =~ s/(F|R)//g;
+      my @unitigs     = split(/_/, $common_unitigs); # k-unitigs in common between nodes
       my $mers_shared = 0;
-      my $mers_info = $$node_j{MERCOUNTS};
+      my $mers_info   = $$node_j{MERCOUNTS};
+      my $overlap_len = @unitig_len ? 0 : undef;
       for(my $k = 0; $k < @unitigs; ++$k) {
         $mers_shared += $$mers_info[2 * $k];
         $mers_shared -= $$mers_info[2 * $k - 1] if $k > 0;
+        $overlap_len += $unitig_len[$unitigs[$k]] if defined($overlap_len);
+	last if($overlap_len - ($k - 1) * ($unitigs_k - 1) >  (1 + $overlap_play) * $position_len);
       }
+      if(defined($overlap_len)) {
+        $overlap_len -= (@unitigs - 1) * ($unitigs_k - 1);
+#        $overlap_len *= ($$node_i{STRETCH} + $$node_j{STRETCH}) / 2;
+#        my $position_len = $$node_i{IMP_END} - $$node_j{IMP_START} + 1;
+        if($overlap_len > (1 + $overlap_play) * $position_len ||
+           $position_len > (1 + $overlap_play) * $overlap_len) {
+          next;
+        }
+      }
+
       push(@{$$node_i{NEIGHS}}, [$j, $mers_shared, scalar(@unitigs)]);
       $$node_j{INDEG}++;
       $components->union($i, $j);
@@ -156,7 +206,13 @@ sub write_dot {
     my $start_n   = $$n{LSTART};
     my $lp_len    = $$n{IMP_END} - $$start_n{IMP_START} + 1;
     my $density   = $$n{LPATH} / $lp_len;
-    printf($io "  $$n{ID} [tooltip=\"$$n{NAME}\", label=\"$$n{ID} L$$n{QLEN} #$$n{NMERS}\\nP($$n{RSTART},$$n{REND})\\nS($$n{QSTART},$$n{QEND})\\nLP #$$n{LPATH} L%.1f d%.2g\"];\n", $lp_len, $density);
+    my $color     = "";
+    if($$n{INDEG} == 0) {
+      $color = "color=blue";
+    } elsif(!@{$$n{NEIGHS}}) {
+      $color = "color=green";
+    }
+    printf($io "  $$n{ID} [tooltip=\"$$n{NAME}\", label=\"$$n{ID} L$$n{QLEN} #$$n{NMERS}\\nP($$n{RSTART},$$n{REND})\\nS($$n{QSTART},$$n{QEND})\\nLP #$$n{LPATH} L%.1f d%.2g\"$color];\n", $lp_len, $density);
   }
 
   foreach my $n (@$nodes) {
@@ -194,9 +250,16 @@ sub find_longest_paths {
 
     # Record longest path for ending nodes
     if(@{$$v{NEIGHS}} == 0) {
+      # If both start and end node, single node in component, don't
+      # record a longest path
+      #next if $$v{INDEG} == 0;
       my $comp = $components->find($$v{ID});
       my $lp   = $longest_paths{$comp};
-      $longest_paths{$comp} = $v if !defined($lp) || $cpath > $$lp{LPATH};
+      if(!defined($lp) || $cpath > $$lp[0]{LPATH}) {
+        $longest_paths{$comp} = [$v];
+      } elsif(defined($lp) && $cpath == $$lp[0]{LPATH}) {
+        push(@$lp, $v);
+      }
       next;
     }
     
@@ -204,11 +267,12 @@ sub find_longest_paths {
     foreach my $e (@{$$v{NEIGHS}}) {
       my $nv     = $$nodes[$$e[0]];
       my $ncp    = $cpath + $$nv{NMERS} - $$e[1];
-      if($ncp > $$nv{LPATH}) {
+      if(!defined($$nv{LSTART}) ||
+         $ncp > $$nv{LPATH} || 
+         ($ncp == $$nv{LPATH} && $$v{LSTART}{IMP_START} > $$nv{LSTART}{IMP_START})) {
         $$nv{LPATH}  = $ncp;
         $$nv{LSTART} = $$v{LSTART};
         $$nv{LPREV}  = $v;
-        $$nv{LCOUNT} = $$v{LCOUNT} + 1;
       }
     }
   }
@@ -220,24 +284,33 @@ sub print_longest_paths {
   my ($longest_paths, $pbname, $out) = @_;
 
   print($out ">$pbname\n") if $compact;
-# For each connected component, get the longest path (given by its last node $end_n).
-  while(my ($comp, $end_n) = each %$longest_paths) {
-    next if $$end_n{LCOUNT} < $min_sr;
-    my $start_n   = $$end_n{LSTART};
-    my $density   = $$end_n{LPATH} / ($$end_n{IMP_END} - $$start_n{IMP_START} + 1);
-    next if($density < $min_density);
+# For each connected component, get the longest paths (given by their last node $end_n).
+  while(my ($comp, $end_nodes) = each %$longest_paths) {
+    my ($max_end_n, $max_density) = (undef, 0);
+    foreach my $end_n (@$end_nodes) {
+      my $start_n = $$end_n{LSTART};
+      my $density = $$end_n{LPATH} / (($$end_n{IMP_END} > $$end_n{RLEN} ? $$end_n{RLEN} : $$end_n{IMP_END}) -
+                                      ($$start_n{IMP_START} < 1 ? 1 : $$start_n{IMP_START}) + 1);
+      if($density > $max_density) {
+        $max_density = $density;
+        $max_end_n = $end_n;
+      }
+    }
+    next if($max_density < $min_density);
 
     my @path;
-    my $cur_n = $end_n;
+    my $cur_n   = $max_end_n;
+    my $start_n = $$max_end_n{LSTART};
     while(defined($cur_n)) {
       $$cur_n{ON_LPATH} = 1;
       push(@path, $cur_n);
       $cur_n = $$cur_n{LPREV};
     }
 
-    printf($out "%d %d %d %.2g ", $$start_n{IMP_START}, $$end_n{IMP_END}, $$end_n{LPATH}, $density);
+    printf($out "%d %d %d %.2g ", $$start_n{IMP_START}, $$max_end_n{IMP_END}, $$max_end_n{LPATH}, $max_density);
     print($out "$pbname ") unless($compact);
 
+    my $path_len = length_sr($path[-1]{NAME});
     print($out $path[-1]{NAME});
     for(my $i = $#path; $i > 0; $i--) {
       my $v = $path[$i];
@@ -246,11 +319,12 @@ sub print_longest_paths {
         my $w = $path[$i - 1];
         my @srs = split(/_/, $$w{NAME});
         splice(@srs, 0, $$n[2]);
+        $path_len += length_sr(join("_", @srs)) - ($unitigs_k - 1);
         print($out "_", join("_", @srs));
         last;
       }
     }
-    print($out "\n");
+    print($out " $path_len\n");
   }
 }
 
