@@ -82,7 +82,7 @@ while($line=<STDIN>){
 		$max_gap_local=int($min_len*.33);
 		$max_gap_local=$max_gap if($max_gap_local>$max_gap);
 		$max_gap_local=50 if($max_gap_local<50);
-		#print "join status ",$bgn-$last_coord," $max_gap_local $join_allowed allowed:$allowed{$str} $str\n";
+		print "join status ",$bgn-$last_coord," $max_gap_local $join_allowed allowed:$allowed{$str} $str\n";
 		if($bgn-$last_coord<$max_gap_local && $join_allowed){#then put N's and later split
 		$outread.=lc(substr($pbseq{$rn},$last_coord+1,$bgn-$last_coord)).$seq;
 		}else{
@@ -107,9 +107,9 @@ while($line=<STDIN>){
 }
 #output the last one
             $indx=0;
-            @f=split(/(N)\1+/,$outread);
-            for($i=0;$i<=$#f;$i+=2){
-                print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n";
+            @f=split(/N/,$outread);
+            for($i=0;$i<=$#f;$i++){
+                print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>400);
                 $indx++;
             }
 

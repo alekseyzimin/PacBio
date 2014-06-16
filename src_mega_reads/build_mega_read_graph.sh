@@ -12,7 +12,7 @@ touch $FILENAME.megareads.sorted.wseq
 
 #wc -l $FILENAME.megareads
 if [ -s $FILENAME.megareads ];then
-/home/alekseyz/myprogs/masurca-devel/build/inst/bin/createFastaSuperReadSequences work1 <(awk '{print "1 "$6}' $FILENAME.megareads| head -n 25) -seqdiffmax 0 -min-ovl-len $KM1 -minreadsinsuperread 1  -good-sr-filename $FILENAME.megareads.names  -kunitigsfile /genome7/raid/alekseyz/PB_ScerW303/assembly_k${KMER}/guillaumeKUnitigsAtLeast32bases_all.fasta -good-sequence-output-file $FILENAME.megareads.all.fa -super-read-name-and-lengths-file $FILENAME.megareads.sizes -rename-super-reads  2>/dev/null
+/home/alekseyz/myprogs/masurca-devel/build/inst/bin/createFastaSuperReadSequences work1 <(awk '{print "1 "$6}' $FILENAME.megareads| head -n 25) -seqdiffmax 0 -min-ovl-len $KM1 -minreadsinsuperread 1  -good-sr-filename $FILENAME.megareads.names  -kunitigsfile /genome3/raid/alekseyz/PB_ScerW303/assembly_k${KMER}/guillaumeKUnitigsAtLeast32bases_all.fasta -good-sequence-output-file $FILENAME.megareads.all.fa -super-read-name-and-lengths-file $FILENAME.megareads.sizes -rename-super-reads  2>/dev/null
 
 perl -e 'while($line=<STDIN>){$s=$line;$line=<STDIN>;print "$s$line" if(length($line)>125);}' < $FILENAME.megareads.all.fa > $FILENAME.megareads.fa
 if [ ! -s $FILENAME.megareads.fa ];then exit; fi
@@ -64,5 +64,6 @@ print $l;
 }' $FILENAME.megareads.sizes $FILENAME.megareads.fa $FILENAME.megareads < $FILENAME.f.ncoords  | sort -nrk5,5 > $FILENAME.megareads.wseq
 
 
-$EXEPATH/reconciliate_mega_reads.pl 20 < $FILENAME.megareads.wseq | sort -nk1,1 > $FILENAME.megareads.sorted.wseq
+$EXEPATH/reconciliate_mega_reads.pl 25 < $FILENAME.megareads.wseq | sort -nk1,1 > $FILENAME.megareads.sorted.wseq
+
 fi

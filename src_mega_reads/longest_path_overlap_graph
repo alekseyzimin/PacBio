@@ -154,17 +154,20 @@ sub create_edges {
     my $i_name    = $$node_i{NAME};
     $i_name =~ /(^|_)(\d+(F|R))$/;
     my $lastKUni  = $2;
+    #print "NAME i $i_name implied end i $$node_i{IMP_END}\n";
     for (my $j=$i+1; $j < @$nodes; ++$j) {
       my $node_j      = $$nodes[$j];
       my $position_len = $$node_i{IMP_END} - $$node_j{IMP_START} + 1;
       next if $$node_j{IMP_START} <= 1; # Hanging off 5' end of PacBio read: no overlap
       last if $position_len < $unitigs_k/(1 + $overlap_play)-1;
+      #print "name j $$node_j{NAME} implied start j $$node_j{IMP_START}\n";
       #last if $$node_j{IMP_START} > $$node_i{IMP_END};
       my $j_name = $$node_j{NAME};
       next unless $j_name =~ /(?:^|_)($lastKUni)(?:_|$)/;
       my $common_len     = $+[1];
       my $common_unitigs = substr($i_name, -$common_len);
       next unless $common_unitigs eq substr($j_name, 0, $common_len);
+      #print "OVERLAP FOUND\n";
       $common_unitigs =~ s/(F|R)//g;
       my @unitigs     = split(/_/, $common_unitigs); # k-unitigs in common between nodes
       my $mers_shared = 0;
@@ -176,16 +179,18 @@ sub create_edges {
         $overlap_len += $unitig_len[$unitigs[$k]] if defined($overlap_len);
 	last if($overlap_len - ($k - 1) * ($unitigs_k - 1) >  (1 + $overlap_play) * $position_len);
       }
+      
       if(defined($overlap_len)) {
         $overlap_len -= (@unitigs - 1) * ($unitigs_k - 1);
+         #print "OVERLAP LENGTH $overlap_len vs $position_len\n";
 #        $overlap_len *= ($$node_i{STRETCH} + $$node_j{STRETCH}) / 2;
 #        my $position_len = $$node_i{IMP_END} - $$node_j{IMP_START} + 1;
         if($overlap_len > (1 + $overlap_play) * $position_len ||
-           $position_len > (1 + $overlap_play) * $overlap_len) {
+           $overlap_len < (1 - $overlap_play) * $position_len) {
           next;
         }
       }
-
+      #print "ADDING NODE\n";
       push(@{$$node_i{NEIGHS}}, [$j, $mers_shared, scalar(@unitigs)]);
       $$node_j{INDEG}++;
       $components->union($i, $j);
