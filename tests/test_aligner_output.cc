@@ -463,7 +463,7 @@ TEST_F(AlignerOutput, FilterMer) {
   superread_parse(1, hash, names, sr_file.path);
   align_pb_reads(1, hash, 10, 2, false, true, false, pb_file.path, coords_file.path, details_file.path,
                  unitig_lengths, sizeof(unitig_lengths) / sizeof(int), mer_len,
-                 0.13);
+                 0.09);
   check_file(coords_file.path, merinfo_coords, 2, 1);
 } // AlignerOutput.Filter
 
@@ -475,7 +475,7 @@ TEST_F(AlignerOutput, FilterBases) {
   superread_parse(1, hash, names, sr_file.path);
   align_pb_reads(1, hash, 10, 2, false, true, false, pb_file.path, coords_file.path, details_file.path,
                  unitig_lengths, sizeof(unitig_lengths) / sizeof(int), mer_len,
-                 0.0, 0.42);
+                 0.0, 0.27);
   check_file(coords_file.path, merinfo_coords, 2, 1);
 } // AlignerOutput.FilterBases
 

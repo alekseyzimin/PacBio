@@ -222,7 +222,7 @@ public:
 
   // Compute the statistics of the matches in frags_pos (all the
   // matches to a given pac-bio read)
-  std::vector<coords_info> compute_coordinates(const frags_pos_type& frags_pos);
+  std::vector<coords_info> compute_coordinates(const frags_pos_type& frags_pos, size_t pb_size);
 
   void print_coords(Multiplexer::ostream& out, const std::string& pb_name, size_t pb_size, const frags_pos_type& frags_pos);
 

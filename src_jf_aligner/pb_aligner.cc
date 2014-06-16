@@ -68,7 +68,7 @@ void align_pb::print_details(Multiplexer::ostream& out, const std::string& pb_na
   out.end_record();
 }
 
-std::vector<align_pb::coords_info> align_pb::compute_coordinates(const frags_pos_type& frags_pos) {
+std::vector<align_pb::coords_info> align_pb::compute_coordinates(const frags_pos_type& frags_pos, const size_t pb_size) {
   std::vector<align_pb::coords_info> coords;
   for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
     const align_pb::mer_lists& ml          = it->second;
@@ -139,11 +139,9 @@ std::vector<align_pb::coords_info> align_pb::compute_coordinates(const frags_pos
     info.canonicalize(forward_);
 
     if(matching_mers_factor_ || matching_bases_factor_) {
-      const int imp_s = std::max((unsigned int)1,
-                                 std::min(ml.frag->len, (unsigned int)lrint(info.stretch * info.qs + info.offset)));
-      const int imp_e = std::max((unsigned int)1,
-                                 std::min(ml.frag->len, (unsigned int)lrint(info.stretch * info.qe + info.offset)));
-      const int imp_len = abs(lrint(imp_e - imp_s)) + 1;
+      const double imp_s   = std::max(1.0, std::min((double)pb_size, info.stretch + info.offset));
+      const double imp_e   = std::max(1.0, std::min((double)pb_size, info.stretch * info.ql + info.offset));
+      const int    imp_len = abs(lrint(imp_e - imp_s)) + 1;
       if(matching_mers_factor_ && matching_mers_factor_ * (imp_len - mer_dna::k() + 1) > lis.size())
         continue;
       if(matching_bases_factor_ && matching_bases_factor_ * (imp_len - 2 * mer_dna::k()) > info.pb_cover)
@@ -158,7 +156,7 @@ std::vector<align_pb::coords_info> align_pb::compute_coordinates(const frags_pos
 
 
 void align_pb::print_coords(Multiplexer::ostream& out, const std::string& pb_name, size_t pb_size, const frags_pos_type& frags_pos) {
-  std::vector<coords_info> coords = compute_coordinates(frags_pos);
+  std::vector<coords_info> coords = compute_coordinates(frags_pos, pb_size);
   auto nb_lines = std::distance(coords.cbegin(), coords.cend());
   if(nb_lines == 0) return;
 
