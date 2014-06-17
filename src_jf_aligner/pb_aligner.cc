@@ -87,7 +87,7 @@ std::vector<align_pb::coords_info> align_pb::compute_coordinates(const frags_pos
                                            ml.frag->len, nb_mers);
     const std::vector<pb_sr_offsets>& offsets = fwd_align ? ml.fwd.offsets : ml.bwd.offsets;
     const std::vector<unsigned int>&  lis     = fwd_align ? ml.fwd.lis : ml.bwd.lis;
-    compute_kmers_info<align_pb>      kmers_info(info.kmers_info, info.qname, *this);
+    compute_kmers_info<align_pb>      kmers_info(info.kmers_info, info.bases_info, info.qname, *this);
     least_square_2d                   least_square;
     {
       auto          lisit = lis.cbegin();

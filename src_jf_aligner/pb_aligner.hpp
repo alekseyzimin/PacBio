@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <unordered_map>
+#include <limits>
 
 #include <src_jf_aligner/jf_aligner.hpp>
 #include <src_jf_aligner/super_read_name.hpp>
@@ -119,6 +120,7 @@ public:
     uint64_t         hash;
     std::string      qname;
     std::vector<int> kmers_info; // Number of k-mers in k-unitigs and common between unitigs
+    std::vector<int> bases_info; // Number of bases in k-unitigs and common between unitigs
     double           stretch, offset, avg_err; // Least square stretch, offset and average error
     coords_info(const std::string& name, size_t l, int n) :
       nb_mers(n),
@@ -163,20 +165,23 @@ public:
   // if the super read name is empty.
   template<typename AlignerT>
   struct compute_kmers_info {
-    std::vector<int>&                info_;
+    std::vector<int>&                mers_;
+    std::vector<int>&                bases_;
     std::unique_ptr<super_read_name> sr_name_;
     unsigned int                     cunitig_;
-    unsigned int                     cend_;
+    int                              cend_;
+    int                              prev_pos_;
     const AlignerT&                  aligner_;
 
-    compute_kmers_info(std::vector<int>& info, const std::string& name, const AlignerT& aligner) :
-      info_(info), sr_name_(aligner.k_len_ && name.size() ? new super_read_name(name) : 0),
-      cunitig_(0), cend_(0), aligner_(aligner)
+    compute_kmers_info(std::vector<int>& mers, std::vector<int>& bases, const std::string& name, const AlignerT& aligner) :
+      mers_(mers), bases_(bases), sr_name_(aligner.k_len_ && name.size() ? new super_read_name(name) : 0),
+      cunitig_(0), cend_(0), prev_pos_(-mer_dna::k()), aligner_(aligner)
     {
       if(sr_name_) {
         const auto unitig_id = sr_name_->unitig_id(0);
         if(unitig_id != super_read_name::invalid && unitig_id < nb_unitigs()) {
-          info_.resize(2 * sr_name_->size() - 1, 0);
+          mers_.resize(2 * sr_name_->size() - 1, 0);
+          bases_.resize(2 * sr_name_->size() - 1, 0);
           cend_ = unitigs_lengths(unitig_id);
         } else // error
           sr_name_.reset();
@@ -187,35 +192,49 @@ public:
     size_t nb_unitigs() const { return aligner_.unitigs_lengths_->size(); }
     unsigned int k_len() const { return aligner_.k_len_; }
 
+    template<typename T>
+    static T p_min(const T x, const T y) { return std::max((T)0, std::min(x, y)); }
+
     void add_mer(const int pos) {
       if(!sr_name_) return;
 
-      unsigned int       cendi;
-      const unsigned int sr_pos = abs(pos);
-      while(sr_pos + mer_dna::k() > cend_ + 1) {
+      int       cendi;
+      const int sr_pos = abs(pos);
+      const int new_bases   = std::min((int)mer_dna::k(), sr_pos - prev_pos_);
+      while(sr_pos + (int)mer_dna::k() > cend_ + 1) {
+        if(cend_ >= sr_pos) {
+          const int nb_bases = cend_ - std::max(sr_pos, prev_pos_ + (int)mer_dna::k()) + 1;
+          bases_[2 * cunitig_]     += nb_bases;
+          bases_[2 * cunitig_ + 1] += nb_bases;
+        }
         const auto unitig_id = sr_name_->unitig_id(++cunitig_);
+        if(unitig_id == super_read_name::invalid || unitig_id >= nb_unitigs())
+          goto error;
+        cend_ += unitigs_lengths(unitig_id) - k_len() + 1;
+      }
+      ++mers_[2 * cunitig_];
+      bases_[2 * cunitig_] += new_bases;
+      cendi                 = cend_;
+      for(unsigned int i = cunitig_; (i < sr_name_->size() - 1) && (sr_pos + mer_dna::k() > cendi - k_len() + 1); ++i) {
+        const int  full_mer   = sr_pos + (int)k_len() > cendi + 1;
+        mers_[2 * i + 1]     += full_mer;
+        mers_[2 * i + 2]     += full_mer;
+        const int  nb_bases   = std::min(new_bases, sr_pos + (int)mer_dna::k() - cendi + (int)k_len() - 2);
+        bases_[2 * i + 1]    += nb_bases;
+        bases_[2 * i + 2]    += nb_bases;
+        const auto unitig_id  = sr_name_->unitig_id(i + 1);
         if(unitig_id != super_read_name::invalid && unitig_id < nb_unitigs())
-          cend_ += unitigs_lengths(unitig_id) - k_len() + 1;
+          cendi += unitigs_lengths(unitig_id) - k_len() + 1;
         else
           goto error;
       }
-      ++info_[2 * cunitig_];
-      cendi = cend_;
-      for(unsigned int i = cunitig_; (i < sr_name_->size() - 1) && (sr_pos + k_len() - 1 > cendi); ++i) {
-        ++info_[2 * i + 1];
-        ++info_[2 * i + 2];
-        const auto unitig_id = sr_name_->unitig_id(i + 1);
-        if(unitig_id != super_read_name::invalid && unitig_id < nb_unitigs())
-          cendi += unitigs_lengths(unitig_id) - k_len() + 1;
-        else {
-          goto error;
-        }
-      }
+      prev_pos_ = sr_pos;
       return;
 
     error:
       sr_name_.reset();
-      info_.resize(0);
+      mers_.clear();
+      bases_.clear();
     }
   };
 
