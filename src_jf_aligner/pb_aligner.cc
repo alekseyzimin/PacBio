@@ -179,8 +179,10 @@ void align_pb::print_coords(Multiplexer::ostream& out, const std::string& pb_nam
       std::cerr << "Error while finding k-mers matching in k-unitigs. Most likely the lengths of k-unitigs are wrong or the super-read sequences are messed up.";
       exit(1);
     }
-    for(auto mit : it->kmers_info)
-      out << " " << mit;
+    auto mit = it->kmers_info.cbegin();
+    auto bit = it->bases_info.cbegin();
+    for( ; mit != it->kmers_info.cend(); ++mit, ++bit)
+      out << " " << *mit << ":" << *bit;
     out << "\n";
   }
   out.end_record();
