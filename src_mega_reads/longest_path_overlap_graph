@@ -114,24 +114,19 @@ sub thread_main {
     foreach my $line (@$lines) {
       my @flds = split (/\s/, $$line);
       my @info = splice(@flds, 0, 15);
-      my ($stretch, $offset, $avg_err) = @info[11..13];
       my @counts = map { my $x = /(\d+):(\d+)/; defined($bases) ? $2 : $1 } @flds;
+      my $nmers = defined($bases) ? $info[8] : $info[4];
+      my ($stretch, $offset, $avg_err) = @info[11..13];
       # LPATH -> Number of mers in longest path up to this node. LPREV ->
       # Previous node in longest path. LSTART -> starting node in longest
       # path. LCOUNT -> Number of nodes in longest path.
-      my $node = { NAME => $info[14], NMERS => $info[4], NEIGHS => [], INDEG => 0,
+      my $node = { NAME => $info[14], NMERS => $nmers, NEIGHS => [], INDEG => 0,
                    RSTART => $info[0], REND => $info[1], QSTART => $info[2], QEND => $info[3],
                    RLEN => $info[9], QLEN => $info[10], MERCOUNTS => \@counts,
                    STRETCH => $stretch, OFFSET => $offset, AVG_ERR => $avg_err,
                    LPATH => 0, LPREV => undef, LSTART => undef };
-#      my $imp_start     = $stretch * $$node{QSTART} + $offset - $nb_errors * $avg_err;
-      my $imp_start     = $stretch + $offset - $nb_errors * $avg_err;
-#      $$node{IMP_START} = $imp_start < 1 ? 1 : $imp_start;
-      $$node{IMP_START} = $imp_start;
-#      my $imp_end       = $stretch * $$node{QEND} + $offset + $nb_errors * $avg_err;
-      my $imp_end       = $stretch * $$node{QLEN} + $offset + $nb_errors * $avg_err;
-#      $$node{IMP_END}   = $imp_end > $$node{RLEN} ? $$node{RLEN} : $imp_end;
-      $$node{IMP_END}   = $imp_end;
+      $$node{IMP_START} = $stretch + $offset - $nb_errors * $avg_err;
+      $$node{IMP_END}   = $stretch * $$node{QLEN} + $offset + $nb_errors * $avg_err;
       push(@nodes, $node);
     }
     @nodes = sort { $$a{IMP_START} <=> $$b{IMP_START} } @nodes;
