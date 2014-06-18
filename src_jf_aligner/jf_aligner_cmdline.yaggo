@@ -24,7 +24,7 @@ option("C", "compress") {
   off }
 option("d", "duplicated") {
   description "Remove duplicated match entries from coords file"
-  off }
+  off; conflict "compact" }
 option("B", "bases-matching") {
   description "Filter base on percent of bases matching"
   double; default 0.0 }

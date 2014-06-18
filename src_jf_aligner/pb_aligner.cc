@@ -113,14 +113,14 @@ std::vector<align_pb::coords_info> align_pb::compute_coordinates(const frags_pos
 
     // Compute average error
     double e = 0;
-    if(least_square.n > 0){
-      const double a = least_square.a();
-      const double b = least_square.b();
+    if(least_square.n > 1){
+      const double a = info.stretch = least_square.a();
+      const double b = info.offset = least_square.b();
       for(auto v : lis) {
         auto& c = offsets[v];
         e += abs(a * c.second + b - c.first);
       }
-      e = e / least_square.n;
+      info.avg_err = e / least_square.n;
     }
 
     uint64_t r1, r2;
@@ -133,9 +133,6 @@ std::vector<align_pb::coords_info> align_pb::compute_coordinates(const frags_pos
 
     info.qs = first.second;
     info.qe = last.second;
-    info.stretch = least_square.a();
-    info.offset  = least_square.b();
-    info.avg_err = e;
     info.canonicalize(forward_);
 
     if(matching_mers_factor_ || matching_bases_factor_) {
