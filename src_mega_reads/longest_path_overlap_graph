@@ -9,7 +9,7 @@ use UnionFind;
 use threads;
 use Thread::Queue;
 
-my ($no_header, $compact, $dot_file, $length_unitigs_file, $unitigs_k, $help);
+my ($no_header, $compact, $dot_file, $length_unitigs_file, $unitigs_k, $bases, $help);
 my $nb_threads   = 1;
 my $min_density  = 0.05;
 my $nb_errors    = 3;
@@ -23,6 +23,7 @@ GetOptions("d|density=f"        => \$min_density,
            "c|compact"          => \$compact,
            "e|errors=f"         => \$nb_errors,
            "l|length-unitigs=s" => \$length_unitigs_file,
+           "b|bases"            => \$bases,
            "k=i"                => \$unitigs_k,
            "p|overlap-play=f"   => \$overlap_play,
            "dot=s"              => \$dot_file,
@@ -39,6 +40,7 @@ Find the longest (with most k-mers) path in the super-read overlap graph
  -c,--compact              Compact output
  -e,--errors FLOAT         Number of average errors slack for implied position
  -l,--length-unitigs FILE  File containing unitigs length
+ -b,--bases                Use bases counts instead of k-mer counts
  -k                        Length of k-mer for creating k-unitigs in super reads
  -p,--overlap-play FLOAT   Play in the overlap length difference between position and k-unitigs lengths
     --dot PREFIX           Write an overlap graph (dot file) for each PacBio read
@@ -113,12 +115,13 @@ sub thread_main {
       my @flds = split (/\s/, $$line);
       my @info = splice(@flds, 0, 15);
       my ($stretch, $offset, $avg_err) = @info[11..13];
+      my @counts = map { my $x = /(\d+):(\d+)/; defined($bases) ? $2 : $1 } @flds;
       # LPATH -> Number of mers in longest path up to this node. LPREV ->
       # Previous node in longest path. LSTART -> starting node in longest
       # path. LCOUNT -> Number of nodes in longest path.
       my $node = { NAME => $info[14], NMERS => $info[4], NEIGHS => [], INDEG => 0,
                    RSTART => $info[0], REND => $info[1], QSTART => $info[2], QEND => $info[3],
-                   RLEN => $info[9], QLEN => $info[10], MERCOUNTS => \@flds,
+                   RLEN => $info[9], QLEN => $info[10], MERCOUNTS => \@counts,
                    STRETCH => $stretch, OFFSET => $offset, AVG_ERR => $avg_err,
                    LPATH => 0, LPREV => undef, LSTART => undef };
 #      my $imp_start     = $stretch * $$node{QSTART} + $offset - $nb_errors * $avg_err;
