@@ -172,12 +172,8 @@ sub create_edges {
       my $mers_info   = $$node_j{MERCOUNTS};
       my $overlap_len = @unitig_len ? 0 : undef;
       for(my $k = 0; $k < @unitigs; ++$k) {
-        my ($m1,$m2)=split(/:/,$$mers_info[2 * $k]);
-        $mers_shared += $m1;
-        if($k > 0) {
-        my ($m1,$m2)=split(/:/,$$mers_info[2 * $k - 1]);
-        $mers_shared -= $m1;
-	}
+        $mers_shared += $$mers_info[2 * $k];
+        $mers_shared -= $$mers_info[2 * $k - 1] if($k > 0);
         $overlap_len += $unitig_len[$unitigs[$k]] if defined($overlap_len);
       }
       
