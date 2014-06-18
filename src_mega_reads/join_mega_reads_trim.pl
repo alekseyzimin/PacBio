@@ -7,7 +7,7 @@ my $pbseqfile=$ARGV[0];
 my $max_gap=$ARGV[1];
 my $allowed_gaps=$ARGV[2];
 my $kmer=$ARGV[3];
-my $chimeric_pb=$ARGV[4];
+my $good_pb=$ARGV[4];
 
 my $rn="";
 my %pbseq;
@@ -27,10 +27,10 @@ while($line=<FILE>){
     $allowed{$line}=1;
 }
 
-open(FILE,$chimeric_pb);
+open(FILE,$good_pb);
 while($line=<FILE>){
     chomp($line);
-    $chimeric_pb{substr($line,1)}=1;
+    $good_pb{$line}=1;
 }
 
 
@@ -74,7 +74,7 @@ while($line=<STDIN>){
             $str="$k1s[$#k1s] $k2s[0]";
             $str="$k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
             $join_allowed=1 if($allowed{$str});
-	    #$join_allowed=1 if(not(defined($chimeric_pb{$pb})));
+	    #$join_allowed=1 if(defined($good_pb{$pb}));
 	    #$join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads
 
 	    if($bgn>$last_coord){#if gap -- check if the closure is allowed
@@ -82,7 +82,7 @@ while($line=<STDIN>){
 		$max_gap_local=int($min_len*.33);
 		$max_gap_local=$max_gap if($max_gap_local>$max_gap);
 		$max_gap_local=50 if($max_gap_local<50);
-		print "join status ",$bgn-$last_coord," $max_gap_local $join_allowed allowed:$allowed{$str} $str\n";
+		#print "join status ",$bgn-$last_coord," $max_gap_local ",length($seq)," $join_allowed allowed:$allowed{$str} $str $seq\n";
 		if($bgn-$last_coord<$max_gap_local && $join_allowed){#then put N's and later split
 		$outread.=lc(substr($pbseq{$rn},$last_coord+1,$bgn-$last_coord)).$seq;
 		}else{
@@ -92,7 +92,7 @@ while($line=<STDIN>){
  	    $join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads 
 	    $join_allowed=1 if($last_coord-$bgn>=10 && $last_coord-$bgn<$kmer); 
             # we join if same mega-read, just fractured, or the overlap is less than kmer length, or join is allowed
- 	    #print "join status ",$bgn-$last_coord," $max_gap_local $join_allowed allowed:$allowed{$str} $str\n";
+ 	    #print "join status ",$bgn-$last_coord," ",length($seq)," $join_allowed allowed:$allowed{$str} $str $seq\n";
 	    if($join_allowed){
 	    $outread.=substr($seq,$last_coord-$bgn+1);
             }else{
