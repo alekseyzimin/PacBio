@@ -188,12 +188,10 @@ public:
       }
     }
 
+
     int unitigs_lengths(long int id) const { return (*aligner_.unitigs_lengths_)[id]; }
     size_t nb_unitigs() const { return aligner_.unitigs_lengths_->size(); }
     unsigned int k_len() const { return aligner_.k_len_; }
-
-    template<typename T>
-    static T p_min(const T x, const T y) { return std::max((T)0, std::min(x, y)); }
 
     void add_mer(const int pos) {
       if(!sr_name_) return;
