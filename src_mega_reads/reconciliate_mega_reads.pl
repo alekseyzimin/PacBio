@@ -16,12 +16,15 @@
 @mrname=();
 #max overlap is in percentage of size
 $max_overlap_pct=$ARGV[0];
+$kmer=$ARGV[1];
+$fudge_factor=1.2;
 
 while($line=<STDIN>){
 chomp($line);
 ($pbgn,$pend,$mbgn,$mend,$qlt,$pb,$mrseq,$mrname)=split(/\s+/,$line);
 $mrseq=substr($mrseq,$mbgn-1,$mend-$mbgn+1);
 $max_overlap=$max_overlap_pct*length($mrseq)/100;
+$max_overlap=$kmer*$fudge_factor if($max_overlap<$kmer*$fudge_factor);
 $bgn=$pbgn;
 $end=$pend;
 $overlap=0;
@@ -35,7 +38,6 @@ $end_inside=0;
 $bgn_inside=1 if($bgn>=$interval_g_bgn[$i] && $bgn<=$interval_g_end[$i]);
 $end_inside=1 if($end>=$interval_g_bgn[$i] && $end<=$interval_g_end[$i]);
 next if($bgn_inside==0 && $end_inside==0);#non-overlapping this interlal
-
 #we get here if we have an overlap
 if($bgn_inside==1){#check the overlaps
 last if($interval_g_end[$i]-$bgn>$max_overlap);#overlap bigger -- contained

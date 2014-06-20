@@ -12,12 +12,12 @@ touch $FILENAME.megareads.sorted.wseq
 
 #wc -l $FILENAME.megareads
 if [ -s $FILENAME.megareads ];then
-/home/alekseyz/myprogs/masurca-devel/build/inst/bin/createFastaSuperReadSequences work1 <(awk '{print "1 "$6}' $FILENAME.megareads| head -n 25) -seqdiffmax 0 -min-ovl-len $KM1 -minreadsinsuperread 1  -good-sr-filename $FILENAME.megareads.names  -kunitigsfile /genome3/raid/alekseyz/PB_ScerW303/assembly_k${KMER}/guillaumeKUnitigsAtLeast32bases_all.fasta -good-sequence-output-file $FILENAME.megareads.all.fa -super-read-name-and-lengths-file $FILENAME.megareads.sizes -rename-super-reads  2>/dev/null
+/home/alekseyz/myprogs/masurca-devel/build/inst/bin/createFastaSuperReadSequences work1 <(awk '{print "1 "$6}' $FILENAME.megareads|head -n 25) -seqdiffmax 0 -min-ovl-len $KM1 -minreadsinsuperread 1  -good-sr-filename $FILENAME.megareads.names  -kunitigsfile /genome3/raid/alekseyz/PB_ScerW303/assembly_k${KMER}/guillaumeKUnitigsAtLeast32bases_all.fasta -good-sequence-output-file $FILENAME.megareads.all.fa -super-read-name-and-lengths-file $FILENAME.megareads.sizes -rename-super-reads  2>/dev/null
 
 perl -e 'while($line=<STDIN>){$s=$line;$line=<STDIN>;print "$s$line" if(length($line)>125);}' < $FILENAME.megareads.all.fa > $FILENAME.megareads.fa
 if [ ! -s $FILENAME.megareads.fa ];then exit; fi
 awk -F ',' '{print ">"$1"\n"$2}'  $NAMESEQFILE > $NAMESEQFILE.fa
-nucmer  -d 0.2 -f -g 200 -l 15 -p $FILENAME $NAMESEQFILE.fa $FILENAME.megareads.fa 1>/dev/null 2>&1
+nucmer  --maxmatch -d 0.2 -f -g 200 -l 15  -p $FILENAME $NAMESEQFILE.fa $FILENAME.megareads.fa 1>/dev/null 2>&1
 if [ ! -s $FILENAME.delta ];then exit; fi
 delta-filter -g -o 20 $FILENAME.delta > $FILENAME.f.delta
 show-coords -lcHr  $FILENAME.f.delta  |sort -nk19 -k1n | $EXEPATH/merge_matches_coords_file.pl 1000 > $FILENAME.f.ncoords
@@ -62,6 +62,6 @@ print $outline;
 }' $FILENAME.megareads.sizes $FILENAME.megareads.fa $FILENAME.megareads < $FILENAME.f.ncoords  | sort -nrk5,5 > $FILENAME.megareads.wseq
 
 
-$EXEPATH/reconciliate_mega_reads.pl 20 < $FILENAME.megareads.wseq | sort -nk1,1 > $FILENAME.megareads.sorted.wseq
+$EXEPATH/reconciliate_mega_reads.pl 20 $KMER < $FILENAME.megareads.wseq | sort -nk1,1 > $FILENAME.megareads.sorted.wseq
 
 fi

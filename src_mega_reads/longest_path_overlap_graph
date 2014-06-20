@@ -13,7 +13,7 @@ my ($no_header, $compact, $dot_file, $length_unitigs_file, $unitigs_k, $bases, $
 my $nb_threads   = 1;
 my $min_density  = 0.05;
 my $nb_errors    = 3;
-my $overlap_play = 0.35;
+my $overlap_play = 0.3;
 my $output       = "mega_reads";
 my $DEBUG        = 0;
 GetOptions("d|density=f"        => \$min_density,
@@ -125,8 +125,11 @@ sub thread_main {
                    RLEN => $info[9], QLEN => $info[10], MERCOUNTS => \@counts,
                    STRETCH => $stretch, OFFSET => $offset, AVG_ERR => $avg_err,
                    LPATH => 0, LPREV => undef, LSTART => undef };
-      $$node{IMP_START} = $stretch + $offset - $nb_errors * $avg_err;
-      $$node{IMP_END}   = $stretch * $$node{QLEN} + $offset + $nb_errors * $avg_err;
+      $$node{IMP_START} = $stretch + $offset;
+      $$node{IMP_END}   = $stretch * $$node{QLEN} + $offset;
+      #$$node{IMP_START} = $info[0]-$info[2]+1;
+      #$$node{IMP_END}   = $info[1]+$info[10]-$info[3];
+
       push(@nodes, $node);
     }
     @nodes = sort { $$a{IMP_START} <=> $$b{IMP_START} } @nodes;
@@ -182,8 +185,8 @@ sub create_edges {
          print "OVERLAP LENGTH $overlap_len vs $position_len\n" if $DEBUG;
 #        $overlap_len *= ($$node_i{STRETCH} + $$node_j{STRETCH}) / 2;
 #        my $position_len = $$node_i{IMP_END} - $$node_j{IMP_START} + 1;
-        if($overlap_len > (1 + $overlap_play) * $position_len ||
-           $overlap_len < (1 - $overlap_play) * $position_len) {
+        if($overlap_len > (1 + $overlap_play) * $position_len + $nb_errors * $$node_j{AVG_ERR} + $nb_errors * $$node_i{AVG_ERR}||
+           $overlap_len < (1 - $overlap_play) * $position_len - $nb_errors * $$node_j{AVG_ERR} - $nb_errors * $$node_i{AVG_ERR}) {
           next;
         }
       }

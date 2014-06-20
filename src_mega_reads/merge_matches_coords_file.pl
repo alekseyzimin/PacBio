@@ -22,14 +22,18 @@ while ($line = <STDIN>) {
 	next if ($local_direction != $match_direction);
 	if (($prevFlds[3] < $prevFlds[4]) && ($prevMidpoint < $currentMidpoint)) {
             push(@matches,join(" ",@currentFlds));
-	    if(abs(($currentFlds[0]-$prevFlds[1])-($currentFlds[3]-$prevFlds[4]))>$max_gap_diff || $currentFlds[3]-$prevFlds[4] < 0){
+	    my $gap_diff=($currentFlds[0]-$prevFlds[1])-($currentFlds[3]-$prevFlds[4]); #this is the gap difference
+	    #we do not allow deletions in the quiery
+	    if($gap_diff >$max_gap_diff || $gap_diff < -5 || $currentFlds[3]-$prevFlds[4] < 0){
                 $badJoin=1;
             }else{
                 $keepMatchLine = 1;
             }
 	}elsif (($prevFlds[3] >= $prevFlds[4]) && ($prevMidpoint >= $currentMidpoint)) {
 	    push(@matches,join(" ",@currentFlds));
-            if(abs(($currentFlds[0]-$prevFlds[1])-($prevFlds[4]-$currentFlds[3]))>$max_gap_diff || $prevFlds[4]-$currentFlds[3] < 0){
+            my $gap_diff = ($currentFlds[0]-$prevFlds[1])-($prevFlds[4]-$currentFlds[3]); #this is the gap difference
+            #we do not allow deletions in the quiery
+            if($gap_diff >$max_gap_diff || $gap_diff < -5 || $prevFlds[4]-$currentFlds[3] < 0){
 	        $badJoin=1;
 	    }else{
 		$keepMatchLine = 1; 
