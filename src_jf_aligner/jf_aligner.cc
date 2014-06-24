@@ -1,11 +1,50 @@
 #include <memory>
 #include <ios>
+#include <thread>
 
 #include <src_jf_aligner/jf_aligner_cmdline.hpp>
 #include <src_jf_aligner/superread_parser.hpp>
 #include <src_jf_aligner/pb_aligner.hpp>
 
 jf_aligner_cmdline args;
+
+/**
+ * A unique ptr to a multiplexed output stream with a convenient
+ * constructor.
+ */
+class mstream : public std::unique_ptr<Multiplexer::ostream> {
+public:
+  mstream(Multiplexer* m) :
+    std::unique_ptr<Multiplexer::ostream>(m ? new Multiplexer::ostream(m) : 0)
+  { }
+};
+
+void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* coords_m, const align_pb* align_data) {
+  mer_dna                  tmp_m;
+  parse_sequence           parser;
+  align_pb::thread         aligner(*align_data);
+
+  mstream     details_io(details_m);
+  mstream     coords_io(coords_m);
+  std::string name;
+
+  while(true) {
+    read_parser::job job(*reads);
+    if(job.is_empty()) break;
+
+    for(size_t i = 0; i < job->nb_filled; ++i) { // Process each read
+      auto name_end = job->data[i].header.find_first_of(" \t\n\v\f\r");
+      name = job->data[i].header.substr(0, name_end);
+      const size_t pb_size = job->data[i].seq.size();
+      parser.reset(job->data[i].seq);
+      aligner.compute_coords(parser, pb_size);
+
+      align_pb::print_coords(*coords_io, name, pb_size, args.compact_flag, aligner.coords());
+      if(details_io) align_pb::print_details(*details_io, name, aligner.frags_pos());
+    }
+  }
+
+}
 
 int main(int argc, char *argv[])
 {
@@ -48,19 +87,27 @@ int main(int argc, char *argv[])
   frag_lists names(args.threads_arg);
   superread_parse(args.threads_arg, hash, names, args.superreads_arg.cbegin(), args.superreads_arg.cend());
 
-  // Create aligner
+  // Prepare I/O
   stream_manager streams(args.pacbio_arg.cbegin(), args.pacbio_arg.cend());
-  align_pb aligner(args.threads_arg, hash, streams, args.stretch_constant_arg, args.stretch_factor_arg,
-                   args.forward_flag, args.mers_matching_arg / 100.0, args.bases_matching_arg / 100.0);
-  aligner
-    .max_mer_count(args.max_count_arg)
-    .compact_format(args.compact_flag);
-  if(args.details_given) aligner.details_multiplexer(details.multiplexer());
-  aligner.coords_multiplexer(coords.multiplexer(), !args.no_header_flag);
-  if(unitigs_lengths) aligner.unitigs_lengths(unitigs_lengths.get(), args.k_mer_arg);
+  read_parser    reads(4 * args.threads_arg, 100, 1, streams);
 
-  // Output matches
-  aligner.exec_join(args.threads_arg);
+  // Create aligner
+  align_pb align_data(hash, args.stretch_constant_arg, args.stretch_factor_arg,
+                      args.forward_flag, args.max_count_arg,
+                      args.mers_matching_arg / 100.0, args.bases_matching_arg / 100.0);
+  if(unitigs_lengths) align_data.unitigs_lengths(unitigs_lengths.get(), args.k_mer_arg);
+
+  // Output header if necessary
+  if(!args.no_header_flag)
+    align_pb::print_coords_header(coords.multiplexer(), args.compact_flag);
+
+  // Output alignements
+  std::vector<std::thread> threads;
+  for(unsigned int i = 0; i < args.threads_arg; ++i)
+    threads.push_back(std::thread(print_alignments, &reads, details.multiplexer(), coords.multiplexer(),
+                                  &align_data));
+  for(unsigned int i = 0; i < args.threads_arg; ++i)
+    threads[i].join();
 
   return 0;
 }

@@ -4,43 +4,6 @@
 #include <src_jf_aligner/pb_aligner.hpp>
 
 
-void align_pb::start(int thid) {
-  mer_dna                  tmp_m;
-  parse_sequence           parser;
-  frags_pos_type           frags_pos;
-  std::vector<coords_info> coords;
-  lis_align::forward_list<lis_align::element<double> > L; // L buffer
-
-  mstream     details_io(details_multiplexer_);
-  mstream     coords_io(coords_multiplexer_);
-  std::string name;
-
-  while(true) {
-    read_parser::job job(parser_);
-    if(job.is_empty()) break;
-
-    for(size_t i = 0; i < job->nb_filled; ++i) { // Process each read
-      auto name_end = job->data[i].header.find_first_of(" \t\n\v\f\r");
-      name = job->data[i].header.substr(0, name_end);
-      const size_t pb_size = job->data[i].seq.size();
-      parser.reset(job->data[i].seq);
-
-      frags_pos.clear();
-      fetch_super_reads(ary_, parser, frags_pos, max_mer_count_);
-
-      do {
-        do_LIS(frags_pos, L, stretch_constant_, stretch_factor_);
-        coords.clear();
-        compute_coordinates(frags_pos, pb_size, coords);
-      } while(false);
-      std::sort(coords.begin(), coords.end());
-      print_coords(*coords_io, name, pb_size, coords);
-
-      if(details_io) print_details(*details_io, name, frags_pos);
-    }
-  }
-}
-
 void align_pb::print_details(Multiplexer::ostream& out, const std::string& pb_name, const frags_pos_type& frags_pos) {
   for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
     out << pb_name << " " << it->first;
@@ -79,8 +42,18 @@ void align_pb::print_details(Multiplexer::ostream& out, const std::string& pb_na
   out.end_record();
 }
 
+void align_pb::print_coords_header(Multiplexer* m, bool compact) {
+  Multiplexer::ostream o(m); // Write header
+  o << "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Stretch Offset Err";
+  if(!compact)
+    o << " Rname";
+  o << " Qname\n";
+  o.end_record();
+}
+
+
 void align_pb::compute_coordinates(const frags_pos_type& frags_pos, const size_t pb_size,
-                                   std::vector<align_pb::coords_info>& coords) {
+                                   std::vector<align_pb::coords_info>& coords) const {
   for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
     const align_pb::mer_lists& ml          = it->second;
     const auto                 fwd_nb_mers = std::distance(ml.fwd.lis.begin(), ml.fwd.lis.end());
@@ -157,11 +130,11 @@ void align_pb::compute_coordinates(const frags_pos_type& frags_pos, const size_t
 
 
 void align_pb::print_coords(Multiplexer::ostream& out, const std::string& pb_name, const size_t pb_size,
-                            const std::vector<coords_info>& coords) {
+                            const bool compact, const std::vector<coords_info>& coords) {
   auto nb_lines = std::distance(coords.cbegin(), coords.cend());
   if(nb_lines == 0) return;
 
-  if(compact_format_)
+  if(compact)
     out << ">" << nb_lines << " " << pb_name << "\n";
   for(auto it = coords.cbegin(), pit = it; it != coords.cend(); pit = it, ++it) {
     out << it->rs << " " << it->re << " " << it->qs << " " << it->qe << " "
@@ -170,13 +143,9 @@ void align_pb::print_coords(Multiplexer::ostream& out, const std::string& pb_nam
         << it->pb_cover << " " << it->sr_cover << " "
         << pb_size << " " << it->ql
         << " " << it->stretch << " " << it->offset << " " << it->avg_err;
-    if(!compact_format_)
+    if(!compact)
       out << " " << pb_name;
     out << " " << it->qname;
-    if(k_len_ != 0 && it->kmers_info.empty()) {
-      std::cerr << "Error while finding k-mers matching in k-unitigs. Most likely the lengths of k-unitigs are wrong or the super-read sequences are messed up.";
-      exit(1);
-    }
     auto mit = it->kmers_info.cbegin();
     auto bit = it->bases_info.cbegin();
     for( ; mit != it->kmers_info.cend(); ++mit, ++bit)
@@ -223,30 +192,25 @@ void align_pb::do_LIS(frags_pos_type& frags_pos, lis_align::forward_list<lis_ali
 }
 
 
-void align_pb_reads(int threads, mer_pos_hash_type& hash, double stretch_const, double stretch_factor,
-                    bool forward,
-                    const char* pb_path,
-                    const char* coords_path, const char* details_path,
-                    const int* lengths, const int nb_unitigs, const unsigned int k_len,
-                    double matching_mers, double matching_bases) {
-  output_file details, coords;
-  if(coords_path) coords.open(coords_path, threads);
-  if(details_path) details.open(details_path, threads);
-  file_vector files;
-  files.push_back(pb_path);
-  stream_manager streams(files.cbegin(), files.cend());
-  align_pb aligner(threads, hash, streams, stretch_const, stretch_factor,
-                   forward,
-                   matching_mers, matching_bases);
-  if(coords_path) aligner.coords_multiplexer(coords.multiplexer(), true);
-  if(details_path) aligner.details_multiplexer(details.multiplexer());
-  std::vector<int> unitigs_lengths;
-  if(nb_unitigs && lengths && k_len) {
-    unitigs_lengths.insert(unitigs_lengths.begin(), lengths, lengths + nb_unitigs);
-    aligner.unitigs_lengths(&unitigs_lengths, k_len);
-  }
-  aligner.exec_join(threads);
-}
+// static void align_pb::align_pb_reads(mer_pos_hash_type& hash, double stretch_const, double stretch_factor,
+//                                      bool forward, const char* pb_path,
+//                                      const int* lengths, const int nb_unitigs, const unsigned int k_len,
+//                                      double matching_mers, double matching_bases) {
+//   file_vector files;
+//   files.push_back(pb_path);
+//   stream_manager streams(files.cbegin(), files.cend());
+//   align_pb aligner(threads, hash, streams, stretch_const, stretch_factor,
+//                    forward,
+//                    matching_mers, matching_bases);
+//   if(coords_path) aligner.coords_multiplexer(coords.multiplexer(), true);
+//   if(details_path) aligner.details_multiplexer(details.multiplexer());
+//   std::vector<int> unitigs_lengths;
+//   if(nb_unitigs && lengths && k_len) {
+//     unitigs_lengths.insert(unitigs_lengths.begin(), lengths, lengths + nb_unitigs);
+//     aligner.unitigs_lengths(&unitigs_lengths, k_len);
+//   }
+//   aligner.exec_join(threads);
+// }
 
 std::string align_pb::reverse_super_read_name(const std::string& name) {
   std::string res;
@@ -276,4 +240,16 @@ std::string align_pb::reverse_super_read_name(const std::string& name) {
  invalid_name:
   res = name;
   return res;
+}
+
+void align_pb::thread::compute_coords(parse_sequence parser, size_t pb_size) {
+  frags_pos_.clear();
+  coords_.clear();
+  fetch_super_reads(align_data_.ary_, parser, frags_pos_, align_data_.max_mer_count_);
+
+  do {
+    do_LIS(frags_pos_, L_, align_data_.stretch_constant_, align_data_.stretch_factor_);
+    align_data_.compute_coordinates(frags_pos_, pb_size, coords_);
+  } while(false);
+  std::sort(coords_.begin(), coords_.end());
 }

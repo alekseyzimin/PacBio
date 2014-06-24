@@ -11,31 +11,16 @@
 #include <src_lis/lis_align.hpp>
 #include <jellyfish/thread_exec.hpp>
 
-/**
- * A unique ptr to a multiplexed output stream with a convenient
- * constructor.
- */
-class mstream : public std::unique_ptr<Multiplexer::ostream> {
-public:
-  mstream(Multiplexer* m) :
-    std::unique_ptr<Multiplexer::ostream>(m ? new Multiplexer::ostream(m) : 0)
-  { }
-};
-
-class align_pb : public jellyfish::thread_exec {
+class align_pb {
   const mer_pos_hash_type& ary_;
-  read_parser              parser_;
   double                   stretch_constant_, stretch_factor_; // Maximum stretch in LIS
   const bool               forward_;
+  int                      max_mer_count_; // max mer count to be used for alignment
   double                   matching_mers_factor_;
   double                   matching_bases_factor_;
 
-  Multiplexer*             details_multiplexer_;
-  Multiplexer*             coords_multiplexer_;
   const std::vector<int>*  unitigs_lengths_; // Lengths of unitigs
   unsigned int             k_len_; // k-mer length used for creating k-unitigs
-  int                      max_mer_count_; // max mer count to be used for alignment
-  bool                     compact_format_;
 
 
   typedef const mer_pos_hash_type::mapped_type list_type;
@@ -60,36 +45,20 @@ public:
   };
   typedef std::map<const char*, mer_lists> frags_pos_type;
 
-  align_pb(int nb_threads, const mer_pos_hash_type& ary, stream_manager& streams,
+  align_pb(const mer_pos_hash_type& ary,
            double stretch_constant, double stretch_factor,
-           bool forward = false,
+           bool forward = false, int max_mer_count = 0,
            double matching_mers = 0.0, double matching_bases = 0.0) :
     ary_(ary),
-    parser_(4 * nb_threads, 100, 1, streams),
     stretch_constant_(stretch_constant),
     stretch_factor_(stretch_factor),
     forward_(forward),
+    max_mer_count_(max_mer_count),
     matching_mers_factor_(matching_mers),
     matching_bases_factor_(matching_bases),
-    details_multiplexer_(0),
-    coords_multiplexer_(0),
-    unitigs_lengths_(0), k_len_(0),
-    max_mer_count_(0), compact_format_(false)
+    unitigs_lengths_(0), k_len_(0)
   { }
 
-  align_pb& details_multiplexer(Multiplexer* m) { details_multiplexer_ = m; return *this; }
-  align_pb& coords_multiplexer(Multiplexer* m, bool header) {
-    coords_multiplexer_ = m;
-    if(header) {
-      Multiplexer::ostream o(coords_multiplexer_); // Write header
-      o << "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Stretch Offset Err";
-      if(!compact_format_)
-        o << " Rname";
-      o << " Qname\n";
-      o.end_record();
-    }
-    return *this;
-  }
   align_pb& unitigs_lengths(const std::vector<int>* m, unsigned int k_len) {
     if(!forward_) throw std::logic_error("Forward flag must be used if passing unitigs lengths");
     unitigs_lengths_ = m;
@@ -98,10 +67,6 @@ public:
   }
 
   align_pb& max_mer_count(int m) { max_mer_count_ = m; return *this; }
-  align_pb& compact_format(bool c) { compact_format_ = c; return *this; }
-
-  virtual void start(int thid);
-  void print_details(Multiplexer::ostream& out, const std::string& pb_name, const frags_pos_type& frags_pos);
 
   // Contains the summary information of an alignment of a pac-bio and a super read (named qname).
   struct coords_info {
@@ -231,15 +196,17 @@ public:
 
   // Compute the statistics of the matches in frags_pos (all the
   // matches to a given pac-bio read)
-  void compute_coordinates(const frags_pos_type& frags_pos, const size_t pb_size, std::vector<coords_info>& coords);
-  std::vector<coords_info> compute_coordinates(const frags_pos_type& frags_pos, const size_t pb_size) {
+  void compute_coordinates(const frags_pos_type& frags_pos, const size_t pb_size, std::vector<coords_info>& coords) const;
+  std::vector<coords_info> compute_coordinates(const frags_pos_type& frags_pos, const size_t pb_size) const {
     std::vector<coords_info> coords;
     compute_coordinates(frags_pos, pb_size, coords);
     return coords;
   }
 
-  void print_coords(Multiplexer::ostream& out, const std::string& pb_name, size_t const pb_size,
-                    const std::vector<coords_info>& coords);
+  static void print_coords_header(Multiplexer* m, bool compact);
+  static void print_coords(Multiplexer::ostream& out, const std::string& pb_name, size_t const pb_size,
+                           const bool compact, const std::vector<coords_info>& coords);
+  static void print_details(Multiplexer::ostream& out, const std::string& pb_name, const frags_pos_type& frags_pos);
 
   static void fetch_super_reads(const mer_pos_hash_type& ary, parse_sequence& parser,
                                 frags_pos_type& frags_pos, const int max_mer_count = 0);
@@ -255,13 +222,27 @@ public:
   // Reverse the name of a super read. For example 1R_2F_3F becomes
   // 3R_2R_1F. If the name is not valid, name is returned unchanged.
   static std::string reverse_super_read_name(const std::string& name);
+
+  class thread {
+    const align_pb&          align_data_;
+    frags_pos_type           frags_pos_;
+    std::vector<coords_info> coords_;
+    lis_align::forward_list<lis_align::element<double> > L_;
+
+  public:
+    thread(const align_pb& a) : align_data_(a) { }
+
+    void compute_coords(parse_sequence parser, size_t pb_size);
+    const std::vector<coords_info>& coords() const { return coords_; }
+    const frags_pos_type& frags_pos() const { return frags_pos_; }
+  };
+  friend class thread;
+
+  // static void align_pb_reads(mer_pos_hash_type& hash, double stretch_const, double stretch_factor,
+  //                            bool forward, const char* pb_path,
+  //                            const int* lengths = 0, const int nb_unitigs = 0, const unsigned int k_len = 0,
+  //                            double matching_mers = 0.0, double matching_bases = 0.0);
 };
 
-void align_pb_reads(int threads, mer_pos_hash_type& hash, double stretch_const, double stretch_factor,
-                    bool forward,
-                    const char* pb_path,
-                    const char* coords_path = 0, const char* details_path = 0,
-                    const int* lengths = 0, const int nb_unitigs = 0, const unsigned int k_len = 0,
-                    double matching_mers = 0.0, double matching_bases = 0.0);
 
 #endif /* _PB_ALIGNER_HPP_ */
