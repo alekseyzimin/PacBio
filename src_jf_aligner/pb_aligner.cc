@@ -5,13 +5,14 @@
 
 
 void align_pb::start(int thid) {
-  mer_dna         tmp_m;
-  parse_sequence  parser(compress_);
-  frags_pos_type  frags_pos;
+  mer_dna                  tmp_m;
+  parse_sequence           parser(compress_);
+  frags_pos_type           frags_pos;
+  std::vector<coords_info> coords;
   lis_align::forward_list<lis_align::element<double> > L; // L buffer
 
-  mstream     details(details_multiplexer_);
-  mstream     coords(coords_multiplexer_);
+  mstream     details_io(details_multiplexer_);
+  mstream     coords_io(coords_multiplexer_);
   std::string name;
 
   while(true) {
@@ -21,11 +22,19 @@ void align_pb::start(int thid) {
     for(size_t i = 0; i < job->nb_filled; ++i) { // Process each read
       auto name_end = job->data[i].header.find_first_of(" \t\n\v\f\r");
       name = job->data[i].header.substr(0, name_end);
+      const size_t pb_size = job->data[i].seq.size();
       parser.reset(job->data[i].seq);
+
       frags_pos.clear();
       process_read(ary_, parser, frags_pos, L, stretch_constant_, stretch_factor_, max_mer_count_);
-      if(details) print_details(*details, name, frags_pos);
-      if(coords) print_coords(*coords, name, job->data[i].seq.size(), frags_pos);
+
+      if(details_io) print_details(*details_io, name, frags_pos);
+      if(coords_io) {
+        coords.clear();
+        compute_coordinates(frags_pos, pb_size, coords);
+        std::sort(coords.begin(), coords.end());
+        print_coords(*coords_io, name, pb_size, coords);
+      }
     }
   }
 }
@@ -68,8 +77,8 @@ void align_pb::print_details(Multiplexer::ostream& out, const std::string& pb_na
   out.end_record();
 }
 
-std::vector<align_pb::coords_info> align_pb::compute_coordinates(const frags_pos_type& frags_pos, const size_t pb_size) {
-  std::vector<align_pb::coords_info> coords;
+void align_pb::compute_coordinates(const frags_pos_type& frags_pos, const size_t pb_size,
+                                   std::vector<align_pb::coords_info>& coords) {
   for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
     const align_pb::mer_lists& ml          = it->second;
     const auto                 fwd_nb_mers = std::distance(ml.fwd.lis.begin(), ml.fwd.lis.end());
@@ -147,17 +156,14 @@ std::vector<align_pb::coords_info> align_pb::compute_coordinates(const frags_pos
 
     coords.push_back(info);
   }
-
-  return coords;
 }
 
 
-void align_pb::print_coords(Multiplexer::ostream& out, const std::string& pb_name, size_t pb_size, const frags_pos_type& frags_pos) {
-  std::vector<coords_info> coords = compute_coordinates(frags_pos, pb_size);
+void align_pb::print_coords(Multiplexer::ostream& out, const std::string& pb_name, const size_t pb_size,
+                            const std::vector<coords_info>& coords) {
   auto nb_lines = std::distance(coords.cbegin(), coords.cend());
   if(nb_lines == 0) return;
 
-  std::sort(coords.begin(), coords.end());
   if(compact_format_)
     out << ">" << nb_lines << " " << pb_name << "\n";
   for(auto it = coords.cbegin(), pit = it; it != coords.cend(); pit = it, ++it) {

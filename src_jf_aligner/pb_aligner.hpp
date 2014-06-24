@@ -239,10 +239,15 @@ public:
 
   // Compute the statistics of the matches in frags_pos (all the
   // matches to a given pac-bio read)
-  std::vector<coords_info> compute_coordinates(const frags_pos_type& frags_pos, size_t pb_size);
+  void compute_coordinates(const frags_pos_type& frags_pos, const size_t pb_size, std::vector<coords_info>& coords);
+  std::vector<coords_info> compute_coordinates(const frags_pos_type& frags_pos, const size_t pb_size) {
+    std::vector<coords_info> coords;
+    compute_coordinates(frags_pos, pb_size, coords);
+    return coords;
+  }
 
-  void print_coords(Multiplexer::ostream& out, const std::string& pb_name, size_t pb_size, const frags_pos_type& frags_pos);
-
+  void print_coords(Multiplexer::ostream& out, const std::string& pb_name, size_t const pb_size,
+                    const std::vector<coords_info>& coords);
   // For each k-unitigs in the super read qname, output its length, the number of k-mers
   // void print_mers_in_unitigs(Multiplexer::ostream& out, const mer_lists* ml, const std::string qname) {
   //   // super_read_name unitigs(qname);
