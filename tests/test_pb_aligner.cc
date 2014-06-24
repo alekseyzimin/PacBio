@@ -105,7 +105,8 @@ TEST(PbAligner, FakeSequences) {
 
   parse_sequence parser(pacbio_sequence);
   align_pb::frags_pos_type frags_pos;
-  align_pb::process_read(hash, parser, frags_pos, 10, 2);
+  align_pb::fetch_super_reads(hash, parser, frags_pos);
+  align_pb::do_LIS(frags_pos, 10, 2);
 
   EXPECT_EQ((size_t)10, frags_pos.size());
   for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {

@@ -20,7 +20,11 @@ int main(int argc, char *argv[])
   output_file details;
   output_file coords;
   if(args.details_given) details.open(args.details_arg, args.threads_arg);
-  if(args.coords_given) coords.open(args.coords_arg, args.threads_arg);
+  if(args.coords_given) {
+    coords.open(args.coords_arg, args.threads_arg);
+  } else {
+    coords.set(std::cout, args.threads_arg);
+  }
 
   // Read k-unitig lengths
   std::unique_ptr<std::vector<int> > unitigs_lengths;
@@ -42,19 +46,17 @@ int main(int argc, char *argv[])
   // Read the super reads
   mer_pos_hash_type hash(args.size_arg);
   frag_lists names(args.threads_arg);
-  superread_parse(args.threads_arg, hash, names, args.superreads_arg.cbegin(), args.superreads_arg.cend(),
-                  args.compress_flag);
+  superread_parse(args.threads_arg, hash, names, args.superreads_arg.cbegin(), args.superreads_arg.cend());
 
   // Create aligner
   stream_manager streams(args.pacbio_arg.cbegin(), args.pacbio_arg.cend());
   align_pb aligner(args.threads_arg, hash, streams, args.stretch_constant_arg, args.stretch_factor_arg,
-                   args.forward_flag, args.compress_flag, args.duplicated_flag,
-                   args.mers_matching_arg / 100.0, args.bases_matching_arg / 100.0);
+                   args.forward_flag, args.mers_matching_arg / 100.0, args.bases_matching_arg / 100.0);
   aligner
     .max_mer_count(args.max_count_arg)
     .compact_format(args.compact_flag);
   if(args.details_given) aligner.details_multiplexer(details.multiplexer());
-  if(args.coords_given) aligner.coords_multiplexer(coords.multiplexer(), !args.no_header_flag);
+  aligner.coords_multiplexer(coords.multiplexer(), !args.no_header_flag);
   if(unitigs_lengths) aligner.unitigs_lengths(unitigs_lengths.get(), args.k_mer_arg);
 
   // Output matches

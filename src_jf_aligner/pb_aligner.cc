@@ -6,7 +6,7 @@
 
 void align_pb::start(int thid) {
   mer_dna                  tmp_m;
-  parse_sequence           parser(compress_);
+  parse_sequence           parser;
   frags_pos_type           frags_pos;
   std::vector<coords_info> coords;
   lis_align::forward_list<lis_align::element<double> > L; // L buffer
@@ -26,15 +26,17 @@ void align_pb::start(int thid) {
       parser.reset(job->data[i].seq);
 
       frags_pos.clear();
-      process_read(ary_, parser, frags_pos, L, stretch_constant_, stretch_factor_, max_mer_count_);
+      fetch_super_reads(ary_, parser, frags_pos, max_mer_count_);
 
-      if(details_io) print_details(*details_io, name, frags_pos);
-      if(coords_io) {
+      do {
+        do_LIS(frags_pos, L, stretch_constant_, stretch_factor_);
         coords.clear();
         compute_coordinates(frags_pos, pb_size, coords);
-        std::sort(coords.begin(), coords.end());
-        print_coords(*coords_io, name, pb_size, coords);
-      }
+      } while(false);
+      std::sort(coords.begin(), coords.end());
+      print_coords(*coords_io, name, pb_size, coords);
+
+      if(details_io) print_details(*details_io, name, frags_pos);
     }
   }
 }
@@ -91,7 +93,6 @@ void align_pb::compute_coordinates(const frags_pos_type& frags_pos, const size_t
     // compute the number of k-mers aligned in each k-unitigs of the
     // super-read. If an error occurs (unknown k-unitigs, k-unitigs
     // too short, etc.), an empty vector is returned.
-    MurmurHash3A                      hasher;
     coords_info                       info(forward_ && !fwd_align ? reverse_super_read_name(ml.frag->name) : ml.frag->name,
                                            ml.frag->len, nb_mers);
     const std::vector<pb_sr_offsets>& offsets = fwd_align ? ml.fwd.offsets : ml.bwd.offsets;
@@ -113,7 +114,6 @@ void align_pb::compute_coordinates(const frags_pos_type& frags_pos, const size_t
         const unsigned int sr_diff  = cur.second - prev.second;
         info.sr_cons               += sr_diff == 1;
         info.sr_cover              += std::min(mer_dna::k(), sr_diff);
-        hasher.add((uint32_t)cur.first);
         const int pos               = fwd_align ? cur.second : info.ql + cur.second - mer_dna::k() + 2;
         kmers_info.add_mer(pos);
         least_square.add(cur.second, cur.first);
@@ -132,9 +132,6 @@ void align_pb::compute_coordinates(const frags_pos_type& frags_pos, const size_t
       info.avg_err = e / least_square.n;
     }
 
-    uint64_t r1, r2;
-    hasher.finalize(r1, r2);
-    info.hash  = r1 ^ r2;
     auto first = offsets[lis.front()];
     auto last  = offsets[lis.back()];
     info.rs    = first.first;
@@ -167,8 +164,6 @@ void align_pb::print_coords(Multiplexer::ostream& out, const std::string& pb_nam
   if(compact_format_)
     out << ">" << nb_lines << " " << pb_name << "\n";
   for(auto it = coords.cbegin(), pit = it; it != coords.cend(); pit = it, ++it) {
-    if(duplicated_ && it != pit && it->rs == pit->rs && it->re == pit->re && it->hash == pit->hash)
-      continue;
     out << it->rs << " " << it->re << " " << it->qs << " " << it->qe << " "
         << it->nb_mers << " "
         << it->pb_cons << " " << it->sr_cons << " "
@@ -191,14 +186,13 @@ void align_pb::print_coords(Multiplexer::ostream& out, const std::string& pb_nam
   out.end_record();
 }
 
-void align_pb::process_read(const mer_pos_hash_type& ary, parse_sequence& parser,
-                            frags_pos_type& frags_pos, lis_align::forward_list<lis_align::element<double> >& L,
-                            double a, double b, const int max_mer_count) {
+void align_pb::fetch_super_reads(const mer_pos_hash_type& ary, parse_sequence& parser,
+                                 frags_pos_type& frags_pos, const int max_mer_count) {
   while(parser.next()) { // Process each k-mer
     const bool is_canonical = parser.m < parser.rm;
     auto it = ary.find_pos(is_canonical ? parser.m : parser.rm);
     if(max_mer_count && std::distance(it, ary.pos_end()) > max_mer_count) continue;
-    for( ; it != ary.pos_end(); ++it) {
+    for( ; it != ary.pos_end(); ++it) { // For each instance of the k-mer in a super read
       mer_lists& ml = frags_pos[it->frag->name];
       ml.frag       = it->frag;
       const int offset = is_canonical ? it->offset : -it->offset;
@@ -208,6 +202,10 @@ void align_pb::process_read(const mer_pos_hash_type& ary, parse_sequence& parser
         ml.bwd.offsets.push_back(pb_sr_offsets(parser.offset + 1, offset));
     }
   }
+}
+
+void align_pb::do_LIS(frags_pos_type& frags_pos, lis_align::forward_list<lis_align::element<double> >& L,
+                      double a, double b) {
   if(frags_pos.empty()) return;
 
   // Compute LIS forward and backward on every super reads.
@@ -226,7 +224,7 @@ void align_pb::process_read(const mer_pos_hash_type& ary, parse_sequence& parser
 
 
 void align_pb_reads(int threads, mer_pos_hash_type& hash, double stretch_const, double stretch_factor,
-                    bool compress, bool forward, bool duplicated,
+                    bool forward,
                     const char* pb_path,
                     const char* coords_path, const char* details_path,
                     const int* lengths, const int nb_unitigs, const unsigned int k_len,
@@ -238,7 +236,7 @@ void align_pb_reads(int threads, mer_pos_hash_type& hash, double stretch_const, 
   files.push_back(pb_path);
   stream_manager streams(files.cbegin(), files.cend());
   align_pb aligner(threads, hash, streams, stretch_const, stretch_factor,
-                   forward, compress, duplicated,
+                   forward,
                    matching_mers, matching_bases);
   if(coords_path) aligner.coords_multiplexer(coords.multiplexer(), true);
   if(details_path) aligner.details_multiplexer(details.multiplexer());

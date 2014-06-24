@@ -10,7 +10,6 @@
 #include <src_jf_aligner/least_square_2d.hpp>
 #include <src_lis/lis_align.hpp>
 #include <jellyfish/thread_exec.hpp>
-#include <MurmurHash3.h>
 
 /**
  * A unique ptr to a multiplexed output stream with a convenient
@@ -28,8 +27,6 @@ class align_pb : public jellyfish::thread_exec {
   read_parser              parser_;
   double                   stretch_constant_, stretch_factor_; // Maximum stretch in LIS
   const bool               forward_;
-  const bool               compress_;
-  const bool               duplicated_;
   double                   matching_mers_factor_;
   double                   matching_bases_factor_;
 
@@ -65,15 +62,13 @@ public:
 
   align_pb(int nb_threads, const mer_pos_hash_type& ary, stream_manager& streams,
            double stretch_constant, double stretch_factor,
-           bool forward = false, bool compress = false, bool duplicated = false,
+           bool forward = false,
            double matching_mers = 0.0, double matching_bases = 0.0) :
     ary_(ary),
     parser_(4 * nb_threads, 100, 1, streams),
     stretch_constant_(stretch_constant),
     stretch_factor_(stretch_factor),
     forward_(forward),
-    compress_(compress),
-    duplicated_(duplicated),
     matching_mers_factor_(matching_mers),
     matching_bases_factor_(matching_bases),
     details_multiplexer_(0),
@@ -117,7 +112,6 @@ public:
     unsigned int     pb_cover, sr_cover;
     size_t           ql;
     bool             rn;
-    uint64_t         hash;
     std::string      qname;
     std::vector<int> kmers_info; // Number of k-mers in k-unitigs and common between unitigs
     std::vector<int> bases_info; // Number of bases in k-unitigs and common between unitigs
@@ -130,10 +124,8 @@ public:
     { }
 
     bool operator<(const coords_info& rhs) const {
-      return rs < rhs.rs ||
-                  (rs == rhs.rs && (re < rhs.re ||
-                                    (re == rhs.re && (hash < rhs.hash ||
-                                                      (hash == rhs.hash && ql < rhs.ql)))));
+      return rs < rhs.rs || (rs == rhs.rs &&
+                             (re < rhs.re || (re == rhs.re && ql < rhs.ql)));
     }
 
     // Transform raw coordinates obtained from matching to final
@@ -248,20 +240,16 @@ public:
 
   void print_coords(Multiplexer::ostream& out, const std::string& pb_name, size_t const pb_size,
                     const std::vector<coords_info>& coords);
-  // For each k-unitigs in the super read qname, output its length, the number of k-mers
-  // void print_mers_in_unitigs(Multiplexer::ostream& out, const mer_lists* ml, const std::string qname) {
-  //   // super_read_name unitigs(qname);
-  // }
 
-  static void process_read(const mer_pos_hash_type& ary, parse_sequence& parser,
-                           frags_pos_type& frags_pos, lis_align::forward_list<lis_align::element<double> >& L,
-                           double a, double b, const int max_mer_count = 0);
+  static void fetch_super_reads(const mer_pos_hash_type& ary, parse_sequence& parser,
+                                frags_pos_type& frags_pos, const int max_mer_count = 0);
 
+  static void do_LIS(frags_pos_type& frags_pos, lis_align::forward_list<lis_align::element<double> >& L,
+                     double a, double b);
 
-  static void process_read(const mer_pos_hash_type& ary, parse_sequence& parser,
-                           frags_pos_type& frags_pos, double a, double b) {
+  static void do_LIS(frags_pos_type& frags_pos, double a, double b) {
     lis_align::forward_list<lis_align::element<double> > L;
-    process_read(ary, parser, frags_pos, L, a, b);
+    do_LIS(frags_pos, L, a, b);
   }
 
   // Reverse the name of a super read. For example 1R_2F_3F becomes
@@ -270,7 +258,7 @@ public:
 };
 
 void align_pb_reads(int threads, mer_pos_hash_type& hash, double stretch_const, double stretch_factor,
-                    bool compress, bool forward, bool duplicated,
+                    bool forward,
                     const char* pb_path,
                     const char* coords_path = 0, const char* details_path = 0,
                     const int* lengths = 0, const int nb_unitigs = 0, const unsigned int k_len = 0,

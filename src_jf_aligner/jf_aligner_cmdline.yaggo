@@ -19,12 +19,6 @@ option("stretch-factor") {
 option("f", "forward") {
   description "Show all matches forward (reverse super read name if needed)"
   off }
-option("C", "compress") {
-  description "Compress homopolymers"
-  off }
-option("d", "duplicated") {
-  description "Remove duplicated match entries from coords file"
-  off; conflict "compact" }
 option("B", "bases-matching") {
   description "Filter base on percent of bases matching"
   double; default 0.0 }
@@ -35,8 +29,8 @@ option("details") {
   description "Output files with detail k-mer information"
   c_string; typestr "path" }
 option("coords") {
-  description "Output files with math coordinate information"
-  c_string; typestr "path" }
+  description "Output files with math coordinate information (stdout)"
+  c_string; typestr "path"; }
 option("H", "no-header") {
   description "Do not output header"
   off }
