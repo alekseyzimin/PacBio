@@ -52,7 +52,7 @@ void align_pb::print_coords_header(Multiplexer* m, bool compact) {
 }
 
 
-void align_pb::compute_coordinates(const frags_pos_type& frags_pos, const size_t pb_size,
+void align_pb::compute_coords(const frags_pos_type& frags_pos, const size_t pb_size,
                                    std::vector<align_pb::coords_info>& coords) const {
   for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
     const align_pb::mer_lists& ml          = it->second;
@@ -128,9 +128,21 @@ void align_pb::compute_coordinates(const frags_pos_type& frags_pos, const size_t
   }
 }
 
+void align_pb::align_sequence(parse_sequence& parser, const size_t pb_size,
+                              coords_info_type& coords, frags_pos_type& frags_pos,
+                              lis_buffer_type& L) const {
+  fetch_super_reads(ary_, parser, frags_pos, max_mer_count_);
+
+  do {
+    do_LIS(frags_pos, L, stretch_constant_, stretch_factor_);
+    compute_coords(frags_pos, pb_size, coords);
+  } while(false);
+  std::sort(coords.begin(), coords.end());
+}
+
 
 void align_pb::print_coords(Multiplexer::ostream& out, const std::string& pb_name, const size_t pb_size,
-                            const bool compact, const std::vector<coords_info>& coords) {
+                            const bool compact, const coords_info_type& coords) {
   auto nb_lines = std::distance(coords.cbegin(), coords.cend());
   if(nb_lines == 0) return;
 
@@ -166,9 +178,9 @@ void align_pb::fetch_super_reads(const mer_pos_hash_type& ary, parse_sequence& p
       ml.frag       = it->frag;
       const int offset = is_canonical ? it->offset : -it->offset;
       if(offset > 0)
-        ml.fwd.offsets.push_back(pb_sr_offsets(parser.offset + 1, offset));
+        ml.fwd.offsets.push_back(pb_sr_offsets(parser.offset, offset));
       else
-        ml.bwd.offsets.push_back(pb_sr_offsets(parser.offset + 1, offset));
+        ml.bwd.offsets.push_back(pb_sr_offsets(parser.offset, offset));
     }
   }
 }
@@ -242,14 +254,8 @@ std::string align_pb::reverse_super_read_name(const std::string& name) {
   return res;
 }
 
-void align_pb::thread::compute_coords(parse_sequence parser, size_t pb_size) {
+void align_pb::thread::align_sequence(parse_sequence& parser, const size_t pb_size) {
   frags_pos_.clear();
   coords_.clear();
-  fetch_super_reads(align_data_.ary_, parser, frags_pos_, align_data_.max_mer_count_);
-
-  do {
-    do_LIS(frags_pos_, L_, align_data_.stretch_constant_, align_data_.stretch_factor_);
-    align_data_.compute_coordinates(frags_pos_, pb_size, coords_);
-  } while(false);
-  std::sort(coords_.begin(), coords_.end());
+  align_data_.align_sequence(parser, pb_size, coords_, frags_pos_, L_);
 }

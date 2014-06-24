@@ -31,7 +31,7 @@ public:
   // For each super reads, lists, in order the apparition of the
   // k-mers in the PacBio read, the offsets in the super read. The LIS
   // (longest increasing subsequence) on these offsets The longest
-  // such subsequence is stored.
+  // such subsequence is stored. The offsets are 1-based
   typedef std::pair<int, int> pb_sr_offsets; // first = pb_offset, second = sr_offset
 
   struct off_lis {
@@ -44,6 +44,7 @@ public:
     const frag_lists::frag_info* frag;
   };
   typedef std::map<const char*, mer_lists> frags_pos_type;
+  typedef lis_align::forward_list<lis_align::element<double>> lis_buffer_type;
 
   align_pb(const mer_pos_hash_type& ary,
            double stretch_constant, double stretch_factor,
@@ -115,6 +116,7 @@ public:
       }
     }
   };
+  typedef std::vector<coords_info> coords_info_type;
 
   // Helper class that computes the number of k-mers in each k-unitigs
   // and that are shared between the k-unitigs. It handles errors
@@ -196,26 +198,38 @@ public:
 
   // Compute the statistics of the matches in frags_pos (all the
   // matches to a given pac-bio read)
-  void compute_coordinates(const frags_pos_type& frags_pos, const size_t pb_size, std::vector<coords_info>& coords) const;
-  std::vector<coords_info> compute_coordinates(const frags_pos_type& frags_pos, const size_t pb_size) const {
-    std::vector<coords_info> coords;
-    compute_coordinates(frags_pos, pb_size, coords);
+  void compute_coords(const frags_pos_type& frags_pos, const size_t pb_size, coords_info_type& coords) const;
+  coords_info_type compute_coords(const frags_pos_type& frags_pos, const size_t pb_size) const {
+    coords_info_type coords;
+    compute_coords(frags_pos, pb_size, coords);
     return coords;
+  }
+
+  void align_sequence(parse_sequence& parser, const size_t pb_size,
+                      coords_info_type& coords, frags_pos_type& frags, lis_buffer_type& L) const;
+  std::pair<coords_info_type, frags_pos_type> align_sequence(parse_sequence& parser, const size_t pb_size) const {
+    std::pair<coords_info_type, frags_pos_type> res;
+    lis_buffer_type                             L;
+    align_sequence(parser, pb_size, res.first, res.second, L);
+    return res;
+  }
+  std::pair<coords_info_type, frags_pos_type> align_sequence(const std::string& seq) const {
+    parse_sequence parser(seq);
+    return align_sequence(parser, seq.size());
   }
 
   static void print_coords_header(Multiplexer* m, bool compact);
   static void print_coords(Multiplexer::ostream& out, const std::string& pb_name, size_t const pb_size,
-                           const bool compact, const std::vector<coords_info>& coords);
+                           const bool compact, const coords_info_type& coords);
   static void print_details(Multiplexer::ostream& out, const std::string& pb_name, const frags_pos_type& frags_pos);
 
   static void fetch_super_reads(const mer_pos_hash_type& ary, parse_sequence& parser,
                                 frags_pos_type& frags_pos, const int max_mer_count = 0);
 
-  static void do_LIS(frags_pos_type& frags_pos, lis_align::forward_list<lis_align::element<double> >& L,
-                     double a, double b);
+  static void do_LIS(frags_pos_type& frags_pos, lis_buffer_type& L, double a, double b);
 
   static void do_LIS(frags_pos_type& frags_pos, double a, double b) {
-    lis_align::forward_list<lis_align::element<double> > L;
+    lis_buffer_type L;
     do_LIS(frags_pos, L, a, b);
   }
 
@@ -224,16 +238,20 @@ public:
   static std::string reverse_super_read_name(const std::string& name);
 
   class thread {
-    const align_pb&          align_data_;
-    frags_pos_type           frags_pos_;
-    std::vector<coords_info> coords_;
-    lis_align::forward_list<lis_align::element<double> > L_;
+    const align_pb&  align_data_;
+    frags_pos_type   frags_pos_;
+    coords_info_type coords_;
+    lis_buffer_type  L_;
 
   public:
     thread(const align_pb& a) : align_data_(a) { }
 
-    void compute_coords(parse_sequence parser, size_t pb_size);
-    const std::vector<coords_info>& coords() const { return coords_; }
+    void align_sequence(parse_sequence& parser, const size_t pb_size);
+    void align_sequence(const std::string& seq) {
+      parse_sequence parser(seq);
+      align_sequence(parser, seq.size());
+    }
+    const coords_info_type& coords() const { return coords_; }
     const frags_pos_type& frags_pos() const { return frags_pos_; }
   };
   friend class thread;
