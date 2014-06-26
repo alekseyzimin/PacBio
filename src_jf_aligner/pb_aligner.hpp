@@ -76,17 +76,30 @@ public:
     int              nb_mers;
     unsigned int     pb_cons, sr_cons;
     unsigned int     pb_cover, sr_cover;
-    size_t           ql;
+    size_t           rl, ql;
     bool             rn;
     std::string      qname;
     std::vector<int> kmers_info; // Number of k-mers in k-unitigs and common between unitigs
     std::vector<int> bases_info; // Number of bases in k-unitigs and common between unitigs
     double           stretch, offset, avg_err; // Least square stretch, offset and average error
-    coords_info(const std::string& name, size_t l, int n) :
+    coords_info() = default;
+    coords_info(const std::string& name, size_t rl, size_t ql, int n) :
       nb_mers(n),
       pb_cons(0), sr_cons(0), pb_cover(mer_dna::k()), sr_cover(mer_dna::k()),
-      ql(l), rn(false), qname(name),
+      rl(rl), ql(ql), rn(false), qname(name),
       stretch(0), offset(0), avg_err(0)
+    { }
+    coords_info(int rs_, int re_, int qs_, int qe_, int nb_mers_,
+                unsigned int pb_cons_, unsigned sr_cons_,
+                unsigned int pb_cover_, unsigned int sr_cover_,
+                size_t rl_, size_t ql_, bool rn_,
+                double stretch_, double offset_, double avg_err_,
+                std::string qname_) :
+      rs(rs_), re(re_), qs(qs_), qe(qe_), nb_mers(nb_mers_),
+      pb_cons(pb_cons_), sr_cons(sr_cons_),
+      pb_cover(pb_cover_), sr_cover(sr_cover_),
+      rl(rl_), ql(ql_), rn(rn_), qname(qname_),
+      stretch(stretch_), offset(offset_), avg_err(avg_err_)
     { }
 
     bool operator<(const coords_info& rhs) const {
@@ -115,7 +128,15 @@ public:
         qe += mer_dna::k() - 1;
       }
     }
+
+    double imp_s() const { return std::max(1.0, std::min((double)rl, stretch + offset)); }
+    double imp_e() const { return std::max(1.0, std::min((double)rl, stretch * ql + offset)); }
+    int imp_len() const { return abs(lrint(imp_e() - imp_s())) + 1; }
+    bool min_bases(double factor) { return factor * (imp_len() - 2 * (int)mer_dna::k()) <= pb_cover; }
+
+    bool min_mers(double factor) { return factor * (imp_len() - mer_dna::k() + 1) <= nb_mers; }
   };
+
   typedef std::vector<coords_info> coords_info_type;
 
   // Helper class that computes the number of k-mers in each k-unitigs
@@ -198,6 +219,7 @@ public:
 
   // Compute the statistics of the matches in frags_pos (all the
   // matches to a given pac-bio read)
+  coords_info compute_coords_info(const mer_lists& ml, const size_t pb_size) const;
   void compute_coords(const frags_pos_type& frags_pos, const size_t pb_size, coords_info_type& coords) const;
   coords_info_type compute_coords(const frags_pos_type& frags_pos, const size_t pb_size) const {
     coords_info_type coords;

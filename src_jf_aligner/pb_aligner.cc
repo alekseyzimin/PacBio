@@ -53,9 +53,16 @@ void align_pb::print_coords_header(Multiplexer* m, bool compact) {
 
 
 void align_pb::compute_coords(const frags_pos_type& frags_pos, const size_t pb_size,
-                                   std::vector<align_pb::coords_info>& coords) const {
-  for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
-    const align_pb::mer_lists& ml          = it->second;
+                              coords_info_type& coords) const {
+  for(const auto& it : frags_pos) {
+    coords_info info = compute_coords_info(it.second, pb_size);
+    if(matching_mers_factor_ && !info.min_mers(matching_mers_factor_)) continue;
+    if(matching_bases_factor_ > 0.0 && !info.min_bases(matching_bases_factor_)) continue;
+    coords.push_back(std::move(info));
+  }
+}
+
+align_pb::coords_info align_pb::compute_coords_info(const mer_lists& ml, const size_t pb_size) const {
     const auto                 fwd_nb_mers = std::distance(ml.fwd.lis.begin(), ml.fwd.lis.end());
     const auto                 bwd_nb_mers = std::distance(ml.bwd.lis.begin(), ml.bwd.lis.end());
     const bool                 fwd_align   = fwd_nb_mers >= bwd_nb_mers;
@@ -67,7 +74,7 @@ void align_pb::compute_coords(const frags_pos_type& frags_pos, const size_t pb_s
     // super-read. If an error occurs (unknown k-unitigs, k-unitigs
     // too short, etc.), an empty vector is returned.
     coords_info                       info(forward_ && !fwd_align ? reverse_super_read_name(ml.frag->name) : ml.frag->name,
-                                           ml.frag->len, nb_mers);
+                                           pb_size, ml.frag->len, nb_mers);
     const std::vector<pb_sr_offsets>& offsets = fwd_align ? ml.fwd.offsets : ml.bwd.offsets;
     const std::vector<unsigned int>&  lis     = fwd_align ? ml.fwd.lis : ml.bwd.lis;
     compute_kmers_info<align_pb>      kmers_info(info.kmers_info, info.bases_info, info.qname, *this);
@@ -95,7 +102,13 @@ void align_pb::compute_coords(const frags_pos_type& frags_pos, const size_t pb_s
 
     // Compute average error
     double e = 0;
-    if(least_square.n > 1){
+    if(least_square.n == 1) {
+      // In that case, compute offset to shift the 1 mer from the
+      // super read coordinate to the PB coordinate
+      info.stretch = 1.0;
+      info.offset  = least_square.EY - least_square.EX;
+      info.avg_err = 0;
+    } else if(least_square.n > 1) {
       const double a = info.stretch = least_square.a();
       const double b = info.offset = least_square.b();
       for(auto v : lis) {
@@ -114,18 +127,7 @@ void align_pb::compute_coords(const frags_pos_type& frags_pos, const size_t pb_s
     info.qe = last.second;
     info.canonicalize(forward_);
 
-    if(matching_mers_factor_ || matching_bases_factor_) {
-      const double imp_s   = std::max(1.0, std::min((double)pb_size, info.stretch + info.offset));
-      const double imp_e   = std::max(1.0, std::min((double)pb_size, info.stretch * info.ql + info.offset));
-      const int    imp_len = abs(lrint(imp_e - imp_s)) + 1;
-      if(matching_mers_factor_ && matching_mers_factor_ * (imp_len - mer_dna::k() + 1) > lis.size())
-        continue;
-      if(matching_bases_factor_ && matching_bases_factor_ * (imp_len - 2 * mer_dna::k()) > info.pb_cover)
-        continue;
-    }
-
-    coords.push_back(info);
-  }
+    return info;
 }
 
 void align_pb::align_sequence(parse_sequence& parser, const size_t pb_size,
@@ -148,19 +150,19 @@ void align_pb::print_coords(Multiplexer::ostream& out, const std::string& pb_nam
 
   if(compact)
     out << ">" << nb_lines << " " << pb_name << "\n";
-  for(auto it = coords.cbegin(), pit = it; it != coords.cend(); pit = it, ++it) {
-    out << it->rs << " " << it->re << " " << it->qs << " " << it->qe << " "
-        << it->nb_mers << " "
-        << it->pb_cons << " " << it->sr_cons << " "
-        << it->pb_cover << " " << it->sr_cover << " "
-        << pb_size << " " << it->ql
-        << " " << it->stretch << " " << it->offset << " " << it->avg_err;
+  for(const auto& it : coords) {
+    out << it.rs << " " << it.re << " " << it.qs << " " << it.qe << " "
+        << it.nb_mers << " "
+        << it.pb_cons << " " << it.sr_cons << " "
+        << it.pb_cover << " " << it.sr_cover << " "
+        << pb_size << " " << it.ql
+        << " " << it.stretch << " " << it.offset << " " << it.avg_err;
     if(!compact)
       out << " " << pb_name;
-    out << " " << it->qname;
-    auto mit = it->kmers_info.cbegin();
-    auto bit = it->bases_info.cbegin();
-    for( ; mit != it->kmers_info.cend(); ++mit, ++bit)
+    out << " " << it.qname;
+    auto mit = it.kmers_info.cbegin();
+    auto bit = it.bases_info.cbegin();
+    for( ; mit != it.kmers_info.cend(); ++mit, ++bit)
       out << " " << *mit << ":" << *bit;
     out << "\n";
   }
@@ -185,8 +187,7 @@ void align_pb::fetch_super_reads(const mer_pos_hash_type& ary, parse_sequence& p
   }
 }
 
-void align_pb::do_LIS(frags_pos_type& frags_pos, lis_align::forward_list<lis_align::element<double> >& L,
-                      double a, double b) {
+void align_pb::do_LIS(frags_pos_type& frags_pos, lis_buffer_type& L, double a, double b) {
   if(frags_pos.empty()) return;
 
   // Compute LIS forward and backward on every super reads.
