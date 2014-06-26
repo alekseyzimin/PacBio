@@ -46,7 +46,7 @@ while($line=<STDIN>){
 	    $indx=0;
 	    @f=split(/N/,$outread);
 	    for($i=0;$i<=$#f;$i++){
-	    	print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>400);
+	    	print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=400);
 		$indx++;
 	    }
 	}
@@ -56,6 +56,7 @@ while($line=<STDIN>){
 
     }else{
 	($bgn,$end,$pb,$seq,$name)=split(/\s+/,$line);
+	die("pacbio read $pb does not exist in the sequence file!!!") if(not(defined($pbseq{$rn})));
 	@fn=split(/_/,$name);
 	if(substr($fn[0],0,-1)<substr($fn[$#fn],0,-1)){
 		$name_std=$name;
@@ -81,15 +82,15 @@ while($line=<STDIN>){
 
 	    if($bgn>$last_coord){#if gap -- check if the closure is allowed
 		my $min_len=0;
-          
+                my $max_gap_local;
+
                 if(defined($good_pb{$pb})){
-			$min_len=length($outread)>length($seq)?length($outread):length($seq);
-                	$max_gap_local=$min_len;
+			$max_gap_local=length($outread)>length($seq)?length($outread):length($seq);  
 		}else{			
-		$min_len=length($outread)<length($seq)?length($outread):length($seq);
-		$max_gap_local=int($min_len*0.33);
-		$max_gap_local=$max_gap if($max_gap_local>$max_gap);
-		$max_gap_local=50 if($max_gap_local<50);
+			$min_len=length($outread)<length($seq)?length($outread):length($seq);
+			$max_gap_local=int($min_len*0.3);
+			$max_gap_local=$max_gap if($max_gap_local>$max_gap);
+			$max_gap_local=25 if($max_gap_local<25);
 		}
 		#print "join status ",$bgn-$last_coord," $max_gap_local ",length($seq)," $join_allowed allowed:$allowed{$str} $str $seq\n";
 		if($bgn-$last_coord<$max_gap_local && $join_allowed){#then put N's and later split
