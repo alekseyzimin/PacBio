@@ -31,6 +31,9 @@ option("details") {
 option("coords") {
   description "Output files with math coordinate information (stdout)"
   c_string; typestr "path"; }
+option("max-match") {
+  description "Output secondary matches"
+  off }
 option("H", "no-header") {
   description "Do not output header"
   off }

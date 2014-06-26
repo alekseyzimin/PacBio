@@ -1,6 +1,8 @@
 #include <fstream>
 #include <string>
 #include <map>
+#include <algorithm>
+#include <random>
 #include <gtest/gtest.h>
 #include <src_jf_aligner/superread_parser.hpp>
 #include <src_jf_aligner/pb_aligner.hpp>
@@ -171,6 +173,7 @@ TEST_F(FragsCoords, ForwardConsistency) {
   align_pb aligner(hash, 10, 2, true);
   aligner.unitigs_lengths(&unitigs_lengths, mer_len);
   auto res = aligner.align_sequence(pb_sequence);
+  auto res_max = aligner.align_sequence(pb_sequence);
 
   auto& frags_pos = res.second;
   EXPECT_EQ((size_t)3, frags_pos.size());
@@ -201,23 +204,69 @@ TEST_F(FragsCoords, ForwardConsistency) {
 
   check_coords(align_res, coords);
 
+  auto& coords_max = res_max.first;
+  check_coords(align_res, coords_max);
+
   // Same but with filtering
   {
-    align_pb aligner_mer_filter(hash, 10, 2, true, 0, 0.09);
+    align_pb aligner_mer_filter(hash, 10, 2, true, false, 0, 0.09);
     auto res_mer_filter = aligner_mer_filter.align_sequence(pb_sequence);
+    auto res_max_mer_filter = aligner_mer_filter.align_sequence_max(pb_sequence);
     auto& coords_mer_filter = res_mer_filter.first;
+    auto& coords_max_mer_filter = res_max_mer_filter.first;
     ASSERT_EQ((size_t)1, coords_mer_filter.size());
+    ASSERT_EQ((size_t)1, coords_max_mer_filter.size());
     EXPECT_EQ("1R_3F", coords_mer_filter[0].qname);
+    EXPECT_EQ("1R_3F", coords_max_mer_filter[0].qname);
     check_coords(align_res, coords_mer_filter);
+    check_coords(align_res, coords_max_mer_filter);
   }
 
   {
-    align_pb aligner_mer_filter(hash, 10, 2, true, 0, 0.0, 0.27);
+    align_pb aligner_mer_filter(hash, 10, 2, true, false, 0, 0.0, 0.27);
     auto res_mer_filter = aligner_mer_filter.align_sequence(pb_sequence);
+    auto res_max_mer_filter = aligner_mer_filter.align_sequence_max(pb_sequence);
     auto& coords_mer_filter = res_mer_filter.first;
+    auto& coords_max_mer_filter = res_max_mer_filter.first;
     ASSERT_EQ((size_t)1, coords_mer_filter.size());
+    ASSERT_EQ((size_t)1, coords_max_mer_filter.size());
     EXPECT_EQ("1R_3F", coords_mer_filter[0].qname);
+    EXPECT_EQ("1R_3F", coords_max_mer_filter[0].qname);
     check_coords(align_res, coords_mer_filter);
+    check_coords(align_res, coords_max_mer_filter);
+  }
+}
+
+TEST(DiscardLIS, Discard) {
+  align_pb::off_lis                    ol;
+  std::vector<unsigned int>            all_indices;
+  std::vector<align_pb::pb_sr_offsets> all_offsets;
+  const int                            max_size = 100;
+  auto                                 rng      = std::default_random_engine();
+  for(int i = 0; i < max_size; ++i) {
+    all_offsets.push_back(std::make_pair(i, 5 * i));
+    all_indices.push_back(i);
+  }
+
+  // Random lis of increasing size
+  for(int i = 0; i <= max_size; ++i) {
+    SCOPED_TRACE(::testing::Message() << "i:" << i);
+    ol.offsets = all_offsets;
+    ol.lis     = all_indices;
+    std::shuffle(ol.lis.begin(), ol.lis.end(), rng);
+    ol.lis.resize(i);
+    std::sort(ol.lis.begin(), ol.lis.end());
+    ol.discard_LIS();
+
+    ASSERT_EQ((size_t)(max_size - i), ol.offsets.size());
+    int          j   = 0, k = 0;
+    for(auto it : ol.lis) {
+      for( ; j < (int)(it - k); ++j) {
+        SCOPED_TRACE(::testing::Message() << "j:" << j);
+        EXPECT_EQ(j + k, ol.offsets[j].first);
+      }
+      ++k;
+    }
   }
 }
 

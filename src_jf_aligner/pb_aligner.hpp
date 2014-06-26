@@ -15,6 +15,7 @@ class align_pb {
   const mer_pos_hash_type& ary_;
   double                   stretch_constant_, stretch_factor_; // Maximum stretch in LIS
   const bool               forward_;
+  const bool               max_match_;
   int                      max_mer_count_; // max mer count to be used for alignment
   double                   matching_mers_factor_;
   double                   matching_bases_factor_;
@@ -28,6 +29,8 @@ class align_pb {
 
 
 public:
+  typedef lis_align::forward_list<lis_align::element<double>> lis_buffer_type;
+
   // For each super reads, lists, in order the apparition of the
   // k-mers in the PacBio read, the offsets in the super read. The LIS
   // (longest increasing subsequence) on these offsets The longest
@@ -37,23 +40,57 @@ public:
   struct off_lis {
     std::vector<pb_sr_offsets>   offsets;
     std::vector<unsigned int>    lis;
+    void do_LIS(double a, double b, lis_buffer_type& L) {
+      L.clear();
+      lis.clear();
+      lis_align::indices(offsets.cbegin(), offsets.cend(), L, lis, a, b);
+    }
+    void discard_LIS() {
+      auto lis_it = lis.cbegin();
+      if(lis.cbegin() == lis.cend()) return;
+      auto w_oit = offsets.begin() + *lis_it;
+      ++lis_it;
+      for(auto r_oit = w_oit + 1; r_oit != offsets.end(); ++r_oit) {
+        if(lis_it != lis.cend() && (r_oit - offsets.begin()) == *lis_it) {
+          ++lis_it;
+        } else {
+          *w_oit = *r_oit;
+          ++w_oit;
+        }
+      }
+      offsets.resize(offsets.size() - lis.size());
+    }
+    void discard_update_LIS(double a, double b, lis_buffer_type& L) {
+      discard_LIS();
+      do_LIS(a, b, L);
+    }
   };
   struct mer_lists {
     off_lis fwd;
     off_lis bwd;
     const frag_lists::frag_info* frag;
+    void do_LIS(double a, double b, lis_buffer_type& L) {
+      fwd.do_LIS(a, b, L);
+      bwd.do_LIS(a, b, L);
+    }
+    void discard_update_LIS(double a, double b, lis_buffer_type& L) {
+      if(fwd.lis.size() > bwd.lis.size())
+        fwd.discard_update_LIS(a, b, L);
+      else
+        bwd.discard_update_LIS(a, b, L);
+    }
   };
   typedef std::map<const char*, mer_lists> frags_pos_type;
-  typedef lis_align::forward_list<lis_align::element<double>> lis_buffer_type;
 
   align_pb(const mer_pos_hash_type& ary,
            double stretch_constant, double stretch_factor,
-           bool forward = false, int max_mer_count = 0,
+           bool forward = false, bool max_match = false, int max_mer_count = 0,
            double matching_mers = 0.0, double matching_bases = 0.0) :
     ary_(ary),
     stretch_constant_(stretch_constant),
     stretch_factor_(stretch_factor),
     forward_(forward),
+    max_match_(max_match),
     max_mer_count_(max_mer_count),
     matching_mers_factor_(matching_mers),
     matching_bases_factor_(matching_bases),
@@ -240,6 +277,20 @@ public:
     return align_sequence(parser, seq.size());
   }
 
+  void align_sequence_max(parse_sequence& parser, const size_t pb_size,
+                          coords_info_type& coords, frags_pos_type& frags, lis_buffer_type& L) const;
+  coords_info_type align_sequence_max(parse_sequence& parser, const size_t pb_size) const {
+    coords_info_type res;
+    frags_pos_type   frags;
+    lis_buffer_type  L;
+    align_sequence(parser, pb_size, res, frags, L);
+    return res;
+  }
+  std::pair<coords_info_type, frags_pos_type> align_sequence_max(const std::string& seq) const {
+    parse_sequence parser(seq);
+    return align_sequence(parser, seq.size());
+  }
+
   static void print_coords_header(Multiplexer* m, bool compact);
   static void print_coords(Multiplexer::ostream& out, const std::string& pb_name, size_t const pb_size,
                            const bool compact, const coords_info_type& coords);
@@ -248,12 +299,15 @@ public:
   static void fetch_super_reads(const mer_pos_hash_type& ary, parse_sequence& parser,
                                 frags_pos_type& frags_pos, const int max_mer_count = 0);
 
-  static void do_LIS(frags_pos_type& frags_pos, lis_buffer_type& L, double a, double b);
+  static void do_all_LIS(frags_pos_type& frags_pos, lis_buffer_type& L, double a, double b);
 
-  static void do_LIS(frags_pos_type& frags_pos, double a, double b) {
+  static void do_all_LIS(frags_pos_type& frags_pos, double a, double b) {
     lis_buffer_type L;
-    do_LIS(frags_pos, L, a, b);
+    do_all_LIS(frags_pos, L, a, b);
   }
+
+  static void do_LIS(mer_lists& ml, lis_buffer_type& L, double a, double b);
+
 
   // Reverse the name of a super read. For example 1R_2F_3F becomes
   // 3R_2R_1F. If the name is not valid, name is returned unchanged.
@@ -272,6 +326,11 @@ public:
     void align_sequence(const std::string& seq) {
       parse_sequence parser(seq);
       align_sequence(parser, seq.size());
+    }
+    void align_sequence_max(parse_sequence& parser, const size_t pb_size);
+    void align_sequence_max(const std::string& seq) {
+      parse_sequence parser(seq);
+      align_sequence_max(parser, seq.size());
     }
     const coords_info_type& coords() const { return coords_; }
     const frags_pos_type& frags_pos() const { return frags_pos_; }

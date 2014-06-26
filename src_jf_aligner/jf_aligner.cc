@@ -37,7 +37,7 @@ void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* c
       name = job->data[i].header.substr(0, name_end);
       const size_t pb_size = job->data[i].seq.size();
       parser.reset(job->data[i].seq);
-      aligner.align_sequence(parser, pb_size);
+      aligner.align_sequence_max(parser, pb_size);
 
       align_pb::print_coords(*coords_io, name, pb_size, args.compact_flag, aligner.coords());
       if(details_io) align_pb::print_details(*details_io, name, aligner.frags_pos());
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 
   // Create aligner
   align_pb align_data(hash, args.stretch_constant_arg, args.stretch_factor_arg,
-                      args.forward_flag, args.max_count_arg,
+                      args.forward_flag, args.max_match_flag, args.max_count_arg,
                       args.mers_matching_arg / 100.0, args.bases_matching_arg / 100.0);
   if(unitigs_lengths) align_data.unitigs_lengths(unitigs_lengths.get(), args.k_mer_arg);
 
