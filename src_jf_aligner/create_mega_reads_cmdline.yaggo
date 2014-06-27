@@ -1,0 +1,45 @@
+purpose "Align PacBio reads and SuperReads, and create mega reads"
+description ""
+
+option("s", "size") {
+  description "Number of k-mers in SuperReads"
+  uint64; required; suffix }
+option("m", "mer") {
+  description "Mer size"
+  uint32; required }
+option("l", "unitigs-lengths") {
+  description "Length of k-unitigs"
+  c_string; typestr "path"; required }
+option("k", "k-mer") {
+  description "Length of k-mer used to create k-unitigs"
+  uint32; required }
+option("t", "threads") {
+  description "Number of threads"
+  uint32; default 1 }
+option("o", "output") {
+  description "Output file (stdout)"
+  c_string; typestr "path" }
+option("stretch-constant") {
+  description "Constant tolerated stretch between sequences"
+  int; default 10 }
+option("stretch-factor") {
+  description "Factor tolerated stretch between sequences"
+  double; default 1.3 }
+option("B", "bases-matching") {
+  description "Filter base on percent of bases matching"
+  double; default 0.0 }
+option("M", "mers-matching") {
+  description "Filter base on percent of k-mer matching"
+  double; default 0.0 }
+option("max-match") {
+  description "Use secondary matches"
+  off }
+option("max-count") {
+  description "Maximum mer count in super read to be used for alignment"
+  uint32; default 200 }
+option("r", "superreads") {
+  description "SuperReads sequence file"
+  c_string; typestr "path"; multiple }
+option("p", "pacbio") {
+  description "PacBio read sequence file"
+  c_string; typestr "path"; multiple }
