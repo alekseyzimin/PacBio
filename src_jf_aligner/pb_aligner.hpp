@@ -291,11 +291,6 @@ public:
     return align_sequence(parser, seq.size());
   }
 
-  static void print_coords_header(Multiplexer* m, bool compact);
-  static void print_coords(Multiplexer::ostream& out, const std::string& pb_name, size_t const pb_size,
-                           const bool compact, const coords_info_type& coords);
-  static void print_details(Multiplexer::ostream& out, const std::string& pb_name, const frags_pos_type& frags_pos);
-
   static void fetch_super_reads(const mer_pos_hash_type& ary, parse_sequence& parser,
                                 frags_pos_type& frags_pos, const int max_mer_count = 0);
 

@@ -3,55 +3,6 @@
 #include <vector>
 #include <src_jf_aligner/pb_aligner.hpp>
 
-
-void align_pb::print_details(Multiplexer::ostream& out, const std::string& pb_name, const frags_pos_type& frags_pos) {
-  for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
-    out << pb_name << " " << it->first;
-    const align_pb::mer_lists& ml              = it->second;
-    const bool                       fwd_align =
-      std::distance(ml.fwd.lis.cbegin(), ml.fwd.lis.cend()) > std::distance(ml.bwd.lis.cbegin(), ml.bwd.lis.cend());
-    auto                       lisit           = fwd_align ? ml.fwd.lis.cbegin() : ml.bwd.lis.cbegin();
-    const auto                 lisend          = fwd_align ? ml.fwd.lis.cend() : ml.bwd.lis.cend();
-    auto                       fwd_offit       = ml.fwd.offsets.cbegin();
-    const auto                 fwd_offbegin    = fwd_offit;
-    const auto                 fwd_offend      = ml.fwd.offsets.cend();
-    auto                       bwd_offit       = ml.bwd.offsets.cbegin();
-    const auto                 bwd_offbegin    = bwd_offit;
-    const auto                 bwd_offend      = ml.bwd.offsets.cend();
-
-    while(fwd_offit != fwd_offend || bwd_offit != bwd_offend) {
-      std::pair<int, int> pos;
-      bool                part_of_lis = false;
-      if(fwd_offit != fwd_offend && (bwd_offit == bwd_offend || fwd_offit->first <= bwd_offit->first)) {
-        pos = *fwd_offit;
-        part_of_lis = fwd_align && (lisit < lisend) && (*lisit == std::distance(fwd_offbegin, fwd_offit));
-        ++fwd_offit;
-      } else if(bwd_offit != bwd_offend && (fwd_offit == fwd_offend || bwd_offit->first < fwd_offit->first)) {
-        pos = *bwd_offit;
-        part_of_lis = !fwd_align && (lisit < lisend) && (*lisit == std::distance(bwd_offbegin, bwd_offit));
-        ++bwd_offit;
-      }
-      out << " " <<(part_of_lis ? "[" : "")
-          << pos.first << ":" << pos.second
-          << (part_of_lis ? "]" : "");
-      if(part_of_lis)
-        ++lisit;
-    }
-    out << "\n";
-  }
-  out.end_record();
-}
-
-void align_pb::print_coords_header(Multiplexer* m, bool compact) {
-  Multiplexer::ostream o(m); // Write header
-  o << "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Stretch Offset Err";
-  if(!compact)
-    o << " Rname";
-  o << " Qname\n";
-  o.end_record();
-}
-
-
 void align_pb::compute_coords(const frags_pos_type& frags_pos, const size_t pb_size,
                               coords_info_type& coords) const {
   for(const auto& it : frags_pos) {
@@ -140,7 +91,6 @@ void align_pb::align_sequence(parse_sequence& parser, const size_t pb_size,
     do_all_LIS(frags_pos, L, stretch_constant_, stretch_factor_);
     compute_coords(frags_pos, pb_size, coords);
   } while(false);
-  std::sort(coords.begin(), coords.end());
 }
 
 void align_pb::align_sequence_max (parse_sequence& parser, const size_t pb_size,
@@ -160,34 +110,8 @@ void align_pb::align_sequence_max (parse_sequence& parser, const size_t pb_size,
       ml.discard_update_LIS(stretch_constant_, stretch_factor_, L);
     }
   }
-  std::sort(coords.begin(), coords.end());
 }
 
-void align_pb::print_coords(Multiplexer::ostream& out, const std::string& pb_name, const size_t pb_size,
-                            const bool compact, const coords_info_type& coords) {
-  auto nb_lines = std::distance(coords.cbegin(), coords.cend());
-  if(nb_lines == 0) return;
-
-  if(compact)
-    out << ">" << nb_lines << " " << pb_name << "\n";
-  for(const auto& it : coords) {
-    out << it.rs << " " << it.re << " " << it.qs << " " << it.qe << " "
-        << it.nb_mers << " "
-        << it.pb_cons << " " << it.sr_cons << " "
-        << it.pb_cover << " " << it.sr_cover << " "
-        << pb_size << " " << it.ql
-        << " " << it.stretch << " " << it.offset << " " << it.avg_err;
-    if(!compact)
-      out << " " << pb_name;
-    out << " " << it.qname;
-    auto mit = it.kmers_info.cbegin();
-    auto bit = it.bases_info.cbegin();
-    for( ; mit != it.kmers_info.cend(); ++mit, ++bit)
-      out << " " << *mit << ":" << *bit;
-    out << "\n";
-  }
-  out.end_record();
-}
 
 void align_pb::fetch_super_reads(const mer_pos_hash_type& ary, parse_sequence& parser,
                                  frags_pos_type& frags_pos, const int max_mer_count) {

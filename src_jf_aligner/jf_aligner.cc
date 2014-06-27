@@ -19,14 +19,90 @@ public:
   { }
 };
 
+void print_coords_header(Multiplexer* m, bool compact) {
+  Multiplexer::ostream o(m); // Write header
+  o << "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Stretch Offset Err";
+  if(!compact)
+    o << " Rname";
+  o << " Qname\n";
+  o.end_record();
+}
+
+void print_coords(Multiplexer::ostream& out, const std::string& pb_name, const size_t pb_size,
+                  const bool compact, const align_pb::coords_info_type& coords,
+                            const std::vector<int>& order) {
+  const size_t nb_lines = coords.size();
+  if(nb_lines == 0) return;
+
+  if(compact)
+    out << ">" << nb_lines << " " << pb_name << "\n";
+  for(size_t i = 0; i < nb_lines; ++i) {
+    const auto& it = coords[order[i]];
+    out << it.rs << " " << it.re << " " << it.qs << " " << it.qe << " "
+        << it.nb_mers << " "
+        << it.pb_cons << " " << it.sr_cons << " "
+        << it.pb_cover << " " << it.sr_cover << " "
+        << pb_size << " " << it.ql
+        << " " << it.stretch << " " << it.offset << " " << it.avg_err;
+    if(!compact)
+      out << " " << pb_name;
+    out << " " << it.qname;
+    auto mit = it.kmers_info.cbegin();
+    auto bit = it.bases_info.cbegin();
+    for( ; mit != it.kmers_info.cend(); ++mit, ++bit)
+      out << " " << *mit << ":" << *bit;
+    out << "\n";
+  }
+  out.end_record();
+}
+
+void print_details(Multiplexer::ostream& out, const std::string& pb_name, const align_pb::frags_pos_type& frags_pos) {
+  for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
+    out << pb_name << " " << it->first;
+    const align_pb::mer_lists& ml              = it->second;
+    const bool                       fwd_align =
+      std::distance(ml.fwd.lis.cbegin(), ml.fwd.lis.cend()) > std::distance(ml.bwd.lis.cbegin(), ml.bwd.lis.cend());
+    auto                       lisit           = fwd_align ? ml.fwd.lis.cbegin() : ml.bwd.lis.cbegin();
+    const auto                 lisend          = fwd_align ? ml.fwd.lis.cend() : ml.bwd.lis.cend();
+    auto                       fwd_offit       = ml.fwd.offsets.cbegin();
+    const auto                 fwd_offbegin    = fwd_offit;
+    const auto                 fwd_offend      = ml.fwd.offsets.cend();
+    auto                       bwd_offit       = ml.bwd.offsets.cbegin();
+    const auto                 bwd_offbegin    = bwd_offit;
+    const auto                 bwd_offend      = ml.bwd.offsets.cend();
+
+    while(fwd_offit != fwd_offend || bwd_offit != bwd_offend) {
+      std::pair<int, int> pos;
+      bool                part_of_lis = false;
+      if(fwd_offit != fwd_offend && (bwd_offit == bwd_offend || fwd_offit->first <= bwd_offit->first)) {
+        pos = *fwd_offit;
+        part_of_lis = fwd_align && (lisit < lisend) && (*lisit == std::distance(fwd_offbegin, fwd_offit));
+        ++fwd_offit;
+      } else if(bwd_offit != bwd_offend && (fwd_offit == fwd_offend || bwd_offit->first < fwd_offit->first)) {
+        pos = *bwd_offit;
+        part_of_lis = !fwd_align && (lisit < lisend) && (*lisit == std::distance(bwd_offbegin, bwd_offit));
+        ++bwd_offit;
+      }
+      out << " " <<(part_of_lis ? "[" : "")
+          << pos.first << ":" << pos.second
+          << (part_of_lis ? "]" : "");
+      if(part_of_lis)
+        ++lisit;
+    }
+    out << "\n";
+  }
+  out.end_record();
+}
+
 void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* coords_m, const align_pb* align_data) {
   mer_dna                  tmp_m;
   parse_sequence           parser;
   align_pb::thread         aligner(*align_data);
 
-  mstream     details_io(details_m);
-  mstream     coords_io(coords_m);
-  std::string name;
+  mstream          details_io(details_m);
+  mstream          coords_io(coords_m);
+  std::string      name;
+  std::vector<int> sort_array;
 
   while(true) {
     read_parser::job job(*reads);
@@ -39,8 +115,15 @@ void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* c
       parser.reset(job->data[i].seq);
       aligner.align_sequence_max(parser, pb_size);
 
-      align_pb::print_coords(*coords_io, name, pb_size, args.compact_flag, aligner.coords());
-      if(details_io) align_pb::print_details(*details_io, name, aligner.frags_pos());
+      const auto& coords = aligner.coords();
+      const int n = coords.size();
+      if((int)sort_array.size() < n)
+        sort_array.resize(n);
+      for(int i = 0; i < n; ++i)
+        sort_array[i] = i;
+      std::sort(sort_array.begin(), sort_array.begin() + n, [&coords] (int i, int j) { return coords[i] < coords[j]; });
+      print_coords(*coords_io, name, pb_size, args.compact_flag, coords, sort_array);
+      if(details_io) print_details(*details_io, name, aligner.frags_pos());
     }
   }
 
@@ -99,7 +182,7 @@ int main(int argc, char *argv[])
 
   // Output header if necessary
   if(!args.no_header_flag)
-    align_pb::print_coords_header(coords.multiplexer(), args.compact_flag);
+    print_coords_header(coords.multiplexer(), args.compact_flag);
 
   // Output alignements
   std::vector<std::thread> threads;
