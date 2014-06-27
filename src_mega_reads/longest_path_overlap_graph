@@ -294,8 +294,15 @@ sub print_longest_paths {
     my ($max_end_n, $max_density) = (undef, 0);
     foreach my $end_n (@$end_nodes) {
       my $start_n = $$end_n{LSTART};
-      my $density = $$end_n{LPATH} / (($$end_n{IMP_END} > $$end_n{RLEN} ? $$end_n{RLEN} : $$end_n{IMP_END}) -
+      my $density;
+      if((($$end_n{IMP_END} > $$end_n{RLEN} ? $$end_n{RLEN} : $$end_n{IMP_END}) -
+                                      ($$start_n{IMP_START} < 1 ? 1 : $$start_n{IMP_START}) + 1) >0){
+	$density = $$end_n{LPATH} / (($$end_n{IMP_END} > $$end_n{RLEN} ? $$end_n{RLEN} : $$end_n{IMP_END}) -
                                       ($$start_n{IMP_START} < 1 ? 1 : $$start_n{IMP_START}) + 1);
+	}else{
+	$density = 0;
+	}
+ 
       if($density > $max_density) {
         $max_density = $density;
         $max_end_n = $end_n;
