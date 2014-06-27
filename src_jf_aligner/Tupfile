@@ -6,7 +6,7 @@ CXXFLAGS += -I.. $(JELLYFISH_CFLAGS) -I../include
 LDFLAGS += $(JELLYFISH_LIBS)
 
 : foreach jf_aligner_cmdline.yaggo create_mega_reads_cmdline.yaggo |> !yaggo |>
-: foreach pb_aligner.cc superread_parser.cc |> !cxx |>
+: foreach pb_aligner.cc superread_parser.cc union_find.cc |> !cxx |>
 : jf_aligner.cc | jf_aligner_cmdline.hpp |> !cxx |>
 : create_mega_reads.cc | create_mega_reads_cmdline.hpp |> !cxx |>
 
