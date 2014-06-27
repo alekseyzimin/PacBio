@@ -5,6 +5,10 @@ export PKG_CONFIG_PATH
 CXXFLAGS += -I.. $(JELLYFISH_CFLAGS) -I../include
 LDFLAGS += $(JELLYFISH_LIBS)
 
-: jf_aligner_cmdline.yaggo |> !yaggo |>
-: foreach jf_aligner.cc pb_aligner.cc superread_parser.cc | jf_aligner_cmdline.hpp |> !cxx |> {jf_aligner}
-: {jf_aligner} |> !lxxd |> jf_aligner
+: foreach jf_aligner_cmdline.yaggo create_mega_reads_cmdline.yaggo |> !yaggo |>
+: foreach pb_aligner.cc superread_parser.cc union_find.cc |> !cxx |>
+: jf_aligner.cc | jf_aligner_cmdline.hpp |> !cxx |>
+: create_mega_reads.cc | create_mega_reads_cmdline.hpp |> !cxx |>
+
+: jf_aligner.o pb_aligner.o superread_parser.o |> !lxxd |> jf_aligner
+: create_mega_reads.o pb_aligner.o superread_parser.o |> !lxxd |> create_mega_reads

@@ -1,4 +1,4 @@
-purpose "Align PacBio reads and SuperReads"
+purpose "Align PacBio reads and SuperReads, and create mega reads"
 description ""
 
 option("s", "size") {
@@ -7,49 +7,36 @@ option("s", "size") {
 option("m", "mer") {
   description "Mer size"
   uint32; required }
+option("l", "unitigs-lengths") {
+  description "Length of k-unitigs"
+  c_string; typestr "path"; required }
+option("k", "k-mer") {
+  description "Length of k-mer used to create k-unitigs"
+  uint32; required }
 option("t", "threads") {
   description "Number of threads"
   uint32; default 1 }
+option("o", "output") {
+  description "Output file (stdout)"
+  c_string; typestr "path" }
 option("stretch-constant") {
   description "Constant tolerated stretch between sequences"
   int; default 10 }
 option("stretch-factor") {
   description "Factor tolerated stretch between sequences"
   double; default 1.3 }
-option("f", "forward") {
-  description "Show all matches forward (reverse super read name if needed)"
-  off }
 option("B", "bases-matching") {
   description "Filter base on percent of bases matching"
   double; default 0.0 }
 option("M", "mers-matching") {
   description "Filter base on percent of k-mer matching"
   double; default 0.0 }
-option("details") {
-  description "Output files with detail k-mer information"
-  c_string; typestr "path" }
-option("coords") {
-  description "Output files with math coordinate information (stdout)"
-  c_string; typestr "path"; }
 option("max-match") {
-  description "Output secondary matches"
-  off }
-option("H", "no-header") {
-  description "Do not output header"
+  description "Use secondary matches"
   off }
 option("max-count") {
   description "Maximum mer count in super read to be used for alignment"
   uint32; default 200 }
-option("l", "unitigs-lengths") {
-  description "Length of k-unitigs"
-  imply "forward"
-  c_string; typestr "path" }
-option("compact") {
-  description "Compact output format"
-  off }
-option("k", "k-mer") {
-  description "Length of k-mer used to create k-unitigs"
-  uint32 }
 option("r", "superreads") {
   description "SuperReads sequence file"
   c_string; typestr "path"; multiple }

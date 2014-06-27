@@ -15,35 +15,26 @@ LDLIBS_test_MurmurHash3 = -lcommon
 # Tests with one file (no other objects)
 TESTS1  = test_lis.cc test_lf_forward_list.cc test_mer_pos_hash.cc 
 TESTS1 += test_lis_align.cc test_parsesequence.cc
-TESTS1 += test_multiplexer.cc test_MurmurHash3.cc test_super_read_name.cc test_least_square_2d.cc
+TESTS1 += test_multiplexer.cc test_MurmurHash3.cc test_super_read_name.cc test_least_square_2d.cc test_kmers_info.cc
 
 # Tests with special rule for linking
-TESTS2  = test_pb_aligner.cc test_aligner_output.cc test_superread_parser.cc
+TESTS2  = test_pb_aligner.cc test_superread_parser.cc test_align_coordinates.cc test_union_find.cc
 
 # Flags specific to some tests
 CXXFLAGS += $(JELLYFISH_CFLAGS) -I../include
 LDFLAGS += $(JELLYFISH_LIBS)
+CLIBS = libgtest_main.a ../lib/libcommon.a
+SRC = ../src_jf_aligner
 
-test_aligner_output = ../src_jf_aligner/pb_aligner.o
+# test_aligner_output = ../src_jf_aligner/pb_aligner.o
 
-: foreach $(TESTS1) |> !cxx |> {tests1}
-: foreach {tests1}  | libgtest_main.a ../lib/libcommon.a |> !lxxd |> %B {all_tests}
+: foreach $(TESTS1)            |> !cxx  |> {tests1}
+: foreach {tests1}  | $(CLIBS) |> !lxxd |> %B {all_tests}
 
-: foreach $(TESTS2) |> !cxx |>
-: test_pb_aligner.o ../src_jf_aligner/pb_aligner.o ../src_jf_aligner/superread_parser.o | libgtest_main.a ../lib/libcommon.a |> !lxxd |> test_pb_aligner {all_tests}
-: test_aligner_output.o ../src_jf_aligner/pb_aligner.o ../src_jf_aligner/superread_parser.o | libgtest_main.a ../lib/libcommon.a |> !lxxd |> test_aligner_output {all_tests}
-: test_superread_parser.o ../src_jf_aligner/superread_parser.o | libgtest_main.a ../lib/libcommon.a |> !lxxd |> test_superread_parser {all_tests}
-
+: foreach $(TESTS2)                                                                 |> !cxx  |>
+: test_pb_aligner.o $(SRC)/pb_aligner.o $(SRC)/superread_parser.o        | $(CLIBS) |> !lxxd |> test_pb_aligner {all_tests}
+: test_align_coordinates.o $(SRC)/pb_aligner.o $(SRC)/superread_parser.o | $(CLIBS) |> !lxxd |> test_align_coordinates {all_tests}
+: test_superread_parser.o $(SRC)/superread_parser.o                      | $(CLIBS) |> !lxxd |> test_superread_parser {all_tests}
+: test_union_find.o $(SRC)/union_find.o                                  | $(CLIBS) |> !lxxd |> test_union_find {all_tests}
 
 : foreach {all_tests} |> ./%f > %o 2>&1 |> %f.log
-
-
-# CXXFLAGS_test_mer_pos_hash += $(JELLYFISH_CFLAGS)
-# LDFLAGS_test_mer_pos_hash += $(JELLYFISH_LIBS)
-# CXXFLAGS_test_superread_parser += $(JELLYFISH_CFLAGS)
-# LDFLAGS_test_superread_parser += $(JELLYFISH_LIBS)
-# CXXFLAGS_test_pb_aligner += $(JELLYFISH_CFLAGS) -I../include
-# LDFLAGS_test_pb_aligner += $(JELLYFISH_LIBS)
-
-# : foreach $(TESTS) | libgtest_main.a ../lib/libcommon.a |> !cxxld $(%B_DEP) |> {all_tests}
-

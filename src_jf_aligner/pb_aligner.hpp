@@ -10,35 +10,18 @@
 #include <src_jf_aligner/least_square_2d.hpp>
 #include <src_lis/lis_align.hpp>
 #include <jellyfish/thread_exec.hpp>
-#include <MurmurHash3.h>
 
-/**
- * A unique ptr to a multiplexed output stream with a convenient
- * constructor.
- */
-class mstream : public std::unique_ptr<Multiplexer::ostream> {
-public:
-  mstream(Multiplexer* m) :
-    std::unique_ptr<Multiplexer::ostream>(m ? new Multiplexer::ostream(m) : 0)
-  { }
-};
-
-class align_pb : public jellyfish::thread_exec {
+class align_pb {
   const mer_pos_hash_type& ary_;
-  read_parser              parser_;
   double                   stretch_constant_, stretch_factor_; // Maximum stretch in LIS
   const bool               forward_;
-  const bool               compress_;
-  const bool               duplicated_;
+  const bool               max_match_;
+  int                      max_mer_count_; // max mer count to be used for alignment
   double                   matching_mers_factor_;
   double                   matching_bases_factor_;
 
-  Multiplexer*             details_multiplexer_;
-  Multiplexer*             coords_multiplexer_;
   const std::vector<int>*  unitigs_lengths_; // Lengths of unitigs
   unsigned int             k_len_; // k-mer length used for creating k-unitigs
-  int                      max_mer_count_; // max mer count to be used for alignment
-  bool                     compact_format_;
 
 
   typedef const mer_pos_hash_type::mapped_type list_type;
@@ -46,55 +29,74 @@ class align_pb : public jellyfish::thread_exec {
 
 
 public:
+  typedef lis_align::forward_list<lis_align::element<double>> lis_buffer_type;
+
   // For each super reads, lists, in order the apparition of the
   // k-mers in the PacBio read, the offsets in the super read. The LIS
   // (longest increasing subsequence) on these offsets The longest
-  // such subsequence is stored.
+  // such subsequence is stored. The offsets are 1-based
   typedef std::pair<int, int> pb_sr_offsets; // first = pb_offset, second = sr_offset
 
   struct off_lis {
     std::vector<pb_sr_offsets>   offsets;
     std::vector<unsigned int>    lis;
+    void do_LIS(double a, double b, lis_buffer_type& L) {
+      L.clear();
+      lis.clear();
+      lis_align::indices(offsets.cbegin(), offsets.cend(), L, lis, a, b);
+    }
+    void discard_LIS() {
+      auto lis_it = lis.cbegin();
+      if(lis.cbegin() == lis.cend()) return;
+      auto w_oit = offsets.begin() + *lis_it;
+      ++lis_it;
+      for(auto r_oit = w_oit + 1; r_oit != offsets.end(); ++r_oit) {
+        if(lis_it != lis.cend() && (r_oit - offsets.begin()) == *lis_it) {
+          ++lis_it;
+        } else {
+          *w_oit = *r_oit;
+          ++w_oit;
+        }
+      }
+      offsets.resize(offsets.size() - lis.size());
+    }
+    void discard_update_LIS(double a, double b, lis_buffer_type& L) {
+      discard_LIS();
+      do_LIS(a, b, L);
+    }
   };
   struct mer_lists {
     off_lis fwd;
     off_lis bwd;
     const frag_lists::frag_info* frag;
+    void do_LIS(double a, double b, lis_buffer_type& L) {
+      fwd.do_LIS(a, b, L);
+      bwd.do_LIS(a, b, L);
+    }
+    void discard_update_LIS(double a, double b, lis_buffer_type& L) {
+      if(fwd.lis.size() > bwd.lis.size())
+        fwd.discard_update_LIS(a, b, L);
+      else
+        bwd.discard_update_LIS(a, b, L);
+    }
   };
   typedef std::map<const char*, mer_lists> frags_pos_type;
 
-  align_pb(int nb_threads, const mer_pos_hash_type& ary, stream_manager& streams,
+  align_pb(const mer_pos_hash_type& ary,
            double stretch_constant, double stretch_factor,
-           bool forward = false, bool compress = false, bool duplicated = false,
+           bool forward = false, bool max_match = false, int max_mer_count = 0,
            double matching_mers = 0.0, double matching_bases = 0.0) :
     ary_(ary),
-    parser_(4 * nb_threads, 100, 1, streams),
     stretch_constant_(stretch_constant),
     stretch_factor_(stretch_factor),
     forward_(forward),
-    compress_(compress),
-    duplicated_(duplicated),
+    max_match_(max_match),
+    max_mer_count_(max_mer_count),
     matching_mers_factor_(matching_mers),
     matching_bases_factor_(matching_bases),
-    details_multiplexer_(0),
-    coords_multiplexer_(0),
-    unitigs_lengths_(0), k_len_(0),
-    max_mer_count_(0), compact_format_(false)
+    unitigs_lengths_(0), k_len_(0)
   { }
 
-  align_pb& details_multiplexer(Multiplexer* m) { details_multiplexer_ = m; return *this; }
-  align_pb& coords_multiplexer(Multiplexer* m, bool header) {
-    coords_multiplexer_ = m;
-    if(header) {
-      Multiplexer::ostream o(coords_multiplexer_); // Write header
-      o << "Rstart Rend Qstart Qend Nmers Rcons Qcons Rcover Qcover Rlen Qlen Stretch Offset Err";
-      if(!compact_format_)
-        o << " Rname";
-      o << " Qname\n";
-      o.end_record();
-    }
-    return *this;
-  }
   align_pb& unitigs_lengths(const std::vector<int>* m, unsigned int k_len) {
     if(!forward_) throw std::logic_error("Forward flag must be used if passing unitigs lengths");
     unitigs_lengths_ = m;
@@ -103,10 +105,6 @@ public:
   }
 
   align_pb& max_mer_count(int m) { max_mer_count_ = m; return *this; }
-  align_pb& compact_format(bool c) { compact_format_ = c; return *this; }
-
-  virtual void start(int thid);
-  void print_details(Multiplexer::ostream& out, const std::string& pb_name, const frags_pos_type& frags_pos);
 
   // Contains the summary information of an alignment of a pac-bio and a super read (named qname).
   struct coords_info {
@@ -115,25 +113,35 @@ public:
     int              nb_mers;
     unsigned int     pb_cons, sr_cons;
     unsigned int     pb_cover, sr_cover;
-    size_t           ql;
+    size_t           rl, ql;
     bool             rn;
-    uint64_t         hash;
     std::string      qname;
     std::vector<int> kmers_info; // Number of k-mers in k-unitigs and common between unitigs
     std::vector<int> bases_info; // Number of bases in k-unitigs and common between unitigs
     double           stretch, offset, avg_err; // Least square stretch, offset and average error
-    coords_info(const std::string& name, size_t l, int n) :
+    coords_info() = default;
+    coords_info(const std::string& name, size_t rl, size_t ql, int n) :
       nb_mers(n),
       pb_cons(0), sr_cons(0), pb_cover(mer_dna::k()), sr_cover(mer_dna::k()),
-      ql(l), rn(false), qname(name),
+      rl(rl), ql(ql), rn(false), qname(name),
       stretch(0), offset(0), avg_err(0)
+    { }
+    coords_info(int rs_, int re_, int qs_, int qe_, int nb_mers_,
+                unsigned int pb_cons_, unsigned sr_cons_,
+                unsigned int pb_cover_, unsigned int sr_cover_,
+                size_t rl_, size_t ql_, bool rn_,
+                double stretch_, double offset_, double avg_err_,
+                std::string qname_) :
+      rs(rs_), re(re_), qs(qs_), qe(qe_), nb_mers(nb_mers_),
+      pb_cons(pb_cons_), sr_cons(sr_cons_),
+      pb_cover(pb_cover_), sr_cover(sr_cover_),
+      rl(rl_), ql(ql_), rn(rn_), qname(qname_),
+      stretch(stretch_), offset(offset_), avg_err(avg_err_)
     { }
 
     bool operator<(const coords_info& rhs) const {
-      return rs < rhs.rs ||
-                  (rs == rhs.rs && (re < rhs.re ||
-                                    (re == rhs.re && (hash < rhs.hash ||
-                                                      (hash == rhs.hash && ql < rhs.ql)))));
+      return rs < rhs.rs || (rs == rhs.rs &&
+                             (re < rhs.re || (re == rhs.re && ql < rhs.ql)));
     }
 
     // Transform raw coordinates obtained from matching to final
@@ -157,7 +165,16 @@ public:
         qe += mer_dna::k() - 1;
       }
     }
+
+    double imp_s() const { return std::max(1.0, std::min((double)rl, stretch + offset)); }
+    double imp_e() const { return std::max(1.0, std::min((double)rl, stretch * ql + offset)); }
+    int imp_len() const { return abs(lrint(imp_e() - imp_s())) + 1; }
+    bool min_bases(double factor) { return factor * (imp_len() - 2 * (int)mer_dna::k()) <= pb_cover; }
+
+    bool min_mers(double factor) { return factor * (imp_len() - mer_dna::k() + 1) <= nb_mers; }
   };
+
+  typedef std::vector<coords_info> coords_info_type;
 
   // Helper class that computes the number of k-mers in each k-unitigs
   // and that are shared between the k-unitigs. It handles errors
@@ -188,12 +205,10 @@ public:
       }
     }
 
+
     int unitigs_lengths(long int id) const { return (*aligner_.unitigs_lengths_)[id]; }
     size_t nb_unitigs() const { return aligner_.unitigs_lengths_->size(); }
     unsigned int k_len() const { return aligner_.k_len_; }
-
-    template<typename T>
-    static T p_min(const T x, const T y) { return std::max((T)0, std::min(x, y)); }
 
     void add_mer(const int pos) {
       if(!sr_name_) return;
@@ -241,36 +256,87 @@ public:
 
   // Compute the statistics of the matches in frags_pos (all the
   // matches to a given pac-bio read)
-  std::vector<coords_info> compute_coordinates(const frags_pos_type& frags_pos, size_t pb_size);
-
-  void print_coords(Multiplexer::ostream& out, const std::string& pb_name, size_t pb_size, const frags_pos_type& frags_pos);
-
-  // For each k-unitigs in the super read qname, output its length, the number of k-mers
-  // void print_mers_in_unitigs(Multiplexer::ostream& out, const mer_lists* ml, const std::string qname) {
-  //   // super_read_name unitigs(qname);
-  // }
-
-  static void process_read(const mer_pos_hash_type& ary, parse_sequence& parser,
-                           frags_pos_type& frags_pos, lis_align::forward_list<lis_align::element<double> >& L,
-                           double a, double b, const int max_mer_count = 0);
-
-
-  static void process_read(const mer_pos_hash_type& ary, parse_sequence& parser,
-                           frags_pos_type& frags_pos, double a, double b) {
-    lis_align::forward_list<lis_align::element<double> > L;
-    process_read(ary, parser, frags_pos, L, a, b);
+  coords_info compute_coords_info(const mer_lists& ml, const size_t pb_size) const;
+  void compute_coords(const frags_pos_type& frags_pos, const size_t pb_size, coords_info_type& coords) const;
+  coords_info_type compute_coords(const frags_pos_type& frags_pos, const size_t pb_size) const {
+    coords_info_type coords;
+    compute_coords(frags_pos, pb_size, coords);
+    return coords;
   }
+
+  void align_sequence(parse_sequence& parser, const size_t pb_size,
+                      coords_info_type& coords, frags_pos_type& frags, lis_buffer_type& L) const;
+  std::pair<coords_info_type, frags_pos_type> align_sequence(parse_sequence& parser, const size_t pb_size) const {
+    std::pair<coords_info_type, frags_pos_type> res;
+    lis_buffer_type                             L;
+    align_sequence(parser, pb_size, res.first, res.second, L);
+    return res;
+  }
+  std::pair<coords_info_type, frags_pos_type> align_sequence(const std::string& seq) const {
+    parse_sequence parser(seq);
+    return align_sequence(parser, seq.size());
+  }
+
+  void align_sequence_max(parse_sequence& parser, const size_t pb_size,
+                          coords_info_type& coords, frags_pos_type& frags, lis_buffer_type& L) const;
+  coords_info_type align_sequence_max(parse_sequence& parser, const size_t pb_size) const {
+    coords_info_type res;
+    frags_pos_type   frags;
+    lis_buffer_type  L;
+    align_sequence(parser, pb_size, res, frags, L);
+    return res;
+  }
+  std::pair<coords_info_type, frags_pos_type> align_sequence_max(const std::string& seq) const {
+    parse_sequence parser(seq);
+    return align_sequence(parser, seq.size());
+  }
+
+  static void fetch_super_reads(const mer_pos_hash_type& ary, parse_sequence& parser,
+                                frags_pos_type& frags_pos, const int max_mer_count = 0);
+
+  static void do_all_LIS(frags_pos_type& frags_pos, lis_buffer_type& L, double a, double b);
+
+  static void do_all_LIS(frags_pos_type& frags_pos, double a, double b) {
+    lis_buffer_type L;
+    do_all_LIS(frags_pos, L, a, b);
+  }
+
+  static void do_LIS(mer_lists& ml, lis_buffer_type& L, double a, double b);
+
 
   // Reverse the name of a super read. For example 1R_2F_3F becomes
   // 3R_2R_1F. If the name is not valid, name is returned unchanged.
   static std::string reverse_super_read_name(const std::string& name);
+
+  class thread {
+    const align_pb&  align_data_;
+    frags_pos_type   frags_pos_;
+    coords_info_type coords_;
+    lis_buffer_type  L_;
+
+  public:
+    thread(const align_pb& a) : align_data_(a) { }
+
+    void align_sequence(parse_sequence& parser, const size_t pb_size);
+    void align_sequence(const std::string& seq) {
+      parse_sequence parser(seq);
+      align_sequence(parser, seq.size());
+    }
+    void align_sequence_max(parse_sequence& parser, const size_t pb_size);
+    void align_sequence_max(const std::string& seq) {
+      parse_sequence parser(seq);
+      align_sequence_max(parser, seq.size());
+    }
+    const coords_info_type& coords() const { return coords_; }
+    const frags_pos_type& frags_pos() const { return frags_pos_; }
+  };
+  friend class thread;
+
+  // static void align_pb_reads(mer_pos_hash_type& hash, double stretch_const, double stretch_factor,
+  //                            bool forward, const char* pb_path,
+  //                            const int* lengths = 0, const int nb_unitigs = 0, const unsigned int k_len = 0,
+  //                            double matching_mers = 0.0, double matching_bases = 0.0);
 };
 
-void align_pb_reads(int threads, mer_pos_hash_type& hash, double stretch_const, double stretch_factor,
-                    bool compress, bool forward, bool duplicated,
-                    const char* pb_path,
-                    const char* coords_path = 0, const char* details_path = 0,
-                    const int* lengths = 0, const int nb_unitigs = 0, const unsigned int k_len = 0,
-                    double matching_mers = 0.0, double matching_bases = 0.0);
 
 #endif /* _PB_ALIGNER_HPP_ */
