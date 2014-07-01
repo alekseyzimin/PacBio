@@ -29,7 +29,7 @@ align_pb::coords_info align_pb::compute_coords_info(const mer_lists& ml, const s
     if(nb_mers == 0) return info;
     const std::vector<pb_sr_offsets>& offsets = fwd_align ? ml.fwd.offsets : ml.bwd.offsets;
     const std::vector<unsigned int>&  lis     = fwd_align ? ml.fwd.lis : ml.bwd.lis;
-    compute_kmers_info<align_pb>      kmers_info(info.kmers_info, info.bases_info, info.qname, *this);
+    compute_kmers_info                kmers_info(info.kmers_info, info.bases_info, info.qname, k_len_, unitigs_lengths_);
     least_square_2d                   least_square;
     {
       auto          lisit = lis.cbegin();
@@ -137,26 +137,6 @@ void align_pb::do_all_LIS(frags_pos_type& frags_pos, lis_buffer_type& L, double 
     it.second.do_LIS(a, b, L);
 }
 
-// static void align_pb::align_pb_reads(mer_pos_hash_type& hash, double stretch_const, double stretch_factor,
-//                                      bool forward, const char* pb_path,
-//                                      const int* lengths, const int nb_unitigs, const unsigned int k_len,
-//                                      double matching_mers, double matching_bases) {
-//   file_vector files;
-//   files.push_back(pb_path);
-//   stream_manager streams(files.cbegin(), files.cend());
-//   align_pb aligner(threads, hash, streams, stretch_const, stretch_factor,
-//                    forward,
-//                    matching_mers, matching_bases);
-//   if(coords_path) aligner.coords_multiplexer(coords.multiplexer(), true);
-//   if(details_path) aligner.details_multiplexer(details.multiplexer());
-//   std::vector<int> unitigs_lengths;
-//   if(nb_unitigs && lengths && k_len) {
-//     unitigs_lengths.insert(unitigs_lengths.begin(), lengths, lengths + nb_unitigs);
-//     aligner.unitigs_lengths(&unitigs_lengths, k_len);
-//   }
-//   aligner.exec_join(threads);
-// }
-
 std::string align_pb::reverse_super_read_name(const std::string& name) {
   std::string res;
   const size_t nsize = name.size();
@@ -197,4 +177,63 @@ void align_pb::thread::align_sequence_max(parse_sequence& parser, const size_t p
   frags_pos_.clear();
   coords_.clear();
   align_data_.align_sequence_max(parser, pb_size, coords_, frags_pos_, L_);
+}
+
+align_pb::compute_kmers_info::compute_kmers_info(std::vector<int>& mers, std::vector<int>& bases, const std::string& name,
+                                                 unsigned int k_len, const std::vector<int>* ul) :
+  mers_(mers), bases_(bases), sr_name_(k_len && name.size() ? new super_read_name(name) : 0),
+  cunitig_(0), cend_(0), prev_pos_(-mer_dna::k()),
+  k_len_(k_len), unitigs_lengths_(ul)
+{
+  if(sr_name_) {
+    const auto unitig_id = sr_name_->unitig_id(0);
+    if(unitig_id != super_read_name::invalid && unitig_id < nb_unitigs()) {
+      mers_.resize(2 * sr_name_->size() - 1, 0);
+      bases_.resize(2 * sr_name_->size() - 1, 0);
+      cend_ = unitig_length(unitig_id);
+    } else // error
+      sr_name_.reset();
+  }
+}
+
+void align_pb::compute_kmers_info::add_mer(const int pos) {
+  if(!sr_name_) return;
+
+  int       cendi;
+  const int sr_pos = abs(pos);
+  const int new_bases   = std::min((int)mer_dna::k(), sr_pos - prev_pos_);
+  while(sr_pos + (int)mer_dna::k() > cend_ + 1) {
+    if(cend_ >= sr_pos) {
+      const int nb_bases = cend_ - std::max(sr_pos, prev_pos_ + (int)mer_dna::k()) + 1;
+      bases_[2 * cunitig_]     += nb_bases;
+      bases_[2 * cunitig_ + 1] += nb_bases;
+    }
+    const auto unitig_id = sr_name_->unitig_id(++cunitig_);
+    if(unitig_id == super_read_name::invalid || unitig_id >= nb_unitigs())
+      goto error;
+    cend_ += unitig_length(unitig_id) - k_len_+ 1;
+  }
+  ++mers_[2 * cunitig_];
+  bases_[2 * cunitig_] += new_bases;
+  cendi                 = cend_;
+  for(unsigned int i = cunitig_; (i < sr_name_->size() - 1) && (sr_pos + mer_dna::k() > cendi - k_len_ + 1); ++i) {
+    const int  full_mer   = sr_pos + (int)k_len_ > cendi + 1;
+    mers_[2 * i + 1]     += full_mer;
+    mers_[2 * i + 2]     += full_mer;
+    const int  nb_bases   = std::min(new_bases, sr_pos + (int)mer_dna::k() - cendi + (int)k_len_ - 2);
+    bases_[2 * i + 1]    += nb_bases;
+    bases_[2 * i + 2]    += nb_bases;
+    const auto unitig_id  = sr_name_->unitig_id(i + 1);
+    if(unitig_id != super_read_name::invalid && unitig_id < nb_unitigs())
+      cendi += unitig_length(unitig_id) - k_len_ + 1;
+    else
+      goto error;
+  }
+  prev_pos_ = sr_pos;
+  return;
+
+ error:
+  sr_name_.reset();
+  mers_.clear();
+  bases_.clear();
 }

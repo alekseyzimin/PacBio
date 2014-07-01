@@ -11,16 +11,16 @@ struct mock_align_pb {
 
 TEST(ComputeKmersInfo, SimpleOverlap) {
   mer_dna::k(17);
-  mock_align_pb aligner;
-  aligner.k_len_ = 31;
-  aligner.unitigs_lengths_.reset(new vi({ 100, 100, 100 }));
+  static const unsigned int k_len = 31;
+  const std::vector<int> ul({ 100, 100, 100 });
+  //  aligner.unitigs_lengths_.reset(new vi({ 100, 100, 100 }));
   const std::string bad_name = "0F_1R_3F";
   const std::string good_name = "0F_1R_2F";
 
   vi bad_mer_info, good_mer_info;
   vi bad_base_info, good_base_info;
-  align_pb::compute_kmers_info<mock_align_pb> compute_bad(bad_mer_info, bad_base_info, bad_name, aligner);
-  align_pb::compute_kmers_info<mock_align_pb> compute_good(good_mer_info, good_base_info, good_name, aligner);
+  align_pb::compute_kmers_info compute_bad(bad_mer_info, bad_base_info, bad_name, k_len, &ul);
+  align_pb::compute_kmers_info compute_good(good_mer_info, good_base_info, good_name, k_len, &ul);
   EXPECT_EQ(vi({0, 0, 0, 0, 0}), bad_mer_info);
   EXPECT_EQ(vi({0, 0, 0, 0, 0}), good_mer_info);
   EXPECT_EQ(vi({0, 0, 0, 0, 0}), bad_base_info);
@@ -61,13 +61,12 @@ TEST(ComputeKmersInfo, SimpleOverlap) {
 
 TEST(ComputeKmersInfo, ComplexOverlap) {
   mer_dna::k(17);
-  mock_align_pb aligner;
-  aligner.k_len_ = 31;
-  aligner.unitigs_lengths_.reset(new vi({ 100, 31, 31, 40, 100 }));
+  static const unsigned int k_len = 31;
+  std::vector<int> unitigs_lengths({ 100, 31, 31, 40, 100 });
   const std::string name = "0F_1R_2F_3R_4F";
 
   vi mer_info, base_info;
-  align_pb::compute_kmers_info<mock_align_pb> compute(mer_info, base_info, name, aligner);
+  align_pb::compute_kmers_info compute(mer_info, base_info, name, k_len, &unitigs_lengths);
   EXPECT_EQ(vi({0, 0, 0, 0, 0, 0, 0, 0, 0}), mer_info);
   EXPECT_EQ(vi({0, 0, 0, 0, 0, 0, 0, 0, 0}), base_info);
 

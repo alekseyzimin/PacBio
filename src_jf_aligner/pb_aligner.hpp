@@ -181,77 +181,23 @@ public:
   // and that are shared between the k-unitigs. It handles errors
   // gracefully (the kmers_info array is then empty) and can be a NOOP
   // if the super read name is empty.
-  template<typename AlignerT>
   struct compute_kmers_info {
-    std::vector<int>&                mers_;
-    std::vector<int>&                bases_;
-    std::unique_ptr<super_read_name> sr_name_;
-    unsigned int                     cunitig_;
-    int                              cend_;
-    int                              prev_pos_;
-    const AlignerT&                  aligner_;
+    std::vector<int>&                      mers_;
+    std::vector<int>&                      bases_;
+    std::unique_ptr<super_read_name>       sr_name_;
+    unsigned int                           cunitig_;
+    int                                    cend_;
+    int                                    prev_pos_;
+    const unsigned int                     k_len_;
+    const std::vector<int>* const          unitigs_lengths_;
 
-    compute_kmers_info(std::vector<int>& mers, std::vector<int>& bases, const std::string& name, const AlignerT& aligner) :
-      mers_(mers), bases_(bases), sr_name_(aligner.k_len_ && name.size() ? new super_read_name(name) : 0),
-      cunitig_(0), cend_(0), prev_pos_(-mer_dna::k()), aligner_(aligner)
-    {
-      if(sr_name_) {
-        const auto unitig_id = sr_name_->unitig_id(0);
-        if(unitig_id != super_read_name::invalid && unitig_id < nb_unitigs()) {
-          mers_.resize(2 * sr_name_->size() - 1, 0);
-          bases_.resize(2 * sr_name_->size() - 1, 0);
-          cend_ = unitigs_lengths(unitig_id);
-        } else // error
-          sr_name_.reset();
-      }
-    }
+    compute_kmers_info(std::vector<int>& mers, std::vector<int>& bases, const std::string& name,
+                       unsigned int k_len, const std::vector<int>* ul);
 
+    size_t nb_unitigs() const { return unitigs_lengths_->size(); }
+    int unitig_length(int id) const { return (*unitigs_lengths_)[id]; }
 
-    int unitigs_lengths(long int id) const { return (*aligner_.unitigs_lengths_)[id]; }
-    size_t nb_unitigs() const { return aligner_.unitigs_lengths_->size(); }
-    unsigned int k_len() const { return aligner_.k_len_; }
-
-    void add_mer(const int pos) {
-      if(!sr_name_) return;
-
-      int       cendi;
-      const int sr_pos = abs(pos);
-      const int new_bases   = std::min((int)mer_dna::k(), sr_pos - prev_pos_);
-      while(sr_pos + (int)mer_dna::k() > cend_ + 1) {
-        if(cend_ >= sr_pos) {
-          const int nb_bases = cend_ - std::max(sr_pos, prev_pos_ + (int)mer_dna::k()) + 1;
-          bases_[2 * cunitig_]     += nb_bases;
-          bases_[2 * cunitig_ + 1] += nb_bases;
-        }
-        const auto unitig_id = sr_name_->unitig_id(++cunitig_);
-        if(unitig_id == super_read_name::invalid || unitig_id >= nb_unitigs())
-          goto error;
-        cend_ += unitigs_lengths(unitig_id) - k_len() + 1;
-      }
-      ++mers_[2 * cunitig_];
-      bases_[2 * cunitig_] += new_bases;
-      cendi                 = cend_;
-      for(unsigned int i = cunitig_; (i < sr_name_->size() - 1) && (sr_pos + mer_dna::k() > cendi - k_len() + 1); ++i) {
-        const int  full_mer   = sr_pos + (int)k_len() > cendi + 1;
-        mers_[2 * i + 1]     += full_mer;
-        mers_[2 * i + 2]     += full_mer;
-        const int  nb_bases   = std::min(new_bases, sr_pos + (int)mer_dna::k() - cendi + (int)k_len() - 2);
-        bases_[2 * i + 1]    += nb_bases;
-        bases_[2 * i + 2]    += nb_bases;
-        const auto unitig_id  = sr_name_->unitig_id(i + 1);
-        if(unitig_id != super_read_name::invalid && unitig_id < nb_unitigs())
-          cendi += unitigs_lengths(unitig_id) - k_len() + 1;
-        else
-          goto error;
-      }
-      prev_pos_ = sr_pos;
-      return;
-
-    error:
-      sr_name_.reset();
-      mers_.clear();
-      bases_.clear();
-    }
+    void add_mer(const int pos);
   };
 
 
