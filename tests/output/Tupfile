@@ -1,0 +1,3 @@
+SRC = ../../src_jf_aligner
+
+: test_aligner_output.sh | $(SRC)/jf_aligner |> ./%f > %o 2>&1 |> test_aligner_output.log | details_normal coords_normal details_forward coords_forward

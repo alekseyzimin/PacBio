@@ -9,16 +9,26 @@
 
 namespace {
 class FragsCoords : public ::testing::Test {
-public:
-  FragsCoords() : unitigs_lengths({ 0, 3000, 1043, 733, 1043, 1044, 0, 1822 }) { }
-
 protected:
   virtual void SetUp() {
-    std::ifstream file(sr_file);
-    file.seekg(0, std::ios::end);
-    super_read_approx_len = file.tellg();
-
     std::string line;
+    {
+      std::ifstream lengths(ul_file);
+      int i, l;
+      while(true) {
+        lengths >> i >> l;
+        if(!lengths.good()) break;
+        unitigs_lengths.push_back(l);
+        std::cout << "l:" << l << "\n";
+      }
+    }
+
+    {
+      std::ifstream file(sr_file);
+      file.seekg(0, std::ios::end);
+      super_read_approx_len = file.tellg();
+    }
+
     {
       std::ifstream pb(pb_file);
       pb.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -44,13 +54,10 @@ protected:
   size_t                             super_read_approx_len;
   std::string                        pb_sequence;
   std::map<std::string, std::string> sr_sequences;
-  static constexpr const char* pb_file           = "test_pacbio.fa";
-  static constexpr const char* sr_file           = "test_super_reads.fa";
-  const std::vector<int> unitigs_lengths;
-
-  // static constexpr const int unitig_lengths_[8] = {
-  //   0, 3000, 1043, 733, 1043, 1044, 0, 1822
-  // };
+  static constexpr const char* pb_file           = "output/test_pacbio.fa";
+  static constexpr const char* sr_file           = "output/test_super_reads.fa";
+  static constexpr const char* ul_file           = "output/test_unitigs_lengths";
+  std::vector<int> unitigs_lengths;
   static const int mer_len = 65; // mer len for k-unitigs
 };
 

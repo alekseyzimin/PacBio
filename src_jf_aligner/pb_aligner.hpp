@@ -10,6 +10,7 @@
 #include <src_jf_aligner/least_square_2d.hpp>
 #include <src_lis/lis_align.hpp>
 #include <jellyfish/thread_exec.hpp>
+#include <debug.hpp>
 
 class align_pb {
   const mer_pos_hash_type& ary_;

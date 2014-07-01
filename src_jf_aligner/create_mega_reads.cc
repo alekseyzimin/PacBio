@@ -19,7 +19,7 @@ public:
   { }
 };
 
-void print_alignments(read_parser* reads, Multiplexer* output_m, const align_pb* align_data) {
+void create_mega_reads(read_parser* reads, Multiplexer* output_m, const align_pb* align_data) {
   mer_dna                  tmp_m;
   parse_sequence           parser;
   align_pb::thread         aligner(*align_data);
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
   // Output alignements
   std::vector<std::thread> threads;
   for(unsigned int i = 0; i < args.threads_arg; ++i)
-    threads.push_back(std::thread(print_alignments, &reads, output.multiplexer(), &align_data));
+    threads.push_back(std::thread(create_mega_reads, &reads, output.multiplexer(), &align_data));
   for(unsigned int i = 0; i < args.threads_arg; ++i)
     threads[i].join();
 

@@ -51,6 +51,16 @@ public:
     return res;
   }
 
+  // // Return the length of the longest overlap by unitigs between two
+  // // super reads, in a dovetail fashion. The return value is the
+  // // largest integer m such that the last m k-unitigs of *this are
+  // // equal to the first m k-unitigs of rhs. Note that this
+  // // relationship is NOT symmetrical, i.e. *this overlaps with rhs and
+  // // comes before rhs.
+  // int overlap(const super_read_name& rhs) {
+    
+  // }
+
 protected:
   static std::vector<size_t> parse(std::string name) {
     std::vector<size_t> res;

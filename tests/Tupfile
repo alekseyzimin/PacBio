@@ -26,8 +26,6 @@ LDFLAGS += $(JELLYFISH_LIBS)
 CLIBS = libgtest_main.a ../lib/libcommon.a
 SRC = ../src_jf_aligner
 
-# test_aligner_output = ../src_jf_aligner/pb_aligner.o
-
 : foreach $(TESTS1)            |> !cxx  |> {tests1}
 : foreach {tests1}  | $(CLIBS) |> !lxxd |> %B {all_tests}
 

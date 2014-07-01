@@ -5,6 +5,7 @@
 #include <src_jf_aligner/jf_aligner_cmdline.hpp>
 #include <src_jf_aligner/superread_parser.hpp>
 #include <src_jf_aligner/pb_aligner.hpp>
+#include <debug.hpp>
 
 jf_aligner_cmdline args;
 
@@ -159,9 +160,10 @@ int main(int argc, char *argv[])
       jf_aligner_cmdline::error() << "Failed to open unitig lengths map file '" << args.unitigs_lengths_arg << "'";
     std::string unitig;
     unsigned int len;
+    is >> unitig >> len;
     while(is.good()) {
-      is >> unitig >> len;
       unitigs_lengths->push_back(len);
+      is >> unitig >> len;
     }
   }
 
