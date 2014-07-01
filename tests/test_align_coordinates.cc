@@ -19,7 +19,6 @@ protected:
         lengths >> i >> l;
         if(!lengths.good()) break;
         unitigs_lengths.push_back(l);
-        std::cout << "l:" << l << "\n";
       }
     }
 
@@ -134,7 +133,7 @@ void check_info(const align_pb::coords_info e, const align_pb::coords_info a) {
   EXPECT_EQ(e.rl, a.rl);
   EXPECT_EQ(e.ql, a.ql);
   EXPECT_EQ(e.rn, a.rn);
-  EXPECT_EQ(e.qname, a.qname);
+  EXPECT_EQ(e.qname, a.unitigs.name());
   EXPECT_NEAR(e.stretch, a.stretch, 1e-4);
   EXPECT_NEAR(e.offset, a.offset, 1e-1);
   EXPECT_NEAR(e.avg_err, a.avg_err, 1e-3);
@@ -142,8 +141,8 @@ void check_info(const align_pb::coords_info e, const align_pb::coords_info a) {
 
 void check_coords(std::map<std::string, align_pb::coords_info> res, const align_pb::coords_info_type& coords) {
   for(const auto& info : coords) {
-    auto it = res.find(info.qname);
-    EXPECT_NE(res.end(), it);
+    auto it = res.find(info.unitigs.name());
+    ASSERT_NE(res.end(), it);
     check_info(it->second, info);
   }
 }

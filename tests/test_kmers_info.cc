@@ -16,11 +16,13 @@ TEST(ComputeKmersInfo, SimpleOverlap) {
   //  aligner.unitigs_lengths_.reset(new vi({ 100, 100, 100 }));
   const std::string bad_name = "0F_1R_3F";
   const std::string good_name = "0F_1R_2F";
+  const super_read_name bad_sr(bad_name);
+  const super_read_name good_sr(good_name);
 
   vi bad_mer_info, good_mer_info;
   vi bad_base_info, good_base_info;
-  align_pb::compute_kmers_info compute_bad(bad_mer_info, bad_base_info, bad_name, k_len, &ul);
-  align_pb::compute_kmers_info compute_good(good_mer_info, good_base_info, good_name, k_len, &ul);
+  align_pb::compute_kmers_info compute_bad(bad_mer_info, bad_base_info, bad_sr, k_len, &ul);
+  align_pb::compute_kmers_info compute_good(good_mer_info, good_base_info, good_sr, k_len, &ul);
   EXPECT_EQ(vi({0, 0, 0, 0, 0}), bad_mer_info);
   EXPECT_EQ(vi({0, 0, 0, 0, 0}), good_mer_info);
   EXPECT_EQ(vi({0, 0, 0, 0, 0}), bad_base_info);
@@ -64,9 +66,10 @@ TEST(ComputeKmersInfo, ComplexOverlap) {
   static const unsigned int k_len = 31;
   std::vector<int> unitigs_lengths({ 100, 31, 31, 40, 100 });
   const std::string name = "0F_1R_2F_3R_4F";
+  const super_read_name sr(name);
 
   vi mer_info, base_info;
-  align_pb::compute_kmers_info compute(mer_info, base_info, name, k_len, &unitigs_lengths);
+  align_pb::compute_kmers_info compute(mer_info, base_info, sr, k_len, &unitigs_lengths);
   EXPECT_EQ(vi({0, 0, 0, 0, 0, 0, 0, 0, 0}), mer_info);
   EXPECT_EQ(vi({0, 0, 0, 0, 0, 0, 0, 0, 0}), base_info);
 

@@ -117,6 +117,7 @@ public:
     size_t           rl, ql;
     bool             rn;
     std::string      qname;
+    super_read_name  unitigs;
     std::vector<int> kmers_info; // Number of k-mers in k-unitigs and common between unitigs
     std::vector<int> bases_info; // Number of bases in k-unitigs and common between unitigs
     double           stretch, offset, avg_err; // Least square stretch, offset and average error
@@ -125,6 +126,7 @@ public:
       nb_mers(n),
       pb_cons(0), sr_cons(0), pb_cover(mer_dna::k()), sr_cover(mer_dna::k()),
       rl(rl), ql(ql), rn(false), qname(name),
+      unitigs(name),
       stretch(0), offset(0), avg_err(0)
     { }
     coords_info(int rs_, int re_, int qs_, int qe_, int nb_mers_,
@@ -137,6 +139,7 @@ public:
       pb_cons(pb_cons_), sr_cons(sr_cons_),
       pb_cover(pb_cover_), sr_cover(sr_cover_),
       rl(rl_), ql(ql_), rn(rn_), qname(qname_),
+      unitigs(qname_),
       stretch(stretch_), offset(offset_), avg_err(avg_err_)
     { }
 
@@ -182,16 +185,16 @@ public:
   // gracefully (the kmers_info array is then empty) and can be a NOOP
   // if the super read name is empty.
   struct compute_kmers_info {
-    std::vector<int>&                      mers_;
-    std::vector<int>&                      bases_;
-    std::unique_ptr<super_read_name>       sr_name_;
-    unsigned int                           cunitig_;
-    int                                    cend_;
-    int                                    prev_pos_;
-    const unsigned int                     k_len_;
-    const std::vector<int>* const          unitigs_lengths_;
+    std::vector<int>&             mers_;
+    std::vector<int>&             bases_;
+    const super_read_name&        sr_name_;
+    unsigned int                  cunitig_;
+    int                           cend_;
+    int                           prev_pos_;
+    const unsigned int            k_len_;
+    const std::vector<int>* const unitigs_lengths_;
 
-    compute_kmers_info(std::vector<int>& mers, std::vector<int>& bases, const std::string& name,
+    compute_kmers_info(std::vector<int>& mers, std::vector<int>& bases, const super_read_name& sr_name,
                        unsigned int k_len, const std::vector<int>* ul);
 
     size_t nb_unitigs() const { return unitigs_lengths_->size(); }

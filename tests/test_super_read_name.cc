@@ -5,7 +5,7 @@ namespace {
 TEST(SuperReadName, Parse) {
   super_read_name n1("");
   EXPECT_EQ((size_t)0, n1.nb_unitigs());
-  EXPECT_EQ("", n1.reverse().name());
+  EXPECT_EQ("", n1.get_reverse().name());
   {
     const auto u = n1[0];
     EXPECT_EQ(std::numeric_limits<unsigned long>::max(), u.id);
@@ -15,7 +15,7 @@ TEST(SuperReadName, Parse) {
 
   super_read_name n2("1234F");
   EXPECT_EQ((size_t)1, n2.nb_unitigs());
-  EXPECT_EQ("1234R", n2.reverse().name());
+  EXPECT_EQ("1234R", n2.get_reverse().name());
   {
     const auto u = n2[0];
     EXPECT_EQ((unsigned long)1234, u.id);

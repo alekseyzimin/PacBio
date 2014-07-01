@@ -6,13 +6,14 @@
 #include <debug.hpp>
 
 class super_read_name {
-  const std::vector<long> unitigs_;
+  std::vector<long> unitigs_;
 
 public:
   static const unsigned long invalid = std::numeric_limits<unsigned long>::max();
 
-  super_read_name(const std::string& name) : unitigs_(parse(name)) { }
-  super_read_name(std::vector<long>&& unitigs) : unitigs_(std::move(unitigs)) { }
+  super_read_name() = default;
+  explicit super_read_name(const std::string& name) : unitigs_(parse(name)) { }
+  explicit super_read_name(std::vector<long>&& unitigs) : unitigs_(std::move(unitigs)) { }
 
   struct unitig {
     unsigned long id;
@@ -49,16 +50,21 @@ public:
   //   }
   // }
 
-  super_read_name reverse() const {
+  void reverse() {
     const size_t n = unitigs_.size();
-    std::vector<long> us(n, 0);
-    for(size_t i = 0; i < us.size() / 2; ++i) {
-      us[i]         = -unitigs_[n - i - 1];
-      us[n - i - 1] = -unitigs_[i];
+    for(size_t i = 0; i < unitigs_.size() / 2; ++i) {
+      long tmp            = unitigs_[i];
+      unitigs_[i]         = -unitigs_[n - i - 1];
+      unitigs_[n - i - 1] = -tmp;
     }
     if(n % 2 == 1)
-      us[n / 2] = -unitigs_[n / 2];
-    return super_read_name(std::move(us));
+      unitigs_[n / 2] = -unitigs_[n / 2];
+  }
+
+  super_read_name get_reverse() const {
+    super_read_name res(*this);
+    res.reverse();
+    return res;
   }
 
   // Return the length of the longest overlap by unitigs between two
