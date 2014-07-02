@@ -6,11 +6,15 @@ struct set {
   int  rank;
   set* parent;
   set() : rank(0), parent(this) { }
-  set(const set& s) = delete;
-  set(set&& s) = delete;
+  // set(const set& s) = delete;
+  // set(set&& s) = delete;
   inline set* root(); // equivalent to find_root
   bool operator==(set& rhs) { return root() == rhs.root(); }
   inline set& operator|=(set& rhs); // equivalent to union_sets
+  void reset() {
+    rank = 0;
+    parent = this;
+  }
 };
 
 void union_sets(set* s1, set* s2);

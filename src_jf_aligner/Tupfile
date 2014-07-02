@@ -11,4 +11,4 @@ LDFLAGS += $(JELLYFISH_LIBS)
 : create_mega_reads.cc | create_mega_reads_cmdline.hpp |> !cxx |>
 
 : jf_aligner.o pb_aligner.o superread_parser.o |> !lxxd |> jf_aligner
-: create_mega_reads.o pb_aligner.o superread_parser.o |> !lxxd |> create_mega_reads
+: create_mega_reads.o pb_aligner.o superread_parser.o union_find.o |> !lxxd |> create_mega_reads
