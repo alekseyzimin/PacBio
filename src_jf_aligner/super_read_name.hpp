@@ -12,27 +12,29 @@ public:
   static const unsigned long invalid = std::numeric_limits<unsigned long>::max();
 
   super_read_name() = default;
+  explicit super_read_name(size_t n) : unitigs_(n) { }
   explicit super_read_name(const std::string& name) : unitigs_(parse(name)) { }
   explicit super_read_name(std::vector<long>&& unitigs) : unitigs_(std::move(unitigs)) { }
+  // super_read_name(super_read_name&& rhs) : unitigs_(std::move(rhs.unitigs_)) { }
+  // super_read_name(const super_read_name& rhs) : unitigs_(rhs.unitigs_) { }
 
   struct unitig {
     unsigned long id;
     char          ori; // 'F' or 'R'
   };
 
+  const std::vector<long>& unitigs() const { return unitigs_; }
   size_t nb_unitigs() const { return unitigs_.size(); }
   size_t size() const { return nb_unitigs(); }
   std::string unitig_name(long i) const { return std::to_string(abs(i)) + (i > 0 ? 'F' : 'R'); }
-  std::string name() const {
-    std::string res;
-    auto it = unitigs_.cbegin();
-    if(it != unitigs_.cend()) {
-      res += unitig_name(*it);
-      for(++it; it != unitigs_.cend(); ++it)
-        (res += '_') += unitig_name(*it);
-    }
-    return res;
-  }
+  std::string name() const;
+
+  void append(const super_read_name& rhs, size_t skip = 0);
+
+  // Prepend all but 'all_but' elements from the 'rhs' into 'this'
+  // starting at position 'offset'. Returns 'offset' minus the number
+  // of elements copied. If 'rhs' is too big, nothing is copied.
+  size_t prepend(const super_read_name& rhs, size_t all_but = 0, size_t offset = std::numeric_limits<size_t>::max());
 
   unitig operator[](size_t i) const {
     if(i < nb_unitigs())
@@ -50,16 +52,7 @@ public:
   //   }
   // }
 
-  void reverse() {
-    const size_t n = unitigs_.size();
-    for(size_t i = 0; i < unitigs_.size() / 2; ++i) {
-      long tmp            = unitigs_[i];
-      unitigs_[i]         = -unitigs_[n - i - 1];
-      unitigs_[n - i - 1] = -tmp;
-    }
-    if(n % 2 == 1)
-      unitigs_[n / 2] = -unitigs_[n / 2];
-  }
+  void reverse();
 
   super_read_name get_reverse() const {
     super_read_name res(*this);
@@ -74,35 +67,13 @@ public:
   // relationship is NOT symmetrical, i.e. if *this overlaps with rhs
   // then it comes before rhs. If the return is 0, there is no
   // overlap.
-  int overlap(const super_read_name& rhs) const {
-    if(rhs.unitigs_.empty()) return 0;
-    const long fu = rhs.unitigs_.front();
-
-    for(auto it = std::find(unitigs_.cbegin(), unitigs_.cend(), fu);
-        it != unitigs_.cend();
-        it = std::find(it + 1, unitigs_.cend(), fu)) {
-      const int olen = unitigs_.cend() - it;
-      if(olen <= rhs.unitigs_.size() && std::equal(it, unitigs_.cend(), rhs.unitigs_.cbegin()))
-        return olen;
-    }
-    return 0;
-  }
+  int overlap(const super_read_name& rhs) const;
 
 protected:
-  static std::vector<long> parse(std::string name) {
-    std::vector<long> res;
-    if(!name.empty()) {
-      size_t pn = 0;
-      for(size_t n = name.find_first_of('_'); n != std::string::npos; pn = n + 1, n = name.find_first_of('_', pn)) {
-        long id = std::stoul(name.c_str() + pn);
-        res.push_back(name[n - 1] == 'R' ? -id : id);
-      }
-      long id = std::stoul(name.c_str() + pn);
-      res.push_back(name[name.size() - 1] == 'R' ? -id : id);
-    }
-    return res;
-  }
+  static std::vector<long> parse(std::string name);
+
+  friend std::ostream& operator<<(std::ostream& os, const super_read_name& sr);
 };
 
-
+std::ostream& operator<<(std::ostream& os, const super_read_name& sr);
 #endif /* __SUPER_READ_NAME_H__ */

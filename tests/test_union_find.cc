@@ -57,7 +57,7 @@ TEST(UnionFind, Test) {
 
   {
     auto components = find_components(elements.begin(), elements.end());
-    EXPECT_EQ(size, components.size());
+    EXPECT_EQ((size_t)size, components.size());
   }
 
   for(int i = 0; i < size; ++i) {
@@ -67,7 +67,7 @@ TEST(UnionFind, Test) {
   }
 
   auto components = find_components(elements.begin(), elements.end());
-  EXPECT_EQ(size / comp + (size % comp > 0), components.size());
+  EXPECT_EQ((size_t)(size / comp + (size % comp > 0)), components.size());
 
   for(auto& c : components) {
     auto& elements = c.second;

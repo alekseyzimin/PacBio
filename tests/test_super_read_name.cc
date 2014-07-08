@@ -71,4 +71,84 @@ TEST(SuperReadName, Overlap) {
   EXPECT_EQ(0, sr3.overlap(sr2));
 } // SuperReadName.Overlap
 
+TEST(SuperReadName, NameOutput) {
+  super_read_name    empty("");
+  EXPECT_EQ("", empty.name());
+  {
+    std::ostringstream os; os << empty;
+    EXPECT_EQ("", os.str());
+  }
+
+  super_read_name onef("54312F");
+  super_read_name oner("652R");
+  EXPECT_EQ("54312F", onef.name());
+  EXPECT_EQ("652R", oner.name());
+  {
+    std::ostringstream os; os << onef;
+    EXPECT_EQ("54312F", os.str());
+  }
+  {
+    std::ostringstream os; os << oner;
+    EXPECT_EQ("652R", os.str());
+  }
+
+  super_read_name many("1R_2F_65340R_123F");
+  EXPECT_EQ("1R_2F_65340R_123F", many.name());
+  {
+    std::ostringstream os; os << many;
+    EXPECT_EQ("1R_2F_65340R_123F", os.str());
+  }
+
+}
+
+TEST(SuperReadName, Append) {
+  super_read_name sr;
+  EXPECT_EQ("", sr.name());
+
+  {
+    super_read_name sra;
+    sr.append(sra);
+    EXPECT_EQ("", sr.name());
+  }
+  {
+    super_read_name sra("1R_2F");
+    sr.append(sra);
+    EXPECT_EQ("1R_2F", sr.name());
+  }
+  {
+    super_read_name sra("1F_2R");
+    sr.append(sra, 1);
+    EXPECT_EQ("1R_2F_2R", sr.name());
+  }
+  {
+    super_read_name sra("3F_4R");
+    sr.append(sra, 2);
+    EXPECT_EQ("1R_2F_2R", sr.name());
+  }
+}
+
+TEST(SuperReadName, Prepend) {
+  super_read_name sr(10);
+  EXPECT_EQ("0R_0R_0R_0R_0R_0R_0R_0R_0R_0R", sr.name());
+  size_t offset;
+
+  {
+    super_read_name sra("3F_4R");
+    offset = sr.prepend(sra);
+    EXPECT_EQ("0R_0R_0R_0R_0R_0R_0R_0R_3F_4R", sr.name());
+    EXPECT_EQ((size_t)8, offset);
+  }
+  super_read_name sra("1F_2F_3F_4F_5F_6F_7F_8F_9F");
+  offset = sr.prepend(sra, 0, offset);
+  EXPECT_EQ("0R_0R_0R_0R_0R_0R_0R_0R_3F_4R", sr.name());
+  EXPECT_EQ((size_t)8, offset);
+
+  offset = sr.prepend(sra, 3, offset);
+  EXPECT_EQ("0R_0R_1F_2F_3F_4F_5F_6F_3F_4R", sr.name());
+  EXPECT_EQ((size_t)2, offset);
+
+  offset = sr.prepend(sra, 7, offset);
+  EXPECT_EQ("1F_2F_1F_2F_3F_4F_5F_6F_3F_4R", sr.name());
+  EXPECT_EQ((size_t)0, offset);
+}
 } // empty namespace
