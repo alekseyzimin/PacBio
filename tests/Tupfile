@@ -9,8 +9,7 @@ CXXFLAGS += -I$(TUP_CWD)
 # Compile individual tests
 export PKG_CONFIG_PATH
 CXXFLAGS += -I..
-LDFLAGS += -pthread -L$(TUP_CWD) -lgtest_main -L../lib
-LDLIBS_test_MurmurHash3 = -lcommon
+LDFLAGS  += -pthread -L$(TUP_CWD) -lgtest_main -L../lib
 
 TESTS  = test_lis.cc test_lf_forward_list.cc test_mer_pos_hash.cc 
 TESTS += test_lis_align.cc test_parsesequence.cc
@@ -23,19 +22,18 @@ CXXFLAGS += $(JELLYFISH_CFLAGS) -I../include
 LDFLAGS += $(JELLYFISH_LIBS)
 SRC = ../src_jf_aligner
 
-LDLIBS_test_super_read_name = $(SRC)/super_read_name.o
-LDLIBS_test_pb_aligner = $(SRC)/pb_aligner.o $(SRC)/superread_parser.o $(SRC)/super_read_name.o
-LDLIBS_test_superread_parser = $(SRC)/superread_parser.o
+LDFLAGS_test_MurmurHash3      = -lcommon
+LDLIBS_test_super_read_name   = $(SRC)/super_read_name.o
+LDLIBS_test_pb_aligner        = $(SRC)/pb_aligner.o $(SRC)/superread_parser.o $(SRC)/super_read_name.o
+LDLIBS_test_superread_parser  = $(SRC)/superread_parser.o
 LDLIBS_test_align_coordinates = $(SRC)/pb_aligner.o $(SRC)/superread_parser.o $(SRC)/super_read_name.o
-LDLIBS_test_kmers_info = $(SRC)/pb_aligner.o $(SRC)/super_read_name.o
-LDLIBS_test_union_find = $(SRC)/union_find.o
-CLIBS = libgtest_main.a ../lib/libcommon.a 
-CLIBS += $(LDLIBS_test_super_read_name) $(LDLIBS_test_pb_aligner) $(LDLIBS_test_superread_parser)
-CLIBS += $(LDLIBS_test_align_coordinates) $(LDLIBS_test_kmers_info) $(LDLIBS_test_union_find)
+LDLIBS_test_kmers_info        = $(SRC)/pb_aligner.o $(SRC)/super_read_name.o
+LDLIBS_test_union_find        = $(SRC)/union_find.o
+CLIBS  = libgtest_main.a ../lib/libcommon.a 
 
-: foreach $(TESTS)            |> !cxx  |> {tests}
-: foreach {tests}  | $(CLIBS) |> !lxxd |> %B {all_tests}
+: foreach $(TESTS)            |> !cxx           |> {tests}
+: foreach {tests}  | $(CLIBS) |> !lxxd          |> %B {all_tests}
+: foreach {all_tests}         |> ./%f > %o 2>&1 |> %f.log
 
 # : test_overlap_graph.o $(SRC)/overlap_graph.o $(SRC)/union_find.o        | $(CLIBS) |> !lxxd |> test_overlap_graph {all_tests}
 
-: foreach {all_tests} |> ./%f > %o 2>&1 |> %f.log
