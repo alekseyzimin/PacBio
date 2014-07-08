@@ -38,11 +38,11 @@ Find the longest (with most k-mers) path in the super-read overlap graph
  -t,--thread INT           Number of threads ($nb_threads)
  -o,--output PATH          Output prefix file ($output)
  -c,--compact              Compact output
- -e,--errors FLOAT         Number of average errors slack for implied position
+ -e,--errors FLOAT         Number of average errors slack for implied position ($nb_errors)
  -l,--length-unitigs FILE  File containing unitigs length
  -b,--bases                Use bases counts instead of k-mer counts
  -k                        Length of k-mer for creating k-unitigs in super reads
- -p,--overlap-play FLOAT   Play in the overlap length difference between position and k-unitigs lengths
+ -p,--overlap-play FLOAT   Play in the overlap length difference between position and k-unitigs lengths ($overlap_play)
     --dot PREFIX           Write an overlap graph (dot file) for each PacBio read
  -h,--help                 This message
 EOS
