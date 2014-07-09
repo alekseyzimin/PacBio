@@ -5,100 +5,23 @@
 #include <src_jf_aligner/create_mega_reads_cmdline.hpp>
 #include <src_jf_aligner/superread_parser.hpp>
 #include <src_jf_aligner/pb_aligner.hpp>
-#include <src_jf_aligner/union_find.hpp>
+#include <src_jf_aligner/overlap_graph.hpp>
 
 create_mega_reads_cmdline args;
 
-/**
- * A unique ptr to a multiplexed output stream with a convenient
- * constructor.
- */
-class mstream : public std::unique_ptr<Multiplexer::ostream> {
-public:
-  mstream(Multiplexer* m) :
-    std::unique_ptr<Multiplexer::ostream>(m ? new Multiplexer::ostream(m) : 0)
-  { }
-};
-
-struct node_info {
-  bool            start_node;
-  bool            end_node;
-  double          imp_s, imp_e;
-  union_find::set component;
-
-  node_info() = default;
-
-  void reset(const align_pb::coords_info& info) {
-    start_node = true;
-    end_node   = true;
-    imp_s = info.imp_s();
-    imp_e = info.imp_e();
-    component.reset();
-  }
-};
-
-struct overlap_graph {
-  double overlap_play;
-  unsigned int k_len;
-  const std::vector<int>& unitigs_lengths;
-  double nb_errors;
-
-  overlap_graph(double play, unsigned int len, const std::vector<int>& lengths, double errors) :
-    overlap_play(play), k_len(len), unitigs_lengths(lengths), nb_errors(errors)
-  { }
-
-  void traverse(const std::vector<int>& sort_array, const align_pb::coords_info_type& coords,
-                std::vector<node_info>& nodes) {
-    for(size_t it_i = 0; it_i != sort_array.size(); ++it_i) {
-      auto&       node_i   = nodes[it_i];
-      const auto& coords_i = coords[it_i];
-      if(node_i.imp_e >= coords_i.rl)
-        continue; // Hanging off 3' end of PacBio read: no overlap
-      for(size_t it_j = it_i + 1; it_j != sort_array.size(); ++it_j) {
-        auto&       node_j   = nodes[it_j];
-        const auto& coords_j = coords[it_j];
-        if(node_j.imp_s <= 1)
-          continue; // Hanging off 5' end of PacBio read: no overlap
-        const double position_len = node_i.imp_e - node_j.imp_s + 1;
-        if(position_len * overlap_play < k_len)
-          break; // maximum implied overlap is less than a k-mer length
-        const int nb_u_overlap = coords_i.unitigs.overlap(coords_j.unitigs);
-        if(!nb_u_overlap)
-          continue; // No overlap according to unitig names
-        int u_overlap_len = 0;
-        for(int i = 0; i < nb_u_overlap; ++i)
-          u_overlap_len += unitigs_lengths[coords_j.unitigs.unitig_id(i)];
-        u_overlap_len -= (nb_u_overlap - 1) * k_len;
-        double error = nb_errors * (coords_i.avg_err + coords_j.avg_err);
-        if(u_overlap_len > overlap_play * position_len + error || position_len > overlap_play * u_overlap_len + error)
-          continue; // Overlap lengths (position, unitigs) do not agree
-
-        // We have an overlap between nodes i and j
-        node_i.end_node    = false;
-        node_j.start_node  = false;
-        node_i.component  |= node_j.component;
-        
-      }
-    }
-  }
-};
-
-
 void create_mega_reads(read_parser* reads, Multiplexer* output_m, const align_pb* align_data,
                        overlap_graph* graph_walker) {
-  mer_dna                tmp_m;
-  parse_sequence         parser;
-  align_pb::thread       aligner(*align_data);
-  std::vector<int>       sort_array;
-  std::vector<node_info> nodes;
-
-  std::string name;
+  parse_sequence        parser;
+  align_pb::thread      aligner(*align_data);
+  overlap_graph::thread graph(*graph_walker);
+  std::string           name;
+  Multiplexer::ostream  output(output_m);
 
   while(true) {
     read_parser::job job(*reads);
     if(job.is_empty()) break;
 
-    for(size_t i = 0; i < job->nb_filled; ++i) { // Process each read
+    for(size_t i = 0; i < job->nb_filled; ++i) { // Process each PB read
       auto name_end = job->data[i].header.find_first_of(" \t\n\v\f\r");
       name = job->data[i].header.substr(0, name_end);
       const size_t pb_size = job->data[i].seq.size();
@@ -106,19 +29,11 @@ void create_mega_reads(read_parser* reads, Multiplexer* output_m, const align_pb
       aligner.align_sequence_max(parser, pb_size);
 
       const auto& coords = aligner.coords();
-      const int n = coords.size();
-      if((int)sort_array.size() < n)
-        sort_array.resize(n);
-      if((int)nodes.size() < n)
-        nodes.resize(n);
-      for(int i = 0; i < n; ++i) {
-        sort_array[i] = i;
-        nodes[i].reset(coords[i]);
-      }
-      std::sort(sort_array.begin(), sort_array.end() + n,
-                [&nodes] (int i, int j) { return nodes[i].imp_s < nodes[j].imp_s || (nodes[i].imp_s == nodes[j].imp_s &&
-                                                                                     nodes[i].imp_e < nodes[j].imp_e); });
-      graph_walker->traverse(sort_array, coords, nodes);
+      graph.reset(coords);
+      graph.traverse();
+      graph.compute_mega_reads(pb_size);
+      output << ">" << name << "\n";
+      graph.print_mega_reads(output);
     }
   }
 
@@ -168,7 +83,7 @@ int main(int argc, char *argv[])
   align_data.unitigs_lengths(&unitigs_lengths, args.k_mer_arg);
 
   // Output candidate mega_reads
-  overlap_graph graph_walker(args.overlap_play_arg, args.k_mer_arg, unitigs_lengths, args.errors_arg);
+  overlap_graph graph_walker(args.overlap_play_arg, args.k_mer_arg, unitigs_lengths, args.errors_arg, args.bases_flag);
   std::vector<std::thread> threads;
   for(unsigned int i = 0; i < args.threads_arg; ++i)
     threads.push_back(std::thread(create_mega_reads, &reads, output.multiplexer(), &align_data,

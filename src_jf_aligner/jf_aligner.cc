@@ -96,7 +96,6 @@ void print_details(Multiplexer::ostream& out, const std::string& pb_name, const 
 }
 
 void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* coords_m, const align_pb* align_data) {
-  mer_dna                  tmp_m;
   parse_sequence           parser;
   align_pb::thread         aligner(*align_data);
 

@@ -33,7 +33,7 @@ if(defined($help)) {
   print(<<EOS);
 Find the longest (with most k-mers) path in the super-read overlap graph
 
- -d,--density FLOAT        Minimum denity of k-mers ($min_density)
+ -d,--density FLOAT        Minimum density of k-mers ($min_density)
  -H,--no-header            Do not print line headers
  -t,--thread INT           Number of threads ($nb_threads)
  -o,--output PATH          Output prefix file ($output)

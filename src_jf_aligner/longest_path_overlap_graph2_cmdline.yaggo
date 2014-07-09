@@ -1,0 +1,35 @@
+purpose "Find the longest path in the super-read overlap graph"
+
+# option("d", "density") {
+#   description "Minimum density of k-mers"
+#   double; default 0.05 }
+# option("H", "no-header") {
+#   description "Do not print line headers"
+#   off }
+option("t", "threads") {
+  description "Number of threads"
+  uint32; default 1 }
+option("o", "output") {
+  description "Output file"
+  c_string; typestr "path" }
+# option("c", "compact") {
+#   description "Compact output"
+#   off }
+option("O", "overlap-play") {
+  description "Play in overlap length between position and k-unitig lengths"
+  double; default 1.2 }
+option("e", "errors") {
+  description "Number of average errors slack for overlap computation"
+  double; default 3.0 }
+option("b", "bases") {
+  description "Maximize number of bases in path, not the number of mers"
+  off }
+option("l", "unitigs-lengths") {
+  description "Length of k-unitigs"
+  c_string; typestr "path"; required }
+option("k", "k-mer") {
+  description "Length of k-mer used to create k-unitigs"
+  uint32; required }
+arg("coords") {
+  description "Coords file"
+  c_string; typestr "path" }

@@ -43,6 +43,9 @@ option("max-match") {
 option("max-count") {
   description "Maximum mer count in super read to be used for alignment"
   uint32; default 200 }
+option("b", "bases") {
+  description "Maximize number of bases in path, not the number of mers"
+  off }
 option("r", "superreads") {
   description "SuperReads sequence file"
   c_string; typestr "path"; multiple }
