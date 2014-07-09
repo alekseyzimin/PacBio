@@ -53,9 +53,9 @@ protected:
   size_t                             super_read_approx_len;
   std::string                        pb_sequence;
   std::map<std::string, std::string> sr_sequences;
-  static constexpr const char* pb_file           = "output/test_pacbio.fa";
-  static constexpr const char* sr_file           = "output/test_super_reads.fa";
-  static constexpr const char* ul_file           = "output/test_unitigs_lengths";
+  static constexpr const char* pb_file           = "aligner_output/test_pacbio.fa";
+  static constexpr const char* sr_file           = "aligner_output/test_super_reads.fa";
+  static constexpr const char* ul_file           = "aligner_output/test_unitigs_lengths";
   std::vector<int> unitigs_lengths;
   static const int mer_len = 65; // mer len for k-unitigs
 };
