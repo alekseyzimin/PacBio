@@ -21,8 +21,8 @@ struct node_info {
   void reset(const align_pb::coords_info& coords, bool bases) {
     start_node = true;
     end_node   = true;
-    imp_s      = coords.imp_s();
-    imp_e      = coords.imp_e();
+    imp_s      = coords.stretch + coords.offset;
+    imp_e      = coords.stretch * coords.ql + coords.offset;
     component.reset();
     lstart     = -1;
     lprev      = -1;

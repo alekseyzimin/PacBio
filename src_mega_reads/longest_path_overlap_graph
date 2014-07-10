@@ -319,7 +319,7 @@ sub print_longest_paths {
       $cur_n = $$cur_n{LPREV};
     }
 
-    printf($out "%d %d %d %.2g ", $$start_n{IMP_START}, $$max_end_n{IMP_END}, $$max_end_n{LPATH}, $max_density);
+    printf($out "%.2f %.2f %d %.2f ", $$start_n{IMP_START}, $$max_end_n{IMP_END}, $$max_end_n{LPATH}, $max_density);
     print($out "$pbname ") unless($compact);
 
     my $path_len = length_sr($path[-1]{NAME});

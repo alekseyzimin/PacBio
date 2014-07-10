@@ -5,11 +5,11 @@ void union_find::union_sets(union_find::set* s1, union_find::set* s2) {
   auto r2 = find_root(s2);
 
   if(r1->rank > r2->rank) {
-    r2->parent = s1;
+    r2->parent = r1;
   } else if(r1->rank < r2->rank) {
-    r1->parent = s2;
-  } else if(s1 != s2) {
-    r2->parent = s1;
+    r1->parent = r2;
+  } else if(r1 != r2) {
+    r2->parent = r1;
     ++r1->rank;
   }
 }

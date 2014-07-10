@@ -23,6 +23,13 @@ public:
     char          ori; // 'F' or 'R'
   };
 
+
+  super_read_name& operator=(const std::string& name) {
+    unitigs_ = parse(name);
+    return *this;
+  }
+  bool operator==(const super_read_name& rhs) { return unitigs_ == rhs.unitigs_; }
+
   const std::vector<long>& unitigs() const { return unitigs_; }
   size_t nb_unitigs() const { return unitigs_.size(); }
   size_t size() const { return nb_unitigs(); }
@@ -70,7 +77,7 @@ public:
   int overlap(const super_read_name& rhs) const;
 
 protected:
-  static std::vector<long> parse(std::string name);
+  static std::vector<long> parse(const std::string& name);
 
   friend std::ostream& operator<<(std::ostream& os, const super_read_name& sr);
 };

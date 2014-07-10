@@ -53,7 +53,7 @@ int super_read_name::overlap(const super_read_name& rhs) const {
   return 0;
 }
 
-std::vector<long> super_read_name::parse(std::string name) {
+std::vector<long> super_read_name::parse(const std::string& name) {
   std::vector<long> res;
   if(!name.empty()) {
     size_t pn = 0;
@@ -72,7 +72,7 @@ std::ostream& operator<<(std::ostream& os, const super_read_name& sr) {
   if(it != sr.unitigs_.cend()) {
     os << abs(*it) << (*it > 0 ? 'F' : 'R');
     for(++it; it != sr.unitigs_.cend(); ++it)
-      os << '_' << abs(*it) << (*it > 0 ? 'F' : 'R');
+      os << '_' << (abs(*it)) << (*it > 0 ? 'F' : 'R');
   }
   return os;
 }

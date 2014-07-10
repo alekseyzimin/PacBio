@@ -5,13 +5,20 @@ export PKG_CONFIG_PATH
 CXXFLAGS += -I.. $(JELLYFISH_CFLAGS) -I../include
 LDFLAGS += $(JELLYFISH_LIBS)
 
-: foreach jf_aligner_cmdline.yaggo create_mega_reads_cmdline.yaggo longest_path_overlap_graph2_cmdline.yaggo |> !yaggo |>
-: foreach pb_aligner.cc superread_parser.cc union_find.cc overlap_graph.cc super_read_name.cc |> !cxx |>
+CMDLINES = jf_aligner_cmdline.yaggo create_mega_reads_cmdline.yaggo longest_path_overlap_graph2_cmdline.yaggo 
+SRCS = pb_aligner.cc superread_parser.cc union_find.cc overlap_graph.cc super_read_name.cc coords_parsing.cc
+
+JF_ALIGNER_OBJS = jf_aligner.o pb_aligner.o superread_parser.o super_read_name.o
+CREATE_MEGA_READS_OBJS = create_mega_reads.o pb_aligner.o superread_parser.o union_find.o overlap_graph.o super_read_name.o
+LONGEST_PATH_OBJS = longest_path_overlap_graph2.o pb_aligner.o superread_parser.o union_find.o overlap_graph.o super_read_name.o coords_parsing.o
+
+: foreach $(CMDLINES) |> !yaggo |>
+: foreach $(SRCS)     |> !cxx |>
 
 : jf_aligner.cc                  | jf_aligner_cmdline.hpp                  |> !cxx |>
 : create_mega_reads.cc           | create_mega_reads_cmdline.hpp           |> !cxx |>
 : longest_path_overlap_graph2.cc | longest_path_overlap_graph2_cmdline.hpp |> !cxx |>
 
-: jf_aligner.o pb_aligner.o superread_parser.o super_read_name.o                                               |> !lxxd |> jf_aligner
-: create_mega_reads.o pb_aligner.o superread_parser.o union_find.o overlap_graph.o super_read_name.o           |> !lxxd |> create_mega_reads
-: longest_path_overlap_graph2.o pb_aligner.o superread_parser.o union_find.o overlap_graph.o super_read_name.o |> !lxxd |> longest_path_overlap_graph2
+: $(JF_ALIGNER_OBJS)        |> !lxxd |> jf_aligner
+: $(CREATE_MEGA_READS_OBJS) |> !lxxd |> create_mega_reads
+: $(LONGEST_PATH_OBJS)      |> !lxxd |> longest_path_overlap_graph2
