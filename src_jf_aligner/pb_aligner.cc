@@ -158,7 +158,7 @@ align_pb::compute_kmers_info::compute_kmers_info(std::vector<int>& mers, std::ve
 {
   if(k_len_) {
     const auto unitig_id = sr_name_.unitig_id(0);
-    if(unitig_id != super_read_name::invalid && unitig_id < nb_unitigs()) {
+    if(unitig_id != super_read_name::invalid_id && unitig_id < nb_unitigs()) {
       mers_.resize(2 * sr_name_.size() - 1, 0);
       bases_.resize(2 * sr_name_.size() - 1, 0);
       cend_ = unitig_length(unitig_id);
@@ -182,7 +182,7 @@ void align_pb::compute_kmers_info::add_mer(const int pos) {
       bases_[2 * cunitig_ + 1] += nb_bases;
     }
     const auto unitig_id = sr_name_.unitig_id(++cunitig_);
-    if(unitig_id == super_read_name::invalid || unitig_id >= nb_unitigs())
+    if(unitig_id == super_read_name::invalid_id || unitig_id >= nb_unitigs())
       goto error;
     cend_ += unitig_length(unitig_id) - k_len_+ 1;
   }
@@ -197,7 +197,7 @@ void align_pb::compute_kmers_info::add_mer(const int pos) {
     bases_[2 * i + 1]    += nb_bases;
     bases_[2 * i + 2]    += nb_bases;
     const auto unitig_id  = sr_name_.unitig_id(i + 1);
-    if(unitig_id != super_read_name::invalid && unitig_id < nb_unitigs())
+    if(unitig_id != super_read_name::invalid_id && unitig_id < nb_unitigs())
       cendi += unitig_length(unitig_id) - k_len_ + 1;
     else
       goto error;

@@ -1,12 +1,14 @@
 #include <src_jf_aligner/super_read_name.hpp>
 
+const uint64_t super_read_name::invalid_id;
+
 std::string super_read_name::name() const {
   std::string res;
   auto it = unitigs_.cbegin();
   if(it != unitigs_.cend()) {
-    res += unitig_name(*it);
+    res += it->name();
     for(++it; it != unitigs_.cend(); ++it)
-      (res += '_') += unitig_name(*it);
+      (res += '_') += it->name();
   }
   return res;
 }
@@ -31,17 +33,17 @@ size_t super_read_name::prepend(const super_read_name& rhs, size_t all_but, size
 void super_read_name::reverse() {
   const size_t n = unitigs_.size();
   for(size_t i = 0; i < unitigs_.size() / 2; ++i) {
-    long tmp            = unitigs_[i];
-    unitigs_[i]         = -unitigs_[n - i - 1];
-    unitigs_[n - i - 1] = -tmp;
+    auto tmp            = unitigs_[i];
+    unitigs_[i]         = unitigs_[n - i - 1].reversed();
+    unitigs_[n - i - 1] = tmp.reversed();
   }
   if(n % 2 == 1)
-    unitigs_[n / 2] = -unitigs_[n / 2];
+    unitigs_[n / 2].reverse();
 }
 
 int super_read_name::overlap(const super_read_name& rhs) const {
   if(rhs.unitigs_.empty()) return 0;
-  const long fu = rhs.unitigs_.front();
+  const auto fu = rhs.unitigs_.front();
 
   for(auto it = std::find(unitigs_.cbegin(), unitigs_.cend(), fu);
       it != unitigs_.cend();
@@ -53,16 +55,16 @@ int super_read_name::overlap(const super_read_name& rhs) const {
   return 0;
 }
 
-std::vector<long> super_read_name::parse(const std::string& name) {
-  std::vector<long> res;
+super_read_name::unitigs_list super_read_name::parse(const std::string& name) {
+  unitigs_list res;
   if(!name.empty()) {
     size_t pn = 0;
     for(size_t n = name.find_first_of('_'); n != std::string::npos; pn = n + 1, n = name.find_first_of('_', pn)) {
-      long id = std::stoul(name.c_str() + pn);
-      res.push_back(name[n - 1] == 'R' ? -id : id);
+      uint64_t id = std::stoul(name.c_str() + pn);
+      res.push_back(u_id_ori(id, name[n - 1]));
     }
-    long id = std::stoul(name.c_str() + pn);
-    res.push_back(name[name.size() - 1] == 'R' ? -id : id);
+    uint64_t id = std::stoul(name.c_str() + pn);
+    res.push_back(u_id_ori(id, name[name.size() - 1]));
   }
   return res;
 }
@@ -70,9 +72,9 @@ std::vector<long> super_read_name::parse(const std::string& name) {
 std::ostream& operator<<(std::ostream& os, const super_read_name& sr) {
   auto it = sr.unitigs_.cbegin();
   if(it != sr.unitigs_.cend()) {
-    os << abs(*it) << (*it > 0 ? 'F' : 'R');
+    os << it->id() << it->ori();
     for(++it; it != sr.unitigs_.cend(); ++it)
-      os << '_' << (abs(*it)) << (*it > 0 ? 'F' : 'R');
+      os << '_' << it->id() << it->ori();
   }
   return os;
 }

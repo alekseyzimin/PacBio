@@ -6,23 +6,36 @@
 #include <debug.hpp>
 
 class super_read_name {
-  std::vector<long> unitigs_;
+public:
+  struct u_id_ori {
+    uint64_t ori_:1; // 0 -> F, 1 -> R
+    uint64_t id_:63;
+    u_id_ori() : ori_(0), id_(0) { }
+    u_id_ori(uint64_t i, char c) : ori_(c == 'R'), id_(i) { }
+    u_id_ori(uint64_t o, uint64_t n) : ori_(o), id_(n) { }
+
+    char ori() const { return ori_ ? 'R' : 'F'; }
+    uint64_t id() const { return id_; }
+    std::string name() const { return std::to_string(id_) + ori(); }
+    void reverse() { ori_ = ~ori_; }
+    u_id_ori reversed() const { return u_id_ori((uint64_t)1 - ori_, id_); }
+    bool operator==(const u_id_ori& rhs) const { return ori_ == rhs.ori_ && id_ == rhs.id_; }
+    bool operator!=(const u_id_ori& rhs) const { return ori_ == rhs.ori_ && id_ == rhs.id_; }
+  };
+  typedef std::vector<u_id_ori> unitigs_list;
+  static const uint64_t invalid_id = std::numeric_limits<uint64_t>::max() >> 1;
+  //  static const u_id_ori invalid_unitig;
+
+private:
+  unitigs_list unitigs_;
 
 public:
-  static const unsigned long invalid = std::numeric_limits<unsigned long>::max();
-
   super_read_name() = default;
   explicit super_read_name(size_t n) : unitigs_(n) { }
   explicit super_read_name(const std::string& name) : unitigs_(parse(name)) { }
-  explicit super_read_name(std::vector<long>&& unitigs) : unitigs_(std::move(unitigs)) { }
+  //  explicit super_read_name(std::vector<long>&& unitigs) : unitigs_(std::move(unitigs)) { }
   // super_read_name(super_read_name&& rhs) : unitigs_(std::move(rhs.unitigs_)) { }
   // super_read_name(const super_read_name& rhs) : unitigs_(rhs.unitigs_) { }
-
-  struct unitig {
-    unsigned long id;
-    char          ori; // 'F' or 'R'
-  };
-
 
   super_read_name& operator=(const std::string& name) {
     unitigs_ = parse(name);
@@ -30,10 +43,9 @@ public:
   }
   bool operator==(const super_read_name& rhs) { return unitigs_ == rhs.unitigs_; }
 
-  const std::vector<long>& unitigs() const { return unitigs_; }
+  const unitigs_list& unitigs() const { return unitigs_; }
   size_t nb_unitigs() const { return unitigs_.size(); }
   size_t size() const { return nb_unitigs(); }
-  std::string unitig_name(long i) const { return std::to_string(abs(i)) + (i > 0 ? 'F' : 'R'); }
   std::string name() const;
 
   void append(const super_read_name& rhs, size_t skip = 0);
@@ -43,21 +55,9 @@ public:
   // of elements copied. If 'rhs' is too big, nothing is copied.
   size_t prepend(const super_read_name& rhs, size_t all_but = 0, size_t offset = std::numeric_limits<size_t>::max());
 
-  unitig operator[](size_t i) const {
-    if(i < nb_unitigs())
-      return { (unsigned long)abs(unitigs_[i]), unitigs_[i] > 0 ? 'F' : 'R' };
-    return { invalid, '\0' };
-  }
+  u_id_ori operator[](size_t i) const { return i < nb_unitigs() ? unitigs_[i] : u_id_ori(invalid_id, 'F'); }
 
-  unsigned long unitig_id(size_t i) const { return i < nb_unitigs() ? abs(unitigs_[i]) : invalid; }
-
-  // static char reverse_ori(char ori) {
-  //   switch(ori) {
-  //   case 'F': return 'R';
-  //   case 'R': return 'F';
-  //   default: return ori; // Hum?? Bad orientation to begin with.
-  //   }
-  // }
+  uint64_t unitig_id(size_t i) const { return i < nb_unitigs() ? unitigs_[i].id_ : invalid_id; }
 
   void reverse();
 
@@ -77,7 +77,7 @@ public:
   int overlap(const super_read_name& rhs) const;
 
 protected:
-  static std::vector<long> parse(const std::string& name);
+  static unitigs_list parse(const std::string& name);
 
   friend std::ostream& operator<<(std::ostream& os, const super_read_name& sr);
 };

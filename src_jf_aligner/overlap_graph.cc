@@ -49,7 +49,7 @@ void overlap_graph::traverse(const std::vector<int>& sort_array, const align_pb:
       // Update longest path
       int nlpath = node_i.lpath + (maximize_bases ? coords_j.sr_cover : coords_j.nb_mers) - common_overlap;
       if(nlpath > node_j.lpath ||
-         (nlpath == node_j.lpath && l_node_start(node_i, nodes).imp_s > l_node_start(node_j, nodes).imp_s)) {
+         (nlpath == node_j.lpath && (node_j.lstart == -1 || l_node_start(node_i, nodes).imp_s > l_node_start(node_j, nodes).imp_s))) {
         node_j.lpath  = nlpath;
         node_j.lstart = node_i.lstart == -1 ? it_i : node_i.lstart;
         node_j.lprev  = it_i;
@@ -127,8 +127,8 @@ void overlap_graph::print_mega_reads(std::ostream& output, const comp_to_path& m
     }
 
     int sr_len = 0;
-    for(auto i : asr->unitigs())
-      sr_len += unitigs_lengths[abs(i)];
+    for(auto unitig : asr->unitigs())
+      sr_len += unitigs_lengths[unitig.id()];
     sr_len -= (sr.size() - 1) * (k_len - 1);
     output << ' ' << *asr << ' ' << sr_len << '\n';
   }

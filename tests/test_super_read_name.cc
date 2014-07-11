@@ -8,9 +8,8 @@ TEST(SuperReadName, Parse) {
   EXPECT_EQ("", n1.get_reverse().name());
   {
     const auto u = n1[0];
-    EXPECT_EQ(std::numeric_limits<unsigned long>::max(), u.id);
-    EXPECT_EQ('\0', u.ori);
-    EXPECT_EQ(u.id, n1.unitig_id(0));
+    EXPECT_EQ(super_read_name::invalid_id, u.id());
+    EXPECT_EQ(u.id(), n1.unitig_id(0));
   }
 
   super_read_name n2("1234F");
@@ -18,16 +17,15 @@ TEST(SuperReadName, Parse) {
   EXPECT_EQ("1234R", n2.get_reverse().name());
   {
     const auto u = n2[0];
-    EXPECT_EQ((unsigned long)1234, u.id);
-    EXPECT_EQ('F', u.ori);
-    EXPECT_EQ(u.id, n2.unitig_id(0));
+    EXPECT_EQ((uint64_t)1234, u.id());
+    EXPECT_EQ('F', u.ori());
+    EXPECT_EQ(u.id(), n2.unitig_id(0));
   }
 
   {
     const auto u = n2[1];
-    EXPECT_EQ(std::numeric_limits<unsigned long>::max(), u.id);
-    EXPECT_EQ('\0', u.ori);
-    EXPECT_EQ(u.id, n2.unitig_id(1));
+    EXPECT_EQ(super_read_name::invalid_id, u.id());
+    EXPECT_EQ(u.id(), n2.unitig_id(1));
   }
 
   static const int nb = 10;
@@ -38,16 +36,15 @@ TEST(SuperReadName, Parse) {
   EXPECT_EQ((size_t)nb, n3.nb_unitigs());
   for(int i = 0; i < nb; ++i) {
     const auto u = n3[i];
-    EXPECT_EQ((unsigned long)(2 * i), u.id);
-    EXPECT_EQ(i % 3 == 1 ? 'F' : 'R', u.ori);
-    EXPECT_EQ(u.id, n3.unitig_id(i));
+    EXPECT_EQ((uint64_t)(2 * i), u.id());
+    EXPECT_EQ(i % 3 == 1 ? 'F' : 'R', u.ori());
+    EXPECT_EQ(u.id(), n3.unitig_id(i));
   }
 
   {
     const auto u = n3[nb];
-    EXPECT_EQ(std::numeric_limits<unsigned long>::max(), u.id);
-    EXPECT_EQ('\0', u.ori);
-    EXPECT_EQ(u.id, n3.unitig_id(nb));
+    EXPECT_EQ(super_read_name::invalid_id, u.id());
+    EXPECT_EQ(u.id(), n3.unitig_id(nb));
   }
 }
 
@@ -129,22 +126,22 @@ TEST(SuperReadName, Append) {
 
 TEST(SuperReadName, Prepend) {
   super_read_name sr(10);
-  EXPECT_EQ("0R_0R_0R_0R_0R_0R_0R_0R_0R_0R", sr.name());
+  EXPECT_EQ("0F_0F_0F_0F_0F_0F_0F_0F_0F_0F", sr.name());
   size_t offset;
 
   {
     super_read_name sra("3F_4R");
     offset = sr.prepend(sra);
-    EXPECT_EQ("0R_0R_0R_0R_0R_0R_0R_0R_3F_4R", sr.name());
+    EXPECT_EQ("0F_0F_0F_0F_0F_0F_0F_0F_3F_4R", sr.name());
     EXPECT_EQ((size_t)8, offset);
   }
   super_read_name sra("1F_2F_3F_4F_5F_6F_7F_8F_9F");
   offset = sr.prepend(sra, 0, offset);
-  EXPECT_EQ("0R_0R_0R_0R_0R_0R_0R_0R_3F_4R", sr.name());
+  EXPECT_EQ("0F_0F_0F_0F_0F_0F_0F_0F_3F_4R", sr.name());
   EXPECT_EQ((size_t)8, offset);
 
   offset = sr.prepend(sra, 3, offset);
-  EXPECT_EQ("0R_0R_1F_2F_3F_4F_5F_6F_3F_4R", sr.name());
+  EXPECT_EQ("0F_0F_1F_2F_3F_4F_5F_6F_3F_4R", sr.name());
   EXPECT_EQ((size_t)2, offset);
 
   offset = sr.prepend(sra, 7, offset);
