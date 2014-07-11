@@ -1,3 +1,10 @@
-SRC = ../../src_jf_aligner
+AL = ../../src_jf_aligner/jf_aligner
 
-: test_aligner_output.sh | $(SRC)/jf_aligner |> ./%f > %o 2>&1 |> test_aligner_output.log | details_normal coords_normal details_forward coords_forward
+SR = test_super_reads.fa
+PB = test_pacbio.fa
+UL = test_unitigs_lengths
+
+: $(SR) $(PB) | $(AL) |> $(AL) -s 10k -m 17 -r $(SR) -p $(PB) --details details_normal --coords coords_normal |> details_normal coords_normal {outputs}
+: $(SR) $(PB) | $(AL) |> $(AL) -s 10k -m 17 -r $(SR) -p $(PB) -l $(UL) -k 65 -f --details details_forward --coords coords_forward |> details_forward coords_forward {outputs}
+
+: foreach {outputs} |> wdiff %f %f_expected > %o |> %B.diff

@@ -21,18 +21,26 @@ void fill_coords(std::vector<std::string>& lines, align_pb::coords_info_type& co
   }
 }
 
-void create_mega_reads(coords_parser* parser, Multiplexer* output_m, overlap_graph* graph_walker) {
-  align_pb::coords_info_type coords;
-  overlap_graph::thread      graph(*graph_walker);
-  Multiplexer::ostream       output(output_m);
+void create_mega_reads(coords_parser* parser, Multiplexer* output_m, overlap_graph* graph_walker, Multiplexer* dot_m) {
+  align_pb::coords_info_type            coords;
+  overlap_graph::thread                 graph(*graph_walker);
+  Multiplexer::ostream                  output(output_m);
+  std::unique_ptr<Multiplexer::ostream> dot(dot_m ? new Multiplexer::ostream(dot_m) : 0);
 
   for(coords_parser::stream coords_stream(*parser); coords_stream; ++coords_stream) {
     fill_coords(coords_stream->lines, coords);
-    graph.reset(coords);
+    if(dot)
+      *dot << "digraph \"" <<coords_stream->header << "\" {\nnode [fontsize=\"10\"];\n";
+    graph.reset(coords, dot.get());
     graph.traverse();
     graph.compute_mega_reads(coords[0].rl);
     output << ">" << coords_stream->header << "\n";
     graph.print_mega_reads(output);
+    output.end_record();
+    if(dot) {
+      *dot << "}\n";
+      dot->end_record();
+    }
   }
 }
 
@@ -46,6 +54,10 @@ int main(int argc, char* argv[]) {
     output.open(args.output_arg, args.threads_arg);
   } else {
     output.set(std::cout, args.threads_arg);
+  }
+  output_file dot;
+  if(args.dot_given) {
+    dot.open(args.dot_arg, args.threads_arg);
   }
 
   // Read k-unitig lengths
@@ -68,7 +80,7 @@ int main(int argc, char* argv[]) {
   overlap_graph graph_walker(args.overlap_play_arg, args.k_mer_arg, unitigs_lengths, args.errors_arg, args.bases_flag);
   std::vector<std::thread> threads;
   for(unsigned int i = 0; i < args.threads_arg; ++i)
-    threads.push_back(std::thread(create_mega_reads, &parser, output.multiplexer(), &graph_walker));
+    threads.push_back(std::thread(create_mega_reads, &parser, output.multiplexer(), &graph_walker, dot.multiplexer()));
   for(unsigned int i = 0; i < args.threads_arg; ++i)
     threads[i].join();
 

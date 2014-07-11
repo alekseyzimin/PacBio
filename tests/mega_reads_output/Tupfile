@@ -3,7 +3,8 @@ LPN = ../../src_jf_aligner/longest_path_overlap_graph2
 KMER = 70
 UL = kUnitigLengths.txt
 
-: coords          |> $(LPO) -d 0 -t 1 -o `basename %o _1` -c -k $(KMER) -l $(UL) -H %f |> org_mega_reads_1 {mega_reads}
-: coords | $(LPN) |> $(LPN) -t 1 -o %o -k $(KMER) -l $(UL) %f                          |> new_mega_reads {mega_reads}
+: coords          |> $(LPO) -d 0 -t 1 -o `basename %o _1` -c -k $(KMER) -l $(UL) -H --dot %o.dot %f > %o.log |> org_mega_reads_1 | %o.dot %o.log {mega_reads}
+: coords | $(LPN) |> $(LPN) -t 1 -o %o -k $(KMER) -l $(UL) --dot %o.dot %f > %o.log                          |> new_mega_reads | %o.dot %o.log {mega_reads}
+: foreach org_mega_reads_1.dot new_mega_reads.dot |> dot -Tsvg %f > %o |> %B.svg
 : foreach {mega_reads} |> sort -nk1,1 -nk2,2 %f > %o |> %B_sorted {mega_reads_sorted}
 : {mega_reads_sorted} |> wdiff %f > %o |> mega_reads.diff

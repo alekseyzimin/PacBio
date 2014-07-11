@@ -61,18 +61,23 @@ struct overlap_graph {
   { }
 
   void traverse(const std::vector<int>& sort_array, const align_pb::coords_info_type& coords,
-                std::vector<node_info>& nodes) const;
+                std::vector<node_info>& nodes, std::ostream* dot = 0) const;
   typedef std::map<union_find::set*, int> comp_to_path;
-  void comp_mega_reads(const int n, size_t pb_size, std::vector<node_info>& nodes, comp_to_path& res) const;
-  comp_to_path comp_mega_reads(const int n, const size_t pb_size, std::vector<node_info>& nodes) const {
+  void comp_mega_reads(const int n, size_t pb_size, std::vector<node_info>& nodes,
+                       const align_pb::coords_info_type& coords, comp_to_path& res,
+                       std::ostream* dot = 0) const;
+  comp_to_path comp_mega_reads(const int n, const size_t pb_size, std::vector<node_info>& nodes,
+                               const align_pb::coords_info_type& coords,
+                               std::ostream* dot = 0) const {
     comp_to_path res;
-    comp_mega_reads(n, pb_size, nodes, res);
+    comp_mega_reads(n, pb_size, nodes, coords, res);
     return res;
   }
 
   void print_mega_reads(std::ostream& os, const comp_to_path& mega_reads,
                         const align_pb::coords_info_type& coords,
-                        const std::vector<node_info>& nodes) const;
+                        const std::vector<node_info>& nodes,
+                        std::ostream* dot = 0) const;
 
 
   struct thread {
@@ -81,10 +86,11 @@ struct overlap_graph {
     std::vector<node_info>            nodes_;
     const align_pb::coords_info_type* coords_;
     comp_to_path                      mega_reads_;
+    std::ostream*                     dot_;
 
     thread(const overlap_graph& og) : og_(og) { }
 
-    void reset(const align_pb::coords_info_type& coords) {
+    void reset(const align_pb::coords_info_type& coords, std::ostream* dot = 0) {
       coords_     = &coords;
       const int n = coords_->size();
       sort_array_.resize(n);
@@ -96,16 +102,23 @@ struct overlap_graph {
       }
       std::sort(sort_array_.begin(), sort_array_.end(),
                 [&] (int i, int j) { return nodes_[i].imp_s < nodes_[j].imp_s || (nodes_[i].imp_s == nodes_[j].imp_s &&
-                                                                                 nodes_[i].imp_e < nodes_[j].imp_e); });
+                                                                                  nodes_[i].imp_e < nodes_[j].imp_e); });
+      dot_ = dot;
+      if(dot_) {
+        for(size_t i = 0; i < sort_array_.size(); ++i) {
+          const size_t it_i = sort_array_[i];
+          *dot_ << "n" << it_i << "[tooltip=\"" << coords[it_i].qname << "\"];\n";
+        }
+      }
     }
 
-    void traverse() { og_.traverse(sort_array_, *coords_, nodes_); }
+    void traverse() { og_.traverse(sort_array_, *coords_, nodes_, dot_); }
     void compute_mega_reads(size_t pb_size) {
       mega_reads_.clear();
-      og_.comp_mega_reads(coords_->size(), pb_size, nodes_, mega_reads_);
+      og_.comp_mega_reads(coords_->size(), pb_size, nodes_, *coords_, mega_reads_, dot_);
     }
     void print_mega_reads(std::ostream& os) const {
-      og_.print_mega_reads(os, mega_reads_, *coords_, nodes_);
+      og_.print_mega_reads(os, mega_reads_, *coords_, nodes_, dot_);
     }
   };
 };
