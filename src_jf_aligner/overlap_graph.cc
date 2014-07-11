@@ -108,7 +108,7 @@ void overlap_graph::print_mega_reads(std::ostream& output, const comp_to_path& m
     const auto& start_n = end_n.lstart == -1 ? end_n : nodes[end_n.lstart];
     output << std::fixed << std::setprecision(2)
            << start_n.imp_s << ' ' << end_n.imp_e << ' '
-           << end_n.lpath << ' ' << end_n.ldensity;
+           << end_n.lpath << ' ' << std::setprecision(4) << end_n.ldensity;
     const super_read_name *asr;
     super_read_name sr(end_n.lunitigs);
     if(end_n.lstart == -1) {

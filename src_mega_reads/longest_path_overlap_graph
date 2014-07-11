@@ -56,6 +56,12 @@ if(defined($length_unitigs_file) != defined($unitigs_k)) {
 
 sub round { int($_[0] + $_[0]/abs($_[0] * 2)); }
 
+my $dot_io;
+if(defined($dot_file)) {
+  open($dot_io, ">", $dot_file) or die "Failed to open dot file '$dot_file': $!";
+}
+
+
 my @unitig_len;
 if(defined($length_unitigs_file)) {
   open(my $ul_io, "<", $length_unitigs_file) or
@@ -210,10 +216,8 @@ sub create_edges {
 }
 
 sub write_dot {
-  my ($nodes, $pbName, $file) = @_;
+  my ($nodes, $pbName, $io) = @_;
 
-  open(my $io, ">", $file) or
-      die "Failed to open dot file '$file': $!";
   print($io "digraph \"$pbName\" {\n");
   print($io "  node [fontsize=10];\n");
   foreach my $n (@$nodes) {
@@ -239,7 +243,6 @@ sub write_dot {
     }
   }
   print($io "}\n");
-  close($io);
 }
 
 # Find the longest paths in the graph, for the set of nodes and
@@ -307,7 +310,7 @@ sub print_longest_paths {
       if((($$end_n{IMP_END} > $$end_n{RLEN} ? $$end_n{RLEN} : $$end_n{IMP_END}) -
                                       ($$start_n{IMP_START} < 1 ? 1 : $$start_n{IMP_START}) + 1) >0){
 	$density = $$end_n{LPATH} / (($$end_n{IMP_END} > $$end_n{RLEN} ? $$end_n{RLEN} : $$end_n{IMP_END}) -
-                                      ($$start_n{IMP_START} < 1 ? 1 : $$start_n{IMP_START}) + 1);
+                                      ($$start_n{IMP_START} < 1 ? 1 : $$start_n{IMP_START}));
 	}else{
 	$density = 0;
 	}
@@ -328,7 +331,7 @@ sub print_longest_paths {
       $cur_n = $$cur_n{LPREV};
     }
 
-    printf($out "%.2f %.2f %d %.2f ", $$start_n{IMP_START}, $$max_end_n{IMP_END}, $$max_end_n{LPATH}, $max_density);
+    printf($out "%.2f %.2f %d %.4f ", $$start_n{IMP_START}, $$max_end_n{IMP_END}, $$max_end_n{LPATH}, $max_density);
     print($out "$pbname ") unless($compact);
 
     my $path_len = length_sr($path[-1]{NAME});
@@ -355,9 +358,5 @@ sub handle_graph {
   my $components = create_edges($nodes);
   my %longest_paths = find_longest_paths($nodes, $components);
   print_longest_paths(\%longest_paths, $pbname, $out);
-  if(defined($dot_file)) {
-    my $file = $pbname;
-    $file =~ s|/|_|g;
-    write_dot($nodes, $pbname, $dot_file);
-  }
+  write_dot($nodes, $pbname, $dot_io) if(defined($dot_io));
 }
