@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 #include <src_jf_aligner/superread_parser.hpp>
 #include <src_jf_aligner/pb_aligner.hpp>
+#include <tests/misc.hpp>
 
 namespace {
 class FragsCoords : public ::testing::Test {
@@ -60,22 +61,6 @@ protected:
   static const int mer_len = 65; // mer len for k-unitigs
 };
 
-char rev_comp(const char c) {
-  switch(c) {
-  case 'A': case 'a': return 'T';
-  case 'C': case 'c': return 'G';
-  case 'G': case 'g': return 'C';
-  case 'T': case 't': return 'A';
-  }
-  return 'N';
-}
-std::string rev_comp(const std::string s) {
-  std::string res;
-  for(auto it = s.crbegin(); it != s.crend(); ++it)
-    res += rev_comp(*it);
-  return res;
-}
-
 void FragsCoords::check_mers_sequence(const align_pb::frags_pos_type& frags_pos) const {
   // Check that all k-mers have equal sequence and that the LIS are in
   // increasing order
@@ -97,7 +82,7 @@ void FragsCoords::check_mers_sequence(const align_pb::frags_pos_type& frags_pos)
 
     for(auto offsets : ml.bwd.offsets)
       EXPECT_EQ(pb_sequence.substr(offsets.first - 1, mer_dna::k()),
-                rev_comp(sr_seq.substr(-offsets.second - 1, mer_dna::k())));
+                misc::rev_comp(sr_seq.substr(-offsets.second - 1, mer_dna::k())));
 
     p_offsets = align_pb::pb_sr_offsets(0, std::numeric_limits<int>::min());
     for(auto lis_id : ml.bwd.lis) {
@@ -116,7 +101,7 @@ void FragsCoords::check_mers_sequence(const align_pb::frags_pos_type& frags_pos)
     EXPECT_NE(pb_sequence.substr(ml.bwd.offsets.front().first - 2, mer_dna::k()),
               sr_seq.substr(-ml.bwd.offsets.front().second - 2, mer_dna::k()));
     EXPECT_NE(pb_sequence.substr(ml.bwd.offsets.back().first, mer_dna::k()),
-              rev_comp(sr_seq.substr(-ml.bwd.offsets.back().second, mer_dna::k())));
+              misc::rev_comp(sr_seq.substr(-ml.bwd.offsets.back().second, mer_dna::k())));
   }
 }
 

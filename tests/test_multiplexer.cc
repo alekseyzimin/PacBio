@@ -4,18 +4,13 @@
 
 #include <gtest/gtest.h>
 #include <multiplexer.hpp>
+#include <tests/misc.hpp>
 
 namespace {
-struct remove_file {
-  const char* path;
-  bool do_unlink;
-  remove_file(const char* p, bool unlink = true) : path(p), do_unlink(unlink) { }
-  ~remove_file() { if(do_unlink) unlink(path); }
-};
+using misc::remove_file;
 
 TEST(Multiplexer, OneThread) {
   remove_file tmp(".multiplexer_output");
-  tmp.do_unlink = false;
 
   {
     std::ofstream os(tmp.path);
@@ -57,7 +52,6 @@ TEST(Multiplexer, ManyThreads) {
   static const int nb_threads = 10;
   static const int lines_per_thread = 1000;
   remove_file tmp(".manythreads_output");
-  tmp.do_unlink = false;
 
   {
     std::ofstream os(tmp.path);

@@ -78,3 +78,34 @@ std::ostream& operator<<(std::ostream& os, const super_read_name& sr) {
   }
   return os;
 }
+
+static char rev_comp_(char c) {
+  switch(c) {
+  case 'a': case 'A': return 'T';
+  case 'c': case 'C': return 'G';
+  case 'g': case 'G': return 'C';
+  case 't': case 'T': return 'A';
+  default: return 'N';
+  }
+}
+
+static void print_unitig(std::ostream& os, bool rev_comp, const std::string& seq, int offset) {
+  if(offset < seq.size()) {
+    if(rev_comp) {
+      for(auto it = seq.crbegin() + offset; it != seq.crend(); ++it)
+        os << rev_comp_(*it);
+    } else {
+      os << (seq.c_str() + offset);
+    }
+  }
+}
+
+void super_read_name::print_sequence(std::ostream& os, const std::vector<std::string>& unitigs_sequences,
+                                     int k_len) const {
+  auto it = unitigs_.cbegin();
+  if(it != unitigs_.cend()) {
+    print_unitig(os, it->ori_, unitigs_sequences.at(it->id()), 0);
+    for(++it; it != unitigs_.cend(); ++it)
+      print_unitig(os, it->ori_, unitigs_sequences.at(it->id()), k_len);
+  }
+}

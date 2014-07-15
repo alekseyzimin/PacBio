@@ -4,13 +4,10 @@
 
 #include <gtest/gtest.h>
 #include <src_jf_aligner/superread_parser.hpp>
+#include <tests/misc.hpp>
 
 namespace {
-struct remove_file {
-  const char* path;
-  remove_file(const char* p) : path(p) { }
-  ~remove_file() { unlink(path); }
-};
+using misc::remove_file;
 
 void create_sequence(const char* path) {
   static const char bases[4] = { 'A', 'C', 'G','T' };

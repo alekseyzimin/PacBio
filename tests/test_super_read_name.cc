@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <src_jf_aligner/super_read_name.hpp>
+#include <tests/misc.hpp>
 
 namespace {
 TEST(SuperReadName, Parse) {
@@ -148,4 +149,32 @@ TEST(SuperReadName, Prepend) {
   EXPECT_EQ("1F_2F_1F_2F_3F_4F_5F_6F_3F_4R", sr.name());
   EXPECT_EQ((size_t)0, offset);
 }
+
+void expect_sr_sequence(const std::string& res, const super_read_name& sr, const std::vector<std::string>& us, int k_len) {
+  std::ostringstream os;
+  sr.print_sequence(os, us, k_len);
+  EXPECT_EQ(res, os.str());
+}
+
+TEST(SuperReadName, Sequence) {
+  const std::vector<std::string> us = { "CGAACCTCAAGGGTTCGAT", "AAGAGTCTGTCAAGG",
+                                        "GGAGTGCTCGGAAGCTGT", "GAGATCCAGCGGCTC",
+                                        "GAACGACTTTAGAGTTAC" };
+  const int k_len = 5;
+
+  super_read_name sr;
+  expect_sr_sequence("", sr, us, k_len);
+  sr = "1F";
+  expect_sr_sequence(us[1], sr, us, k_len);
+  sr = "1F_3F";
+  expect_sr_sequence(us[1] + us[3].substr(k_len), sr, us, k_len);
+
+  sr = "2R";
+  expect_sr_sequence(misc::rev_comp(us[2]), sr, us, k_len);
+  sr = "2R_4F";
+  expect_sr_sequence(misc::rev_comp(us[2]) + us[4].substr(k_len), sr, us, k_len);
+  sr = "2R_4F_0R";
+  expect_sr_sequence(misc::rev_comp(us[2]) + us[4].substr(k_len) + misc::rev_comp(us[0]).substr(k_len), sr, us, k_len);
+} // SuperReadName.Sequence
+
 } // empty namespace

@@ -2,25 +2,11 @@
 #include <src_jf_aligner/jf_aligner.hpp>
 #include <src_jf_aligner/pb_aligner.hpp>
 #include <src_jf_aligner/superread_parser.hpp>
+#include <tests/misc.hpp>
 
 namespace {
-char rev_char(char c) {
-  switch(c) {
-  case 'A': return 'T';
-  case 'C': return 'G';
-  case 'G': return 'C';
-  case 'T': return 'A';
-  }
-  return 'N';
-}
-std::string rev_comp(std::string s) {
-  for(size_t i = 0, j = s.size() - 1; i <= j; ++i, --j) {
-    char tmp = rev_char(s[i]);
-    s[i] = rev_char(s[j]);
-    s[j] = tmp;
-  }
-  return s;
-}
+using misc::rev_comp;
+using misc::remove_file;
 
 // Create a fake sequence of 1000 bp. Then a PacBio read of length 500
 // starting at base 300 of the sequence. The PacBio reads has an error
@@ -84,13 +70,6 @@ std::string generate_sequences(const char* pacbio_reads, const char* superreads)
 
   return pacbio_sequence;
 }
-
-struct remove_file {
-  const char* path;
-  bool do_unlink;
-  remove_file(const char* p, bool unlink = true) : path(p), do_unlink(unlink) { }
-  ~remove_file() { if(do_unlink) unlink(path); }
-};
 
 TEST(PbAligner, FakeSequences) {
   mer_dna::k(15);

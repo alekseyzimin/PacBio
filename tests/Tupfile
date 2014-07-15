@@ -2,9 +2,9 @@ include_rules
 
 CXXFLAGS += -I$(TUP_CWD)
 
-# Compile Google test library
-: foreach gtest/src/gtest_main.cc gtest/src/gtest-all.cc |> !cxx |>
-: gtest_main.o gtest-all.o |> !ar |> libgtest_main.a
+# Compile Google test library and things common to tests
+: foreach gtest/src/gtest_main.cc gtest/src/gtest-all.cc misc.cc |> !cxx |> {gtest}
+: {gtest} |> !ar |> libgtest_main.a
 
 # Compile individual tests
 export PKG_CONFIG_PATH
