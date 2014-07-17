@@ -29,24 +29,27 @@ void create_mega_reads(coords_parser* parser, Multiplexer* output_m, overlap_gra
 
   for(coords_parser::stream coords_stream(*parser); coords_stream; ++coords_stream) {
     fill_coords(coords_stream->lines, coords);
-    if(dot)
-      *dot << "digraph \"" <<coords_stream->header << "\" {\nnode [fontsize=\"10\"];\n";
-    graph.reset(coords, dot.get());
+    graph.reset(coords, coords_stream->header, dot.get());
     graph.traverse();
-    graph.compute_mega_reads(coords[0].rl);
+    graph.term_node_per_comp(coords[0].rl);
     output << ">" << coords_stream->header << "\n";
     graph.print_mega_reads(output);
     output.end_record();
-    if(dot) {
-      *dot << "}\n";
+    if(dot)
       dot->end_record();
-    }
   }
+}
+
+inline static std::istream& skip_header(std::istream& is) {
+  return is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 
 int main(int argc, char* argv[]) {
   args.parse(argc, argv);
   std::ios::sync_with_stdio(false);
+
+  if(!args.unitigs_lengths_given && !args.unitigs_sequences_given)
+    cmdline_args::error() << "One of --unitigs-lengths or --unitigs-sequences is required.";
 
   // Open output file for early error reporting
   output_file output;
@@ -56,21 +59,32 @@ int main(int argc, char* argv[]) {
     output.set(std::cout, args.threads_arg);
   }
   output_file dot;
-  if(args.dot_given) {
+  if(args.dot_given)
     dot.open(args.dot_arg, args.threads_arg);
-  }
 
   // Read k-unitig lengths
   std::vector<int> unitigs_lengths;
+  std::vector<std::string> sequences;
   {
-    std::ifstream is(args.unitigs_lengths_arg);
-    if(!is.good())
-      cmdline_args::error() << "Failed to open unitig lengths map file '" << args.unitigs_lengths_arg << "'";
-    std::string unitig;
-    unsigned int len;
-    while(is.good()) {
-      is >> unitig >> len;
-      unitigs_lengths.push_back(len);
+    if(args.unitigs_lengths_given) { // File with lengths
+      std::ifstream is(args.unitigs_lengths_arg);
+      if(!is.good())
+        cmdline_args::error() << "Failed to open unitig lengths map file '" << args.unitigs_lengths_arg << "'";
+      std::string unitig;
+      unsigned int len;
+      while(is.good()) {
+        is >> unitig >> len;
+        unitigs_lengths.push_back(len);
+      }
+    } else { // Sequence in fasta file given
+      std::ifstream is(args.unitigs_sequences_arg);
+      if(!is.good())
+        cmdline_args::error() << "Failed to open unitigs sequence file '" << args.unitigs_sequences_arg << "'";
+      while(skip_header(is)) {
+        sequences.push_back("");
+        std::getline(is, sequences.back());
+        unitigs_lengths.push_back(sequences.back().size());
+      }
     }
   }
 

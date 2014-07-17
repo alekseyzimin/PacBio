@@ -19,6 +19,9 @@ option("t", "threads") {
 option("o", "output") {
   description "Output file (stdout)"
   c_string; typestr "path" }
+option("dot") {
+  description "Write an overlap graph (dot file)"
+  c_string; typestr "path" }
 option("stretch-constant") {
   description "Constant tolerated stretch between sequences"
   int; default 10 }

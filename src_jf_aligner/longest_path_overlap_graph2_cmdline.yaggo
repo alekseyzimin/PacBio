@@ -16,8 +16,8 @@ option("o", "output") {
 #   description "Compact output"
 #   off }
 option("dot") {
-  description "Write an overlap graph (dot file) for each PacBio read"
-  c_string; typestr "prefix" }
+  description "Write an overlap graph (dot file)"
+  c_string; typestr "path" }
 option("O", "overlap-play") {
   description "Play in overlap length between position and k-unitig lengths"
   double; default 1.3 }
@@ -29,7 +29,10 @@ option("b", "bases") {
   off }
 option("l", "unitigs-lengths") {
   description "Length of k-unitigs"
-  c_string; typestr "path"; required }
+  c_string; typestr "path"; }
+option("u", "unitigs-sequences") {
+  description "Fasta file containing the sequence of the k-unitigs"
+  c_string; typestr "path"; conflict "unitigs-lengths" }
 option("k", "k-mer") {
   description "Length of k-mer used to create k-unitigs"
   uint32; required }

@@ -41,7 +41,7 @@ public:
     unitigs_ = parse(name);
     return *this;
   }
-  bool operator==(const super_read_name& rhs) { return unitigs_ == rhs.unitigs_; }
+  bool operator==(const super_read_name& rhs) const { return unitigs_ == rhs.unitigs_; }
 
   const unitigs_list& unitigs() const { return unitigs_; }
   size_t nb_unitigs() const { return unitigs_.size(); }

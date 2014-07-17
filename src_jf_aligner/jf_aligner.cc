@@ -177,7 +177,8 @@ int main(int argc, char *argv[])
 
   // Create aligner
   align_pb align_data(hash, args.stretch_constant_arg, args.stretch_factor_arg,
-                      args.forward_flag, args.max_match_flag, args.max_count_arg,
+                      args.forward_flag, args.max_match_flag,
+                      args.max_count_arg ? args.max_count_arg : std::numeric_limits<int>::max(),
                       args.mers_matching_arg / 100.0, args.bases_matching_arg / 100.0);
   if(unitigs_lengths) align_data.unitigs_lengths(unitigs_lengths.get(), args.k_mer_arg);
 

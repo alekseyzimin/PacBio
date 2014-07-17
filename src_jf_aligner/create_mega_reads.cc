@@ -10,12 +10,13 @@
 create_mega_reads_cmdline args;
 
 void create_mega_reads(read_parser* reads, Multiplexer* output_m, const align_pb* align_data,
-                       overlap_graph* graph_walker) {
-  parse_sequence        parser;
-  align_pb::thread      aligner(*align_data);
-  overlap_graph::thread graph(*graph_walker);
-  std::string           name;
-  Multiplexer::ostream  output(output_m);
+                       overlap_graph* graph_walker, Multiplexer* dot_m) {
+  parse_sequence                        parser;
+  align_pb::thread                      aligner(*align_data);
+  overlap_graph::thread                 graph(*graph_walker);
+  std::string                           name;
+  Multiplexer::ostream                  output(output_m);
+  std::unique_ptr<Multiplexer::ostream> dot(dot_m ? new Multiplexer::ostream(dot_m) : 0);
 
   while(true) {
     read_parser::job job(*reads);
@@ -29,11 +30,14 @@ void create_mega_reads(read_parser* reads, Multiplexer* output_m, const align_pb
       aligner.align_sequence_max(parser, pb_size);
 
       const auto& coords = aligner.coords();
-      graph.reset(coords);
+      graph.reset(coords, name, dot.get());
       graph.traverse();
-      graph.compute_mega_reads(pb_size);
+      graph.term_node_per_comp(pb_size);
       output << ">" << name << "\n";
       graph.print_mega_reads(output);
+      output.end_record();
+      if(dot)
+        dot->end_record();
     }
   }
 
@@ -52,6 +56,9 @@ int main(int argc, char *argv[])
   } else {
     output.set(std::cout, args.threads_arg);
   }
+  output_file dot;
+  if(args.dot_given)
+    dot.open(args.dot_arg, args.threads_arg);
 
   // Read k-unitig lengths
   std::vector<int> unitigs_lengths;
@@ -78,7 +85,8 @@ int main(int argc, char *argv[])
 
   // Create aligner
   align_pb align_data(hash, args.stretch_constant_arg, args.stretch_factor_arg,
-                      true /* forward */, args.max_match_flag, args.max_count_arg,
+                      true /* forward */, args.max_match_flag,
+                      args.max_count_arg ? args.max_count_arg : std::numeric_limits<int>::max(),
                       args.mers_matching_arg / 100.0, args.bases_matching_arg / 100.0);
   align_data.unitigs_lengths(&unitigs_lengths, args.k_mer_arg);
 
@@ -87,7 +95,7 @@ int main(int argc, char *argv[])
   std::vector<std::thread> threads;
   for(unsigned int i = 0; i < args.threads_arg; ++i)
     threads.push_back(std::thread(create_mega_reads, &reads, output.multiplexer(), &align_data,
-                                  &graph_walker));
+                                  &graph_walker, dot.multiplexer()));
   for(unsigned int i = 0; i < args.threads_arg; ++i)
     threads[i].join();
 

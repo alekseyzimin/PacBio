@@ -28,6 +28,7 @@ void overlap_graph::traverse(const std::vector<int>& sort_array, const align_pb:
       if(position_len * overlap_play < k_len) break; // maximum implied overlap is less than a k-mer length
       const int nb_u_overlap = coords_i.unitigs.overlap(coords_j.unitigs);
       if(!nb_u_overlap) continue; // No overlap according to unitig names
+      if(coords_i.unitigs == coords_j.unitigs) continue;
       int u_overlap_len  = 0;
       int common_overlap = 0;
       for(int u = 0; u < nb_u_overlap; ++u) {
@@ -61,9 +62,9 @@ void overlap_graph::traverse(const std::vector<int>& sort_array, const align_pb:
   }
 }
 
-void overlap_graph::comp_mega_reads(const int n, size_t pb_size, std::vector<node_info>& nodes,
-                                    const align_pb::coords_info_type& coords, comp_to_path& components,
-                                    std::ostream* dot) const {
+void overlap_graph::term_node_per_comp(const int n, size_t pb_size, std::vector<node_info>& nodes,
+                                       const align_pb::coords_info_type& coords, comp_to_path& components,
+                                       std::ostream* dot) const {
   // For each connected component, keep the index of the terminal node
   // of the longest path found
   for(int i = 0; i < n; ++i) {
@@ -79,7 +80,8 @@ void overlap_graph::comp_mega_reads(const int n, size_t pb_size, std::vector<nod
       }
       const auto& ci = coords[i];
       *dot << std::fixed << "n" << i << " [label=\"" << i << " L" << ci.ql << " #" << ci.nb_mers
-           << "\\nP(" << ci.rs << ',' << ci.re << ")\\nS(" << ci.qs << ',' << ci.qe << ")"
+           << "\\nP(" << ci.rs << ',' << ci.re << ") S(" << ci.qs << ',' << ci.qe << ")"
+           << "\\nI(" << node.imp_s << ',' << node.imp_e << ")"
            << "\\nLP #" << node.lpath << " L" << std::setprecision(1) << imp_len
            << " d" << std::setprecision(2) << node.ldensity << "\""
            << color << "];\n";
@@ -101,6 +103,7 @@ void overlap_graph::comp_mega_reads(const int n, size_t pb_size, std::vector<nod
 void overlap_graph::print_mega_reads(std::ostream& output, const comp_to_path& mega_reads,
                                      const align_pb::coords_info_type& coords,
                                      const std::vector<node_info>& nodes,
+                                     const std::vector<std::string>* unitigs_sequences,
                                      std::ostream* dot) const {
   for(const auto comp : mega_reads) {
     int         node_j  = comp.second;
@@ -130,6 +133,11 @@ void overlap_graph::print_mega_reads(std::ostream& output, const comp_to_path& m
     for(auto unitig : asr->unitigs())
       sr_len += unitigs_lengths[unitig.id()];
     sr_len -= (sr.size() - 1) * (k_len - 1);
-    output << ' ' << *asr << ' ' << sr_len << '\n';
+    output << ' ' << *asr << ' ' << sr_len;
+
+    if(unitigs_sequences)
+      asr->print_sequence(output, *unitigs_sequences, k_len);
+
+    output << '\n';
   }
 }

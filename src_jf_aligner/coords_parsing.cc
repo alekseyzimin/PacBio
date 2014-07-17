@@ -17,7 +17,7 @@ std::istream& operator>>(std::istream& is, align_pb::coords_info& c) {
   return is;
 }
 
-inline void skip_line(std::istream& is) {
+inline static void skip_line(std::istream& is) {
   is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 
@@ -32,7 +32,7 @@ void coords_parser::parser_loop() {
     for(i = 0; i < group_size(); ++i) {
       auto& elt = e->elements[i];
       if(!std::getline(file_, line)) break;
-      if(line[0] != '>') {
+      if(__builtin_expect(line[0] != '>', 0)) {
         std::cerr << "Invalid input file. Line expected to match /^>/ but got: " << line << std::endl;
         file_.close();
         break;
@@ -48,7 +48,7 @@ void coords_parser::parser_loop() {
       elt.header = endptr + 1;
       elt.lines.resize(nb_lines);
       for(long j = 0; j < nb_lines; ++j) {
-        if(!std::getline(file_, elt.lines[j])) {
+        if(__builtin_expect(!std::getline(file_, elt.lines[j]), 0)) {
           std::cerr << "Invalid input file. File truncated" << std::endl;
           file_.close();
           break;

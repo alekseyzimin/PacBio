@@ -8,6 +8,7 @@ use lib "$FindBin::RealBin";
 use UnionFind;
 use threads;
 use Thread::Queue;
+use IO::Handle;
 
 my ($no_header, $compact, $dot_file, $length_unitigs_file, $unitigs_k, $bases, $DEBUG, $help);
 my $nb_threads   = 1;
@@ -173,7 +174,8 @@ sub create_edges {
         last;
       }
       my $j_name = $$node_j{NAME};
-      next unless $j_name =~ /(?:^|_)($lastKUni)(?:_|$)/;
+      next unless $j_name =~ /(?:^|_)($lastKUni)(?:_|$)/; # last unitig of i not in j -> no overlap
+      next if $j_name eq $i_name; # refuse overlap with myself
       my $common_len     = $+[1];
       my $common_unitigs = substr($i_name, -$common_len);
       next unless $common_unitigs eq substr($j_name, 0, $common_len);
@@ -230,7 +232,7 @@ sub write_dot {
     } elsif(!@{$$n{NEIGHS}}) {
       $color = "color=green";
     }
-    printf($io "  $$n{ID} [tooltip=\"$$n{NAME}\", label=\"$$n{ID} L$$n{QLEN} #$$n{NMERS}\\nP($$n{RSTART},$$n{REND})\\nS($$n{QSTART},$$n{QEND})\\nLP #$$n{LPATH} L%.1f d%.2g\"$color];\n", $lp_len, $density);
+    printf($io "  $$n{ID} [tooltip=\"$$n{NAME}\", label=\"$$n{ID} L$$n{QLEN} #$$n{NMERS}\\nP($$n{RSTART},$$n{REND}) S($$n{QSTART},$$n{QEND})\\nI($$n{IMP_START},$$n{IMP_END})\\nLP #$$n{LPATH} L%.1f d%.2g\"$color];\n", $lp_len, $density);
   }
 
   foreach my $n (@$nodes) {
@@ -343,6 +345,7 @@ sub print_longest_paths {
         my $w = $path[$i - 1];
         my @srs = split(/_/, $$w{NAME});
         splice(@srs, 0, $$n[2]);
+        last unless @srs;
         $path_len += length_sr(join("_", @srs)) - ($unitigs_k - 1);
         print($out "_", join("_", @srs));
         last;

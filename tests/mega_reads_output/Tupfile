@@ -1,10 +1,20 @@
+ALG = ../../src_jf_aligner/jf_aligner
 LPO = ../../src_mega_reads/longest_path_overlap_graph
 LPN = ../../src_jf_aligner/longest_path_overlap_graph2
-KMER = 70
+CMR = ../../src_jf_aligner/create_mega_reads
+
+MMER = 15
+UMER = 70
+HS = 20k
 UL = kUnitigLengths.txt
 
-: coords          |> $(LPO) -d 0 -t 1 -o `basename %o _1` -c -k $(KMER) -l $(UL) -H --dot %o.dot %f > %o.log |> org_mega_reads_1 | %o.dot %o.log {mega_reads}
-: coords | $(LPN) |> $(LPN) -t 1 -o %o -k $(KMER) -l $(UL) --dot %o.dot %f > %o.log                          |> new_mega_reads | %o.dot %o.log {mega_reads}
-: foreach org_mega_reads_1.dot new_mega_reads.dot |> dot -Tsvg %f > %o |> %B.svg
-: foreach {mega_reads} |> sort -nk1,1 -nk2,2 %f > %o |> %B_sorted {mega_reads_sorted}
-: {mega_reads_sorted} |> wdiff %f > %o |> mega_reads.diff
+:        | $(ALG) |> $(ALG) -s $(HS) -m $(MMER) -f --max-match -B 10 --max-count 0 --coords %o -H -l $(UL) --compact -k $(UMER) -r sr.fa -p pb.fa |> coords
+: coords          |> /bin/bash -c "wdiff <(sort expect_coords) <(sort %f) > %o"                                                                   |> coords.diff
+
+: coords          |> $(LPO) -d 0 -o `basename %o _1` -c -k $(UMER) -l $(UL) -H --dot %o.dot %f > %o.log                                           |> org_mega_reads_1 | %o.dot %o.log {mega_reads}
+: coords | $(LPN) |> $(LPN) -o %o -k $(UMER) -l $(UL) --dot %o.dot %f > %o.log                                                                    |> new_mega_reads   | %o.dot %o.log {mega_reads}
+:        | $(CMR) |> $(CMR) -s $(HS) -m $(MMER) --max-match -B 10 --max-count 0 -l $(UL) -o %o -k $(UMER) --dot %o.dot -r sr.fa -p pb.fa  > %o.log             |> crm_mega_reads   | %o.dot %o.log {mega_reads}
+
+: foreach org_mega_reads_1.dot new_mega_reads.dot crm_mega_reads.dot |> dot -Tsvg %f > %o                 |> %B.svg
+: foreach {mega_reads}                                  |> sort -k5,5 -nk1,1 -nk2,2 %f > %o      |> %B_sorted {mega_reads_sorted}
+: foreach {mega_reads_sorted} | org_mega_reads_1_sorted |> wdiff org_mega_reads_1_sorted %f > %o |> %B.diff
