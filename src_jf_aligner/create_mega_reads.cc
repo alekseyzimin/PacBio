@@ -30,6 +30,7 @@ void create_mega_reads(read_parser* reads, Multiplexer* output_m, const align_pb
       aligner.align_sequence_max(parser, pb_size);
 
       const auto& coords = aligner.coords();
+
       graph.reset(coords, name, dot.get());
       graph.traverse();
       graph.term_node_per_comp(pb_size);
@@ -68,9 +69,10 @@ int main(int argc, char *argv[])
       create_mega_reads_cmdline::error() << "Failed to open unitig lengths map file '" << args.unitigs_lengths_arg << "'";
     std::string unitig;
     unsigned int len;
+    is >> unitig >> len;
     while(is.good()) {
-      is >> unitig >> len;
       unitigs_lengths.push_back(len);
+      is >> unitig >> len;
     }
   }
 
@@ -96,8 +98,8 @@ int main(int argc, char *argv[])
   for(unsigned int i = 0; i < args.threads_arg; ++i)
     threads.push_back(std::thread(create_mega_reads, &reads, output.multiplexer(), &align_data,
                                   &graph_walker, dot.multiplexer()));
-  for(unsigned int i = 0; i < args.threads_arg; ++i)
-    threads[i].join();
+  for(auto& th : threads)
+    th.join();
 
   return 0;
 }

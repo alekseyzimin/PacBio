@@ -191,8 +191,8 @@ int main(int argc, char *argv[])
   for(unsigned int i = 0; i < args.threads_arg; ++i)
     threads.push_back(std::thread(print_alignments, &reads, details.multiplexer(), coords.multiplexer(),
                                   &align_data));
-  for(unsigned int i = 0; i < args.threads_arg; ++i)
-    threads[i].join();
+  for(auto& th : threads)
+    th.join();
 
   return 0;
 }

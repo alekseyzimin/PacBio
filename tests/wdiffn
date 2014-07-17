@@ -1,0 +1,81 @@
+#! /usr/bin/env perl
+
+use strict;
+use warnings;
+use Getopt::Long qw(:config no_ignore_case bundling);
+
+my ($help);
+my $max_err = 0.01;
+GetOptions("m|max-err=f" => \$max_err,
+           "h|help"      => \$help) or die;
+
+if(defined($help)) {
+  print(<<EOS);
+Compare line by line, word by word. Floats are compared relatively.
+
+ -m,--max-err FLOAT   Maximum relative error ($max_err)
+ -h,--help            This message
+EOS
+#;
+    exit(0);
+}
+
+if(@ARGV != 2) {
+  print(STDERR "Expected two files to compare");
+  exit(1);
+}
+
+open(my $io1, "<", $ARGV[0]) or
+    die("Can't open file '$ARGV[0]': $!");
+open(my $io2, "<", $ARGV[1]) or
+    die("Can't open file '$ARGV[1]': $!");
+
+sub max { return $_[0] < $_[1] ? $_[1] : $_[0]; }
+
+my $equal = 1;
+while(my $line1 = <$io1>) {
+  my $line2 = <$io2>;
+  if(!defined($line2)) {
+    printf("%4d< %s", $., $line2);
+    $equal = 0;
+    next;
+  }
+  next if($line1 eq $line2);
+
+  my @F1 = split(" ", $line1);
+  my @F2 = split(" ", $line2);
+  my @res;
+  my $line_equal = 1;
+  for(my $i = 0; $i < @F1; $i++) {
+    if($i >= @F2) {
+      push(@res, "{$F1[$i]|}");
+      $line_equal = 0;
+      next;
+    }
+    if($F1[$i] eq $F2[$i] ||
+       ($F1[$i] =~ /^[\d.e+-]+$/ && $F2[$i] =~ /^[\d.e+-]+$/ &&
+        (abs($F1[$i] - $F2[$i]) / max($F1[$i], $F2[$i])) <= $max_err)) {
+      push(@res, $F1[$i]);
+      next;
+    }
+    push(@res, "{$F1[$i]|$F2[$i]}");
+    $line_equal = 0;
+  }
+  if(@F2 > @F1) {
+    for(my $i = @F1; $i < @F2; $i++) {
+      push(@res, "{|$F2[$i]}");
+    }
+    $line_equal = 0;
+  }
+  if(!$line_equal) {
+    printf("%4d<>%s\n", $., join(" ", @res));
+    $equal = 0;
+  }
+}
+
+while(my $line2 = <$io2>) {
+  printf("%4d >%s", $., $line2);
+  $equal = 0;
+}
+
+exit($equal ? 0 : 1);

@@ -17,4 +17,4 @@ UL = kUnitigLengths.txt
 
 : foreach org_mega_reads_1.dot new_mega_reads.dot crm_mega_reads.dot |> dot -Tsvg %f > %o                 |> %B.svg
 : foreach {mega_reads}                                  |> sort -k5,5 -nk1,1 -nk2,2 %f > %o      |> %B_sorted {mega_reads_sorted}
-: foreach {mega_reads_sorted} | org_mega_reads_1_sorted |> wdiff org_mega_reads_1_sorted %f > %o |> %B.diff
+: foreach {mega_reads_sorted} | org_mega_reads_1_sorted |> ../wdiffn org_mega_reads_1_sorted %f > %o |> %B.diff

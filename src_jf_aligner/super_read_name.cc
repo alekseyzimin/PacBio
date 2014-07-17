@@ -90,7 +90,7 @@ static char rev_comp_(char c) {
 }
 
 static void print_unitig(std::ostream& os, bool rev_comp, const std::string& seq, int offset) {
-  if(offset < seq.size()) {
+  if((size_t)offset < seq.size()) {
     if(rev_comp) {
       for(auto it = seq.crbegin() + offset; it != seq.crend(); ++it)
         os << rev_comp_(*it);

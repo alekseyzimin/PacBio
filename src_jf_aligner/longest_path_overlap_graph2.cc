@@ -29,6 +29,7 @@ void create_mega_reads(coords_parser* parser, Multiplexer* output_m, overlap_gra
 
   for(coords_parser::stream coords_stream(*parser); coords_stream; ++coords_stream) {
     fill_coords(coords_stream->lines, coords);
+
     graph.reset(coords, coords_stream->header, dot.get());
     graph.traverse();
     graph.term_node_per_comp(coords[0].rl);
@@ -72,9 +73,10 @@ int main(int argc, char* argv[]) {
         cmdline_args::error() << "Failed to open unitig lengths map file '" << args.unitigs_lengths_arg << "'";
       std::string unitig;
       unsigned int len;
+      is >> unitig >> len;
       while(is.good()) {
-        is >> unitig >> len;
         unitigs_lengths.push_back(len);
+        is >> unitig >> len;
       }
     } else { // Sequence in fasta file given
       std::ifstream is(args.unitigs_sequences_arg);
@@ -95,9 +97,8 @@ int main(int argc, char* argv[]) {
   std::vector<std::thread> threads;
   for(unsigned int i = 0; i < args.threads_arg; ++i)
     threads.push_back(std::thread(create_mega_reads, &parser, output.multiplexer(), &graph_walker, dot.multiplexer()));
-  for(unsigned int i = 0; i < args.threads_arg; ++i)
-    threads[i].join();
-
+  for(auto& th : threads)
+    th.join();
 
   return 0;
 }

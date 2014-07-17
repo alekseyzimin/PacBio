@@ -115,7 +115,7 @@ struct overlap_graph {
         *dot << "digraph \"" << pb_name << "\" {\nnode [fontsize=\"10\"];\n";
         for(size_t i = 0; i < sort_array_.size(); ++i) {
           const size_t it_i = sort_array_[i];
-          *dot << "n" << it_i << "[tooltip=\"" << coords[it_i].qname << "\"];\n";
+          *dot << "n" << it_i << "[tooltip=\"" << coords[it_i].unitigs << "\"];\n";
         }
       }
     }
