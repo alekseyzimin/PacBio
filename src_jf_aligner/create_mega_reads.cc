@@ -7,10 +7,13 @@
 #include <src_jf_aligner/pb_aligner.hpp>
 #include <src_jf_aligner/overlap_graph.hpp>
 
-create_mega_reads_cmdline args;
+typedef create_mega_reads_cmdline cmdline_args;
+cmdline_args args;
+
 
 void create_mega_reads(read_parser* reads, Multiplexer* output_m, const align_pb* align_data,
-                       overlap_graph* graph_walker, Multiplexer* dot_m) {
+                       overlap_graph* graph_walker, const std::vector<std::string>* unitigs_sequences,
+                       Multiplexer* dot_m) {
   parse_sequence                        parser;
   align_pb::thread                      aligner(*align_data);
   overlap_graph::thread                 graph(*graph_walker);
@@ -35,13 +38,16 @@ void create_mega_reads(read_parser* reads, Multiplexer* output_m, const align_pb
       graph.traverse();
       graph.term_node_per_comp(pb_size);
       output << ">" << name << "\n";
-      graph.print_mega_reads(output);
+      graph.print_mega_reads(output, unitigs_sequences);
       output.end_record();
       if(dot)
         dot->end_record();
     }
   }
+}
 
+inline static std::istream& skip_header(std::istream& is) {
+  return is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 
 int main(int argc, char *argv[])
@@ -62,17 +68,30 @@ int main(int argc, char *argv[])
     dot.open(args.dot_arg, args.threads_arg);
 
   // Read k-unitig lengths
+  // Read k-unitig lengths
   std::vector<int> unitigs_lengths;
+  std::vector<std::string> sequences;
   {
-    std::ifstream is(args.unitigs_lengths_arg);
-    if(!is.good())
-      create_mega_reads_cmdline::error() << "Failed to open unitig lengths map file '" << args.unitigs_lengths_arg << "'";
-    std::string unitig;
-    unsigned int len;
-    is >> unitig >> len;
-    while(is.good()) {
-      unitigs_lengths.push_back(len);
+    if(args.unitigs_lengths_given) { // File with lengths
+      std::ifstream is(args.unitigs_lengths_arg);
+      if(!is.good())
+        cmdline_args::error() << "Failed to open unitig lengths map file '" << args.unitigs_lengths_arg << "'";
+      std::string unitig;
+      unsigned int len;
       is >> unitig >> len;
+      while(is.good()) {
+        unitigs_lengths.push_back(len);
+        is >> unitig >> len;
+      }
+    } else { // Sequence in fasta file given
+      std::ifstream is(args.unitigs_sequences_arg);
+      if(!is.good())
+        cmdline_args::error() << "Failed to open unitigs sequence file '" << args.unitigs_sequences_arg << "'";
+      while(skip_header(is)) {
+        sequences.push_back("");
+        std::getline(is, sequences.back());
+        unitigs_lengths.push_back(sequences.back().size());
+      }
     }
   }
 
@@ -97,7 +116,9 @@ int main(int argc, char *argv[])
   std::vector<std::thread> threads;
   for(unsigned int i = 0; i < args.threads_arg; ++i)
     threads.push_back(std::thread(create_mega_reads, &reads, output.multiplexer(), &align_data,
-                                  &graph_walker, dot.multiplexer()));
+                                  &graph_walker,
+                                  args.unitigs_sequences_given ? &sequences : 0,
+                                  dot.multiplexer()));
   for(auto& th : threads)
     th.join();
 

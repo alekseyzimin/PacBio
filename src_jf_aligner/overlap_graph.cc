@@ -135,8 +135,10 @@ void overlap_graph::print_mega_reads(std::ostream& output, const comp_to_path& m
     sr_len -= (sr.size() - 1) * (k_len - 1);
     output << ' ' << *asr << ' ' << sr_len;
 
-    if(unitigs_sequences)
+    if(unitigs_sequences) {
+      output << ' ';
       asr->print_sequence(output, *unitigs_sequences, k_len);
+    }
 
     output << '\n';
   }

@@ -125,8 +125,8 @@ struct overlap_graph {
       mega_reads_.clear();
       og_.term_node_per_comp(coords_->size(), pb_size, nodes_, *coords_, mega_reads_, dot_);
     }
-    void print_mega_reads(std::ostream& os, const std::vector<std::string>* unitigs_lengths = 0) const {
-      og_.print_mega_reads(os, mega_reads_, *coords_, nodes_, unitigs_lengths, dot_);
+    void print_mega_reads(std::ostream& os, const std::vector<std::string>* unitigs_sequences = 0) const {
+      og_.print_mega_reads(os, mega_reads_, *coords_, nodes_, unitigs_sequences, dot_);
       if(dot_)
         *dot_ << "}\n";
     }

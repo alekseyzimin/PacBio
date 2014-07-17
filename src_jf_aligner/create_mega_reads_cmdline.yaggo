@@ -9,7 +9,10 @@ option("m", "mer") {
   uint32; required }
 option("l", "unitigs-lengths") {
   description "Length of k-unitigs"
-  c_string; typestr "path"; required }
+  c_string; typestr "path" }
+option("u", "unitigs-sequences") {
+  description "Fasta file containing the sequence of the k-unitigs"
+  c_string; typestr "path"; conflict "unitigs-lengths" }
 option("k", "k-mer") {
   description "Length of k-mer used to create k-unitigs"
   uint32; required }
