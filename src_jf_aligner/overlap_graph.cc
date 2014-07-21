@@ -1,13 +1,5 @@
 #include <src_jf_aligner/overlap_graph.hpp>
-
-///////////////////////
-// Helper functions. //
-///////////////////////
-
-// Return the starting node of the longest path ending at node n
-static node_info& l_node_start(node_info& n, std::vector<node_info>& nodes) {
-  return n.lstart == -1 ? n : nodes[n.lstart];
-}
+#include <boost/icl/interval_set.hpp>
 
 void overlap_graph::traverse(const std::vector<int>& sort_array, const align_pb::coords_info_type& coords,
                              std::vector<node_info>& nodes, std::ostream* dot) const {
@@ -50,7 +42,7 @@ void overlap_graph::traverse(const std::vector<int>& sort_array, const align_pb:
       // Update longest path
       int nlpath = node_i.lpath + (maximize_bases ? coords_j.sr_cover : coords_j.nb_mers) - common_overlap;
       if(nlpath > node_j.lpath ||
-         (nlpath == node_j.lpath && (node_j.lstart == -1 || l_node_start(node_i, nodes).imp_s > l_node_start(node_j, nodes).imp_s))) {
+         (nlpath == node_j.lpath && (node_j.lstart == -1 || node_i.l_start_node(nodes).imp_s > node_j.l_start_node(nodes).imp_s))) {
         node_j.lpath  = nlpath;
         node_j.lstart = node_i.lstart == -1 ? it_i : node_i.lstart;
         node_j.lprev  = it_i;
@@ -69,7 +61,7 @@ void overlap_graph::term_node_per_comp(const int n, size_t pb_size, std::vector<
   // of the longest path found
   for(int i = 0; i < n; ++i) {
     auto& node = nodes[i];
-    const double imp_len = std::min((double)pb_size, node.imp_e) - std::max(1.0, l_node_start(node, nodes).imp_s);
+    const double imp_len = std::min((double)pb_size, node.imp_e) - std::max(1.0, node.l_start_node(nodes).imp_s);
     node.ldensity        = (double)node.lpath / imp_len;
     if(dot) {
       const char* color = "";
@@ -100,14 +92,33 @@ void overlap_graph::term_node_per_comp(const int n, size_t pb_size, std::vector<
   }
 }
 
-void overlap_graph::print_mega_reads(std::ostream& output, const comp_to_path& mega_reads,
+typedef boost::icl::right_open_interval<double> pos_interval;
+typedef boost::icl::interval_set<double, std::less, pos_interval> pos_set;
+void overlap_graph::tile_mega_reads(const std::vector<int>& sort_array,
+                                    const std::vector<node_info>& nodes, std::vector<int>& res,
+                                    size_t at_most) const {
+  pos_set covered;
+
+  for(const int it_i : sort_array) {
+    const auto& node_i = nodes[it_i];
+    pos_interval pos_i(node_i.l_start_node(nodes).imp_s, node_i.imp_e);
+    const auto overlaps = covered & pos_i;
+    bool has_large_overlap = std::any_of(overlaps.begin(), overlaps.end(),
+                                         [=](const pos_interval& x) { return boost::icl::length(x) > k_len * overlap_play; });
+    if(has_large_overlap) continue;
+    covered += pos_i;
+    res.push_back(it_i);
+    if(res.size() >= at_most) break;
+  }
+}
+
+void overlap_graph::print_mega_reads(std::ostream& output, const std::vector<int>& sort_array,
                                      const align_pb::coords_info_type& coords,
                                      const std::vector<node_info>& nodes,
                                      const std::vector<std::string>* unitigs_sequences,
                                      std::ostream* dot) const {
-  for(const auto comp : mega_reads) {
-    int         node_j  = comp.second;
-    const auto& end_n   = nodes[node_j];
+  for(const int cnode : sort_array) {
+    const auto& end_n   = nodes[cnode];
     const auto& start_n = end_n.lstart == -1 ? end_n : nodes[end_n.lstart];
     output << std::fixed << std::setprecision(2)
            << start_n.imp_s << ' ' << end_n.imp_e << ' '
@@ -115,10 +126,11 @@ void overlap_graph::print_mega_reads(std::ostream& output, const comp_to_path& m
     const super_read_name *asr;
     super_read_name sr(end_n.lunitigs);
     if(end_n.lstart == -1) {
-      asr = &coords[node_j].unitigs;
+      asr = &coords[cnode].unitigs;
     } else {
-      size_t          offset = sr.prepend(coords[node_j].unitigs);
-      int             node_i = end_n.lprev;
+      size_t offset = sr.prepend(coords[cnode].unitigs);
+      int    node_j = cnode;
+      int    node_i = end_n.lprev;
       while(node_i >= 0) {
         const size_t overlap = nodes[node_i].lunitigs + coords[node_j].unitigs.size() - nodes[node_j].lunitigs;
         offset = sr.prepend(coords[node_i].unitigs, overlap, offset);

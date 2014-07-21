@@ -37,13 +37,16 @@ void create_mega_reads(read_parser* reads, Multiplexer* output_m, const align_pb
       graph.reset(coords, name, dot.get());
       graph.traverse();
       graph.term_node_per_comp(pb_size);
-      output << ">" << name << "\n";
-      graph.print_mega_reads(output, unitigs_sequences);
+      if(!args.no_tiling_flag) {
+        graph.sort_lpath();
+        graph.tile();
+      }
+      graph.print_mega_reads(output, name, unitigs_sequences);
+
       output.end_record();
-      if(dot)
-        dot->end_record();
+      if(dot) dot->end_record();
     }
-  }
+ }
 }
 
 inline static std::istream& skip_header(std::istream& is) {
@@ -116,8 +119,7 @@ int main(int argc, char *argv[])
   std::vector<std::thread> threads;
   for(unsigned int i = 0; i < args.threads_arg; ++i)
     threads.push_back(std::thread(create_mega_reads, &reads, output.multiplexer(), &align_data,
-                                  &graph_walker,
-                                  args.unitigs_sequences_given ? &sequences : 0,
+                                  &graph_walker, args.unitigs_sequences_given ? &sequences : 0,
                                   dot.multiplexer()));
   for(auto& th : threads)
     th.join();

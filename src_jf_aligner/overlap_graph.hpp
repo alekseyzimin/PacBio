@@ -29,6 +29,14 @@ struct node_info {
     lpath      = bases ? coords.sr_cover : coords.nb_mers;
     lunitigs   = coords.unitigs.size();
   }
+
+  node_info& l_start_node(std::vector<node_info>& nodes) {
+    return lstart == -1 ? *this : nodes[lstart];
+  }
+  const node_info& l_start_node(const std::vector<node_info>& nodes) const {
+    return lstart == -1 ? *this : nodes[lstart];
+  }
+
 };
 
 struct overlap_graph {
@@ -72,15 +80,26 @@ struct overlap_graph {
                           const align_pb::coords_info_type& coords, comp_to_path& res,
                           std::ostream* dot = 0) const;
   comp_to_path term_node_per_comp(const int n, const size_t pb_size, std::vector<node_info>& nodes,
-                                   const align_pb::coords_info_type& coords,
+                                  const align_pb::coords_info_type& coords,
                                   std::ostream* dot = 0) const {
     comp_to_path res;
     term_node_per_comp(n, pb_size, nodes, coords, res);
     return res;
   }
 
+  void tile_mega_reads(const std::vector<int>& sort_array,
+                       const std::vector<node_info>& nodes,
+                       std::vector<int>& res, size_t at_most = std::numeric_limits<size_t>::max()) const;
+  std::vector<int> tile_mega_reads(const std::vector<int>& sort_array,
+                                   const std::vector<node_info>& nodes,
+                                   size_t at_most = std::numeric_limits<size_t>::max()) const {
+    std::vector<int> res;
+    tile_mega_reads(sort_array, nodes, res, at_most);
+    return res;
+  }
+
   // Given the terminal nodes found by term_node_per_comp, print the mega reads
-  void print_mega_reads(std::ostream& os, const comp_to_path& mega_reads,
+  void print_mega_reads(std::ostream& os, const std::vector<int>& sort_array,
                         const align_pb::coords_info_type& coords,
                         const std::vector<node_info>& nodes,
                         const std::vector<std::string>* unitigs_sequences,
@@ -89,7 +108,7 @@ struct overlap_graph {
 
   struct thread {
     const overlap_graph&              og_;
-    std::vector<int>                  sort_array_;
+    std::vector<int>                  sort_nodes_, sort_mega_reads_, tiling_;
     std::vector<node_info>            nodes_;
     const align_pb::coords_info_type* coords_;
     comp_to_path                      mega_reads_;
@@ -100,35 +119,64 @@ struct overlap_graph {
     void reset(const align_pb::coords_info_type& coords, const std::string& pb_name, std::ostream* dot = 0) {
       coords_     = &coords;
       const int n = coords_->size();
-      sort_array_.resize(n);
+      sort_nodes_.resize(n);
       if((int)nodes_.size() < n)
         nodes_.resize(n);
       for(int i = 0; i < n; ++i) {
-        sort_array_[i] = i;
+        sort_nodes_[i] = i;
         nodes_[i].reset(coords[i], og_.maximize_bases);
       }
-      std::sort(sort_array_.begin(), sort_array_.end(),
+      std::sort(sort_nodes_.begin(), sort_nodes_.end(),
                 [&] (int i, int j) { return nodes_[i].imp_s < nodes_[j].imp_s || (nodes_[i].imp_s == nodes_[j].imp_s &&
                                                                                   nodes_[i].imp_e < nodes_[j].imp_e); });
       dot_ = dot;
       if(dot_) {
         *dot << "digraph \"" << pb_name << "\" {\nnode [fontsize=\"10\"];\n";
-        for(size_t i = 0; i < sort_array_.size(); ++i) {
-          const size_t it_i = sort_array_[i];
+        for(size_t i = 0; i < sort_nodes_.size(); ++i) {
+          const size_t it_i = sort_nodes_[i];
           *dot << "n" << it_i << "[tooltip=\"" << coords[it_i].unitigs << "\"];\n";
         }
       }
     }
 
-    void traverse() { og_.traverse(sort_array_, *coords_, nodes_, dot_); }
+    void traverse() { og_.traverse(sort_nodes_, *coords_, nodes_, dot_); }
     void term_node_per_comp(size_t pb_size) {
       mega_reads_.clear();
       og_.term_node_per_comp(coords_->size(), pb_size, nodes_, *coords_, mega_reads_, dot_);
+      sort_mega_reads_.clear();
+      for(const auto& comp : mega_reads_)
+        sort_mega_reads_.push_back(comp.second);
+      tiling_.clear();
     }
-    void print_mega_reads(std::ostream& os, const std::vector<std::string>* unitigs_sequences = 0) const {
-      og_.print_mega_reads(os, mega_reads_, *coords_, nodes_, unitigs_sequences, dot_);
-      if(dot_)
-        *dot_ << "}\n";
+    void sort_lpath() {
+      // Sort by decreasing lpath
+      std::sort(sort_mega_reads_.begin(), sort_mega_reads_.end(),
+                [&](int i, int j) { return nodes_[j].lpath < nodes_[i].lpath; });
+    }
+
+    // void sort_pos() {
+    //   // Sort by decreasing lpath
+    //   std::sort(sort_mega_reads_.begin(), sort_mega_reads_.end(),
+    //             [&](int i, int j) { return nodes_[j]. < nodes_[i].lpath; });
+    // }
+
+    void tile(size_t at_most = std::numeric_limits<size_t>::max()) {
+      og_.tile_mega_reads(sort_mega_reads_, nodes_, tiling_, at_most);
+      std::sort(tiling_.begin(), tiling_.end(),
+                [&](int i, int j) -> bool {
+                  auto st_i = nodes_[i].l_start_node(nodes_).imp_s, st_j = nodes_[j].l_start_node(nodes_).imp_s;
+                  return st_i < st_j || (st_i == st_j && nodes_[i].imp_e < nodes_[j].imp_e);
+                });
+    }
+
+    void print_mega_reads(std::ostream& os, const std::string& name,
+                          const std::vector<std::string>* unitigs_sequences = 0) const {
+      if(!mega_reads_.empty()) {
+        os << '>' << name << '\n';
+        og_.print_mega_reads(os, tiling_.empty() ? sort_mega_reads_ : tiling_, *coords_, nodes_, unitigs_sequences, dot_);
+        if(dot_)
+          *dot_ << "}\n";
+      }
     }
   };
 };
