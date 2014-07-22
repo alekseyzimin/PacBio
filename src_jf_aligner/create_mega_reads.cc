@@ -37,10 +37,8 @@ void create_mega_reads(read_parser* reads, Multiplexer* output_m, const align_pb
       graph.reset(coords, name, dot.get());
       graph.traverse();
       graph.term_node_per_comp(pb_size);
-      if(!args.no_tiling_flag) {
-        graph.sort_lpath();
-        graph.tile();
-      }
+      if(!args.no_tiling_flag)
+        args.maximal_tiling_flag ? graph.tile_maximal() : graph.tile_greedy();
       graph.print_mega_reads(output, name, unitigs_sequences);
 
       output.end_record();

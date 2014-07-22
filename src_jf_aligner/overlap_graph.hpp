@@ -87,15 +87,34 @@ struct overlap_graph {
     return res;
   }
 
-  void tile_mega_reads(const std::vector<int>& sort_array,
-                       const std::vector<node_info>& nodes,
-                       std::vector<int>& res, size_t at_most = std::numeric_limits<size_t>::max()) const;
-  std::vector<int> tile_mega_reads(const std::vector<int>& sort_array,
-                                   const std::vector<node_info>& nodes,
-                                   size_t at_most = std::numeric_limits<size_t>::max()) const {
+  // Tile the mega reads in a greedy fashion. Expect sort_array to be
+  // the indices of the last nodes in the mega reads, sorted by size
+  // of the mega reads (e.g. number of aligned k-mers or number of
+  // bases).
+  int tile_greedy(const std::vector<int>& sort_array,
+                   const std::vector<node_info>& nodes,
+                   std::vector<int>& res, size_t at_most = std::numeric_limits<size_t>::max()) const;
+
+  std::pair<int, std::vector<int>> tile_greedy(const std::vector<int>& sort_array,
+                                               const std::vector<node_info>& nodes,
+                                               size_t at_most = std::numeric_limits<size_t>::max()) const {
     std::vector<int> res;
-    tile_mega_reads(sort_array, nodes, res, at_most);
-    return res;
+    int score = tile_greedy(sort_array, nodes, res, at_most);
+    return std::make_pair(score, std::move(res));
+  }
+
+  // Tile the mega reads maximizing the number of aligned
+  // k-mers. Expect sort_array to be the indices of the last nodes in
+  // the mega reads, sorted by the number of mers aligned.
+  int tile_maximal(const std::vector<int>& sort_array,
+                    const std::vector<node_info>& nodes,
+                    std::vector<int>& res) const;
+
+  std::pair<int, std::vector<int>> tile_maximal(const std::vector<int>& sort_array,
+                                                const std::vector<node_info>& nodes) const {
+    std::vector<int> res;
+    int score = tile_maximal(sort_array, nodes, res);
+    return std::make_pair(score, std::move(res));
   }
 
   // Given the terminal nodes found by term_node_per_comp, print the mega reads
@@ -148,26 +167,29 @@ struct overlap_graph {
         sort_mega_reads_.push_back(comp.second);
       tiling_.clear();
     }
-    void sort_lpath() {
-      // Sort by decreasing lpath
+
+    void tile_greedy(size_t at_most = std::numeric_limits<size_t>::max()) {
       std::sort(sort_mega_reads_.begin(), sort_mega_reads_.end(),
                 [&](int i, int j) { return nodes_[j].lpath < nodes_[i].lpath; });
-    }
-
-    // void sort_pos() {
-    //   // Sort by decreasing lpath
-    //   std::sort(sort_mega_reads_.begin(), sort_mega_reads_.end(),
-    //             [&](int i, int j) { return nodes_[j]. < nodes_[i].lpath; });
-    // }
-
-    void tile(size_t at_most = std::numeric_limits<size_t>::max()) {
-      og_.tile_mega_reads(sort_mega_reads_, nodes_, tiling_, at_most);
+      og_.tile_greedy(sort_mega_reads_, nodes_, tiling_, at_most);
       std::sort(tiling_.begin(), tiling_.end(),
                 [&](int i, int j) -> bool {
                   auto st_i = nodes_[i].l_start_node(nodes_).imp_s, st_j = nodes_[j].l_start_node(nodes_).imp_s;
                   return st_i < st_j || (st_i == st_j && nodes_[i].imp_e < nodes_[j].imp_e);
                 });
     }
+
+    void tile_maximal() {
+      std::sort(sort_mega_reads_.begin(), sort_mega_reads_.end(),
+                [&](int i, int j) { return nodes_[i].imp_e < nodes_[j].imp_e; });
+      og_.tile_maximal(sort_mega_reads_, nodes_, tiling_);
+      std::sort(tiling_.begin(), tiling_.end(),
+                [&](int i, int j) -> bool {
+                  auto st_i = nodes_[i].l_start_node(nodes_).imp_s, st_j = nodes_[j].l_start_node(nodes_).imp_s;
+                  return st_i < st_j || (st_i == st_j && nodes_[i].imp_e < nodes_[j].imp_e);
+                });
+    }
+
 
     void print_mega_reads(std::ostream& os, const std::string& name,
                           const std::vector<std::string>* unitigs_sequences = 0) const {
