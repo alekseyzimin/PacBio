@@ -135,22 +135,19 @@ int overlap_graph::tile_maximal(const std::vector<int>& sort_array,
   auto       it  = sort_array.cbegin();
   const auto end = sort_array.cend();
   if(it == end) return 0;
-  std::cout << "it:" << *it << " nodes:" << nodes.size() << " imp_s:" << nodes[*it].imp_s << " imp_e:" << nodes[*it].imp_e << "\n";
   info.push_back({nodes[*it].lpath, nodes[*it].imp_e, *it, -1, 1 });
-  std::cout << "0 " << info.back() << "\n";
 
   for(++it; it != end; ++it) {
-    const double lpath_start = nodes[*it].l_start_node(nodes).imp_s + k_len * overlap_play;
-    std::cout << "(" << lpath_start << ", " << nodes[*it].imp_e << ")\n";
-    auto lb = std::upper_bound(info.cbegin(), info.cend(),
-                               std::min(lpath_start, nodes[*it].imp_e),
-                               [](const double x, const max_tile_info& y) { return x < y.pos; });
-    const int dst    = std::distance(info.cbegin(), lb);
-    const int nscore = (dst ? (lb - 1)->score : 0) + nodes[*it].lpath;
-    if(nscore > info.back().score) {
-      info.push_back({ nscore, nodes[*it].imp_e, *it, dst - 1, dst ? (lb - 1)->length + 1 : 1 });
-      std::cout << (info.size() - 1) << " " << info.back() << "\n";
-    }
+    const double lpath_start = nodes[*it].l_start_node(nodes).imp_s;
+    const auto lb = std::upper_bound(info.cbegin(), info.cend(),
+                                     std::min(lpath_start + k_len * overlap_play, nodes[*it].imp_e),
+                                     [](const double x, const max_tile_info& y) { return x < y.pos; });
+    int i = std::distance(info.cbegin(), lb) - 1;
+    while(i > 0 && info[i].previous >= 0 && info[info[i].previous].pos > lpath_start)
+      i = info[i].previous;
+    const int nscore = (i >= 0 ? info[i].score : 0) + nodes[*it].lpath;
+    if(nscore > info.back().score)
+      info.push_back({ nscore, nodes[*it].imp_e, *it, i, (i >= 0 ? info[i].length : 0) + 1 });
   }
 
   res.resize(info.back().length);
