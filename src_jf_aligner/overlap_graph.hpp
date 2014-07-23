@@ -78,12 +78,12 @@ struct overlap_graph {
   typedef std::map<union_find::set*, int> comp_to_path;
   void term_node_per_comp(const int n, size_t pb_size, std::vector<node_info>& nodes,
                           const align_pb::coords_info_type& coords, comp_to_path& res,
-                          std::ostream* dot = 0) const;
+                          double min_density = 0, std::ostream* dot = 0) const;
   comp_to_path term_node_per_comp(const int n, const size_t pb_size, std::vector<node_info>& nodes,
                                   const align_pb::coords_info_type& coords,
-                                  std::ostream* dot = 0) const {
+                                  double min_density = 0, std::ostream* dot = 0) const {
     comp_to_path res;
-    term_node_per_comp(n, pb_size, nodes, coords, res);
+    term_node_per_comp(n, pb_size, nodes, coords, res, min_density, dot);
     return res;
   }
 
@@ -159,9 +159,9 @@ struct overlap_graph {
     }
 
     void traverse() { og_.traverse(sort_nodes_, *coords_, nodes_, dot_); }
-    void term_node_per_comp(size_t pb_size) {
+    void term_node_per_comp(size_t pb_size, double min_density = 0) {
       mega_reads_.clear();
-      og_.term_node_per_comp(coords_->size(), pb_size, nodes_, *coords_, mega_reads_, dot_);
+      og_.term_node_per_comp(coords_->size(), pb_size, nodes_, *coords_, mega_reads_, min_density, dot_);
       sort_mega_reads_.clear();
       for(const auto& comp : mega_reads_)
         sort_mega_reads_.push_back(comp.second);

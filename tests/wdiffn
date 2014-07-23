@@ -4,10 +4,11 @@ use strict;
 use warnings;
 use Getopt::Long qw(:config no_ignore_case bundling);
 
-my ($help);
+my ($preprocess, $help);
 my $max_err = 0.01;
-GetOptions("m|max-err=f" => \$max_err,
-           "h|help"      => \$help) or die;
+GetOptions("m|max-err=f"    => \$max_err,
+           "p|preprocess=s" => \$preprocess,
+           "h|help"         => \$help) or die;
 
 if(defined($help)) {
   print(<<EOS);
@@ -25,10 +26,28 @@ if(@ARGV != 2) {
   exit(1);
 }
 
-open(my $io1, "<", $ARGV[0]) or
-    die("Can't open file '$ARGV[0]': $!");
-open(my $io2, "<", $ARGV[1]) or
-    die("Can't open file '$ARGV[1]': $!");
+sub open_file {
+  my ($file) = @_;
+  open(my $io, "<", $file) or
+      die("Can't open file '$file': $!");
+  return $io;
+}
+
+sub open_preprocess {
+  my ($file, $preprocess) = @_;
+  open(my $io, "$preprocess < $file |") or
+      die("Can't preprocess file '$file': $!");
+  return $io;
+}
+
+my ($io1, $io2);
+if(defined($preprocess)) {
+  $io1 = open_preprocess($ARGV[0], $preprocess);
+  $io2 = open_preprocess($ARGV[1], $preprocess);
+} else {
+  $io1 = open_file($ARGV[0]);
+  $io2 = open_file($ARGV[1]);
+}
 
 sub max { return $_[0] < $_[1] ? $_[1] : $_[0]; }
 

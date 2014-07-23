@@ -1,8 +1,5 @@
 purpose "Find the longest path in the super-read overlap graph"
 
-# option("d", "density") {
-#   description "Minimum density of k-mers"
-#   double; default 0.05 }
 # option("H", "no-header") {
 #   description "Do not print line headers"
 #   off }
@@ -36,6 +33,9 @@ option("u", "unitigs-sequences") {
 option("k", "k-mer") {
   description "Length of k-mer used to create k-unitigs"
   uint32; required }
+option("d", "density") {
+  description "Minimum density of k-mers"
+  double; default 0.05 }
 arg("coords") {
   description "Coords file"
   c_string; typestr "path" }
