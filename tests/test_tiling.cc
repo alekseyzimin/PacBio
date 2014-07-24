@@ -17,10 +17,11 @@ void check_no_overlap(std::vector<int> tiling, std::vector<node_info> nodes, dou
   pos_set covered;
   for(auto it : tiling) {
     pos_interval pos(nodes[it].l_start_node(nodes).imp_s, nodes[it].imp_e);
-    const auto overlaps = covered & pos;
-    const double max = std::min(max_ovl, boost::icl::length(pos));
-    const bool has_large_overlap = std::any_of(overlaps.begin(), overlaps.end(),
-                                               [=](const pos_interval& x) { return boost::icl::length(x) >= max; });
+    const auto   overlaps           = covered & pos;
+    covered                        += pos;
+    const double max                = std::min(max_ovl, boost::icl::length(pos));
+    const bool   has_large_overlap  = std::any_of(overlaps.begin(), overlaps.end(),
+                                                  [=](const pos_interval& x) { return boost::icl::length(x) >= max; });
     EXPECT_FALSE(has_large_overlap);
   }
 }

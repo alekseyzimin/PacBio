@@ -185,7 +185,8 @@ struct overlap_graph {
       og_.tile_maximal(sort_mega_reads_, nodes_, tiling_);
       std::sort(tiling_.begin(), tiling_.end(),
                 [&](int i, int j) -> bool {
-                  auto st_i = nodes_[i].l_start_node(nodes_).imp_s, st_j = nodes_[j].l_start_node(nodes_).imp_s;
+                  const auto st_i = nodes_[i].l_start_node(nodes_).imp_s;
+                  const auto st_j = nodes_[j].l_start_node(nodes_).imp_s;
                   return st_i < st_j || (st_i == st_j && nodes_[i].imp_e < nodes_[j].imp_e);
                 });
     }
@@ -194,6 +195,7 @@ struct overlap_graph {
     void print_mega_reads(std::ostream& os, const std::string& name,
                           const std::vector<std::string>* unitigs_sequences = 0) const {
       if(!mega_reads_.empty()) {
+        //        os << '>' << name << ' ' << '(' << sort_mega_reads_.size() << ',' << tiling_.size() << ')' << '\n';
         os << '>' << name << '\n';
         og_.print_mega_reads(os, tiling_.empty() ? sort_mega_reads_ : tiling_, *coords_, nodes_, unitigs_sequences, dot_);
         if(dot_)

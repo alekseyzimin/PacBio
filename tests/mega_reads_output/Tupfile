@@ -8,13 +8,13 @@ UMER = 70
 HS = 20k
 UL = kUnitigLengths.txt
 
-:        | $(ALG) |> $(ALG) -s $(HS) -m $(MMER) -f --max-match -B 10 --max-count 0 --coords %o -H -l $(UL) --compact -k $(UMER) -r sr.fa -p pb.fa |> coords
-: coords          |> ../wdiffn -p 'sort' expect_coords %f > %o                                                                                      |> coords.diff
+:        | $(ALG) |> $(ALG) -s $(HS) -m $(MMER) -f --max-match -B 10 --max-count 0 --coords %o -H -l $(UL) --compact -k $(UMER) -r sr.fa -p pb.fa     |> coords
+: coords          |> ../wdiffn -p 'sort' expect_coords %f > %o                                                                                        |> coords.diff
 
-: coords          |> $(LPO) --force -o `basename %o _1` -c -k $(UMER) -l $(UL) -H --dot %o.dot %f > %o.log                                                |> org_mega_reads_1 | %o.dot %o.log {mega_reads}
-: coords | $(LPN) |> $(LPN) -o %o -k $(UMER) -l $(UL) --dot %o.dot %f > %o.log                                                                    |> new_mega_reads   | %o.dot %o.log {mega_reads}
-:        | $(CMR) |> $(CMR) -s $(HS) -m $(MMER) --max-match -T -B 10 --max-count 0 -l $(UL) -o %o -k $(UMER) --dot %o.dot -r sr.fa -p pb.fa  > %o.log             |> crm_mega_reads   | %o.dot %o.log {mega_reads}
+: coords          |> $(LPO) --force -o `basename %o _1` -c -k $(UMER) -l $(UL) -H --dot %o.dot %f > %o.log                                            |> org_mega_reads_1 | %o.dot %o.log {mega_reads}
+: coords | $(LPN) |> $(LPN) -o %o -k $(UMER) -l $(UL) --dot %o.dot %f > %o.log                                                                        |> new_mega_reads   | %o.dot %o.log {mega_reads}
+:        | $(CMR) |> $(CMR) -s $(HS) -m $(MMER) --max-match -T -B 10 --max-count 0 -l $(UL) -o %o -k $(UMER) --dot %o.dot -r sr.fa -p pb.fa  > %o.log |> crm_mega_reads   | %o.dot %o.log {mega_reads}
 
-: foreach org_mega_reads_1.dot new_mega_reads.dot crm_mega_reads.dot |> dot -Tsvg %f > %o                 |> %B.svg
+: foreach org_mega_reads_1.dot new_mega_reads.dot crm_mega_reads.dot |> dot -Tsvg %f > %o                     |> %B.svg
 : foreach {mega_reads} | org_mega_reads_1 |> ../wdiffn -p 'sort -k5,5 -nk1,1 -nk2,2' org_mega_reads_1 %f > %o |> %B_5_1_2.diff
-: foreach {mega_reads} | org_mega_reads_1 |> ../wdiffn -p 'sort -nk1,1 -nk2,2' org_mega_reads_1 %f > %o |> %B_1_2.diff
+: foreach {mega_reads} | org_mega_reads_1 |> ../wdiffn -p 'sort -nk1,1 -nk2,2' org_mega_reads_1 %f > %o       |> %B_1_2.diff
