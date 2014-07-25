@@ -32,7 +32,7 @@ void create_mega_reads(coords_parser* parser, Multiplexer* output_m, overlap_gra
 
     graph.reset(coords, coords_stream->header, dot.get());
     graph.traverse();
-    graph.term_node_per_comp(coords[0].rl, args.density_arg);
+    graph.term_node_per_comp(coords[0].rl, args.density_arg, args.min_length_arg);
     graph.print_mega_reads(output, coords_stream->header);
     output.end_record();
     if(dot)

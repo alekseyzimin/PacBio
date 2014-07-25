@@ -36,6 +36,9 @@ option("k", "k-mer") {
 option("d", "density") {
   description "Minimum density of k-mers"
   double; default 0.05 }
+option("L", "min-length") {
+  description "Minimum length of a mega-read"
+  double; default 100.0 }
 arg("coords") {
   description "Coords file"
   c_string; typestr "path" }

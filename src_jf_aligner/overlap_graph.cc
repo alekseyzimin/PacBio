@@ -56,7 +56,7 @@ void overlap_graph::traverse(const std::vector<int>& sort_array, const align_pb:
 
 void overlap_graph::term_node_per_comp(const int n, size_t pb_size, std::vector<node_info>& nodes,
                                        const align_pb::coords_info_type& coords, comp_to_path& components,
-                                       double min_density, std::ostream* dot) const {
+                                       double min_density, double min_len, std::ostream* dot) const {
   // For each connected component, keep the index of the terminal node
   // of the longest path found
   for(int i = 0; i < n; ++i) {
@@ -78,7 +78,7 @@ void overlap_graph::term_node_per_comp(const int n, size_t pb_size, std::vector<
            << " d" << std::setprecision(2) << node.ldensity << "\""
            << color << "];\n";
     }
-    if(!node.end_node || node.ldensity < min_density) continue;
+    if(!node.end_node || node.ldensity < min_density || imp_len < min_len) continue;
 
     auto comp_root = node.component.root();
     auto comp_it   = components.find(comp_root);
