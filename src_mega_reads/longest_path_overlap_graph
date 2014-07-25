@@ -10,7 +10,7 @@ use threads;
 use Thread::Queue;
 use IO::Handle;
 
-my ($no_header, $compact, $dot_file, $length_unitigs_file, $unitigs_k, $bases, $DEBUG, $help);
+my ($no_header, $compact, $dot_file, $length_unitigs_file, $unitigs_k, $bases, $DEBUG, $force, $help);
 my $nb_threads   = 1;
 my $min_density  = 0.05;
 my $nb_errors    = 3;
@@ -27,6 +27,7 @@ GetOptions("d|density=f"        => \$min_density,
            "k=i"                => \$unitigs_k,
            "p|overlap-play=f"   => \$overlap_play,
            "dot=s"              => \$dot_file,
+           "force"              => \$force,
            "debug"              => \$DEBUG,
            "h|help"             => \$help) or die;
 
@@ -50,6 +51,12 @@ EOS
 # ;
 exit(0);
 }
+if(!defined($force)) {
+  print(STDERR "longest_path_overlap_graph is deprecated. Use longest_path_overlap_graph2 in the src_jf_aligner directory\n",
+        "Or use '--force' to ignore this warning\n");
+  exit(1);
+}
+
 if(defined($length_unitigs_file) != defined($unitigs_k)) {
   print(STDERR "Switches --length-unitigs and -k must be supplied together.");
   exit(1);
