@@ -312,7 +312,7 @@ sub print_longest_paths {
       if((($$end_n{IMP_END} > $$end_n{RLEN} ? $$end_n{RLEN} : $$end_n{IMP_END}) -
                                       ($$start_n{IMP_START} < 1 ? 1 : $$start_n{IMP_START}) + 1) >0){
 	$density = $$end_n{LPATH} / (($$end_n{IMP_END} > $$end_n{RLEN} ? $$end_n{RLEN} : $$end_n{IMP_END}) -
-                                      ($$start_n{IMP_START} < 1 ? 1 : $$start_n{IMP_START}));
+                                      ($$start_n{IMP_START} < 1 ? 1 : $$start_n{IMP_START}) + 1);
 	}else{
 	$density = 0;
 	}
