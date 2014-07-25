@@ -1,12 +1,14 @@
 #include <ostream>
 #include <string>
 #include <vector>
+#include <cmath>
 #include <src_jf_aligner/pb_aligner.hpp>
 
 void align_pb::compute_coords(const frags_pos_type& frags_pos, const size_t pb_size,
                               coords_info_type& coords) const {
   for(const auto& it : frags_pos) {
     coords_info info = compute_coords_info(it.second, pb_size);
+    if(fabs(info.stretch) == 0.0) continue; // Very compressed. Collapsed repeats.
     if(matching_mers_factor_ && !info.min_mers(matching_mers_factor_)) continue;
     if(matching_bases_factor_ > 0.0 && !info.min_bases(matching_bases_factor_)) continue;
     coords.push_back(std::move(info));
@@ -104,6 +106,7 @@ void align_pb::align_sequence_max (parse_sequence& parser, const size_t pb_size,
     while(true) {
       coords_info info = compute_coords_info(ml, pb_size);
       if(info.nb_mers == 0) break;
+      if(fabs(info.stretch) == 0.0) break;
       if(matching_mers_factor_ && !info.min_mers(matching_mers_factor_)) break;
       if(matching_bases_factor_ > 0.0 && !info.min_bases(matching_bases_factor_)) break;
       coords.push_back(std::move(info));

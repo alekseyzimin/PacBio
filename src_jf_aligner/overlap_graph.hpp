@@ -141,8 +141,7 @@ struct overlap_graph {
       coords_     = &coords;
       const int n = coords_->size();
       sort_nodes_.resize(n);
-      if((int)nodes_.size() < n)
-        nodes_.resize(n);
+      nodes_.resize(n);
       for(int i = 0; i < n; ++i) {
         sort_nodes_[i] = i;
         nodes_[i].reset(coords[i], og_.maximize_bases);
