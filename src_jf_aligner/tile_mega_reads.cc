@@ -9,7 +9,7 @@ cmdline_args args;
 
 void tile_mega_reads(std::ostream& out, const overlap_graph& og, const std::string& header, const std::vector<node_info>& nodes) {
   std::vector<int> sort(nodes.size());
-  for(int i = 0; i < nodes.size(); ++i) sort[i] = i;
+  for(int i = 0, s = nodes.size(); i < s; ++i) sort[i] = i;
   std::vector<int> res;
   if(args.maximal_tiling_flag)
     og.tile_maximal(sort, nodes, res);

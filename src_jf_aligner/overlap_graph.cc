@@ -79,9 +79,6 @@ void overlap_graph::term_node_per_comp(const int n, size_t pb_size, std::vector<
            << color << "];\n";
     }
     if(!node.end_node || node.ldensity < min_density) continue;
-    // std::cerr << "(" << node.l_start_node(nodes).imp_s << "," << node.imp_e << ')'
-    //           << " pbsize:" << pb_size << " imp_len:" << imp_len << " density:" << node.ldensity << " min:" << min_density
-    //           << ' ' << coords[i].unitigs << "\n";
 
     auto comp_root = node.component.root();
     auto comp_it   = components.find(comp_root);
@@ -108,13 +105,11 @@ int overlap_graph::tile_greedy(const std::vector<int>& sort_array,
     const auto& node_i = nodes[it_i];
     pos_interval pos_i(node_i.l_start_node(nodes).imp_s, node_i.imp_e);
     const double max_overlap       = std::min(k_len * overlap_play, boost::icl::length(pos_i));
-    //    std::cout << "mo:" << max_overlap << ' ' << pos_i;
     const auto   overlaps          = covered & pos_i;
     const bool   has_large_overlap =
       std::any_of(overlaps.begin(), overlaps.end(),
                   [=](const pos_interval& x) { return boost::icl::length(x) >= max_overlap; });
-    //    std::cerr << it_i << " large:" << has_large_overlap << "\n";
-    //    std::cout << ' ' << covered << "+" << pos_i << "->" << overlaps << " has_ovl:" << has_large_overlap << "\n";
+
     if(has_large_overlap) continue;
     const bool contains =
       std::any_of(placed.begin(), placed.end(),
@@ -122,6 +117,7 @@ int overlap_graph::tile_greedy(const std::vector<int>& sort_array,
     if(contains) continue;
 
     covered += pos_i;
+    placed.push_back(pos_i);
     score   += nodes[it_i].lpath;
     res.push_back(it_i);
     if(res.size() >= at_most) break;
@@ -158,14 +154,10 @@ int overlap_graph::tile_maximal(const std::vector<int>& sort_array,
                                      std::min(lpath_start + k_len * overlap_play, nodes[*it].imp_e),
                                      [](const double x, const max_tile_info& y) { return x < y.pos; });
     int i = std::distance(info.cbegin(), lb) - 1;
-    //    std::cout << "found:" << i << " " << (i >= 0 ? info[i] : mtig) << " " << (info[i].previous >= 0 ? nodes[info[i].node].l_start_node(nodes).imp_s : -1) << "\n";
-    while(i > 0 && info[i].previous >= 0 && nodes[info[i].node].l_start_node(nodes).imp_s >= lpath_start) {
-      //      std::cout << "back:" << i << " " << info[info[i].previous] << " " << nodes[info[i].previous].l_start_node(nodes).imp_s <<"\n";
+    while(i >= 0 && nodes[info[i].node].l_start_node(nodes).imp_s >= lpath_start)
       i = info[i].previous;
-    }
+
     const int nscore = (i >= 0 ? info[i].score : 0) + nodes[*it].lpath;
-    //    for(auto& it : info) std::cout << " " << it;
-    //    std::cout << "(" << lpath_start << "," << nodes[*it].imp_e << "):" << nodes[*it].lpath << " " << i << (i >= 0 ? info[i] : mtig) << " nscore:" << nscore << " max:" << info.back() << " " << info.size() << "\n";
     if(nscore > info.back().score)
       info.push_back({ nscore, nodes[*it].imp_e, *it, i, (i >= 0 ? info[i].length : 0) + 1 });
   }
@@ -191,7 +183,6 @@ void overlap_graph::print_mega_reads(std::ostream& output, const std::vector<int
   for(const int cnode : sort_array) {
     const auto& end_n   = nodes[cnode];
     const auto& start_n = end_n.l_start_node(nodes);
-    //    output << cnode << ' ' << std::fixed << std::setprecision(2)
     output << std::fixed << std::setprecision(2)
            << start_n.imp_s << ' ' << end_n.imp_e << ' '
            << end_n.lpath << ' ' << std::setprecision(4) << end_n.ldensity;
