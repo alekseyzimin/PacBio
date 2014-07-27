@@ -136,7 +136,7 @@ std::ostream& operator<<(std::ostream& os, const max_tile_info& i) {
   return os << "{score:" << i.score << ", pos:" << i.pos << ", node:" << i.node << ", prev:" << i.previous << ", len:" << i.length << "}";
 }
 
-static max_tile_info mtig = { 0, std::numeric_limits<double>::min(), -1, -1, 0 };
+//static max_tile_info mtig = { 0, std::numeric_limits<double>::min(), -1, -1, 0 };
 
 int overlap_graph::tile_maximal(const std::vector<int>& sort_array,
                                 const std::vector<node_info>& nodes, std::vector<int>& res) const {
