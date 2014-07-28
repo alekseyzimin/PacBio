@@ -20,7 +20,7 @@ awk -F ',' '{print ">"$1"\n"$2}'  $NAMESEQFILE > $NAMESEQFILE.fa
 nucmer  --maxmatch -d 0.2 -f -g 200 -l 15  -p $FILENAME $NAMESEQFILE.fa $FILENAME.megareads.fa 1>/dev/null 2>&1
 if [ ! -s $FILENAME.delta ];then exit; fi
 delta-filter -g -o 20 $FILENAME.delta > $FILENAME.f.delta
-show-coords -lcHr  $FILENAME.f.delta  |sort -nk19 -k1n | $EXEPATH/merge_matches_coords_file.pl 1000 > $FILENAME.f.ncoords
+show-coords -lcHr  $FILENAME.f.delta  > $FILENAME.f.ncoords
 if [ ! -s $FILENAME.f.ncoords ];then exit; fi
 
 perl -e '{
@@ -56,12 +56,13 @@ while($line=<STDIN>){
 	@f=split(/\s+/,$line);
 	@c=split(/\s+/,$coords_pb[$f[-1]]);
         next if(($f[0]>$c[1] && $f[1]>$c[1])||($f[0]<$c[0] && $f[1]<$c[0]));
-	$outline.="$f[0] $f[1] $f[3] $f[4] ".$scores[$f[-1]]." $pbn[$f[-1]] $seq[$f[-1]] $srnames[$f[-1]]\n";
+	$outline.="$f[0] $f[1] $f[3] $f[4] ".($f[7]*$f[9]/100)." $scores[$f[-1]] $pbn[$f[-1]] $seq[$f[-1]] $srnames[$f[-1]]\n";
 }
 print $outline;
-}' $FILENAME.megareads.sizes $FILENAME.megareads.fa $FILENAME.megareads < $FILENAME.f.ncoords  | sort -nrk5,5 > $FILENAME.megareads.wseq
+}' $FILENAME.megareads.sizes $FILENAME.megareads.fa $FILENAME.megareads < $FILENAME.f.ncoords  | sort -nrk5 -k6nr > $FILENAME.megareads.wseq
 
 
-$EXEPATH/reconciliate_mega_reads.pl 20 $KMER < $FILENAME.megareads.wseq | sort -nk1,1 > $FILENAME.megareads.sorted.wseq
+$EXEPATH/reconciliate_mega_reads.pl 20 $KMER < $FILENAME.megareads.wseq  > $FILENAME.megareads.reconciled.wseq
+awk '{print $1" "$2" "$5" "substr($6,$3,$4-$3+1)" "$7}' $FILENAME.megareads.reconciled.wseq > $FILENAME.megareads.sorted.wseq
 
 fi

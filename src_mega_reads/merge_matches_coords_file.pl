@@ -55,6 +55,7 @@ while ($line = <STDIN>) {
 	$match_qry_beg = $currentFlds[3];
 	$prev_match = $current_match;
 	$match_direction = $local_direction;
+	$match_bases = 0;
 	$badJoin=0;
 	@matches=();
 	push(@matches,join(" ",@currentFlds));
@@ -62,6 +63,7 @@ while ($line = <STDIN>) {
     if ($keepMatchLine) {
 	$match_ref_end = $currentFlds[1];
 	$match_qry_end = $currentFlds[4];
+	$match_bases += $currentFlds[7]*$currentFlds[9]/100;
 	@prevFlds = @currentFlds;
 	$prevMidpoint = $currentMidpoint;
     }
@@ -95,7 +97,7 @@ sub outputMatchGroup
 {
     $qry_match_len = abs($match_qry_end-$match_qry_beg) + 1;
     $ref_match_len = $match_ref_end-$match_ref_beg + 1;
-    $pctIdentity = 100 - abs($qry_match_len-$ref_match_len)/$ref_match_len * 100;
+    $pctIdentity = $match_bases*100 / $qry_match_len;
     $pctRefMatchLen = 100 * ($ref_match_len/$prevFlds[11]);
     $pctQueryMatchLen = 100 * ($qry_match_len/$prevFlds[12]);
     $pctIdentityStr = &makeHundredths ($pctIdentity);
