@@ -26,7 +26,8 @@ while($line=<FILE>){
 open(FILE,$allowed_gaps);
 while($line=<FILE>){
     chomp($line);
-    $allowed{$line}=1;
+    @f=split(/\s+/,$line);
+    $allowed{"$f[0] $f[1]"}=1;
 }
 
 open(FILE,$good_pb);
@@ -42,6 +43,7 @@ my $last_coord =-1000000000;
 while($line=<STDIN>){
     chomp($line);
     if($line =~ /^>/){
+	#$outread.=$last_ext;
 	if(not($outread eq "")){
 	    $indx=0;
 	    @f=split(/N/,$outread);
@@ -55,17 +57,12 @@ while($line=<STDIN>){
 	$rn=substr($line,1);
 
     }else{
-	($bgn,$end,$pb,$seq,$name)=split(/\s+/,$line);
+	($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=split(/\s+/,$line);
+        $seq=substr($mseq,$mbgn-1,$mend-$mbgn+1);
 	die("pacbio read $pb does not exist in the sequence file!!!") if(not(defined($pbseq{$rn})));
-	@fn=split(/_/,$name);
-	if(substr($fn[0],0,-1)<substr($fn[$#fn],0,-1)){
-		$name_std=$name;
-	}else{
-		$sr=join("_",reverse(@fn));
-		$sr=~tr/FR/RF/;
-		$name_std=$sr;
-	}
+
 	if($outread eq ""){
+		#$outread=substr($mseq,0,$mend);
 		$outread=$seq;
 	}else{
 	    #first we figure out if we can allow this join.  
@@ -78,7 +75,7 @@ while($line=<STDIN>){
             $str="$k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
             $join_allowed=1 if($allowed{$str});
 	    $join_allowed=1 if(defined($good_pb{$pb}));
-	    #$join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads
+	  
 
 	    if($bgn>$last_coord){#if gap -- check if the closure is allowed
 		my $min_len=0;
@@ -100,7 +97,7 @@ while($line=<STDIN>){
 		}
 	    }else{#overlapping
  	    $join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads 
-	    $join_allowed=1 if($last_coord-$bgn>=10 && $last_coord-$bgn<=$kmer);
+	    $join_allowed=1 if($last_implied_coord-($bgn-$mbgn+1)>=5 && $last_implied_coord-($bgn-$mbgn+1)<=$kmer);
             #$join_allowed=0 if($last_coord-$bgn>$kmer); 
             # we join if same mega-read, just fractured, or the overlap is less than kmer length, or join is allowed
  	    #print "join status ",$bgn-$last_coord," ",length($seq)," $join_allowed allowed:$allowed{$str} $str $seq\n";
@@ -112,8 +109,11 @@ while($line=<STDIN>){
 	    }
 	}
     $last_coord=$end;
+    $last_implied_coord=$end+$mlen-$mend;
     $last_mr=$name;
     $last_len=length($seq);
+    $last_ext=substr($mseq,$mend);
+    $last_mend=$mend;
     }
 }
 #output the last one
