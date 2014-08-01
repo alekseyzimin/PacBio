@@ -316,17 +316,12 @@ sub print_longest_paths {
     foreach my $end_n (@$end_nodes) {
       my $start_n = $$end_n{LSTART};
       my $density;
-      if((($$end_n{IMP_END} > $$end_n{RLEN} ? $$end_n{RLEN} : $$end_n{IMP_END}) -
-                                      ($$start_n{IMP_START} < 1 ? 1 : $$start_n{IMP_START})) >0){
-	$density = $$end_n{LPATH} / (($$end_n{IMP_END} > $$end_n{RLEN} ? $$end_n{RLEN} : $$end_n{IMP_END}) -
-                                      ($$start_n{IMP_START} < 1 ? 1 : $$start_n{IMP_START}));
-	}else{
-	$density = 0;
-	}
+      my $len = ($$end_n{IMP_END} > $$end_n{RLEN} ? $$end_n{RLEN} : $$end_n{IMP_END}) - ($$start_n{IMP_START} < 1 ? 1 : $$start_n{IMP_START});
+      $density = $len > 0 ? $$end_n{LPATH} / $len : 0;
  
       if($density > $max_density) {
         $max_density = $density;
-        $max_end_n = $end_n;
+        $max_end_n   = $end_n;
       }
     }
     next if($max_density < $min_density);
@@ -340,15 +335,8 @@ sub print_longest_paths {
       $cur_n = $$cur_n{LPREV};
     }
 
-    printf($out "%.2f %.2f %d %d %d %d %d %.4f ",
-           $$start_n{IMP_START}, $$max_end_n{IMP_END},
-           $$start_n{RSTART}, $$max_end_n{REND},
-           $$start_n{QSTART}, $$max_end_n{QEND},
-           $$max_end_n{LPATH}, $max_density);
-    print($out "$pbname ") unless($compact);
-
     my $path_len = length_sr($path[-1]{NAME});
-    print($out $path[-1]{NAME});
+    my $mega_read = $path[-1]{NAME};
     for(my $i = $#path; $i > 0; $i--) {
       my $v = $path[$i];
       foreach my $n (@{$$v{NEIGHS}}) {
@@ -358,11 +346,17 @@ sub print_longest_paths {
         splice(@srs, 0, $$n[2]);
         last unless @srs;
         $path_len += length_sr(join("_", @srs)) - ($unitigs_k - 1);
-        print($out "_", join("_", @srs));
+        $mega_read .= "_" . join("_", @srs);
         last;
       }
     }
-    print($out " $path_len\n");
+    printf($out "%.2f %.2f %d %d %d %d %d %.4f ",
+           $$start_n{IMP_START}, $$max_end_n{IMP_END},
+           $$start_n{RSTART}, $$max_end_n{REND},
+           $$start_n{QSTART}, $path_len - ($$max_end_n{QLEN} - $$max_end_n{QEND}),
+           $$max_end_n{LPATH}, $max_density);
+    print($out "$pbname ") unless($compact);
+    print($out " $mega_read $path_len\n");
   }
 }
 

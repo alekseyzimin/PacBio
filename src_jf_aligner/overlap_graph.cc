@@ -185,11 +185,6 @@ void overlap_graph::print_mega_reads(std::ostream& output, const std::vector<int
     const auto& start_n = end_n.l_start_node(nodes);
     const auto& end_c   = coords[cnode];
     const auto& start_c = coords[end_n.lstart == -1 ? cnode : end_n.lstart];
-    output << std::fixed << std::setprecision(2)
-           << start_n.imp_s << ' ' << end_n.imp_e << ' '
-           << start_c.rs << ' ' << end_c.re << ' '
-           << start_c.qs << ' ' << end_c.qe << ' '
-           << end_n.lpath << ' ' << std::setprecision(4) << end_n.ldensity;
     const super_read_name *asr;
     super_read_name sr(end_n.lunitigs);
     if(end_n.lstart == -1) {
@@ -212,7 +207,14 @@ void overlap_graph::print_mega_reads(std::ostream& output, const std::vector<int
     for(auto unitig : asr->unitigs())
       sr_len += unitigs_lengths[unitig.id()];
     sr_len -= (sr.size() - 1) * (k_len - 1);
-    output << ' ' << *asr << ' ' << sr_len;
+
+
+    output << std::fixed << std::setprecision(2)
+           << start_n.imp_s << ' ' << end_n.imp_e << ' '
+           << start_c.rs << ' ' << end_c.re << ' '
+           << start_c.qs << ' ' << (sr_len - (end_c.ql - end_c.qe)) << ' '
+           << end_n.lpath << ' ' << std::setprecision(4) << end_n.ldensity
+           << ' ' << *asr << ' ' << sr_len;
 
     if(unitigs_sequences) {
       output << ' ';
