@@ -18,6 +18,7 @@
 $max_overlap_pct=$ARGV[0];
 $kmer=$ARGV[1];
 $fudge_factor=1.2;
+$max_insertion=1000;
 
 while($line=<STDIN>){
     chomp($line);
@@ -42,7 +43,7 @@ if(not($f[6] eq $last_mr)){
         for($j=1;$j<=$#curr_intervals;$j++){
             @ff1=split(/\s+/,$curr_intervals_output[$merge_index]);
             @ff2=split(/\s+/,$curr_intervals[$j]);
-            if(($ff2[0]-$ff1[1])-($ff2[2]-$ff1[3])>-.02*(($ff2[0]-$ff1[1])+($ff2[2]-$ff1[3])) && $ff2[2]-$ff1[3]>-5){ # if insertion in pb
+            if(($ff2[0]-$ff1[1])-($ff2[2]-$ff1[3])>-.02*(($ff2[0]-$ff1[1])+($ff2[2]-$ff1[3])) && ($ff2[0]-$ff1[1])-($ff2[2]-$ff1[3])<$max_insertion && $ff2[2]-$ff1[3]>-5){ # if insertion in pb
                 $curr_intervals_output[$merge_index]="$ff1[0] $ff2[1] $ff1[2] $ff2[3] $ff1[4] $ff1[5] $ff1[6] $ff1[7]";
             }else{
                 $merge_index++;
@@ -66,7 +67,7 @@ push(@curr_intervals,$intervals_sorted[$i]);
         for($j=1;$j<=$#curr_intervals;$j++){
             @ff1=split(/\s+/,$curr_intervals_output[$merge_index]);
             @ff2=split(/\s+/,$curr_intervals[$j]);
-            if(($ff2[0]-$ff1[1])-($ff2[2]-$ff1[3])>-.02*(($ff2[0]-$ff1[1])+($ff2[2]-$ff1[3])) && $ff2[2]-$ff1[3]>-5){ # if insertion in pb
+            if(($ff2[0]-$ff1[1])-($ff2[2]-$ff1[3])>-.02*(($ff2[0]-$ff1[1])+($ff2[2]-$ff1[3])) && ($ff2[0]-$ff1[1])-($ff2[2]-$ff1[3])<$max_insertion && $ff2[2]-$ff1[3]>-5){ # if insertion in pb
                 $curr_intervals_output[$merge_index]="$ff1[0] $ff2[1] $ff1[2] $ff2[3] $ff1[4] $ff1[5] $ff1[6] $ff1[7]";
             }else{
                 $merge_index++;

@@ -3,6 +3,7 @@
 FILENAME=$1  #filename of a megareads file for matches of SINGLE pacbio read to the super-reads
 NAMESEQFILE=$2 #file containing pb read "name sequence"
 KMER=$3
+KUNITIGS=$4
 let KM1=$KMER-1
 EXEPATH=`dirname $0`
 
@@ -12,7 +13,7 @@ touch $FILENAME.megareads.sorted.wseq
 
 #wc -l $FILENAME.megareads
 if [ -s $FILENAME.megareads ];then
-/home/alekseyz/myprogs/masurca-devel/build/inst/bin/createFastaSuperReadSequences work1 <(awk 'BEGIN{n=0}{if($7>=125 && n<25) print "1 "$6; n++;}' $FILENAME.megareads) -seqdiffmax 0 -min-ovl-len $KM1 -minreadsinsuperread 1  -good-sr-filename $FILENAME.megareads.names  -kunitigsfile /genome3/raid/alekseyz/PB_ScerW303/assembly_k${KMER}/guillaumeKUnitigsAtLeast32bases_all.fasta -good-sequence-output-file $FILENAME.megareads.fa -super-read-name-and-lengths-file $FILENAME.megareads.sizes -rename-super-reads  2>/dev/null
+/home/alekseyz/myprogs/masurca-devel/build/inst/bin/createFastaSuperReadSequences work1 <(awk 'BEGIN{n=0}{if($7>=125 && n<25) print "1 "$6; n++;}' $FILENAME.megareads) -seqdiffmax 0 -min-ovl-len $KM1 -minreadsinsuperread 1  -good-sr-filename $FILENAME.megareads.names  -kunitigsfile $KUNITIGS -good-sequence-output-file $FILENAME.megareads.fa -super-read-name-and-lengths-file $FILENAME.megareads.sizes -rename-super-reads  2>/dev/null
 
 if [ ! -s $FILENAME.megareads.fa ];then exit; fi
 awk -F ',' '{print ">"$1"\n"$2}'  $NAMESEQFILE > $NAMESEQFILE.fa

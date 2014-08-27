@@ -17,7 +17,8 @@ open(FILE,$pbseqfile);
 while($line=<FILE>){
     chomp($line);
     if($line =~ /^>/){
-	$rn=substr($line,1);
+	@f=split(/\s+/,$line);
+	$rn=substr($f[0],1);
     }else{
 	$pbseq{$rn}.=$line;
     }
@@ -75,7 +76,7 @@ while($line=<STDIN>){
             $str="$k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
             $join_allowed=1 if($allowed{$str});
 	    $join_allowed=1 if(defined($good_pb{$pb}));
-	  
+	    #$join_allowed=1 if($last_implied_coord>$bgn-$mbgn && $bgn>$last_coord);#allow join if implied overlap 
 
 	    if($bgn>$last_coord){#if gap -- check if the closure is allowed
 		my $min_len=0;
@@ -97,7 +98,7 @@ while($line=<STDIN>){
 		}
 	    }else{#overlapping
  	    $join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads 
-	    $join_allowed=1 if($last_implied_coord-($bgn-$mbgn+1)>=5 && $last_implied_coord-($bgn-$mbgn+1)<=$kmer);
+	    $join_allowed=1 if($last_implied_coord-($bgn-$mbgn+1)>1 && $last_implied_coord-($bgn-$mbgn+1)<=$kmer);
             #$join_allowed=0 if($last_coord-$bgn>$kmer); 
             # we join if same mega-read, just fractured, or the overlap is less than kmer length, or join is allowed
  	    #print "join status ",$bgn-$last_coord," ",length($seq)," $join_allowed allowed:$allowed{$str} $str $seq\n";
