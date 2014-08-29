@@ -54,8 +54,9 @@ while($line=<STDIN>){
 		    $indx++;
 		}
 	    }
-	}
 	@lines=();
+	}
+	($rn,$junk)=split(/\s+/,substr($line,1));
     }else{
 	push(@lines, $line);
     }
