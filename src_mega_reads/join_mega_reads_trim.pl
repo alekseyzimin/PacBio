@@ -86,7 +86,6 @@ sub process_sorted_lines{
     my $outread="";
     $last_coord =-1000000000;
     foreach $l(@_){
-	print $l,"\n";
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=split(/\s+/,$l);
         $seq=substr($mseq,$mbgn-1,$mend-$mbgn+1);
         die("inconsistent sequence length") if(not(length($mseq)==$mlen));
