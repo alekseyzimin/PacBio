@@ -88,7 +88,7 @@ sub process_sorted_lines{
     $last_coord =-1000000000;
     foreach $l(@_){
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=split(/\s+/,$l);
-        $seq=substr($mseq,$mbgn-1,$mend-$mbgn+1);
+	$seq=substr($mseq,$mbgn,$mend-$mbgn+1);
         die("inconsistent sequence length") if(not(length($mseq)==$mlen));
         die("pacbio read $pb does not exist in the sequence file!!!") if(not(defined($pbseq{$rn})));
 
@@ -125,6 +125,8 @@ sub process_sorted_lines{
             }else{#overlapping
 		$join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads 
 		$join_allowed=1 if($last_implied_coord-($bgn-$mbgn+1)>1 && $last_implied_coord-($bgn-$mbgn+1)<=$kmer);
+                #print "DEBUG $kmer $mlen,$last_dir $join_allowed $last_implied_coord $bgn,$end,$mbgn,$mend,$mlen  $str ",$last_implied_coord-($bgn-$mbgn+1),"\n";
+
 		if($join_allowed){
 		    $outread.=substr($seq,$last_coord-$bgn+1);
 		}else{
@@ -138,6 +140,15 @@ sub process_sorted_lines{
 	$last_len=length($seq);
 	$last_ext=substr($mseq,$mend);
 	$last_mend=$mend;
+        last if($last_coord>=length($pbseq{$rn}));	
     }
     return($outread);
 }
+
+sub reverse_complement{
+    my $str=$_[0];
+    $str =~ tr/acgtACGTNn/tgcaTGCANn/;
+    $str = reverse ($str);
+    return ($str);
+}
+
