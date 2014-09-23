@@ -8,8 +8,8 @@ UMER = 70
 HS = 20k
 UL = kUnitigLengths.txt
 
-:        | $(ALG) |> $(ALG) -s $(HS) -m $(MMER) -f --max-match -B 10 --max-count 0 --coords %o -H -l $(UL) --compact -k $(UMER) -r sr.fa -p pb.fa     |> coords
-: coords          |> ../wdiffn -p 'sort' expect_coords %f > %o                                                                                        |> coords.diff
+:        | $(ALG) |> $(ALG) -s $(HS) -m $(MMER) -f --max-match -B 10 --max-count 0 --coords %o --details details -H -l $(UL) --compact -k $(UMER) -r sr.fa -p pb.fa     |> coords | details
+: coords          |> ../wdiffn -p 'sort' expect_coords %f > %o                                                                                                          |> coords.diff
 
 : coords          |> $(LPO) --force -o `basename %o _1` -c -k $(UMER) -l $(UL) -H --dot %o.dot %f > %o.log                                            |> org_mega_reads_1 | %o.dot %o.log {mega_reads}
 : coords | $(LPN) |> $(LPN) -o %o -k $(UMER) -L 0 -l $(UL) --dot %o.dot %f > %o.log                                                                        |> new_mega_reads   | %o.dot %o.log {mega_reads}

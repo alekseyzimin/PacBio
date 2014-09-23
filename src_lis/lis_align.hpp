@@ -5,72 +5,134 @@
 #include <iterator>
 #include <type_traits>
 #include <algorithm>
+#include <forward_list>
 
 #include <src_jf_aligner/lf_forward_list.hpp>
 
 
 namespace lis_align {
-/**
- * A forward list defined for trivial data types. Per thread bulk
- * memory management.
- */
-template <typename T>
-class forward_list : public lf_forward_list_base<T, false> {
-  typedef lf_forward_list_base<T, false> super;
-  typedef typename super::node    node;
+// /**
+//  * A forward list defined for trivial data types. Per thread bulk
+//  * memory management.
+//  */
+// template <typename T>
+// class forward_list : public lf_forward_list_base<T, false> {
+//   typedef lf_forward_list_base<T, false> super;
+//   typedef typename super::node    node;
 
-  struct data_page {
-    static const size_t node_per_page = 1024 * 1024;
-    node*  data;
-    size_t used;
-  };
+//   struct data_page {
+//     static const size_t node_per_page = 1024 * 1024;
+//     node*  data;
+//     size_t used;
+//   };
+
+// public:
+//   typedef typename super::iterator       iterator;
+//   typedef typename super::const_iterator const_iterator;
+//   typedef T                              value_type;
+
+//   forward_list() : super(0), cpage_ind(0) {
+//     static_assert(std::is_trivial<T>::value, "Forward list defined only for trivial types");
+//     data_pages.push_back({ new node[data_page::node_per_page], 0 });
+//   }
+//   ~forward_list() {
+//     for(auto it = data_pages.begin(); it != data_pages.end(); ++it)
+//       delete [] it->data;
+//   }
+
+//   void clear() {
+//     for(auto it = data_pages.begin(); it != data_pages.end(); ++it)
+//       it->used = 0;
+//     cpage_ind          = 0;
+//     super::head_.next_ = 0;
+//   }
+
+//   iterator insert_after(const_iterator position, const value_type& val) {
+//     data_page* cpage = &data_pages[cpage_ind];
+//     if(cpage->used >= data_page::node_per_page) {
+//       if(++cpage_ind >= (int)data_pages.size())
+//         data_pages.push_back({ new node[data_page::node_per_page], 0 });
+//       cpage = &data_pages[cpage_ind];
+//     }
+
+//     node* cnode = &cpage->data[cpage->used++];
+//     std::copy(&val, &val + 1, &cnode->val_);
+//     super::insert_after_(position, cnode);
+//     return iterator(cnode);
+//   }
+
+// private:
+//   std::vector<data_page> data_pages;
+//   int                    cpage_ind;
+// };
+
+template<typename T>
+class sum_buffer {
+  std::vector<T> v_;
+  size_t         next_;
+  bool           filled_;
+  T              sum_;
 
 public:
-  typedef typename super::iterator       iterator;
-  typedef typename super::const_iterator const_iterator;
-  typedef T                              value_type;
+  sum_buffer(size_t size) : v_(size), next_(0), filled_(false), sum_(0) { }
+  //  sum_buffer(const sum_buffer& rhs) : v_(rhs.v_), next_(rhs.next_), filled_(rhs.filled_), sum_(rhs.sum_) { }
 
-  forward_list() : super(0), cpage_ind(0) {
-    static_assert(std::is_trivial<T>::value, "Forward list defined only for trivial types");
-    data_pages.push_back({ new node[data_page::node_per_page], 0 });
-  }
-  ~forward_list() {
-    for(auto it = data_pages.begin(); it != data_pages.end(); ++it)
-      delete [] it->data;
-  }
-  
-  void clear() {
-    for(auto it = data_pages.begin(); it != data_pages.end(); ++it)
-      it->used = 0;
-    cpage_ind          = 0;
-    super::head_.next_ = 0;
-  }
-
-  iterator insert_after(const_iterator position, const value_type& val) {
-    data_page* cpage = &data_pages[cpage_ind];
-    if(cpage->used >= data_page::node_per_page) {
-      if(++cpage_ind >= (int)data_pages.size())
-        data_pages.push_back({ new node[data_page::node_per_page], 0 });
-      cpage = &data_pages[cpage_ind];
+  bool filled() const { return filled_; }
+  bool will_be_filled() const { return filled_ || next_ == size() - 1; }
+  T sum() const { return sum_; }
+  size_t size() const { return v_.size(); }
+  void push_back(const T& x) {
+    if(v_.size()) {
+      sum_       = test_sum(x);
+      v_[next_]  = x;
+      next_      = (next_ + 1) % v_.size();
+      filled_    = filled_ || (next_ == 0);
     }
-
-    node* cnode = &cpage->data[cpage->used++];
-    std::copy(&val, &val + 1, &cnode->val_);
-    super::insert_after_(position, cnode);
-    return iterator(cnode);
   }
-
-private:
-  std::vector<data_page> data_pages;
-  int                    cpage_ind;
+  T test_sum(const T& x) const {
+    T res = sum_ + x;
+    if(filled_ || next_ > 0) res -= v_[next_];
+    return res;
+  }
 };
 
+template<typename T>
+struct sum_pair : public std::pair<T, T> {
+  sum_pair(const T x, const T y) : std::pair<T, T>(x, y) { }
+  sum_pair(const T x) : std::pair<T, T>(x, x) { }
+  sum_pair() : std::pair<T, T>(T(), T()) { }
+
+  sum_pair& operator+=(const sum_pair& rhs) {
+    this->first  += rhs.first;
+    this->second += rhs.second;
+    return *this;
+  }
+  sum_pair operator+(const sum_pair& rhs) const {
+    sum_pair res(*this);
+    return res += rhs;
+  }
+
+  sum_pair& operator-=(const sum_pair& rhs) {
+    this->first  -= rhs.first;
+    this->second -= rhs.second;
+    return *this;
+  }
+  sum_pair operator-(const sum_pair& rhs) const {
+    sum_pair res(*this);
+    return res -= rhs;
+  }
+};
+
+template<typename T>
+bool not_stretched(T a, T b, const sum_pair<T>& s) {
+  return (s.first <= b + a * s.second) && (s.second <= b + a * s.first);
+}
 
 /**
  * Compute an alignment on an array X where each element is a pair of
  * offsets. It returns the longest alignment (in term of number of
  * elements) the second offset are all increasing and where the spans
- * in first offsets is bounded by an affine relation to the spans of
+ * in first offsets is bounded by an affine relation to the spans offsets
  * the second offsets (and conversely).
  *
  * The algorithm is quadratic in the length of X.
@@ -94,14 +156,14 @@ private:
  */
 template<typename T>
 struct element {
-  size_t       elt;             // Index of element in X
-  unsigned int len;             // Length of LIS
-  T            span1;
-  T            span2;
+  size_t                   elt;             // Index of element in X
+  unsigned int             len;             // Length of LIS
+  sum_buffer<sum_pair<T> > span_window; // Span in reference and query in a window
+  sum_pair<T>              span_full;      // Span from first to last k-mer
 };
 template<typename T>
 std::ostream& operator<<(std::ostream& os, const element<T>& x) {
-  return os << "<" << x.len << ", " << x.span1 << ", " << x.span2 << ">";
+  return os << "<" << x.len << ", " << x.span_window.first << ", " << x.span_window.second << ">";
 }
 template<typename T, typename U>
 std::ostream& operator<<(std::ostream& os, const std::pair<T, U>& x) {
@@ -110,13 +172,13 @@ std::ostream& operator<<(std::ostream& os, const std::pair<T, U>& x) {
 
 template<typename InputIterator, typename T>
 std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const InputIterator Xend,
-                                                  forward_list<element<T> >& L, std::vector<unsigned int>& P,
-                                                  T a, T b) {
+                                                  std::forward_list<element<T> >& L, std::vector<unsigned int>& P,
+                                                  T a, T b, size_t window_size) {
   unsigned int longest = 0, longest_ind = 0;
   const size_t N = std::distance(X, Xend);
 
   for(unsigned int i = 0 ; i < N; ++i) {
-    element<T>    e_longest = { i, 1, 0, 0 };
+    element<T>    e_longest = { i, 1, window_size };
     unsigned int& j_longest = P[i];
     j_longest       = N;
 
@@ -129,14 +191,16 @@ std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const I
     for( ; it != L.cend() && it->len >= e_longest.len; ++it) {
       const unsigned int j = it->elt;
       if(X[i].second > X[j].second && e_longest.len < it->len + 1) {
-        T new_span1 = it->span1 + (X[i].first - X[j].first);
-        T new_span2 = it->span2 + (X[i].second - X[j].second);
-        if(new_span1 <= a + b * new_span2 &&
-           new_span2 <= a + b * new_span1) {
-          e_longest.len   = it->len + 1;
-          j_longest       = j;
-          e_longest.span1 = new_span1;
-          e_longest.span2 = new_span2;
+        sum_pair<T>       add(X[i].first - X[j].first, X[i].second - X[j].second);
+        const sum_pair<T> new_span = it->span_window.test_sum(add);
+        std::cout << "test " << X[i] << ',' << X[j] << " span:" << it->span_window.sum() << " new_span:" << new_span
+                  << ' ' << it->span_window.will_be_filled() << ' ' << not_stretched(a, b, new_span) << '\n';
+        if(!it->span_window.will_be_filled() || not_stretched(a, b, new_span)) {
+          e_longest.len         = it->len + 1;
+          j_longest             = j;
+          e_longest.span_window = it->span_window;
+          e_longest.span_window.push_back(add);
+          e_longest.span_full   = it->span_full + add;
           break;
         }
       }
@@ -144,7 +208,8 @@ std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const I
         prev = it;
     }
     L.insert_after(prev, e_longest);
-    if(longest < e_longest.len) {
+    std::cout << "longest " << X[i] << " span:" << e_longest.span_full << " len:" << e_longest.len << " prev:" << j_longest << X[j_longest] << not_stretched(a, b, e_longest.span_full) << '\n';
+    if(longest < e_longest.len && not_stretched(a, b, e_longest.span_full)) {
       longest     = e_longest.len;
       longest_ind = i;
     }
@@ -160,11 +225,11 @@ void indices_reversed(P_type& P, const unsigned int len, unsigned int start, Out
 
 template<typename InputIterator, typename T>
 unsigned int indices(const InputIterator X, const InputIterator Xend,
-                     forward_list<element<T> >& L, std::vector<unsigned int>& res,
-                     T a, T b) {
+                     std::forward_list<element<T> >& L, std::vector<unsigned int>& res,
+                     T a, T b, size_t window_size) {
   const size_t N = std::distance(X, Xend);
   std::vector<unsigned int> P(N);
-  const std::pair<unsigned int, unsigned int> lis = compute_L_P(X, Xend, L, P, a, b);
+  const std::pair<unsigned int, unsigned int> lis = compute_L_P(X, Xend, L, P, a, b, window_size);
 
   if(res.size() < lis.first)
     res.resize(lis.first);
@@ -174,17 +239,17 @@ unsigned int indices(const InputIterator X, const InputIterator Xend,
 
 template<typename InputIterator, typename T>
 unsigned int indices(const InputIterator X, const InputIterator Xend, std::vector<unsigned int>& res,
-                     T a, T b) {
-  forward_list<element<T> > L;
-  return indices(X, Xend, L, res, a, b);
+                     T a, T b, size_t window_size) {
+  std::forward_list<element<T> > L;
+  return indices(X, Xend, L, res, a, b, window_size);
 }
 
 template<typename InputIterator, typename T>
 std::vector<unsigned int> indices(const InputIterator X, const InputIterator Xend,
-                                  T a, T b) {
+                                  T a, T b, size_t window_size) {
   std::vector<unsigned int> res;
 
-  indices(X, Xend, res, a, b);
+  indices(X, Xend, res, a, b, window_size);
   return res;
 }
 } // namespace lis2

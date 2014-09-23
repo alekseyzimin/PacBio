@@ -137,7 +137,7 @@ TEST_F(FragsCoords, NormalConsistency) {
   mer_pos_hash_type hash(super_read_approx_len * 2);
   frag_lists names(1);
   superread_parse(1, hash, names, sr_file);
-  align_pb aligner(hash, 10, 2);
+  align_pb aligner(hash, 10, 2, 1);
   auto res = aligner.align_sequence(pb_sequence);
 
   auto& frags_pos = res.second;
@@ -161,7 +161,7 @@ TEST_F(FragsCoords, ForwardConsistency) {
   mer_pos_hash_type hash(super_read_approx_len * 2);
   frag_lists names(1);
   superread_parse(1, hash, names, sr_file);
-  align_pb aligner(hash, 10, 2, true);
+  align_pb aligner(hash, 10, 2, 1, true);
   aligner.unitigs_lengths(&unitigs_lengths, mer_len);
   auto res = aligner.align_sequence(pb_sequence);
   auto res_max = aligner.align_sequence(pb_sequence);
@@ -200,7 +200,7 @@ TEST_F(FragsCoords, ForwardConsistency) {
 
   // Same but with filtering
   {
-    align_pb aligner_mer_filter(hash, 10, 2, true, false, 0, 0.09);
+    align_pb aligner_mer_filter(hash, 10, 2, 1, true, false, 0, 0.09);
     auto res_mer_filter = aligner_mer_filter.align_sequence(pb_sequence);
     auto res_max_mer_filter = aligner_mer_filter.align_sequence_max(pb_sequence);
     auto& coords_mer_filter = res_mer_filter.first;
@@ -214,7 +214,7 @@ TEST_F(FragsCoords, ForwardConsistency) {
   }
 
   {
-    align_pb aligner_mer_filter(hash, 10, 2, true, false, 0, 0.0, 0.27);
+    align_pb aligner_mer_filter(hash, 10, 2, 1, true, false, 0, 0.0, 0.27);
     auto res_mer_filter = aligner_mer_filter.align_sequence(pb_sequence);
     auto res_max_mer_filter = aligner_mer_filter.align_sequence_max(pb_sequence);
     auto& coords_mer_filter = res_mer_filter.first;
