@@ -123,10 +123,28 @@ struct sum_pair : public std::pair<T, T> {
   }
 };
 
-template<typename T>
-bool not_stretched(T a, T b, const sum_pair<T>& s) {
-  return (s.first <= b + a * s.second) && (s.second <= b + a * s.first);
-}
+// template<typename T>
+// bool not_stretched(T a, T b, const sum_pair<T>& s) {
+//   return (s.first <= b + a * s.second) && (s.second <= b + a * s.first);
+// }
+
+struct affine_capped {
+  const double a, b, C;
+  affine_capped(double a_, double b_, double C_) : a(a_), b(b_), C(C_) { }
+  template<typename T>
+  bool operator()(const sum_pair<T>& s) const {
+    return (s.first <= b + a * s.second) && (s.second <= b + a * s.first) && s.first <= C && s.second <= C;
+  }
+};
+
+struct linear {
+  const double a;
+  linear(double a_) : a(a_) { }
+  template<typename T>
+  bool operator()(const sum_pair<T>& s) const {
+    return (s.first <= a * s.second) && (s.second <= a * s.first);
+  }
+};
 
 /**
  * Compute an alignment on an array X where each element is a pair of
@@ -170,12 +188,13 @@ std::ostream& operator<<(std::ostream& os, const std::pair<T, U>& x) {
   return os << "<" << x.first << ", " << x.second << ">";
 }
 
-template<typename InputIterator, typename T>
+template<typename InputIterator, typename F1, typename F2,
+         typename T=typename std::iterator_traits<InputIterator>::value_type::first_type>
 std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const InputIterator Xend,
                                                   std::forward_list<element<T> >& L, std::vector<unsigned int>& P,
-                                                  T a, T b, size_t window_size) {
+                                                  size_t window_size, F1& accept_mer, F2& accept_sequence) {
   unsigned int longest = 0, longest_ind = 0;
-  const size_t N = std::distance(X, Xend);
+  const size_t N       = std::distance(X, Xend);
 
   for(unsigned int i = 0 ; i < N; ++i) {
     element<T>    e_longest = { i, 1, window_size };
@@ -193,9 +212,9 @@ std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const I
       if(X[i].second > X[j].second && e_longest.len < it->len + 1) {
         sum_pair<T>       add(X[i].first - X[j].first, X[i].second - X[j].second);
         const sum_pair<T> new_span = it->span_window.test_sum(add);
-        std::cout << "test " << X[i] << ',' << X[j] << " span:" << it->span_window.sum() << " new_span:" << new_span
-                  << ' ' << it->span_window.will_be_filled() << ' ' << not_stretched(a, b, new_span) << '\n';
-        if(!it->span_window.will_be_filled() || not_stretched(a, b, new_span)) {
+        // std::cout << "test " << X[i] << ',' << X[j] << " span:" << it->span_window.sum() << " new_span:" << new_span
+        //           << ' ' << it->span_window.will_be_filled() << ' ' << accept_mer(new_span) << '\n';
+        if(!it->span_window.will_be_filled() || accept_mer(new_span)) {
           e_longest.len         = it->len + 1;
           j_longest             = j;
           e_longest.span_window = it->span_window;
@@ -208,8 +227,8 @@ std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const I
         prev = it;
     }
     L.insert_after(prev, e_longest);
-    std::cout << "longest " << X[i] << " span:" << e_longest.span_full << " len:" << e_longest.len << " prev:" << j_longest << X[j_longest] << not_stretched(a, b, e_longest.span_full) << '\n';
-    if(longest < e_longest.len && not_stretched(a, b, e_longest.span_full)) {
+    // std::cout << "longest " << X[i] << " span:" << e_longest.span_full << " len:" << e_longest.len << " prev:" << j_longest << X[j_longest] << ' ' << accept_sequence(e_longest.span_full) << '\n';
+    if(longest < e_longest.len && accept_sequence(e_longest.span_full)) {
       longest     = e_longest.len;
       longest_ind = i;
     }
@@ -223,13 +242,14 @@ void indices_reversed(P_type& P, const unsigned int len, unsigned int start, Out
     *out = start;
 }
 
-template<typename InputIterator, typename T>
+template<typename InputIterator, typename F1, typename F2,
+         typename T=typename std::iterator_traits<InputIterator>::value_type::first_type>
 unsigned int indices(const InputIterator X, const InputIterator Xend,
                      std::forward_list<element<T> >& L, std::vector<unsigned int>& res,
-                     T a, T b, size_t window_size) {
+                     size_t window_size, F1& accept_mer, F2& accept_sequence) {
   const size_t N = std::distance(X, Xend);
   std::vector<unsigned int> P(N);
-  const std::pair<unsigned int, unsigned int> lis = compute_L_P(X, Xend, L, P, a, b, window_size);
+  const std::pair<unsigned int, unsigned int> lis = compute_L_P(X, Xend, L, P, window_size, accept_mer, accept_sequence);
 
   if(res.size() < lis.first)
     res.resize(lis.first);
@@ -237,19 +257,20 @@ unsigned int indices(const InputIterator X, const InputIterator Xend,
   return lis.first;
 }
 
-template<typename InputIterator, typename T>
+template<typename InputIterator, typename F1, typename F2,
+         typename T=typename std::iterator_traits<InputIterator>::value_type::first_type>
 unsigned int indices(const InputIterator X, const InputIterator Xend, std::vector<unsigned int>& res,
-                     T a, T b, size_t window_size) {
+                     size_t window_size, F1& accept_mer, F2& accept_sequence) {
   std::forward_list<element<T> > L;
-  return indices(X, Xend, L, res, a, b, window_size);
+  return indices(X, Xend, L, res, window_size, accept_mer, accept_sequence);
 }
 
-template<typename InputIterator, typename T>
+template<typename InputIterator, typename F1, typename F2>
 std::vector<unsigned int> indices(const InputIterator X, const InputIterator Xend,
-                                  T a, T b, size_t window_size) {
+                                  size_t window_size, F1& accept_mer, F2& accept_sequence) {
   std::vector<unsigned int> res;
 
-  indices(X, Xend, res, a, b, window_size);
+  indices(X, Xend, res, window_size, accept_mer, accept_sequence);
   return res;
 }
 } // namespace lis2

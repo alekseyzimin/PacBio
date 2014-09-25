@@ -7,4 +7,4 @@ UL = test_unitigs_lengths
 : $(SR) $(PB) | $(AL) |> $(AL) -s 10k -m 17 -r $(SR) -p $(PB) --details details_normal --coords coords_normal |> details_normal coords_normal {outputs}
 : $(SR) $(PB) | $(AL) |> $(AL) -s 10k -m 17 -r $(SR) -p $(PB) -l $(UL) -k 65 -f --details details_forward --coords coords_forward |> details_forward coords_forward {outputs}
 
-: foreach {outputs} |> wdiff %f %f_expected > %o |> %B.diff
+: foreach {outputs} |> ../wdiffn %f %f_expected > %o |> %B.diff

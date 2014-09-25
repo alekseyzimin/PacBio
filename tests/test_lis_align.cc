@@ -50,7 +50,9 @@ TEST(LisAlign, SumBuffer) {
 
 TEST(LisAlign, Simple) {
   static const pair v[5] = { {1,1}, {3, 3}, {4,2}, {5,5}, {7,7} };
-  auto res = lis_align::indices(v, v + 5, 5, 1, 1);
+  lis_align::affine_capped accept_mer(5, 1, 1e9);
+  lis_align::linear        accept_sequence(5);
+  auto res = lis_align::indices(v, v + 5, 1, accept_mer, accept_sequence);
 
   EXPECT_TRUE(increasing(res, v));
   EXPECT_EQ((size_t)4, res.size());
@@ -62,7 +64,9 @@ TEST(LisAlign, Simple) {
 
 TEST(LisAlign, StretchSimple) {
   static const pair v[4] = { {1, 1}, {2, 2}, {3, 3}, {10, 4} };
-  auto res = lis_align::indices(v, v + 4, 5, 1, 1);
+  lis_align::affine_capped accept_mer(5, 1, 1e9);
+  lis_align::linear        accept_sequence(5);
+  auto res = lis_align::indices(v, v + 4, 1, accept_mer, accept_sequence);
 
   EXPECT_TRUE(increasing(res, v));
   EXPECT_EQ((size_t)3, res.size());
@@ -70,23 +74,25 @@ TEST(LisAlign, StretchSimple) {
 
 TEST(LisAlign, StretchFullLength) {
   static const pair v[5] = { {2, 2}, {3, 3}, {13, 4}, {14, 5}, {24, 6} };
+  lis_align::affine_capped accept_mer(5, 1, 1e9);
+  lis_align::linear        accept_sequence(5);
 
+  // All window stretch are satisfied but not the full length
+  // stretch for 1st and 3rd case.
   {
-    auto res = lis_align::indices(v, v + 3, 5, 1, 2);
+    auto res = lis_align::indices(v, v + 3, 2, accept_mer, accept_sequence);
     EXPECT_TRUE(increasing(res, v));
-    EXPECT_EQ((size_t)3, res.size());
+    EXPECT_EQ((size_t)2, res.size());
   }
 
   {
-    auto res = lis_align::indices(v, v + 4, 5, 1, 2);
+    auto res = lis_align::indices(v, v + 4, 2, accept_mer, accept_sequence);
     EXPECT_TRUE(increasing(res, v));
     EXPECT_EQ((size_t)4, res.size());
   }
 
   {
-    // All window stretch are satisfied but not the full length
-    // stretch.
-    auto res = lis_align::indices(v, v + 5, 5, 1, 2);
+    auto res = lis_align::indices(v, v + 5, 2, accept_mer, accept_sequence);
     EXPECT_TRUE(increasing(res, v));
     EXPECT_EQ((size_t)4, res.size());
   }
@@ -94,12 +100,14 @@ TEST(LisAlign, StretchFullLength) {
 
 TEST(LisAlign, StretchLocalWindow) {
   static const pair v[5] = { {1, 1}, {2, 2}, {3, 3}, {14, 4}, {16, 5} };
+  lis_align::affine_capped accept_mer(5, 1, 1e9);
+  lis_align::linear        accept_sequence(5);
 
   {
     // Window stretch fails between {3,3} and {14,4} although full
     // length stretch would be satisfied between {1,1} and {14,4}, or
     // between {1,1} and {16,5}.
-    auto res = lis_align::indices(v, v + 5, 5, 1, 2);
+    auto res = lis_align::indices(v, v + 5, 1, accept_mer, accept_sequence);
     EXPECT_TRUE(increasing(res, v));
     EXPECT_EQ((size_t)3, res.size());
   }

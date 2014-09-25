@@ -14,7 +14,9 @@
 
 class align_pb {
   const mer_pos_hash_type& ary_;
-  double                   stretch_constant_, stretch_factor_; // Maximum stretch in LIS
+  //  double                   stretch_constant_, stretch_factor_; // Maximum stretch in LIS
+  lis_align::affine_capped accept_mer_;
+  lis_align::linear        accept_sequence_;
   size_t                   window_size_; // Window to compute stretch
   const bool               forward_;
   const bool               max_match_;
@@ -43,10 +45,12 @@ public:
   struct off_lis {
     std::vector<pb_sr_offsets>   offsets;
     std::vector<unsigned int>    lis;
-    void do_LIS(double a, double b, size_t window_size, lis_buffer_type& L) {
+
+    template<typename F1, typename F2>
+    void do_LIS(F1& accept_mer, F2& accept_sequence, size_t window_size, lis_buffer_type& L) {
       L.clear();
       lis.clear();
-      lis_align::indices(offsets.cbegin(), offsets.cend(), L, lis, a, b, window_size);
+      lis_align::indices(offsets.cbegin(), offsets.cend(), L, lis, window_size, accept_mer, accept_sequence);
     }
     void discard_LIS() {
       auto lis_it = lis.cbegin();
@@ -63,35 +67,39 @@ public:
       }
       offsets.resize(offsets.size() - lis.size());
     }
-    void discard_update_LIS(double a, double b, size_t window_size, lis_buffer_type& L) {
+
+    template<typename F1, typename F2>
+    void discard_update_LIS(F1& accept_mer, F2& accept_sequence, size_t window_size, lis_buffer_type& L) {
       discard_LIS();
-      do_LIS(a, b, window_size, L);
+      do_LIS(accept_mer, accept_sequence, window_size, L);
     }
   };
   struct mer_lists {
     off_lis fwd;
     off_lis bwd;
     const frag_lists::frag_info* frag;
-    void do_LIS(double a, double b, size_t window_size, lis_buffer_type& L) {
-      fwd.do_LIS(a, b, window_size, L);
-      bwd.do_LIS(a, b, window_size, L);
+    template<typename F1, typename F2>
+    void do_LIS(F1& accept_mer, F2& accept_sequence, size_t window_size, lis_buffer_type& L) {
+      fwd.do_LIS(accept_mer, accept_sequence, window_size, L);
+      bwd.do_LIS(accept_mer, accept_sequence, window_size, L);
     }
-    void discard_update_LIS(double a, double b, size_t window_size, lis_buffer_type& L) {
+    template<typename F1, typename F2>
+    void discard_update_LIS(F1& accept_mer, F2& accept_sequence, size_t window_size, lis_buffer_type& L) {
       if(fwd.lis.size() > bwd.lis.size())
-        fwd.discard_update_LIS(a, b, window_size, L);
+        fwd.discard_update_LIS(accept_mer, accept_sequence, window_size, L);
       else
-        bwd.discard_update_LIS(a, b, window_size, L);
+        bwd.discard_update_LIS(accept_mer, accept_sequence, window_size, L);
     }
   };
   typedef std::map<const char*, mer_lists> frags_pos_type;
 
   align_pb(const mer_pos_hash_type& ary,
-           double stretch_constant, double stretch_factor, size_t window_size,
+           double stretch_factor, double stretch_constant, size_t window_size,
            bool forward = false, bool max_match = false, int max_mer_count = 0,
            double matching_mers = 0.0, double matching_bases = 0.0) :
     ary_(ary),
-    stretch_constant_(stretch_constant),
-    stretch_factor_(stretch_factor),
+    accept_mer_(stretch_factor, stretch_constant, 100),
+    accept_sequence_(stretch_factor),
     window_size_(window_size),
     forward_(forward),
     max_match_(max_match),
@@ -246,14 +254,21 @@ public:
   static void fetch_super_reads(const mer_pos_hash_type& ary, parse_sequence& parser,
                                 frags_pos_type& frags_pos, const int max_mer_count = 0);
 
-  static void do_all_LIS(frags_pos_type& frags_pos, lis_buffer_type& L, double a, double b, size_t window_size);
-
-  static void do_all_LIS(frags_pos_type& frags_pos, double a, double b, size_t window_size) {
-    lis_buffer_type L;
-    do_all_LIS(frags_pos, L, a, b, window_size);
+  template<typename F1, typename F2>
+  static void do_all_LIS(frags_pos_type& frags_pos, lis_buffer_type& L, F1& accept_mer, F2& accept_sequence, size_t window_size) {
+    // Compute LIS forward and backward on every super reads.
+    for(auto& it : frags_pos)
+      it.second.do_LIS(accept_mer, accept_sequence, window_size, L);
   }
 
-  static void do_LIS(mer_lists& ml, lis_buffer_type& L, double a, double b, size_t window_size);
+  template<typename F1, typename F2>
+  static void do_all_LIS(frags_pos_type& frags_pos, F1& accept_mer, F2& accept_sequence, size_t window_size) {
+    lis_buffer_type L;
+    do_all_LIS(frags_pos, L, accept_mer, accept_sequence, window_size);
+  }
+
+  template<typename F1, typename F2>
+  static void do_LIS(mer_lists& ml, lis_buffer_type& L, F1& accept_mer, F2& accept_sequence, size_t window_size);
 
 
   // Reverse the name of a super read. For example 1R_2F_3F becomes

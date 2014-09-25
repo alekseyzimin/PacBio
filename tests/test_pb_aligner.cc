@@ -82,10 +82,12 @@ TEST(PbAligner, FakeSequences) {
   superread_parse(1, hash, names, sr_file.path);
   EXPECT_EQ((size_t)1, names.size());
 
-  parse_sequence parser(pacbio_sequence);
+  parse_sequence           parser(pacbio_sequence);
   align_pb::frags_pos_type frags_pos;
+  lis_align::affine_capped accept_mer(10, 2, 1e9);
+  lis_align::linear        accept_sequence(10);
   align_pb::fetch_super_reads(hash, parser, frags_pos);
-  align_pb::do_all_LIS(frags_pos, 10, 2, 1);
+  align_pb::do_all_LIS(frags_pos, accept_mer, accept_sequence, 1);
 
   EXPECT_EQ((size_t)10, frags_pos.size());
   for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
