@@ -137,7 +137,7 @@ TEST_F(FragsCoords, NormalConsistency) {
   mer_pos_hash_type hash(super_read_approx_len * 2);
   frag_lists names(1);
   superread_parse(1, hash, names, sr_file);
-  align_pb aligner(hash, 10, 2, 1);
+  align_pb aligner(hash, 10, 2, 100, 1);
   auto res = aligner.align_sequence(pb_sequence);
 
   auto& frags_pos = res.second;

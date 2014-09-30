@@ -11,61 +11,6 @@
 
 
 namespace lis_align {
-// /**
-//  * A forward list defined for trivial data types. Per thread bulk
-//  * memory management.
-//  */
-// template <typename T>
-// class forward_list : public lf_forward_list_base<T, false> {
-//   typedef lf_forward_list_base<T, false> super;
-//   typedef typename super::node    node;
-
-//   struct data_page {
-//     static const size_t node_per_page = 1024 * 1024;
-//     node*  data;
-//     size_t used;
-//   };
-
-// public:
-//   typedef typename super::iterator       iterator;
-//   typedef typename super::const_iterator const_iterator;
-//   typedef T                              value_type;
-
-//   forward_list() : super(0), cpage_ind(0) {
-//     static_assert(std::is_trivial<T>::value, "Forward list defined only for trivial types");
-//     data_pages.push_back({ new node[data_page::node_per_page], 0 });
-//   }
-//   ~forward_list() {
-//     for(auto it = data_pages.begin(); it != data_pages.end(); ++it)
-//       delete [] it->data;
-//   }
-
-//   void clear() {
-//     for(auto it = data_pages.begin(); it != data_pages.end(); ++it)
-//       it->used = 0;
-//     cpage_ind          = 0;
-//     super::head_.next_ = 0;
-//   }
-
-//   iterator insert_after(const_iterator position, const value_type& val) {
-//     data_page* cpage = &data_pages[cpage_ind];
-//     if(cpage->used >= data_page::node_per_page) {
-//       if(++cpage_ind >= (int)data_pages.size())
-//         data_pages.push_back({ new node[data_page::node_per_page], 0 });
-//       cpage = &data_pages[cpage_ind];
-//     }
-
-//     node* cnode = &cpage->data[cpage->used++];
-//     std::copy(&val, &val + 1, &cnode->val_);
-//     super::insert_after_(position, cnode);
-//     return iterator(cnode);
-//   }
-
-// private:
-//   std::vector<data_page> data_pages;
-//   int                    cpage_ind;
-// };
-
 template<typename T>
 class sum_buffer {
   std::vector<T> v_;
@@ -123,14 +68,11 @@ struct sum_pair : public std::pair<T, T> {
   }
 };
 
-// template<typename T>
-// bool not_stretched(T a, T b, const sum_pair<T>& s) {
-//   return (s.first <= b + a * s.second) && (s.second <= b + a * s.first);
-// }
-
 struct affine_capped {
   const double a, b, C;
-  affine_capped(double a_, double b_, double C_) : a(a_), b(b_), C(C_) { }
+  affine_capped(double a_, double b_, double C_) : a(a_), b(b_), C(C_) {
+    std::cerr << "afine_capped a:" << a << " b:" << b << " C:" << C << '\n';
+  }
   template<typename T>
   bool operator()(const sum_pair<T>& s) const {
     return (s.first <= b + a * s.second) && (s.second <= b + a * s.first) && s.first <= C && s.second <= C;
@@ -195,7 +137,7 @@ std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const I
                                                   size_t window_size, F1& accept_mer, F2& accept_sequence) {
   unsigned int longest = 0, longest_ind = 0;
   const size_t N       = std::distance(X, Xend);
-
+  std::cout << "---\n";
   for(unsigned int i = 0 ; i < N; ++i) {
     element<T>    e_longest = { i, 1, window_size };
     unsigned int& j_longest = P[i];
@@ -212,8 +154,9 @@ std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const I
       if(X[i].second > X[j].second && e_longest.len < it->len + 1) {
         sum_pair<T>       add(X[i].first - X[j].first, X[i].second - X[j].second);
         const sum_pair<T> new_span = it->span_window.test_sum(add);
-        // std::cout << "test " << X[i] << ',' << X[j] << " span:" << it->span_window.sum() << " new_span:" << new_span
-        //           << ' ' << it->span_window.will_be_filled() << ' ' << accept_mer(new_span) << '\n';
+        std::cout << "test " << X[i] << ',' << X[j] << " len:" << it->len << " span:" << it->span_window.sum()
+                  << " new_span:" << new_span
+                  << ' ' << it->span_window.will_be_filled() << ' ' << accept_mer(new_span) << '\n';
         if(!it->span_window.will_be_filled() || accept_mer(new_span)) {
           e_longest.len         = it->len + 1;
           j_longest             = j;
@@ -227,7 +170,7 @@ std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const I
         prev = it;
     }
     L.insert_after(prev, e_longest);
-    // std::cout << "longest " << X[i] << " span:" << e_longest.span_full << " len:" << e_longest.len << " prev:" << j_longest << X[j_longest] << ' ' << accept_sequence(e_longest.span_full) << '\n';
+    std::cout << "longest " << X[i] << " span:" << e_longest.span_full << " len:" << e_longest.len << " prev:" << j_longest << X[j_longest] << ' ' << accept_sequence(e_longest.span_full) << '\n';
     if(longest < e_longest.len && accept_sequence(e_longest.span_full)) {
       longest     = e_longest.len;
       longest_ind = i;

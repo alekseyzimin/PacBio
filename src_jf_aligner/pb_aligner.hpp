@@ -94,11 +94,11 @@ public:
   typedef std::map<const char*, mer_lists> frags_pos_type;
 
   align_pb(const mer_pos_hash_type& ary,
-           double stretch_factor, double stretch_constant, size_t window_size,
+           double stretch_factor, double stretch_constant, double stretch_cap, size_t window_size,
            bool forward = false, bool max_match = false, int max_mer_count = 0,
            double matching_mers = 0.0, double matching_bases = 0.0) :
     ary_(ary),
-    accept_mer_(stretch_factor, stretch_constant, 100),
+    accept_mer_(stretch_factor, stretch_constant, stretch_cap),
     accept_sequence_(stretch_factor),
     window_size_(window_size),
     forward_(forward),
