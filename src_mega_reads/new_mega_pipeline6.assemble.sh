@@ -60,7 +60,7 @@ $out{$mega_read}=1;
 
 
 perl -ane  '{if($F[0] =~ /^\>/){print substr($F[0],1);}else{ print " ",length($F[0]),"\n";}}' $COORDS.all_mr.mr.fa | sort -nrk2 -S 10%  > $COORDS.mr_sizes.tmp
-reduce_sr 148481 ../assembly_k70/work1/kUnitigLengths.txt 70 $COORDS.mr_sizes.tmp -o $COORDS.reduce.tmp
+reduce_sr 148481 ../assembly_k70/work1/kUnitigLengths.txt $KMER $COORDS.mr_sizes.tmp -o $COORDS.reduce.tmp
 cat <(awk '{print $1}' $COORDS.reduce.tmp) <(awk '{print $1}'  $COORDS.mr_sizes.tmp) | sort -S 10% |uniq -u > $COORDS.maximal_mr.txt
 extractreads.pl $COORDS.maximal_mr.txt $COORDS.all_mr.mr.fa 1 | perl -ane 'BEGIN{$mr_number=0;}{
 if($F[0] =~ /^\>/){

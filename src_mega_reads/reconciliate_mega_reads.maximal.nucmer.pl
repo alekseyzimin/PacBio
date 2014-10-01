@@ -103,9 +103,9 @@ if(not($f[6] eq $last_mr)){
         for($j=1;$j<=$#curr_intervals;$j++){
             @ff1=split(/\s+/,$curr_intervals_output[$merge_index]);
             @ff2=split(/\s+/,$curr_intervals[$j]);
-            if(($ff2[0]-$ff1[1])-($ff2[2]-$ff1[3])>-.02*(($ff2[0]-$ff1[1])+($ff2[2]-$ff1[3])) && $ff2[2]-$ff1[3]>-5){ # if insertion in pb
+            if(($ff2[0]-$ff1[1])-($ff2[2]-$ff1[3])>-.02*(($ff2[0]-$ff1[1])+($ff2[2]-$ff1[3])) && $ff2[2]-$ff1[3]>-5 && $ff2[2]-$ff1[3]<($ff1[3]-$ff1[2]+$ff2[3]-$ff2[2])){ # if insertion in pb
 		my $qlt=$ff1[4]+$ff2[4];
-                $curr_intervals_output[$merge_index]="$ff1[0] $ff2[1] $ff1[2] $ff2[3] $ff1[4] $ff1[5] $ff1[6] $ff1[7] $qlt $ff1[9]";
+                $curr_intervals_output[$merge_index]="$ff1[0] $ff2[1] $ff1[2] $ff2[3] $ff1[4] $ff1[5] $ff1[6] $ff1[7] $qlt $ff1[9]"; #do the merging
             }else{
                 $merge_index++;
                 $curr_intervals_output[$merge_index]=$curr_intervals[$j];

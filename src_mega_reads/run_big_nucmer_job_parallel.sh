@@ -25,9 +25,9 @@ echo "NUCmer parameters: $nuc_params"
 rm -rf $rundir
 mkdir $rundir
 
-./split_contig_file.pl $rundir $refseq  $rnumbases 1>/dev/null 2>&1 &
+split_contig_file.pl $rundir $refseq  $rnumbases 1>/dev/null 2>&1 &
 pid1=$!
-./split_contig_file.pl $rundir $qryseq  $qnumbases 1>/dev/null 2>&1 &
+split_contig_file.pl $rundir $qryseq  $qnumbases 1>/dev/null 2>&1 &
 pid2=$!
 wait $pid1 $pid2
 
