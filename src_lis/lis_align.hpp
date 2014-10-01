@@ -137,7 +137,7 @@ std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const I
                                                   size_t window_size, F1& accept_mer, F2& accept_sequence) {
   unsigned int longest = 0, longest_ind = 0;
   const size_t N       = std::distance(X, Xend);
-  std::cout << "---\n";
+
   for(unsigned int i = 0 ; i < N; ++i) {
     element<T>    e_longest = { i, 1, window_size };
     unsigned int& j_longest = P[i];
@@ -154,9 +154,6 @@ std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const I
       if(X[i].second > X[j].second && e_longest.len < it->len + 1) {
         sum_pair<T>       add(X[i].first - X[j].first, X[i].second - X[j].second);
         const sum_pair<T> new_span = it->span_window.test_sum(add);
-        std::cout << "test " << X[i] << ',' << X[j] << " len:" << it->len << " span:" << it->span_window.sum()
-                  << " new_span:" << new_span
-                  << ' ' << it->span_window.will_be_filled() << ' ' << accept_mer(new_span) << '\n';
         if(!it->span_window.will_be_filled() || accept_mer(new_span)) {
           e_longest.len         = it->len + 1;
           j_longest             = j;
@@ -170,7 +167,6 @@ std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const I
         prev = it;
     }
     L.insert_after(prev, e_longest);
-    std::cout << "longest " << X[i] << " span:" << e_longest.span_full << " len:" << e_longest.len << " prev:" << j_longest << X[j_longest] << ' ' << accept_sequence(e_longest.span_full) << '\n';
     if(longest < e_longest.len && accept_sequence(e_longest.span_full)) {
       longest     = e_longest.len;
       longest_ind = i;

@@ -105,128 +105,128 @@ void FragsCoords::check_mers_sequence(const align_pb::frags_pos_type& frags_pos)
   }
 }
 
-void check_info(const align_pb::coords_info e, const align_pb::coords_info a) {
-  EXPECT_EQ(e.rs, a.rs);
-  EXPECT_EQ(e.re, a.re);
-  EXPECT_EQ(e.qs, a.qs);
-  EXPECT_EQ(e.qe, a.qe);
-  EXPECT_EQ(e.nb_mers, a.nb_mers);
-  EXPECT_EQ(e.pb_cons, a.pb_cons);
-  EXPECT_EQ(e.sr_cons, a.sr_cons);
-  EXPECT_EQ(e.pb_cover, a.pb_cover);
-  EXPECT_EQ(e.sr_cover, a.sr_cover);
-  EXPECT_EQ(e.rl, a.rl);
-  EXPECT_EQ(e.ql, a.ql);
-  EXPECT_EQ(e.rn, a.rn);
-  EXPECT_EQ(e.qname, a.unitigs.name());
-  EXPECT_NEAR(e.stretch, a.stretch, 1e-4);
-  EXPECT_NEAR(e.offset, a.offset, 1e-1);
-  EXPECT_NEAR(e.avg_err, a.avg_err, 1e-3);
-}
+// void check_info(const align_pb::coords_info e, const align_pb::coords_info a) {
+//   EXPECT_EQ(e.rs, a.rs);
+//   EXPECT_EQ(e.re, a.re);
+//   EXPECT_EQ(e.qs, a.qs);
+//   EXPECT_EQ(e.qe, a.qe);
+//   EXPECT_EQ(e.nb_mers, a.nb_mers);
+//   EXPECT_EQ(e.pb_cons, a.pb_cons);
+//   EXPECT_EQ(e.sr_cons, a.sr_cons);
+//   EXPECT_EQ(e.pb_cover, a.pb_cover);
+//   EXPECT_EQ(e.sr_cover, a.sr_cover);
+//   EXPECT_EQ(e.rl, a.rl);
+//   EXPECT_EQ(e.ql, a.ql);
+//   EXPECT_EQ(e.rn, a.rn);
+//   EXPECT_EQ(e.qname, a.unitigs.name());
+//   EXPECT_NEAR(e.stretch, a.stretch, 1e-4);
+//   EXPECT_NEAR(e.offset, a.offset, 1e-1);
+//   EXPECT_NEAR(e.avg_err, a.avg_err, 1e-3);
+// }
 
-void check_coords(std::map<std::string, align_pb::coords_info> res, const align_pb::coords_info_type& coords) {
-  for(const auto& info : coords) {
-    auto it = res.find(info.unitigs.name());
-    ASSERT_NE(res.end(), it);
-    check_info(it->second, info);
-  }
-}
+// void check_coords(std::map<std::string, align_pb::coords_info> res, const align_pb::coords_info_type& coords) {
+//   for(const auto& info : coords) {
+//     auto it = res.find(info.unitigs.name());
+//     ASSERT_NE(res.end(), it);
+//     check_info(it->second, info);
+//   }
+// }
 
-TEST_F(FragsCoords, NormalConsistency) {
-  mer_dna::k(17);
-  mer_pos_hash_type hash(super_read_approx_len * 2);
-  frag_lists names(1);
-  superread_parse(1, hash, names, sr_file);
-  align_pb aligner(hash, 10, 2, 100, 1);
-  auto res = aligner.align_sequence(pb_sequence);
+// TEST_F(FragsCoords, NormalConsistency) {
+//   mer_dna::k(17);
+//   mer_pos_hash_type hash(super_read_approx_len * 2);
+//   frag_lists names(1);
+//   superread_parse(1, hash, names, sr_file);
+//   align_pb aligner(hash, 10, 2, 100, 1);
+//   auto res = aligner.align_sequence(pb_sequence);
 
-  auto& frags_pos = res.second;
-  EXPECT_EQ((size_t)3, frags_pos.size());
-  check_mers_sequence(frags_pos);
+//   auto& frags_pos = res.second;
+//   EXPECT_EQ((size_t)3, frags_pos.size());
+//   check_mers_sequence(frags_pos);
 
-  std::map<std::string, align_pb::coords_info> align_res;
-  align_res["1R_3F"] = align_pb::coords_info(302, 876, 3051, 3597, 90, 79, 79, 263, 262, 1287, 3668, false,
-                                             1.05042, -2899.38, 1.72222, "1R_3F");
-  align_res["5F_4R_2F"] = align_pb::coords_info(302, 1149, 1420, 613, 107, 93, 93, 328, 327, 1287, 3000, false,
-                                                -1.04824, 1793.59, 1.4486, "5F_4R_2F");
-  align_res["7R_2F"] = align_pb::coords_info(302, 1149, 1280, 473, 107, 93, 93, 328, 327, 1287, 2800, false,
-                                             -1.04824, 1646.84, 1.4486, "7R_2F");
-  auto& coords = res.first;
-  EXPECT_EQ((size_t)3, coords.size());
-  check_coords(align_res, coords);
-} // ComputeCoords.Consistency
+//   std::map<std::string, align_pb::coords_info> align_res;
+//   align_res["1R_3F"] = align_pb::coords_info(302, 876, 3051, 3597, 90, 79, 79, 263, 262, 1287, 3668, false,
+//                                              1.05042, -2899.38, 1.72222, "1R_3F");
+//   align_res["5F_4R_2F"] = align_pb::coords_info(302, 1149, 1420, 613, 107, 93, 93, 328, 327, 1287, 3000, false,
+//                                                 -1.04824, 1793.59, 1.4486, "5F_4R_2F");
+//   align_res["7R_2F"] = align_pb::coords_info(302, 1149, 1280, 473, 107, 93, 93, 328, 327, 1287, 2800, false,
+//                                              -1.04824, 1646.84, 1.4486, "7R_2F");
+//   auto& coords = res.first;
+//   EXPECT_EQ((size_t)3, coords.size());
+//   check_coords(align_res, coords);
+// } // ComputeCoords.Consistency
 
-TEST_F(FragsCoords, ForwardConsistency) {
-  mer_dna::k(17);
-  mer_pos_hash_type hash(super_read_approx_len * 2);
-  frag_lists names(1);
-  superread_parse(1, hash, names, sr_file);
-  align_pb aligner(hash, 10, 2, 1, true);
-  aligner.unitigs_lengths(&unitigs_lengths, mer_len);
-  auto res = aligner.align_sequence(pb_sequence);
-  auto res_max = aligner.align_sequence(pb_sequence);
+// TEST_F(FragsCoords, ForwardConsistency) {
+//   mer_dna::k(17);
+//   mer_pos_hash_type hash(super_read_approx_len * 2);
+//   frag_lists names(1);
+//   superread_parse(1, hash, names, sr_file);
+//   align_pb aligner(hash, 10, 2, 20, 1, true);
+//   aligner.unitigs_lengths(&unitigs_lengths, mer_len);
+//   auto res = aligner.align_sequence(pb_sequence);
+//   auto res_max = aligner.align_sequence(pb_sequence);
 
-  auto& frags_pos = res.second;
-  EXPECT_EQ((size_t)3, frags_pos.size());
-  check_mers_sequence(frags_pos);
+//   auto& frags_pos = res.second;
+//   EXPECT_EQ((size_t)3, frags_pos.size());
+//   check_mers_sequence(frags_pos);
 
-  auto& coords = res.first;
-  EXPECT_EQ((size_t)3, coords.size());
-  // Check that the alternate sums add up to the right values
-  for(const auto& info : coords) {
-    int total_mers  = 0;
-    int total_bases = 0;
-    ASSERT_EQ(info.kmers_info.size(), info.bases_info.size());
-    for(size_t i = 0; i < info.kmers_info.size(); ++i) {
-      total_mers  += i & 0x1 ? -info.kmers_info[i] : info.kmers_info[i];
-      total_bases += i & 0x1 ? -info.bases_info[i] : info.bases_info[i];
-    }
-    EXPECT_EQ(info.nb_mers, total_mers);
-    EXPECT_EQ((int)info.sr_cover, total_bases);
-  }
+//   auto& coords = res.first;
+//   EXPECT_EQ((size_t)3, coords.size());
+//   // Check that the alternate sums add up to the right values
+//   for(const auto& info : coords) {
+//     int total_mers  = 0;
+//     int total_bases = 0;
+//     ASSERT_EQ(info.kmers_info.size(), info.bases_info.size());
+//     for(size_t i = 0; i < info.kmers_info.size(); ++i) {
+//       total_mers  += i & 0x1 ? -info.kmers_info[i] : info.kmers_info[i];
+//       total_bases += i & 0x1 ? -info.bases_info[i] : info.bases_info[i];
+//     }
+//     EXPECT_EQ(info.nb_mers, total_mers);
+//     EXPECT_EQ((int)info.sr_cover, total_bases);
+//   }
 
-  std::map<std::string, align_pb::coords_info> align_res;
-  align_res["1R_3F"] = align_pb::coords_info(302, 876, 3051, 3597, 90, 79, 79, 263, 262, 1287, 3668, false,
-                                             1.05042, -2899.38, 1.72222, "1R_3F");
-  align_res["2R_4F_5R"] = align_pb::coords_info(302, 1149, 1581, 2388, 107, 93, 93, 328, 327, 1287, 3000, true,
-                                                1.04824, -1351.17, 1.4486, "2R_4F_5R");
-  align_res["2R_7F"] = align_pb::coords_info(302, 1149, 1521, 2328, 107, 93, 93, 328, 327, 1287, 2800, true,
-                                             1.04824, -1288.28, 1.4486, "2R_7F");
+//   std::map<std::string, align_pb::coords_info> align_res;
+//   align_res["1R_3F"] = align_pb::coords_info(302, 876, 3051, 3597, 90, 79, 79, 263, 262, 1287, 3668, false,
+//                                              1.05042, -2899.38, 1.72222, "1R_3F");
+//   align_res["2R_4F_5R"] = align_pb::coords_info(302, 1149, 1581, 2388, 107, 93, 93, 328, 327, 1287, 3000, true,
+//                                                 1.04824, -1351.17, 1.4486, "2R_4F_5R");
+//   align_res["2R_7F"] = align_pb::coords_info(302, 1149, 1521, 2328, 107, 93, 93, 328, 327, 1287, 2800, true,
+//                                              1.04824, -1288.28, 1.4486, "2R_7F");
 
-  check_coords(align_res, coords);
+//   check_coords(align_res, coords);
 
-  auto& coords_max = res_max.first;
-  check_coords(align_res, coords_max);
+//   auto& coords_max = res_max.first;
+//   check_coords(align_res, coords_max);
 
-  // Same but with filtering
-  {
-    align_pb aligner_mer_filter(hash, 10, 2, 1, true, false, 0, 0.09);
-    auto res_mer_filter = aligner_mer_filter.align_sequence(pb_sequence);
-    auto res_max_mer_filter = aligner_mer_filter.align_sequence_max(pb_sequence);
-    auto& coords_mer_filter = res_mer_filter.first;
-    auto& coords_max_mer_filter = res_max_mer_filter.first;
-    ASSERT_EQ((size_t)1, coords_mer_filter.size());
-    ASSERT_EQ((size_t)1, coords_max_mer_filter.size());
-    EXPECT_EQ("1R_3F", coords_mer_filter[0].qname);
-    EXPECT_EQ("1R_3F", coords_max_mer_filter[0].qname);
-    check_coords(align_res, coords_mer_filter);
-    check_coords(align_res, coords_max_mer_filter);
-  }
+//   // Same but with filtering
+//   {
+//     align_pb aligner_mer_filter(hash, 10, 2, 20, 1, true, false, 0, 0.09);
+//     auto res_mer_filter = aligner_mer_filter.align_sequence(pb_sequence);
+//     auto res_max_mer_filter = aligner_mer_filter.align_sequence_max(pb_sequence);
+//     auto& coords_mer_filter = res_mer_filter.first;
+//     auto& coords_max_mer_filter = res_max_mer_filter.first;
+//     ASSERT_EQ((size_t)1, coords_mer_filter.size());
+//     ASSERT_EQ((size_t)1, coords_max_mer_filter.size());
+//     EXPECT_EQ("1R_3F", coords_mer_filter[0].qname);
+//     EXPECT_EQ("1R_3F", coords_max_mer_filter[0].qname);
+//     check_coords(align_res, coords_mer_filter);
+//     check_coords(align_res, coords_max_mer_filter);
+//   }
 
-  {
-    align_pb aligner_mer_filter(hash, 10, 2, 1, true, false, 0, 0.0, 0.27);
-    auto res_mer_filter = aligner_mer_filter.align_sequence(pb_sequence);
-    auto res_max_mer_filter = aligner_mer_filter.align_sequence_max(pb_sequence);
-    auto& coords_mer_filter = res_mer_filter.first;
-    auto& coords_max_mer_filter = res_max_mer_filter.first;
-    ASSERT_EQ((size_t)1, coords_mer_filter.size());
-    ASSERT_EQ((size_t)1, coords_max_mer_filter.size());
-    EXPECT_EQ("1R_3F", coords_mer_filter[0].qname);
-    EXPECT_EQ("1R_3F", coords_max_mer_filter[0].qname);
-    check_coords(align_res, coords_mer_filter);
-    check_coords(align_res, coords_max_mer_filter);
-  }
-}
+//   {
+//     align_pb aligner_mer_filter(hash, 10, 2, 20, 1, true, false, 0, 0.0, 0.27);
+//     auto res_mer_filter = aligner_mer_filter.align_sequence(pb_sequence);
+//     auto res_max_mer_filter = aligner_mer_filter.align_sequence_max(pb_sequence);
+//     auto& coords_mer_filter = res_mer_filter.first;
+//     auto& coords_max_mer_filter = res_max_mer_filter.first;
+//     ASSERT_EQ((size_t)1, coords_mer_filter.size());
+//     ASSERT_EQ((size_t)1, coords_max_mer_filter.size());
+//     EXPECT_EQ("1R_3F", coords_mer_filter[0].qname);
+//     EXPECT_EQ("1R_3F", coords_max_mer_filter[0].qname);
+//     check_coords(align_res, coords_mer_filter);
+//     check_coords(align_res, coords_max_mer_filter);
+//   }
+// }
 
 TEST(DiscardLIS, Discard) {
   align_pb::off_lis                    ol;
