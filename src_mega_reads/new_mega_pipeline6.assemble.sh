@@ -2,9 +2,9 @@
 export PATH=~/myprogs/PacBio/src_mega_reads:~/myprogs/masurca-devel/build/inst/bin/:~/myprogs/PacBio/src_jf_aligner:$PATH
 COORDS=$1
 KMER=$2
-MER=$3
-B=$4
-d=$5
+MER=13
+B=25
+d=0.1
 
 
 COORDS=$COORDS.$KMER.$MER.$B.$d
