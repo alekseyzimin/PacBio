@@ -28,7 +28,7 @@ open(FILE,$allowed_gaps);
 while($line=<FILE>){
     chomp($line);
     @f=split(/\s+/,$line);
-    $allowed{"$f[0] $f[1]"}=1;
+    $allowed{"$f[0] $f[2] $f[3]"}=$f[-1];
 }
 
 open(FILE,$good_pb);
@@ -88,7 +88,7 @@ sub process_sorted_lines{
     $last_coord =-1000000000;
     foreach $l(@_){
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=split(/\s+/,$l);
-        $seq=substr($mseq,$mbgn-1,$mend-$mbgn+1);
+	$seq=substr($mseq,$mbgn,$mend-$mbgn+1);
         die("inconsistent sequence length") if(not(length($mseq)==$mlen));
         die("pacbio read $pb does not exist in the sequence file!!!") if(not(defined($pbseq{$rn})));
 
@@ -100,8 +100,8 @@ sub process_sorted_lines{
             $join_allowed=0;
             $k1s[$#k1s] =substr($k1s[$#k1s],0,-1);
             $k2s[0] = substr($k2s[0],0,-1);
-            $str="$k1s[$#k1s] $k2s[0]";
-            $str="$k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
+            $str="$pb $k1s[$#k1s] $k2s[0]";
+            $str="$pb $k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
             $join_allowed=1 if($allowed{$str});
             $join_allowed=1 if(defined($good_pb{$pb}));
 
@@ -123,10 +123,26 @@ sub process_sorted_lines{
 		    $outread.="N".$seq;
                 }
             }else{#overlapping
+	        my $offset;
 		$join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads 
-		$join_allowed=1 if($last_implied_coord-($bgn-$mbgn+1)>1 && $last_implied_coord-($bgn-$mbgn+1)<=$kmer);
+		#$join_allowed=1 if($last_implied_coord-($bgn-$mbgn+1)>1 && $last_implied_coord-($bgn-$mbgn+1)<=$kmer);
+		if($last_coord-$bgn > 10){
+                    $ind=index($outread,substr($seq,0,31),length($outread)-($last_coord-$bgn)*1.2);
+                    if($ind==-1 || abs(($last_coord-$bgn)-(length($outread)-$ind))>(0.2*($last_coord-$bgn)+10)){
+                        $offset=$last_coord-$bgn+1;
+                        if($offset > 75){
+				$join_allowed=0;
+			}else{
+				$join_allowed=1;
+			}
+		    }else{
+			$offset=length($outread)-$ind;
+			$join_allowed=1;
+		    }
+		}
+#print "$join_allowed $last_coord $bgn INDEX $ind ",length($outread)," ",$last_coord-$bgn+1," ",length($outread)-$ind,"\n";
 		if($join_allowed){
-		    $outread.=substr($seq,$last_coord-$bgn+1);
+		    $outread.=substr($seq,$offset);
 		}else{
 		    $outread.="N".$seq;
 		}
@@ -136,8 +152,17 @@ sub process_sorted_lines{
 	$last_implied_coord=$end+$mlen-$mend;
 	$last_mr=$name;
 	$last_len=length($seq);
-	$last_ext=substr($mseq,$mend);
+	$last_seq=$seq;
 	$last_mend=$mend;
+        last if($last_coord>=length($pbseq{$rn}));	
     }
     return($outread);
 }
+
+sub reverse_complement{
+    my $str=$_[0];
+    $str =~ tr/acgtACGTNn/tgcaTGCANn/;
+    $str = reverse ($str);
+    return ($str);
+}
+
