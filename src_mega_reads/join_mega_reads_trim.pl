@@ -28,7 +28,7 @@ open(FILE,$allowed_gaps);
 while($line=<FILE>){
     chomp($line);
     @f=split(/\s+/,$line);
-    $allowed{"$f[0] $f[1]"}=1;
+    $allowed{"$f[0] $f[2] $f[3]"}=$f[-1];
 }
 
 open(FILE,$good_pb);
@@ -37,91 +37,132 @@ while($line=<FILE>){
     $good_pb{$line}=1;
 }
 
-
+my @lines=();
 my $outread="";
-my $last_coord =-1000000000;
 #now we process the pb+mega-reads file
 while($line=<STDIN>){
     chomp($line);
     if($line =~ /^>/){
-	#$outread.=$last_ext;
-	if(not($outread eq "")){
-	    $indx=0;
-	    @f=split(/N/,$outread);
-	    for($i=0;$i<=$#f;$i++){
-	    	print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=400);
-		$indx++;
+	if(@lines){
+	    @lines_sorted = sort by_first_number @lines;
+	    $outread=&process_sorted_lines(@lines_sorted);
+	    if(not($outread eq "")){
+		$indx=0;
+		@f=split(/N/,$outread);
+		for($i=0;$i<=$#f;$i++){
+		    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=400);
+		    $indx++;
+		}
 	    }
+	@lines=();
 	}
-	$outread="";
-	$last_coord =-1000000000;
-	$rn=substr($line,1);
-
+	($rn,$junk)=split(/\s+/,substr($line,1));
     }else{
-	($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=split(/\s+/,$line);
-        $seq=substr($mseq,$mbgn-1,$mend-$mbgn+1);
-	die("pacbio read $pb does not exist in the sequence file!!!") if(not(defined($pbseq{$rn})));
+	push(@lines, $line);
+    }
+}
+#do not forgrt the last one
+        if(@lines){
+            @lines_sorted = sort by_first_number @lines;
+            $outread=&process_sorted_lines(@lines_sorted);
+            if(not($outread eq "")){
+                $indx=0;
+                @f=split(/N/,$outread);
+                for($i=0;$i<=$#f;$i++){
+                    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=400);
+                    $indx++;
+                }
+            }
+        }
 
-	if($outread eq ""){
-		#$outread=substr($mseq,0,$mend);
-		$outread=$seq;
-	}else{
-	    #first we figure out if we can allow this join.  
+
+
+sub by_first_number{
+($fn1,$rest)=split(/\s+/,$a);
+($fn2,$rest)=split(/\s+/,$b);
+return($a <=> $b);
+}
+
+sub process_sorted_lines{
+    my $outread="";
+    $last_coord =-1000000000;
+    foreach $l(@_){
+        ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=split(/\s+/,$l);
+	$seq=substr($mseq,$mbgn,$mend-$mbgn+1);
+        die("inconsistent sequence length") if(not(length($mseq)==$mlen));
+        die("pacbio read $pb does not exist in the sequence file!!!") if(not(defined($pbseq{$rn})));
+
+        if($outread eq ""){
+	    $outread=$seq;
+        }else{
             my @k1s=split(/_/,$last_mr);
             my @k2s=split(/_/,$name);
-	    $join_allowed=0;
-	    $k1s[$#k1s] =substr($k1s[$#k1s],0,-1);
+            $join_allowed=0;
+            $k1s[$#k1s] =substr($k1s[$#k1s],0,-1);
             $k2s[0] = substr($k2s[0],0,-1);
-            $str="$k1s[$#k1s] $k2s[0]";
-            $str="$k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
+            $str="$pb $k1s[$#k1s] $k2s[0]";
+            $str="$pb $k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
             $join_allowed=1 if($allowed{$str});
-	    $join_allowed=1 if(defined($good_pb{$pb}));
-	    #$join_allowed=1 if($last_implied_coord>$bgn-$mbgn && $bgn>$last_coord);#allow join if implied overlap 
+            $join_allowed=1 if(defined($good_pb{$pb}));
 
-	    if($bgn>$last_coord){#if gap -- check if the closure is allowed
-		my $min_len=0;
+            if($bgn>$last_coord){#if gap -- check if the closure is allowed
+                my $min_len=0;
                 my $max_gap_local;
 
                 if(defined($good_pb{$pb})){
-			$max_gap_local=length($outread)>length($seq)?length($outread):length($seq);  
-		}else{			
-			$min_len=length($outread)<length($seq)?length($outread):length($seq);
-			$max_gap_local=int($min_len*0.3);
-			$max_gap_local=$max_gap if($max_gap_local>$max_gap);
-			$max_gap_local=25 if($max_gap_local<25);
+		    $max_gap_local=length($outread)>length($seq)?length($outread):length($seq);
+                }else{
+		    $min_len=length($outread)<length($seq)?length($outread):length($seq);
+		    $max_gap_local=int($min_len*0.3);
+		    $max_gap_local=$max_gap if($max_gap_local>$max_gap);
+		    $max_gap_local=25 if($max_gap_local<25);
+                }
+                if($bgn-$last_coord<$max_gap_local && $join_allowed){#then put N's and later split
+		    $outread.=lc(substr($pbseq{$rn},$last_coord+1,$bgn-$last_coord)).$seq;
+                }else{
+		    $outread.="N".$seq;
+                }
+            }else{#overlapping
+	        my $offset;
+		$join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads 
+		#$join_allowed=1 if($last_implied_coord-($bgn-$mbgn+1)>1 && $last_implied_coord-($bgn-$mbgn+1)<=$kmer);
+		if($last_coord-$bgn > 10){
+                    $ind=index($outread,substr($seq,0,31),length($outread)-($last_coord-$bgn)*1.2);
+                    if($ind==-1 || abs(($last_coord-$bgn)-(length($outread)-$ind))>(0.2*($last_coord-$bgn)+10)){
+                        $offset=$last_coord-$bgn+1;
+                        if($offset > 75){
+				$join_allowed=0;
+			}else{
+				$join_allowed=1;
+			}
+		    }else{
+			$offset=length($outread)-$ind;
+			$join_allowed=1;
+		    }
 		}
-		#print "join status ",$bgn-$last_coord," $max_gap_local ",length($seq)," $join_allowed allowed:$allowed{$str} $str $seq\n";
-		if($bgn-$last_coord<$max_gap_local && $join_allowed){#then put N's and later split
-		$outread.=lc(substr($pbseq{$rn},$last_coord+1,$bgn-$last_coord)).$seq;
+#print "$join_allowed $last_coord $bgn INDEX $ind ",length($outread)," ",$last_coord-$bgn+1," ",length($outread)-$ind,"\n";
+		if($join_allowed){
+		    $outread.=substr($seq,$offset);
 		}else{
-		$outread.="N".$seq;
+		    $outread.="N".$seq;
 		}
-	    }else{#overlapping
- 	    $join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads 
-	    $join_allowed=1 if($last_implied_coord-($bgn-$mbgn+1)>1 && $last_implied_coord-($bgn-$mbgn+1)<=$kmer);
-            #$join_allowed=0 if($last_coord-$bgn>$kmer); 
-            # we join if same mega-read, just fractured, or the overlap is less than kmer length, or join is allowed
- 	    #print "join status ",$bgn-$last_coord," ",length($seq)," $join_allowed allowed:$allowed{$str} $str $seq\n";
-	    if($join_allowed){
-	    $outread.=substr($seq,$last_coord-$bgn+1);
-            }else{
-            $outread.="N".$seq;
             }
-	    }
-	}
-    $last_coord=$end;
-    $last_implied_coord=$end+$mlen-$mend;
-    $last_mr=$name;
-    $last_len=length($seq);
-    $last_ext=substr($mseq,$mend);
-    $last_mend=$mend;
+        }
+	$last_coord=$end;
+	$last_implied_coord=$end+$mlen-$mend;
+	$last_mr=$name;
+	$last_len=length($seq);
+	$last_seq=$seq;
+	$last_mend=$mend;
+        last if($last_coord>=length($pbseq{$rn}));	
     }
+    return($outread);
 }
-#output the last one
-            $indx=0;
-            @f=split(/N/,$outread);
-            for($i=0;$i<=$#f;$i++){
-                print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>400);
-                $indx++;
-            }
+
+sub reverse_complement{
+    my $str=$_[0];
+    $str =~ tr/acgtACGTNn/tgcaTGCANn/;
+    $str = reverse ($str);
+    return ($str);
+}
 
