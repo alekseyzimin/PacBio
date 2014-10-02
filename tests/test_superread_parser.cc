@@ -43,10 +43,11 @@ TEST(SuperReadParser, OneRead) {
     mer_dna rm(m.get_reverse_complement());
     bool is_canonical = m < rm;
 
-    const auto it = hash.find_pos(is_canonical ? m : rm);
-    ASSERT_TRUE(it != hash.pos_end());
-    EXPECT_EQ(1, std::distance(it, hash.pos_end()));
+    const auto list = hash.equal_range(is_canonical ? m : rm);
+    ASSERT_TRUE(list.first != list.second);
+    EXPECT_EQ(1, std::distance(list.first, list.second));
     //    const mer_pos_hash_type::position_type& pos = *list->cbegin();
+    const auto it = list.first;
     EXPECT_STREQ("superread", it->frag->name);
     EXPECT_EQ((int)(i + 1) * (is_canonical ? 1 : -1), it->offset);
   }
@@ -102,10 +103,10 @@ TEST(SuperReadParser, ManyReads) {
     const bool is_canonical = m < rm;
     SCOPED_TRACE(::testing::Message() << "i:" << i << " m:" << m << " canonical:" << is_canonical << " delta:" << delta);
 
-    auto it = hash.find_pos(is_canonical ? m : rm);
-    EXPECT_TRUE(it != hash.pos_end());
+    auto list = hash.equal_range(is_canonical ? m : rm);
+    EXPECT_TRUE(list.first != list.second);
     int count = 0;
-    for( ; it != hash.pos_end(); ++it, ++count) {
+    for(auto it = list.first; it != list.second; ++it, ++count) {
       EXPECT_EQ(read_len, (int)it->frag->len);
       int read_id = std::atoi(it->frag->name);
       // Is id valid?
