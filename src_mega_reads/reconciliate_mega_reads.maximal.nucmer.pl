@@ -9,6 +9,8 @@ $max_overlap_pct=$ARGV[0];
 $kmer=$ARGV[1];
 $seqfile=$ARGV[2];
 $mr_namefile=$ARGV[3];
+$min_len=0;
+$min_len=$ARGV[4] if(not($ARGV[4] eq ""));
 
 open(FILE,$seqfile);
 while($line=<FILE>){
@@ -33,6 +35,7 @@ while($l=<STDIN>){
     chomp($l);
     my @ff=split(/\s+/,$l);
     next if($ff[10] eq "");
+    next if(($ff[7]-$ff[6])<$min_len);
     #next if($ff[3]==1);
     $original_mega_read=$ff[1];
     $mega_read=$original_mega_read;
