@@ -1,6 +1,8 @@
 #!/bin/bash
-MY_PATH="`dirname \"$0\"`"
+MYPATH="`dirname \"$0\"`"
+MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:~alekseyz/myprogs/masurca-devel/build/inst/bin/:$MYPATH/../src_jf_aligner:$PATH
+echo $PATH
 #arguments
 COORDS=$1
 KMER=$2
