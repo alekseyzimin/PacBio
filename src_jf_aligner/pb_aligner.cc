@@ -119,17 +119,17 @@ void coarse_aligner::align_sequence_max (parse_sequence& parser, const size_t pb
 void fetch_super_reads(const mer_pos_hash_type& ary, parse_sequence& parser,
                        frags_pos_type& frags_pos, const int max_mer_count) {
   while(parser.next()) { // Process each k-mer
-    const bool is_canonical = parser.m < parser.rm;
-    auto list = ary.equal_range(is_canonical ? parser.m : parser.rm);
+    const bool is_canonical = parser.mer<0>().is_canonical();
+    auto list = ary.equal_range(is_canonical ? parser.mer<0>().m : parser.mer<0>().rm);
     if(max_mer_count && std::distance(list.first, list.second) > max_mer_count) continue;
     for(auto it = list.first ; it != list.second; ++it) { // For each instance of the k-mer in a super read
       mer_lists& ml = frags_pos[it->frag->name];
       ml.frag       = it->frag;
       const int offset = is_canonical ? it->offset : -it->offset;
       if(offset > 0)
-        ml.fwd.offsets.push_back(pb_sr_offsets(parser.offset, offset));
+        ml.fwd.offsets.push_back(pb_sr_offsets(parser.offset<0>(), offset));
       else
-        ml.bwd.offsets.push_back(pb_sr_offsets(parser.offset, offset));
+        ml.bwd.offsets.push_back(pb_sr_offsets(parser.offset<0>(), offset));
     }
   }
 }

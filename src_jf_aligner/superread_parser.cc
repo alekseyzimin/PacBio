@@ -13,11 +13,11 @@ void superreads_read_mers::start(int thid) {
       parser.reset(job->data[i].seq);
 
       while(parser.next()) { // Process each k-mer
-        if(parser.m.is_homopolymer()) continue;
-        const bool is_canonical = parser.m < parser.rm;
-        ary_.push_front(is_canonical ? parser.m : parser.rm,
+        if(parser.mer<0>().m.is_homopolymer()) continue;
+        const bool is_canonical = parser.mer<0>().is_canonical();
+        ary_.push_front(is_canonical ? parser.mer<0>().m : parser.mer<0>().rm,
                         header,
-                        is_canonical ? parser.offset : -parser.offset);
+                        is_canonical ? parser.offset<0>() : -parser.offset<0>());
       }
     }
   }
