@@ -1,7 +1,15 @@
 #!/bin/bash
-export PATH=~/myprogs/PacBio/src_mega_reads:~/myprogs/masurca-devel/build/inst/bin/:~/myprogs/PacBio/src_jf_aligner:$PATH
+#!/bin/bash
+MY_PATH="`dirname \"$0\"`"
+export PATH=$MYPATH:~alekseyz/myprogs/masurca-devel/build/inst/bin/:$MYPATH/../src_jf_aligner:$PATH
+#arguments
 COORDS=$1
 KMER=$2
+KUNITIGS=$3
+SUPERREADS=$4
+PACBIO=$5
+
+#parameters
 MER=13
 B=25
 d=0.1
@@ -13,7 +21,7 @@ echo "$COORDS.all.txt exists";
 exit;
 fi
 
-create_mega_reads -s 20000000 -m $MER -k 70 -u ../assembly_k70/guillaumeKUnitigsAtLeast32bases_all.fasta -t 48 -B $B --max-count 300 -d $d  -r ../assembly_k70/work1/superReadSequences.named.fasta  -p pb10x.fasta -o $COORDS.txt
+create_mega_reads -s 20000000 -m $MER --stretch-cap 10000 -k 70 -u $KUNITIGS -t 48 -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt
 
 #first we reduce to maximal
 perl -ane '{
@@ -36,7 +44,7 @@ $out{$mega_read}=1;
 }
 }' $COORDS.txt 1> $COORDS.all_mr.fa 
 
-create_mega_reads -s 20000000 -m $MER -k 70 -u ../assembly_k70/guillaumeKUnitigsAtLeast32bases_all.fasta -t 48 -B $B --max-count 300 -d $d  -r $COORDS.all_mr.fa  -p pb10x.fasta -o $COORDS.mr.txt
+create_mega_reads -s 20000000 -m $MER --max-match -k 70 -u $KUNITIGS -t 48 -B $B --max-count 300 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt
 
 perl -ane '{
 if($F[0] =~ /^\>/){
