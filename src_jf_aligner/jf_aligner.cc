@@ -7,6 +7,8 @@
 #include <src_jf_aligner/pb_aligner.hpp>
 #include <debug.hpp>
 
+using align_pb::coarse_aligner;
+
 jf_aligner_cmdline args;
 
 /**
@@ -95,9 +97,9 @@ void print_details(Multiplexer::ostream& out, const std::string& pb_name, const 
   out.end_record();
 }
 
-void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* coords_m, const align_pb* align_data) {
-  parse_sequence           parser;
-  align_pb::thread         aligner(*align_data);
+void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* coords_m, const coarse_aligner* align_data) {
+  parse_sequence         parser;
+  coarse_aligner::thread aligner(*align_data);
 
   mstream          details_io(details_m);
   mstream          coords_io(coords_m);
@@ -176,10 +178,11 @@ int main(int argc, char *argv[])
   read_parser    reads(4 * args.threads_arg, 100, 1, streams);
 
   // Create aligner
-  align_pb align_data(hash, args.stretch_factor_arg, args.stretch_constant_arg, args.stretch_cap_arg, args.window_size_arg,
-                      args.forward_flag, args.max_match_flag,
-                      args.max_count_arg ? args.max_count_arg : std::numeric_limits<int>::max(),
-                      args.mers_matching_arg / 100.0, args.bases_matching_arg / 100.0);
+  coarse_aligner align_data(hash, mer_dna::k(),
+                            args.stretch_factor_arg, args.stretch_constant_arg, args.stretch_cap_arg, args.window_size_arg,
+                            args.forward_flag, args.max_match_flag,
+                            args.max_count_arg ? args.max_count_arg : std::numeric_limits<int>::max(),
+                            args.mers_matching_arg / 100.0, args.bases_matching_arg / 100.0);
   if(unitigs_lengths) align_data.unitigs_lengths(unitigs_lengths.get(), args.k_mer_arg);
 
   // Output header if necessary

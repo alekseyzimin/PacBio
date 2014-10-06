@@ -7,15 +7,17 @@
 #include <src_jf_aligner/pb_aligner.hpp>
 #include <src_jf_aligner/overlap_graph.hpp>
 
+using align_pb::coarse_aligner;
+
 typedef create_mega_reads_cmdline cmdline_args;
 cmdline_args args;
 
 
-void create_mega_reads(read_parser* reads, Multiplexer* output_m, const align_pb* align_data,
+void create_mega_reads(read_parser* reads, Multiplexer* output_m, const coarse_aligner* align_data,
                        overlap_graph* graph_walker, const std::vector<std::string>* unitigs_sequences,
                        Multiplexer* dot_m) {
   parse_sequence                        parser;
-  align_pb::thread                      aligner(*align_data);
+  coarse_aligner::thread                aligner(*align_data);
   overlap_graph::thread                 graph(*graph_walker);
   std::string                           name;
   Multiplexer::ostream                  output(output_m);
@@ -106,10 +108,11 @@ int main(int argc, char *argv[])
   read_parser    reads(4 * args.threads_arg, 100, 1, streams);
 
   // Create aligner
-  align_pb align_data(hash, args.stretch_constant_arg, args.stretch_factor_arg, args.stretch_cap_arg, args.window_size_arg,
-                      true /* forward */, args.max_match_flag,
-                      args.max_count_arg ? args.max_count_arg : std::numeric_limits<int>::max(),
-                      args.mers_matching_arg / 100.0, args.bases_matching_arg / 100.0);
+  coarse_aligner align_data(hash, mer_dna::k(),
+                            args.stretch_constant_arg, args.stretch_factor_arg, args.stretch_cap_arg, args.window_size_arg,
+                            true /* forward */, args.max_match_flag,
+                            args.max_count_arg ? args.max_count_arg : std::numeric_limits<int>::max(),
+                            args.mers_matching_arg / 100.0, args.bases_matching_arg / 100.0);
   align_data.unitigs_lengths(&unitigs_lengths, args.k_mer_arg);
 
   // Output candidate mega_reads

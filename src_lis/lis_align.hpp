@@ -68,6 +68,11 @@ struct sum_pair : public std::pair<T, T> {
   }
 };
 
+struct accept_all {
+  template<typename T>
+  bool operator()(const T& x) const { return true; }
+};
+
 struct affine_capped {
   const double a, b, C;
   affine_capped(double a_, double b_, double C_) : a(a_), b(b_), C(C_) {
