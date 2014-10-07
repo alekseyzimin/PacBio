@@ -65,21 +65,6 @@ public:
     return &pos_[id];
   }
 
-  /** Push a position for mer m. */
-  void push_front(const mer_type& m, const T* s, int o) {
-    static __thread data_page thread_data = { 0, 0 };
-
-    if(!thread_data.data || thread_data.used >= node_per_page) {
-      thread_data.used = 0;
-      thread_data.data = new node[node_per_page];
-      data_pages_.push_front(thread_data.data);
-    }
-    node* cnode  = &thread_data.data[thread_data.used++];
-    cnode->val_.frag   = s;
-    cnode->val_.offset = o;
-    mapped_type::insert_after_(insert_mer(m), cnode);
-  }
-
   pos_iterator pos_end() { return pos_iterator(); }
   const_pos_iterator pos_end() const { return const_pos_iterator(); }
 
@@ -121,6 +106,29 @@ public:
     return std::make_pair(find_pos(m), const_pos_iterator());
   }
 
+  class thread {
+    mer_pos_hash& hash_;
+    data_page     data_;
+
+  public:
+    thread(mer_pos_hash& hash) : hash_(hash), data_({0, 0}) { }
+    thread(mer_pos_hash* hash) : hash_(*hash), data_({0, 0}) { }
+
+    /** Push a position for mer m. */
+    void push_front(const mer_type& m, const T* s, int o) {
+      if(!data_.data || data_.used >= mer_pos_hash::node_per_page) {
+        data_.used = 0;
+        data_.data = new node[node_per_page];
+        hash_.data_pages_.push_front(data_.data);
+      }
+      node* cnode  = &data_.data[data_.used++];
+      cnode->val_.frag   = s;
+      cnode->val_.offset = o;
+      mapped_type::insert_after_(hash_.insert_mer(m), cnode);
+    }
+  };
+  friend class thread;
+
 private:
   mer_array_type                   mers_;
   typename mapped_type::head_node* pos_;
@@ -128,3 +136,4 @@ private:
 };
 
 #endif /* _MER_POS_HASH_HPP_ */
+

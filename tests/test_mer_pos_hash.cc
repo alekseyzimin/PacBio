@@ -25,9 +25,12 @@ TEST(MerPosHash, Insert) {
   mer_pos_hash_type hash(2 * nb_mers);
 
   static const int nb_inserts = 10000;
-  # pragma omp parallel for
-  for(int i = 0; i < nb_inserts; ++i)
-    hash.push_front(mers[i % nb_mers], frags[i % nb_frags].c_str(), i * (2 * (i % 2) - 1));
+  {
+    mer_pos_hash_type::thread ht(hash);
+# pragma omp parallel for firstprivate(ht)
+    for(int i = 0; i < nb_inserts; ++i)
+      ht.push_front(mers[i % nb_mers], frags[i % nb_frags].c_str(), i * (2 * (i % 2) - 1));
+  }
 
   for(int i = 0; i < nb_mers; ++i) {
     auto list = hash.equal_range(mers[i]);

@@ -15,7 +15,10 @@
 
 namespace err = jellyfish::err;
 using jellyfish::mer_dna;
+typedef mer_dna long_mer_type;
+typedef jellyfish::mer_dna_ns::mer_base_static<uint64_t, 1> short_mer_type;
 typedef mer_pos_hash<frag_lists::frag_info, mer_dna> mer_pos_hash_type;
+typedef mer_pos_hash<frag_lists::frag_info, short_mer_type> short_mer_pos_hash_type;
 typedef std::vector<const char*> file_vector;
 typedef jellyfish::stream_manager<file_vector::const_iterator> stream_manager;
 typedef jellyfish::whole_sequence_parser<stream_manager> read_parser;
@@ -119,5 +122,6 @@ struct parser_base {
 } // namespace parse_sequence_ns
 
 typedef parse_sequence_ns::parser_base<mer_dna> parse_sequence;
+typedef parse_sequence_ns::parser_base<long_mer_type, short_mer_type> parse_sequence2;
 
 #endif /* _JF_ALIGNER_HPP_ */

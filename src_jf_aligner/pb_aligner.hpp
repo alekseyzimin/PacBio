@@ -202,7 +202,6 @@ struct compute_kmers_info {
 
 class coarse_aligner {
   const mer_pos_hash_type& ary_;
-  //  double                   stretch_constant_, stretch_factor_; // Maximum stretch in LIS
   const unsigned int       align_k_; // k-mer length used for alignment
   lis_align::affine_capped accept_mer_;
   lis_align::linear        accept_sequence_;
@@ -313,9 +312,11 @@ public:
   friend class thread;
 };
 
-class fine_aligner {
-
-};
+// class fine_aligner {
+//   const unsigned int align_k_;
+// public:
+//   fine_aligner(unsigned int align_k) : align_k_(align_k) { }
+// };
 
 } // namespace align_pb
 
