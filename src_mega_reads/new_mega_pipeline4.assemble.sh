@@ -2,18 +2,18 @@
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:~alekseyz/myprogs/masurca-devel/build/inst/bin/:$MYPATH/../src_jf_aligner:$PATH
-echo $PATH
 #arguments
 COORDS=$1
 KMER=$2
 KUNITIGS=$3
 SUPERREADS=$4
 PACBIO=$5
+JF_SIZE=$6
 
 #parameters
-MER=13
-B=25
-d=0.1
+MER=15
+B=15
+d=0.06
 
 
 COORDS=$COORDS.$KMER.$MER.$B.$d
@@ -22,7 +22,7 @@ echo "$COORDS.all.txt exists";
 exit;
 fi
 
-create_mega_reads -s 20000000 -m $MER --stretch-cap 10000 -k 70 -u $KUNITIGS -t 48 -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt
+create_mega_reads -s $JF_SIZE -m $MER --stretch-cap 10000 -k 70 -u $KUNITIGS -t 48 -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt
 
 perl -ane '{
 if($F[0] =~ /^\>/){
