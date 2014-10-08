@@ -4,7 +4,7 @@
 
 #include <src_jf_aligner/create_mega_reads_cmdline.hpp>
 #include <src_jf_aligner/superread_parser.hpp>
-#include <src_jf_aligner/pb_aligner.hpp>
+#include <src_jf_aligner/coarse_aligner.hpp>
 #include <src_jf_aligner/overlap_graph.hpp>
 
 using align_pb::coarse_aligner;

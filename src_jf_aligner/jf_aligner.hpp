@@ -122,6 +122,7 @@ struct parser_base {
 } // namespace parse_sequence_ns
 
 typedef parse_sequence_ns::parser_base<mer_dna> parse_sequence;
+typedef parse_sequence_ns::parser_base<short_mer_type> short_parse_sequence;
 typedef parse_sequence_ns::parser_base<long_mer_type, short_mer_type> parse_sequence2;
 
 #endif /* _JF_ALIGNER_HPP_ */
