@@ -18,7 +18,7 @@ coords_info compute_coords_info(const mer_lists& ml, const size_t pb_size, const
   // compute the number of k-mers aligned in each k-unitigs of the
   // super-read. If an error occurs (unknown k-unitigs, k-unitigs
   // too short, etc.), an empty vector is returned.
-  coords_info                       info(ml.frag->name, align_k, pb_size, ml.frag->len, nb_mers);
+  coords_info                       info(ml.frag, align_k, pb_size, ml.frag->len, nb_mers);
   if(forward && !fwd_align)
     info.unitigs.reverse();
   if(nb_mers == 0) return info;

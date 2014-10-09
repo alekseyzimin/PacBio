@@ -75,9 +75,7 @@ struct accept_all {
 
 struct affine_capped {
   const double a, b, C;
-  affine_capped(double a_, double b_, double C_) : a(a_), b(b_), C(C_) {
-    std::cerr << "afine_capped a:" << a << " b:" << b << " C:" << C << '\n';
-  }
+  affine_capped(double a_, double b_, double C_) : a(a_), b(b_), C(C_) { }
   template<typename T>
   bool operator()(const sum_pair<T>& s) const {
     return (s.first <= b + a * s.second) && (s.second <= b + a * s.first) && s.first <= C && s.second <= C;

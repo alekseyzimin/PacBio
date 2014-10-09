@@ -24,7 +24,7 @@ TEST(CoordsParsing, CoordsInfo) {
   EXPECT_DOUBLE_EQ(302.084, ci.offset);
   EXPECT_DOUBLE_EQ(0.727273, ci.avg_err);
   //  EXPECT_EQ("116700F_68092F", ci.qname);
-  EXPECT_EQ((const char*)0, ci.qname);
+  EXPECT_EQ((const frag_lists::frag_info*)0, ci.qfrag);
   EXPECT_EQ("116700F_68092F", ci.unitigs.name());
   EXPECT_EQ(std::vector<int>({13, 6, 15}), ci.kmers_info);
   EXPECT_EQ(std::vector<int>({41, 34, 57}), ci.bases_info);

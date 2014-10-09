@@ -6,7 +6,7 @@ std::istream& operator>>(std::istream& is, align_pb::coords_info& c) {
      >> c.pb_cover >> c.sr_cover >> c.rl >> c.ql
      >> c.stretch >> c.offset >> c.avg_err
      >> qname;
-  c.qname = 0;
+  c.qfrag   = 0;
   c.unitigs = qname;
   c.kmers_info.clear();
   c.bases_info.clear();

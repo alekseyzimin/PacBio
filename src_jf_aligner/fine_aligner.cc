@@ -12,10 +12,9 @@ void fetch_local_super_reads(const short_mer_pos_hash_type& ary, short_parse_seq
       if(local_mls == frags_pos.end()) continue;
       const auto mls_end = local_mls->second.end();
       for(auto local_ml = local_mls->second.begin(); local_ml != mls_end; ++local_ml) {
-        if(abs(it->offset) >= local_ml->begin && abs(it->offset) <= local_ml->begin) {
+        if(parser.offset<0>() >= local_ml->begin && parser.offset<0>() <= local_ml->end) {
           auto&     ml     = local_ml->ml;
-          //          static_assert(decltype(*ml)::dummy_error, "Dump type");
-          ml.frag          = it->frag;
+          //          ml.frag          = it->frag;
           const int offset = is_canonical ? it->offset : -it->offset;
           if(offset > 0)
             ml.fwd.offsets.push_back(pb_sr_offsets(parser.offset<0>(), offset));

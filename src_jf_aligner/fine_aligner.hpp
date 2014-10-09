@@ -9,7 +9,7 @@ struct sr_local_ml {
   double     begin; // Implied first start base of k-mer
   double     end;   // Implied last start base of k-mer
   mer_lists  ml;    // List of mers
-  sr_local_ml(double b, double e) : begin(b), end(e) { }
+  sr_local_ml(const frag_lists::frag_info* frag, double b, double e) : begin(b), end(e), ml(frag) { }
 };
 typedef std::vector<sr_local_ml> local_mer_lists_type;
 typedef std::map<const char*, local_mer_lists_type> frags_local_pos_type;
@@ -45,13 +45,14 @@ public:
     void prime_frags_pos(Iterator it, const Iterator end) {
       frags_pos_.clear();
       for( ; it != end; ++it) {
-        auto&  local_mls = frags_pos_[it->qname];
+        auto&  local_mls = frags_pos_[it->qfrag->name];
         double begin     = std::max((double)0, it->stretch - it->avg_err);
-        double end       = std::min((double)it->rl, it->stretch * it->ql + it->avg_err - aligner_.align_k_);
-        local_mls.push_back(sr_local_ml(begin, end));
+        double end       = std::min((double)it->rl, it->stretch * it->ql + it->offset + it->avg_err - aligner_.align_k_);
+        local_mls.push_back(sr_local_ml(it->qfrag, begin, end));
       }
     }
     void align_sequence(short_parse_sequence& parser, const size_t pb_size, const coords_info_type& coarse_coords);
+    const coords_info_type& coords() { return coords_; }
   };
   friend class thread;
 };
