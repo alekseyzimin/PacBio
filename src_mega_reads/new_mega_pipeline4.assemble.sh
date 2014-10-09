@@ -1,9 +1,19 @@
 #!/bin/bash
+MYPATH="`dirname \"$0\"`"
+MYPATH="`( cd \"$MYPATH\" && pwd )`"
+export PATH=$MYPATH:~alekseyz/myprogs/masurca-devel/build/inst/bin/:$MYPATH/../src_jf_aligner:$PATH
+#arguments
 COORDS=$1
 KMER=$2
-MER=$3
-B=$4
-d=$5
+KUNITIGS=$3
+SUPERREADS=$4
+PACBIO=$5
+JF_SIZE=$6
+
+#parameters
+MER=15
+B=15
+d=0.06
 
 
 COORDS=$COORDS.$KMER.$MER.$B.$d
@@ -12,33 +22,52 @@ echo "$COORDS.all.txt exists";
 exit;
 fi
 
-~/myprogs/PacBio/src_jf_aligner/create_mega_reads -s 20000000 -m $MER -k 70 -u ../assembly_k70/guillaumeKUnitigsAtLeast32bases_all.fasta -t 48 -B $B --max-count 300 -d $d  -r ../assembly_k70/work1/superReadSequences.named.fasta  -p pb10x.fasta -o $COORDS.txt
+create_mega_reads -s $JF_SIZE -m $MER --stretch-cap 10000 -k 70 -u $KUNITIGS -t 48 -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt
 
-perl -ane 'BEGIN{$mrn=0;}{
+perl -ane '{
 if($F[0] =~ /^\>/){
 $pb=substr($F[0],1);
 }else{
 $mega_read=$F[8];
+@kunis=split(/_/,$mega_read);
 $sequence=$F[10];
+if(substr($kunis[0],0,-1)>substr($kunis[-1],0,-1)){
+        $mega_read=join("_",reverse(@kunis));
+        $mega_read=~tr/FR/RF/;
+        $sequence=reverse($sequence);
+        $sequence=~tr/ACGTNacgtn/TGCANtgcan/;
+}
 if(not(defined($out{$mega_read}))){
-print ">$mrn\n$sequence\n";
-$out{$mega_read}=$mrn;
-$mrn++;
+print ">$mega_read\n$sequence\n";
+$out{$mega_read}=1;
 }
-$pacbios{"$mega_read:$out{$mega_read}"}.="$pb:$F[6] ";
 }
-}END{
-foreach $m(keys %pacbios){
-print STDERR "$m $pacbios{$m}\n";
-}}' $COORDS.txt 1> $COORDS.all_mr.mr.fa 2>$COORDS.mr.pb.txt
+}' $COORDS.txt | perl -ane 'BEGIN{$mr_number=0;}{
+if($F[0] =~ /^\>/){
+$mega_read=substr($F[0],1);
+}else{
+$sequence=$F[0];
+print ">$mr_number\n$sequence\n";
+print STDERR "$mega_read\n";
+$mr_number++;
+@kunis=split(/_/,$mega_read);
+$mega_read=join("_",reverse(@kunis));
+$mega_read=~tr/FR/RF/;
+$sequence=reverse($sequence);
+$sequence=~tr/ACGTNacgtn/TGCANtgcan/;
+print ">$mr_number\n$sequence\n";
+print STDERR "$mega_read\n";
+$mr_number++;
+}
+}' 1>$COORDS.maximal_mr.fa 2>$COORDS.maximal_mr.names
 
-./run_big_nucmer_job_parallel.sh pb10x.fasta $COORDS.all_mr.mr.fa 1000000 100000000 '--maxmatch -d 0.2 -f -g 200 -l 15 -b 150' 48
-show-coords -lcHr  pb10x.fasta.$COORDS.all_mr.mr.fa.g.delta | awk '{print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}' > $COORDS.blasr.out
-~/myprogs/PacBio/src_mega_reads/reconciliate_mega_reads.nucmer.pl 20 $KMER $COORDS.all_mr.mr.fa $COORDS.mr.pb.txt< $COORDS.blasr.out > $COORDS.all.txt
+run_big_nucmer_job_parallel.sh pb10x.fasta $COORDS.maximal_mr.fa 1000000 100000000 '--maxmatch -d 0.2 -f -g 200 -l 15 -b 150 -c 100' 48
+show-coords -lcHr  pb10x.fasta.$COORDS.maximal_mr.fa.g.delta | awk '{print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}' > $COORDS.blasr.out
+reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $COORDS.blasr.out > $COORDS.all.txt
 
-./analyze_mega_gaps.sh $COORDS  $KMER > ${COORDS}.allowed; 
+analyze_mega_gaps.sh $COORDS  $KMER > ${COORDS}.allowed; 
 
-./eval.sh $COORDS > $COORDS.report &
+eval.sh $COORDS > $COORDS.report &
 sleep 20
 
 cd assembly
