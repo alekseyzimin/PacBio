@@ -103,15 +103,42 @@ struct lf_forward_list_base {
     insert_after_(&head_, n);
     return iterator(n);
   }
+
+  // Remove elements after position up to last. Somewhat thread
+  // safe. It can be mixed with insert operation but not with erase
+  // operations on ranges that overlap. The base class does not
+  // allocate/deallocate the elements, hence it does not control the
+  // life span of the element removed.
+  // Returns a pointer to the first node removed from the list (position->next_).
+  static head_node* erase_after_(head_node* position, head_node* last) {
+    head_node* nn;
+    if(LF) {
+      head_node* onn;
+      nn = *const_cast<head_node* volatile*>(&position->next_);
+      do {
+        onn = nn;
+        nn = __sync_val_compare_and_swap(&position->next_, nn, last);
+      } while(nn != onn);
+      return nn;
+    } else {
+      nn              = position->next_;
+      position->next_ = last;
+      return nn;
+    }
+  }
+  static head_node* erase_after_(iterator position, iterator last) {
+    return erase_after_(position.head_, last.head_);
+  }
+
   head_node head_;
 };
 
-template<typename T, class Alloc = std::allocator<T> >
-class lf_forward_list : public lf_forward_list_base<T>
+template<typename T, bool LF = true, class Alloc = std::allocator<T> >
+class lf_forward_list : public lf_forward_list_base<T, LF>
 {
-  typedef lf_forward_list_base<T>   super;
-  typedef typename super::head_node head_node;
-  typedef typename super::node      node;
+  typedef lf_forward_list_base<T, LF> super;
+  typedef typename super::head_node   head_node;
+  typedef typename super::node        node;
 
 public:
   typedef Alloc                          allocator_type;
@@ -129,16 +156,14 @@ public:
   }
 
   /** Remove all element from the list. Not safe if other threads are
-      accessing elements in the list, but it can be mixed with other
-      insert operations. */
+      accessing elements in the list. */
   void clear() {
-    head_node* hn = *const_cast<head_node* volatile*>(&(this->head_.next_));
-    head_node* ohn;
+    erase_after(this->before_begin(), this->end());
+  }
 
-    do {
-      ohn = hn;
-      hn  = __sync_val_compare_and_swap (&this->head_.next_, hn, 0);
-    } while(hn != ohn);
+  iterator erase_after(iterator position, iterator last) {
+    head_node* hn = super::erase_after_(position, last);
+    head_node* ohn;
 
     while(hn) {
       ohn = hn->next_;
@@ -146,6 +171,7 @@ public:
       node_alloc_.deallocate(static_cast<node*>(hn), 1);
       hn = ohn;
     }
+    return last;
   }
 
   /** Push an element to the front of the list (copy). Returns an

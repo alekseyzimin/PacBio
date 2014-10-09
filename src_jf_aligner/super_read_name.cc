@@ -106,6 +106,6 @@ void super_read_name::print_sequence(std::ostream& os, const std::vector<std::st
   if(it != unitigs_.cend()) {
     print_unitig(os, it->ori_, unitigs_sequences.at(it->id()), 0);
     for(++it; it != unitigs_.cend(); ++it)
-      print_unitig(os, it->ori_, unitigs_sequences.at(it->id()), k_len);
+      print_unitig(os, it->ori_, unitigs_sequences.at(it->id()), k_len - 1);
   }
 }

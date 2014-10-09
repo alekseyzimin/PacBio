@@ -8,7 +8,8 @@
 struct node_info {
   bool            start_node;
   bool            end_node;
-  double          imp_s, imp_e;
+  double          imp_s, imp_e; // coordinates used for longest path
+  double          ts, te; // coordinates used for tiling
   union_find::set component;
   int             lstart; // id of node starting longest path (-1 if first node in path)
   int             lprev;  // id of previous node in longest path (-1 if first)
@@ -23,6 +24,8 @@ struct node_info {
     end_node   = true;
     imp_s      = coords.stretch + coords.offset;
     imp_e      = coords.stretch * coords.ql + coords.offset;
+    ts         = coords.rs;
+    te         = coords.re;
     component.reset();
     lstart     = -1;
     lprev      = -1;
@@ -94,8 +97,8 @@ struct overlap_graph {
   // of the mega reads (e.g. number of aligned k-mers or number of
   // bases).
   int tile_greedy(const std::vector<int>& sort_array,
-                   const std::vector<node_info>& nodes,
-                   std::vector<int>& res, size_t at_most = std::numeric_limits<size_t>::max()) const;
+                  const std::vector<node_info>& nodes,
+                  std::vector<int>& res, size_t at_most = std::numeric_limits<size_t>::max()) const;
 
   std::pair<int, std::vector<int>> tile_greedy(const std::vector<int>& sort_array,
                                                const std::vector<node_info>& nodes,
@@ -141,8 +144,7 @@ struct overlap_graph {
       coords_     = &coords;
       const int n = coords_->size();
       sort_nodes_.resize(n);
-      if((int)nodes_.size() < n)
-        nodes_.resize(n);
+      nodes_.resize(n);
       for(int i = 0; i < n; ++i) {
         sort_nodes_[i] = i;
         nodes_[i].reset(coords[i], og_.maximize_bases);

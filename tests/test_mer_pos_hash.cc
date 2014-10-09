@@ -25,15 +25,16 @@ TEST(MerPosHash, Insert) {
   mer_pos_hash_type hash(2 * nb_mers);
 
   static const int nb_inserts = 10000;
-  # pragma omp parallel for
-  for(int i = 0; i < nb_inserts; ++i)
-    hash.push_front(mers[i % nb_mers], frags[i % nb_frags].c_str(), i * (2 * (i % 2) - 1));
+  {
+    mer_pos_hash_type::thread ht(hash);
+# pragma omp parallel for firstprivate(ht)
+    for(int i = 0; i < nb_inserts; ++i)
+      ht.push_front(mers[i % nb_mers], frags[i % nb_frags].c_str(), i * (2 * (i % 2) - 1));
+  }
 
   for(int i = 0; i < nb_mers; ++i) {
-    //    const list_type&   list       = hash[mers[i]];
-    const_pos_iterator it = hash.find_pos(mers[i]);
-    //    EXPECT_EQ(list.cbegin(), it);
-    for( ; it != hash.pos_end(); ++it) {
+    auto list = hash.equal_range(mers[i]);
+    for(auto it = list.first ; it != list.second; ++it) {
       EXPECT_TRUE(abs(it->offset) >= 0 && it->offset < nb_inserts);
       EXPECT_EQ(i, abs(it->offset) % nb_mers);
       EXPECT_EQ(i % 2,  it->offset > 0);

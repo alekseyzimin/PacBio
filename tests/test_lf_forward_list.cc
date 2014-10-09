@@ -2,10 +2,12 @@
 #include <src_jf_aligner/lf_forward_list.hpp>
 
 namespace {
-TEST(LfForwardList, PushFront) {
+TEST(LfForwardList, LockFree) {
+  typedef lf_forward_list<int>                                       list_type;
+  typedef std::iterator_traits<list_type::iterator>::difference_type distance_type;
+
   static const int size = 10000;
-  lf_forward_list<int> list;
-  typedef std::iterator_traits<lf_forward_list<int>::iterator>::difference_type distance_type;
+  list_type        list;
 
   EXPECT_TRUE(list.cbegin() == list.cend());
   EXPECT_FALSE(list.cbegin() != list.cend());
@@ -14,7 +16,7 @@ TEST(LfForwardList, PushFront) {
   bool it_equal = true;
 #pragma omp parallel for reduction(&&:it_equal)
   for(int i = 0; i < size; ++i) {
-    lf_forward_list<int>::iterator it = list.push_front(i);
+    auto it = list.push_front(i);
     it_equal = it_equal && (*it == i);
   }
   EXPECT_TRUE(it_equal);
@@ -34,4 +36,40 @@ TEST(LfForwardList, PushFront) {
   list.clear();
   EXPECT_EQ((distance_type)0, std::distance(list.cbegin(), list.cend()));
 }
+
+
+TEST(LfForwardList, SingleThread) {
+  typedef lf_forward_list<int, false>                                list_type;
+  typedef std::iterator_traits<list_type::iterator>::difference_type distance_type;
+
+  static const int size = 10000;
+  list_type        list;
+
+  EXPECT_TRUE(list.cbegin() == list.cend());
+  EXPECT_FALSE(list.cbegin() != list.cend());
+  EXPECT_EQ((distance_type)0, std::distance(list.cbegin(), list.cend()));
+
+  bool it_equal = true;
+  for(int i = 0; i < size; ++i) {
+    auto it = list.push_front(i);
+    it_equal = it_equal && (*it == i);
+  }
+  EXPECT_TRUE(it_equal);
+
+  EXPECT_FALSE(list.cbegin() == list.cend());
+  EXPECT_TRUE(list.cbegin() != list.cend());
+  EXPECT_EQ((distance_type)size, std::distance(list.cbegin(), list.cend()));
+
+  std::set<int> unique;
+  for(auto it = list.cbegin(); it != list.cend(); ++it) {
+    auto res = unique.insert(*it);
+    EXPECT_TRUE(res.second); // Means it was not present in the set
+    EXPECT_TRUE(*it >= 0 && *it < size);
+  }
+  EXPECT_EQ((std::set<int>::size_type)size, unique.size());
+
+  list.clear();
+  EXPECT_EQ((distance_type)0, std::distance(list.cbegin(), list.cend()));
+}
+
 }
