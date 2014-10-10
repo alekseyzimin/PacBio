@@ -1,0 +1,18 @@
+purpose "Find were we shouldn't join sub-mega reads for given pacbio reads."
+
+description ""
+
+name "cmdline_parse"
+
+option("input-file", "f") {
+  description "Pacbio read-super-read match file"
+  c_string; required; typestr "path" ; access "read" }
+option("max-gap-overlap") {
+  description "Shorter matches between good-overlap regions are considered a gap"
+  int; default "70" }
+option("min-ovl-implied-vs-gap-end") {
+  description "Implied overlaps which overlap good match regions by less than this are not processed"
+  int; default "100" }
+option("min-match-len-for-implied-match") {
+  description "Will not use implied matches of matches whose actual match is shorter than this"
+  int; default "30" }
