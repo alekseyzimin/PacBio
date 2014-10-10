@@ -58,6 +58,14 @@ int main (int argc, char **argv)
      std::set<std::string> pacbioNames;
      bool isFirstLine = true;
      FILE *infile = Fopen (fname, "r");
+     fseek (infile, 0L, SEEK_END);
+     long fsize = ftell (infile);
+     rewind (infile);
+     if (fsize == 0L) {
+	  fclose (infile);
+	  fprintf (stderr, "Input file %s is empty. Bye!\n", (char *) fname);
+	  exit (1);
+     }
      cmdline_parse args;
      args.parse (argc, argv);
      strcpy (fname, args.input_file_arg);
