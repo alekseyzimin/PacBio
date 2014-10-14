@@ -1,11 +1,12 @@
 #ifndef __COARSE_ALIGNER_H__
 #define __COARSE_ALIGNER_H__
 
+#include <unordered_map>
 #include <src_jf_aligner/pb_aligner.hpp>
 
 
 namespace align_pb {
-typedef std::map<const char*, mer_lists> frags_pos_type;
+typedef std::unordered_map<const char*, mer_lists> frags_pos_type;
 
 template<typename F1, typename F2>
 void do_all_LIS(frags_pos_type& frags_pos, lis_buffer_type& L, F1& accept_mer, F2& accept_sequence, size_t window_size) {
