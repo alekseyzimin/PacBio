@@ -15,4 +15,4 @@ OBJS = findGapsInCoverageOfPacbios.o
 
 : findGapsInCoverageOfPacbios.cc | findGapsInCoverageOfPacbios_cmdline.hpp |> !cxx |>
 
-# : $(OBJS)                   |> !lxxd |> findGapsInCoverageOfPacbios
+: $(OBJS)                   |> !lxxd |> findGapsInCoverageOfPacbios
