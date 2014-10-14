@@ -4,7 +4,9 @@ SR = test_super_reads.fa
 PB = test_pacbio.fa
 UL = test_unitigs_lengths
 
-: $(SR) $(PB) | $(AL) |> $(AL) -s 10k -m 17 -r $(SR) -p $(PB) --details details_normal --coords coords_normal |> details_normal coords_normal {outputs}
-: $(SR) $(PB) | $(AL) |> $(AL) -s 10k -m 17 -r $(SR) -p $(PB) -l $(UL) -k 65 -f --details details_forward --coords coords_forward |> details_forward coords_forward {outputs}
+: $(SR) $(PB) | $(AL) |> $(AL) -s 10k -m 17 -r $(SR) -p $(PB) --stretch-cap 200 --details details_normal --coords coords_normal |> details_normal coords_normal {outputs}
+: $(SR) $(PB) | $(AL) |> $(AL) -s 10k -m 17 -r $(SR) -p $(PB) -l $(UL) -k 65 -f --stretch-cap 200 --details details_forward --coords coords_forward |> details_forward coords_forward {outputs}
+: $(SR) $(PB) | $(AL) |> $(AL) -s 10k -m 17 -r $(SR) -p $(PB) -l $(UL) -k 65 -f --stretch-cap 200 -F 13 --coords coords_fine |> coords_fine
+: coords_forward coords_fine |> ./compare_coarse_fine_alignments %f >%o 2>&1 |> compare_coarse_fine_alignments.log
 
-: foreach {outputs} |> wdiff %f %f_expected > %o |> %B.diff
+: foreach {outputs} |> ../wdiffn %f %f_expected > %o |> %B.diff

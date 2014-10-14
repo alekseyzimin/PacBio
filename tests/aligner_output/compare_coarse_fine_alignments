@@ -1,0 +1,61 @@
+#! /usr/bin/env perl
+
+use strict;
+use warnings;
+
+my ($coarse_file, $fine_file) = @ARGV;
+die "Missing files" unless defined($coarse_file) && defined($fine_file);
+
+sub read_alignments {
+  my ($file) = @_;
+  open(my $io, "<", $file) or die "Can't open $file: $!";
+  my %res;
+  <$io>; # Skip header
+  while(<$io>) {
+    my @F = split;
+    $res{$F[15]} = \@F;
+  }
+  close($io);
+  return %res;
+}
+
+sub sum_up {
+  my ($ary) = @_;
+  my ($mers, $bases) = (0, 0);
+  for(my $i = 16; $i < @$ary; $i++) {
+    my ($nmers, $nbases) = split(/:/, $$ary[$i]);
+    ($nmers, $nbases) = (-$nmers, -$nbases) if($i % 2 == 1);
+    ($mers, $bases) = ($mers + $nmers, $bases + $nbases);
+  }
+  return ($mers, $bases);
+}
+
+my %coarse_lines = read_alignments($coarse_file);
+my %fine_lines = read_alignments($fine_file);
+
+die "Mismatching number of alignments" unless scalar(keys(%coarse_lines)) == scalar(keys(%fine_lines));
+while(my ($qname, $cf) = each %coarse_lines) {
+  my $ff = $fine_lines{$qname};
+  die "Non existent in fine file: $qname" unless defined($ff);
+  if($$ff[9] != $$cf[9] || $$ff[10] != $$cf[10] || $$ff[14] ne $$cf[14] || $$ff[15] ne $$cf[15]) {
+    die "Inconsistent name and length information for $qname";
+  }
+  my ($f_mers, $f_bases) = sum_up($ff);
+  if($$ff[4] != $f_mers || $$ff[8] != $f_bases) {
+    die "Inconsistent mer count information in fine file for $qname";
+  }
+  my ($c_mers, $c_bases) = sum_up($cf);
+  if($$cf[4] != $c_mers || $$cf[8] != $c_bases) {
+    die "Inconsistent mer count information in coarse file for $qname";
+  }
+  unless($$ff[0] <= $$cf[0] && $$ff[1] >= $$cf[1] &&
+         $$ff[2] <= $$cf[2] && $$ff[3] >= $$cf[3]) {
+    die "Fine positions don't contain coarse positions for $qname";
+  }
+  unless($$ff[4] >= $$cf[4] && $$ff[5] >= $$cf[5] && $$ff[6] >= $$cf[6] &&
+         $$ff[7] >= $$cf[7] && $$ff[8] >= $$cf[8]) {
+    die "Number of matching mers has not increased for $qname";
+  }
+}
+
+print("All tests pass\n");

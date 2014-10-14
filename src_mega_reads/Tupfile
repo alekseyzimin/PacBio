@@ -1,0 +1,18 @@
+include_rules
+
+# export PKG_CONFIG_PATH
+
+CXXFLAGS += -I../include -I..
+# LDFLAGS +=
+
+CMDLINES = findGapsInCoverageOfPacbios_cmdline.yaggo
+SRCS = findGapsInCoverageOfPacbios.cc
+
+OBJS = findGapsInCoverageOfPacbios.o
+
+: foreach $(CMDLINES) |> !yaggo |>
+# : foreach $(SRCS)     |> !cxx |>
+
+: findGapsInCoverageOfPacbios.cc | findGapsInCoverageOfPacbios_cmdline.hpp |> !cxx |>
+
+# : $(OBJS)                   |> !lxxd |> findGapsInCoverageOfPacbios

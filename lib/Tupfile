@@ -1,7 +1,7 @@
 include_rules
 
-COMMON_FILES = MurmurHash3.cpp
-CXXFLAGS += -I../include
+COMMON_FILES = MurmurHash3.cpp backtrace.cc
+CXXFLAGS += -I../include -DHAVE_EXECINFO_H
 
 : foreach $(COMMON_FILES) |> !cxx |> {library}
 : {library} |> !ar |> libcommon.a

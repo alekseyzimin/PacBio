@@ -4,8 +4,13 @@
 
 #include <src_jf_aligner/jf_aligner_cmdline.hpp>
 #include <src_jf_aligner/superread_parser.hpp>
-#include <src_jf_aligner/pb_aligner.hpp>
+#include <src_jf_aligner/coarse_aligner.hpp>
+#include <src_jf_aligner/fine_aligner.hpp>
 #include <debug.hpp>
+
+using align_pb::coarse_aligner;
+using align_pb::fine_aligner;
+using align_pb::coords_info_type;
 
 jf_aligner_cmdline args;
 
@@ -95,14 +100,22 @@ void print_details(Multiplexer::ostream& out, const std::string& pb_name, const 
   out.end_record();
 }
 
-void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* coords_m, const align_pb* align_data) {
-  parse_sequence           parser;
-  align_pb::thread         aligner(*align_data);
+void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* coords_m,
+                      const coarse_aligner* align_data, const fine_aligner* short_align_data) {
+  parse_sequence         parser;
+  coarse_aligner::thread aligner(*align_data);
+  std::unique_ptr<fine_aligner::thread> short_aligner;
+  std::unique_ptr<short_parse_sequence> short_parser;
 
   mstream          details_io(details_m);
   mstream          coords_io(coords_m);
   std::string      name;
   std::vector<int> sort_array;
+
+  if(short_align_data) {
+    short_aligner.reset(new fine_aligner::thread(*short_align_data));
+    short_parser.reset(new short_parse_sequence);
+  }
 
   while(true) {
     read_parser::job job(*reads);
@@ -115,14 +128,21 @@ void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* c
       parser.reset(job->data[i].seq);
       aligner.align_sequence_max(parser, pb_size);
 
-      const auto& coords = aligner.coords();
-      const int n = coords.size();
+      const coords_info_type* coords = &aligner.coords();
+
+      if(short_aligner) { // Lets recompute the alignment with smaller mers
+        short_parser->reset(job->data[i].seq);
+        short_aligner->align_sequence(*short_parser, pb_size, *coords);
+        coords = &short_aligner->coords();
+      }
+
+      const int n = coords->size();
       if((int)sort_array.size() < n)
         sort_array.resize(n);
       for(int i = 0; i < n; ++i)
         sort_array[i] = i;
-      std::sort(sort_array.begin(), sort_array.begin() + n, [&coords] (int i, int j) { return coords[i] < coords[j]; });
-      print_coords(*coords_io, name, pb_size, args.compact_flag, coords, sort_array);
+      std::sort(sort_array.begin(), sort_array.begin() + n, [coords] (int i, int j) { return (*coords)[i] < (*coords)[j]; });
+      print_coords(*coords_io, name, pb_size, args.compact_flag, *coords, sort_array);
       if(details_io) print_details(*details_io, name, aligner.frags_pos());
     }
   }
@@ -168,19 +188,32 @@ int main(int argc, char *argv[])
 
   // Read the super reads
   mer_pos_hash_type hash(args.size_arg);
+  std::unique_ptr<short_mer_pos_hash_type> short_hash;
+  if(args.fine_mer_given) {
+    short_mer_type::k(args.fine_mer_arg);
+    short_hash.reset(new short_mer_pos_hash_type(args.size_arg));
+  }
   frag_lists names(args.threads_arg);
-  superread_parse(args.threads_arg, hash, names, args.superreads_arg.cbegin(), args.superreads_arg.cend());
+  {
+    stream_manager streams(args.superreads_arg.cbegin(), args.superreads_arg.cend());
+    superreads_read_mers reader(args.threads_arg, &hash, short_hash.get(), names, streams, args.compact_flag);
+    reader.exec_join(args.threads_arg);
+  }
 
   // Prepare I/O
   stream_manager streams(args.pacbio_arg.cbegin(), args.pacbio_arg.cend());
   read_parser    reads(4 * args.threads_arg, 100, 1, streams);
 
-  // Create aligner
-  align_pb align_data(hash, args.stretch_constant_arg, args.stretch_factor_arg,
-                      args.forward_flag, args.max_match_flag,
-                      args.max_count_arg ? args.max_count_arg : std::numeric_limits<int>::max(),
-                      args.mers_matching_arg / 100.0, args.bases_matching_arg / 100.0);
+  // Create aligners
+  coarse_aligner align_data(hash, mer_dna::k(),
+                            args.stretch_factor_arg, args.stretch_constant_arg, args.stretch_cap_arg, args.window_size_arg,
+                            args.forward_flag, args.max_match_flag,
+                            args.max_count_arg ? args.max_count_arg : std::numeric_limits<int>::max(),
+                            args.mers_matching_arg / 100.0, args.bases_matching_arg / 100.0);
   if(unitigs_lengths) align_data.unitigs_lengths(unitigs_lengths.get(), args.k_mer_arg);
+  std::unique_ptr<fine_aligner> short_align_data;
+  if(args.fine_mer_given)
+    short_align_data.reset(new fine_aligner(*short_hash, args.fine_mer_arg, unitigs_lengths.get(), args.k_mer_arg));
 
   // Output header if necessary
   if(!args.no_header_flag)
@@ -190,7 +223,7 @@ int main(int argc, char *argv[])
   std::vector<std::thread> threads;
   for(unsigned int i = 0; i < args.threads_arg; ++i)
     threads.push_back(std::thread(print_alignments, &reads, details.multiplexer(), coords.multiplexer(),
-                                  &align_data));
+                                  &align_data, short_align_data.get()));
   for(auto& th : threads)
     th.join();
 

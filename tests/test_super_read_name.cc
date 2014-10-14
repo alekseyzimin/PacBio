@@ -167,14 +167,14 @@ TEST(SuperReadName, Sequence) {
   sr = "1F";
   expect_sr_sequence(us[1], sr, us, k_len);
   sr = "1F_3F";
-  expect_sr_sequence(us[1] + us[3].substr(k_len), sr, us, k_len);
+  expect_sr_sequence(us[1] + us[3].substr(k_len - 1), sr, us, k_len);
 
   sr = "2R";
   expect_sr_sequence(misc::rev_comp(us[2]), sr, us, k_len);
   sr = "2R_4F";
-  expect_sr_sequence(misc::rev_comp(us[2]) + us[4].substr(k_len), sr, us, k_len);
+  expect_sr_sequence(misc::rev_comp(us[2]) + us[4].substr(k_len - 1), sr, us, k_len);
   sr = "2R_4F_0R";
-  expect_sr_sequence(misc::rev_comp(us[2]) + us[4].substr(k_len) + misc::rev_comp(us[0]).substr(k_len), sr, us, k_len);
+  expect_sr_sequence(misc::rev_comp(us[2]) + us[4].substr(k_len - 1) + misc::rev_comp(us[0]).substr(k_len - 1), sr, us, k_len);
 } // SuperReadName.Sequence
 
 } // empty namespace

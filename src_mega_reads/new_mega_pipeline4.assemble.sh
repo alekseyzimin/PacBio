@@ -9,6 +9,14 @@ KUNITIGS=$3
 SUPERREADS=$4
 PACBIO=$5
 JF_SIZE=$6
+<<<<<<< HEAD
+=======
+
+#parameters
+MER=15
+B=15
+d=0.06
+>>>>>>> 89c00cf4bc8862e5be8f12eed8f16ccd3b48cd32
 
 #parameters
 MER=15

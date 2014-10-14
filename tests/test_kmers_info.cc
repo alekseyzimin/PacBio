@@ -21,8 +21,8 @@ TEST(ComputeKmersInfo, SimpleOverlap) {
 
   vi bad_mer_info, good_mer_info;
   vi bad_base_info, good_base_info;
-  align_pb::compute_kmers_info compute_bad(bad_mer_info, bad_base_info, bad_sr, k_len, &ul);
-  align_pb::compute_kmers_info compute_good(good_mer_info, good_base_info, good_sr, k_len, &ul);
+  align_pb::compute_kmers_info compute_bad(bad_mer_info, bad_base_info, bad_sr, k_len, mer_dna::k(), &ul);
+  align_pb::compute_kmers_info compute_good(good_mer_info, good_base_info, good_sr, k_len, mer_dna::k(),  &ul);
   EXPECT_EQ(vi({0, 0, 0, 0, 0}), bad_mer_info);
   EXPECT_EQ(vi({0, 0, 0, 0, 0}), good_mer_info);
   EXPECT_EQ(vi({0, 0, 0, 0, 0}), bad_base_info);
@@ -69,7 +69,7 @@ TEST(ComputeKmersInfo, ComplexOverlap) {
   const super_read_name sr(name);
 
   vi mer_info, base_info;
-  align_pb::compute_kmers_info compute(mer_info, base_info, sr, k_len, &unitigs_lengths);
+  align_pb::compute_kmers_info compute(mer_info, base_info, sr, k_len, mer_dna::k(), &unitigs_lengths);
   EXPECT_EQ(vi({0, 0, 0, 0, 0, 0, 0, 0, 0}), mer_info);
   EXPECT_EQ(vi({0, 0, 0, 0, 0, 0, 0, 0, 0}), base_info);
 

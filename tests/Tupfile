@@ -21,7 +21,7 @@ SRC = ../src_jf_aligner
 
 LDFLAGS_test_MurmurHash3      = -lcommon
 LDLIBS_test_super_read_name   = $(SRC)/super_read_name.o
-LDLIBS_test_pb_aligner        = $(SRC)/pb_aligner.o $(SRC)/superread_parser.o $(SRC)/super_read_name.o
+LDLIBS_test_pb_aligner        = $(SRC)/pb_aligner.o $(SRC)/coarse_aligner.o $(SRC)/superread_parser.o $(SRC)/super_read_name.o
 LDLIBS_test_superread_parser  = $(SRC)/superread_parser.o
 LDLIBS_test_align_coordinates = $(SRC)/pb_aligner.o $(SRC)/superread_parser.o $(SRC)/super_read_name.o
 LDLIBS_test_kmers_info        = $(SRC)/pb_aligner.o $(SRC)/super_read_name.o
