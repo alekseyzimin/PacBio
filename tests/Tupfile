@@ -11,7 +11,7 @@ export PKG_CONFIG_PATH
 CXXFLAGS += -I.. $(JELLYFISH_CFLAGS) -I../include
 LDFLAGS  += -pthread -L$(TUP_CWD) -lgtest_main -L../lib $(JELLYFISH_LIBS)
 
-TESTS  = test_lis.cc test_lf_forward_list.cc test_mer_pos_hash.cc 
+TESTS  = test_lis.cc test_lf_forward_list.cc test_bounded_counter.cc test_mer_pos_hash.cc 
 TESTS += test_lis_align.cc test_parsesequence.cc
 TESTS += test_multiplexer.cc test_MurmurHash3.cc test_super_read_name.cc test_least_square_2d.cc
 TESTS += test_pb_aligner.cc test_superread_parser.cc test_align_coordinates.cc test_kmers_info.cc

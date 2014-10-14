@@ -61,9 +61,10 @@ void fetch_super_reads(const mer_pos_hash_type& ary, parse_sequence& parser,
                        frags_pos_type& frags_pos, const int max_mer_count) {
   while(parser.next()) { // Process each k-mer
     const bool is_canonical = parser.mer<0>().is_canonical();
-    auto list = ary.equal_range(is_canonical ? parser.mer<0>().m : parser.mer<0>().rm);
-    if(max_mer_count && std::distance(list.first, list.second) > max_mer_count) continue;
-    for(auto it = list.first ; it != list.second; ++it) { // For each instance of the k-mer in a super read
+    auto list = ary.find_pos_size(is_canonical ? parser.mer<0>().m : parser.mer<0>().rm);
+    if(max_mer_count && list.second >= max_mer_count) continue;
+    const auto end = ary.pos_end();
+    for(auto it = list.first ; it != end; ++it) { // For each instance of the k-mer in a super read
       mer_lists& ml = frags_pos[it->frag->name];
       ml.frag       = it->frag;
       const int offset = is_canonical ? it->offset : -it->offset;

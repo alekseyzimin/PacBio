@@ -187,11 +187,11 @@ int main(int argc, char *argv[])
   }
 
   // Read the super reads
-  mer_pos_hash_type hash(args.size_arg);
+  mer_pos_hash_type hash(args.size_arg, args.max_count_arg);
   std::unique_ptr<short_mer_pos_hash_type> short_hash;
   if(args.fine_mer_given) {
     short_mer_type::k(args.fine_mer_arg);
-    short_hash.reset(new short_mer_pos_hash_type(args.size_arg));
+    short_hash.reset(new short_mer_pos_hash_type(args.size_arg, 0));
   }
   frag_lists names(args.threads_arg);
   {
