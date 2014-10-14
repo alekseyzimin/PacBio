@@ -1,8 +1,11 @@
 #!/bin/bash
 COORDS=$1;
-export PATH=~/myprogs/PacBio/src_mega_reads:~/myprogs/masurca-devel/build/inst/bin/:~/myprogs/PacBio/src_jf_aligner:$PATH
-create_fasta_frg.sh 200 $COORDS 70 pb10x.fasta;
-cp $COORDS.200.fa $COORDS.200.n.fa;
+KMER=$2;
+export PATH=~/myprogs/PacBio/src_mega_reads:~/myprogs/masurca-devel/build/inst/bin/:$PATH
+
+
+create_fasta_frg.sh 201 $COORDS $KMER pb10x.fasta;
+cp $COORDS.201.fa $COORDS.200.n.fa;
 nucmer -p $COORDS -l 51 ../finished_sequence/polished_assembly.fasta $COORDS.200.n.fa;
 delta-filter -q -o 20 $COORDS.delta > $COORDS.q.delta;
 show-coords -lcHr $COORDS.q.delta > $COORDS.q.coords;

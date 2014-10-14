@@ -1,7 +1,7 @@
 #!/bin/bash
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
-export PATH=$MYPATH:~alekseyz/myprogs/masurca-devel/build/inst/bin/:$MYPATH/../src_jf_aligner:$PATH
+export PATH=$MYPATH:~alekseyz/myprogs/masurca-devel/build/inst/bin/:$MYPATH/../build-default/src_jf_aligner:$MYPATH/../src_jf_aligner:$PATH
 #arguments
 COORDS=$1
 KMER=$2
@@ -9,12 +9,20 @@ KUNITIGS=$3
 SUPERREADS=$4
 PACBIO=$5
 JF_SIZE=$6
+<<<<<<< HEAD
+=======
 
 #parameters
 MER=15
 B=15
 d=0.06
+>>>>>>> 89c00cf4bc8862e5be8f12eed8f16ccd3b48cd32
 
+#parameters
+MER=15
+B=15
+d=0.06
+NUM_THREADS=48
 
 COORDS=$COORDS.$KMER.$MER.$B.$d
 if [ -e $COORDS.all.txt ];then
@@ -22,7 +30,7 @@ echo "$COORDS.all.txt exists";
 exit;
 fi
 
-create_mega_reads -s $JF_SIZE -m $MER --stretch-cap 10000 -k 70 -u $KUNITIGS -t 48 -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt
+create_mega_reads -s $JF_SIZE -m $MER --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt
 
 perl -ane '{
 if($F[0] =~ /^\>/){
@@ -61,7 +69,7 @@ $mr_number++;
 }
 }' 1>$COORDS.maximal_mr.fa 2>$COORDS.maximal_mr.names
 
-run_big_nucmer_job_parallel.sh pb10x.fasta $COORDS.maximal_mr.fa 1000000 100000000 '--maxmatch -d 0.2 -f -g 200 -l 15 -b 150 -c 100' 48
+run_big_nucmer_job_parallel.sh pb10x.fasta $COORDS.maximal_mr.fa 1000000 100000000 '--maxmatch -d 0.2 -f -g 200 -l 15 -b 150 -c 100' $NUM_THREADS
 show-coords -lcHr  pb10x.fasta.$COORDS.maximal_mr.fa.g.delta | awk '{print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}' > $COORDS.blasr.out
 reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $COORDS.blasr.out > $COORDS.all.txt
 
