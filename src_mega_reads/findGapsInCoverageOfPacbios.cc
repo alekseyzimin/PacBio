@@ -57,15 +57,6 @@ int main (int argc, char **argv)
      charb line(100), pacbio(100);
      std::set<std::string> pacbioNames;
      bool isFirstLine = true;
-     FILE *infile = Fopen (fname, "r");
-     fseek (infile, 0L, SEEK_END);
-     long fsize = ftell (infile);
-     rewind (infile);
-     if (fsize == 0L) {
-	  fclose (infile);
-	  fprintf (stderr, "Input file %s is empty. Bye!\n", (char *) fname);
-	  exit (1);
-     }
      cmdline_parse args;
      args.parse (argc, argv);
      strcpy (fname, args.input_file_arg);
@@ -74,10 +65,19 @@ int main (int argc, char **argv)
      int minMatchLenForImpliedMatch = args.min_match_len_for_implied_match_arg;
      std::vector<char *> flds;
      debug = 0;
-     fgets (line, 100, infile); // Skip the first line (may have to change later)
+     FILE *infile = Fopen (fname, "r");
+     // Make sure the file isn't empty
+     if (! fgets (line, 100, infile)) {
+	  fclose (infile);
+	  fprintf (stderr, "Input file %s is empty. Bye!\n", (char *) fname);
+	  exit (1); }
+     int numFlds = getFldsFromLine (line, flds);
+     if (numFlds >= 12)
+	  rewind (infile);
+	  
      while (fgets (line, 100, infile)) {
 	  if (debug > 1) fputs (line, stdout);
-	  int numFlds = getFldsFromLine (line, flds);
+	  numFlds = getFldsFromLine (line, flds);
 	  if (numFlds < 12) {
 	       fprintf (stderr, "Line has %d fields, must have at least 12, line is", numFlds);
 	       for (int i=0; i<numFlds; ++i) {
