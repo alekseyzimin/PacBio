@@ -10,7 +10,7 @@ namespace {
 using misc::remove_file;
 
 TEST(Multiplexer, OneThread) {
-  remove_file tmp(".multiplexer_output");
+  remove_file tmp;
 
   {
     std::ofstream os(tmp.path);
@@ -51,7 +51,7 @@ void output_lines(int id, Multiplexer* m, const int nb_lines) {
 TEST(Multiplexer, ManyThreads) {
   static const int nb_threads = 10;
   static const int lines_per_thread = 1000;
-  remove_file tmp(".manythreads_output");
+  remove_file tmp;
 
   {
     std::ofstream os(tmp.path);

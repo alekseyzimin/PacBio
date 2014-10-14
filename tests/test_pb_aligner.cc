@@ -31,7 +31,7 @@ using misc::remove_file;
 //     |----> R1       |----> R3  |----> R9      |----> R5    |----> R7
 //      <----| R2    <----| R4      <----| R10    <----| R6    <----| R8
 
-std::string generate_sequences(const char* pacbio_reads, const char* superreads) {
+std::string generate_sequences(const char* superreads) {
   std::string sequence(1000, 'A');
   static const char base[4] = {'A', 'C', 'G', 'T' };
   for(size_t i = 0; i < sequence.size(); ++i)
@@ -45,12 +45,6 @@ std::string generate_sequences(const char* pacbio_reads, const char* superreads)
   pacbio_sequence[399] = 'C';
   pacbio_sequence[400] = 'G';
   pacbio_sequence.insert(400, "ACGT");
-  {
-    std::ofstream pacbio(pacbio_reads);
-    if(!pacbio.good())
-      throw std::runtime_error("Can't open pacbio temp file");
-    pacbio << ">pacbio\n" << pacbio_sequence << "\n";
-  }
 
   {
     std::ofstream super(superreads);
@@ -73,9 +67,8 @@ std::string generate_sequences(const char* pacbio_reads, const char* superreads)
 
 TEST(PbAligner, FakeSequences) {
   mer_dna::k(15);
-  remove_file pb_file(".pacbio.fa", false);
-  remove_file sr_file(".superreads.fa", false);
-  std::string pacbio_sequence = generate_sequences(pb_file.path, sr_file.path);
+  remove_file sr_file;
+  std::string pacbio_sequence = generate_sequences(sr_file.path);
 
   mer_pos_hash_type hash(2048);
   frag_lists names(1);
