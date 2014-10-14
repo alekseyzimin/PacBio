@@ -102,8 +102,8 @@ void print_details(Multiplexer::ostream& out, const std::string& pb_name, const 
 
 void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* coords_m,
                       const coarse_aligner* align_data, const fine_aligner* short_align_data) {
-  parse_sequence         parser;
-  coarse_aligner::thread aligner(*align_data);
+  parse_sequence                        parser;
+  coarse_aligner::thread                aligner(*align_data);
   std::unique_ptr<fine_aligner::thread> short_aligner;
   std::unique_ptr<short_parse_sequence> short_parser;
 
