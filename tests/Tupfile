@@ -30,7 +30,7 @@ LDLIBS_test_coords_parsing    = $(SRC)/coords_parsing.o $(SRC)/super_read_name.o
 LDLIBS_test_tiling            = $(SRC)/overlap_graph.o $(SRC)/super_read_name.o $(SRC)/union_find.o
 CLIBS  = libgtest_main.a ../lib/libcommon.a 
 
-!run_test = |> ^ RUN   %f^ export TEST_TMP=%B.tmp; touch $TEST_TMP; ./%f > %o 2>&1 |> %B.log | %B.tmp
+!run_test = |> ^ RUN   %f^ export TEST_TMP=%B.tmp; touch $TEST_TMP; @(VALGRIND) ./%f > %o 2>&1 |> %B.log | %B.tmp
 
 : foreach $(TESTS)            |> !cxx      |> {tests}
 : foreach {tests}  | $(CLIBS) |> !lxxd     |> %B {all_tests}

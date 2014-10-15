@@ -8,6 +8,9 @@ TEST(BoundedCounter, Serial) {
   bounded_counter<false, uint16_t> counter;
   static uint16_t max = 100;
 
+  EXPECT_TRUE(std::is_pod<decltype(counter)>::value);
+  counter.counter_ = 0;
+
   for(int i = 0; i < 1000; ++i)
     EXPECT_EQ((uint16_t)i < max, counter.inc(max));
   EXPECT_EQ(max, (uint16_t)counter);
@@ -18,6 +21,9 @@ TEST(BoundedCounter, Parallel) {
 
   {
     bounded_counter<true, uint16_t> counter;
+
+    EXPECT_TRUE(std::is_pod<decltype(counter)>::value);
+    counter.counter_ = 0;
 
 # pragma omp parallel for
     for(int i = 0; i < (uint16_t)max; ++i)
@@ -32,6 +38,10 @@ TEST(BoundedCounter, Parallel) {
 
   {
     bounded_counter<true, uint16_t> counter;
+
+    EXPECT_TRUE(std::is_pod<decltype(counter)>::value);
+    counter.counter_ = 0;
+
 # pragma omp parallel for
     for(int i = 0; i < 10000; ++i)
       counter.inc(max);
@@ -41,6 +51,10 @@ TEST(BoundedCounter, Parallel) {
 
   {
     bounded_counter<true, uint16_t> counter;
+
+    EXPECT_TRUE(std::is_pod<decltype(counter)>::value);
+    counter.counter_ = 0;
+
 # pragma omp parallel for
     for(int i = 0; i < 10000; ++i)
       counter.inc(0);
