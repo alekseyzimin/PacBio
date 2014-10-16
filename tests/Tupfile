@@ -16,6 +16,7 @@ TESTS += test_lis_align.cc test_parsesequence.cc
 TESTS += test_multiplexer.cc test_MurmurHash3.cc test_super_read_name.cc test_least_square_2d.cc
 TESTS += test_pb_aligner.cc test_superread_parser.cc test_align_coordinates.cc test_kmers_info.cc
 TESTS += test_union_find.cc test_coords_parsing.cc test_tiling.cc
+TESTS += test_caching_map.cc
 
 SRC = ../src_jf_aligner
 

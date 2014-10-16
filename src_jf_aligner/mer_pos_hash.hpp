@@ -49,12 +49,12 @@ public:
     pos_((head_node*)data_.get_ptr()),
     max_count_(max_count)
   {
+    std::cout << sizeof(head_node) << ' ' << sizeof(node) << "\n";
     if(!pos_)
       throw std::runtime_error("Can't allocate mer pos hash");
   }
 
   ~mer_pos_hash() {
-    //    delete [] pos_;
     for(auto it = data_pages_.begin(); it != data_pages_.end(); ++it)
       delete [] *it;
   }
