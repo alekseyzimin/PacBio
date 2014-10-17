@@ -102,8 +102,8 @@ void print_details(Multiplexer::ostream& out, const std::string& pb_name, const 
 
 void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* coords_m,
                       const coarse_aligner* align_data, const fine_aligner* short_align_data) {
-  parse_sequence         parser;
-  coarse_aligner::thread aligner(*align_data);
+  parse_sequence                        parser;
+  coarse_aligner::thread                aligner(*align_data);
   std::unique_ptr<fine_aligner::thread> short_aligner;
   std::unique_ptr<short_parse_sequence> short_parser;
 
@@ -187,11 +187,11 @@ int main(int argc, char *argv[])
   }
 
   // Read the super reads
-  mer_pos_hash_type hash(args.size_arg);
+  mer_pos_hash_type hash(args.size_arg, args.max_count_arg);
   std::unique_ptr<short_mer_pos_hash_type> short_hash;
   if(args.fine_mer_given) {
     short_mer_type::k(args.fine_mer_arg);
-    short_hash.reset(new short_mer_pos_hash_type(args.size_arg));
+    short_hash.reset(new short_mer_pos_hash_type(args.size_arg, 0));
   }
   frag_lists names(args.threads_arg);
   {

@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 #include <jellyfish/hash_counter.hpp>
-#include <src_jf_aligner/lf_forward_list.hpp>
+#include <src_jf_aligner/lf_forward_size_list.hpp>
 
 template<typename T, typename mer_type = jellyfish::mer_dna, typename mer_array_type = jellyfish::large_hash::array<mer_type> >
 class mer_pos_hash {
@@ -26,7 +26,7 @@ class mer_pos_hash {
 public:
   typedef elt                                  position_type;
   typedef mer_type                             key_type;
-  typedef lf_forward_list_base<elt>            mapped_type;
+  typedef lf_forward_size_list_base<elt>       mapped_type;
   typedef typename mapped_type::iterator       pos_iterator;
   typedef typename mapped_type::const_iterator const_pos_iterator;
 
@@ -42,10 +42,10 @@ private:
   static const size_t node_per_page = 1024 * 1024;
 
 public:
-  mer_pos_hash(size_t size) :
+  mer_pos_hash(size_t size, uint16_t max_count = std::numeric_limits<uint16_t>::max()) :
     mers_(size, 2 * mer_type::k(), 0, 126),
-    pos_(0)
-    //    pos_(mers_.size())
+    pos_(0),
+    max_count_(max_count)
   {
     pos_ = new head_node[mers_.size()];
     memset(pos_, '\0', sizeof(head_node) * mers_.size());
@@ -96,6 +96,16 @@ public:
     return pos_iterator();
   }
 
+  std::pair<pos_iterator, uint16_t> find_pos_size(const mer_type& m) const {
+    mer_type tmp_m;
+    size_t   id;
+    if(mers_.get_key_id(m, &id, tmp_m)) {
+      const auto& list = pos_[id];
+      return std::pair<pos_iterator, uint16_t>(pos_iterator(list.next_), list.size_);
+    }
+    return std::pair<pos_iterator, uint16_t>(pos_iterator(), 0);
+  }
+
   /** Same than find_pos but interface compatible with multimap.
    */
   std::pair<pos_iterator, pos_iterator> equal_range(const mer_type& m) {
@@ -124,7 +134,8 @@ public:
       node* cnode  = &data_.data[data_.used++];
       cnode->val_.frag   = s;
       cnode->val_.offset = o;
-      mapped_type::insert_after_(hash_.insert_mer(m), cnode);
+      auto list = hash_.insert_mer(m);
+      mapped_type::insert_after_(list, cnode, hash_.max_count_);
     }
   };
   friend class thread;
@@ -133,6 +144,7 @@ private:
   mer_array_type                   mers_;
   typename mapped_type::head_node* pos_;
   lf_forward_list<node*>           data_pages_;
+  const uint16_t                   max_count_;
 };
 
 #endif /* _MER_POS_HASH_HPP_ */

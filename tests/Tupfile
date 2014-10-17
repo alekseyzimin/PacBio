@@ -11,7 +11,7 @@ export PKG_CONFIG_PATH
 CXXFLAGS += -I.. $(JELLYFISH_CFLAGS) -I../include
 LDFLAGS  += -pthread -L$(TUP_CWD) -lgtest_main -L../lib $(JELLYFISH_LIBS)
 
-TESTS  = test_lis.cc test_lf_forward_list.cc test_mer_pos_hash.cc 
+TESTS  = test_lis.cc test_lf_forward_list.cc test_bounded_counter.cc test_mer_pos_hash.cc 
 TESTS += test_lis_align.cc test_parsesequence.cc
 TESTS += test_multiplexer.cc test_MurmurHash3.cc test_super_read_name.cc test_least_square_2d.cc
 TESTS += test_pb_aligner.cc test_superread_parser.cc test_align_coordinates.cc test_kmers_info.cc
@@ -30,9 +30,13 @@ LDLIBS_test_coords_parsing    = $(SRC)/coords_parsing.o $(SRC)/super_read_name.o
 LDLIBS_test_tiling            = $(SRC)/overlap_graph.o $(SRC)/super_read_name.o $(SRC)/union_find.o
 CLIBS  = libgtest_main.a ../lib/libcommon.a 
 
-: foreach $(TESTS)            |> !cxx           |> {tests}
-: foreach {tests}  | $(CLIBS) |> !lxxd          |> %B {all_tests}
-: foreach {all_tests}         |> ./%f > %o 2>&1 |> %f.log
+!run_test = |> ^ RUN   %f^ export TEST_TMP=%B.tmp; touch $TEST_TMP; ./%f > %o 2>&1 |> %B.log | %B.tmp
+
+: foreach $(TESTS)            |> !cxx      |> {tests}
+: foreach {tests}  | $(CLIBS) |> !lxxd     |> %B {all_tests}
+: foreach {all_tests}         |> !run_test |>
+
+
 
 # : test_overlap_graph.o $(SRC)/overlap_graph.o $(SRC)/union_find.o        | $(CLIBS) |> !lxxd |> test_overlap_graph {all_tests}
 

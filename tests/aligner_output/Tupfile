@@ -9,4 +9,4 @@ UL = test_unitigs_lengths
 : $(SR) $(PB) | $(AL) |> $(AL) -s 10k -m 17 -r $(SR) -p $(PB) -l $(UL) -k 65 -f --stretch-cap 200 -F 13 --coords coords_fine |> coords_fine
 : coords_forward coords_fine |> ./compare_coarse_fine_alignments %f >%o 2>&1 |> compare_coarse_fine_alignments.log
 
-: foreach {outputs} |> ../wdiffn %f %f_expected > %o |> %B.diff
+: foreach {outputs} |> ../wdiffn -p 'sort' %f %f_expected > %o |> %B.diff

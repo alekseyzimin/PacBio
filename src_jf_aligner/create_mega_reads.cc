@@ -5,23 +5,35 @@
 #include <src_jf_aligner/create_mega_reads_cmdline.hpp>
 #include <src_jf_aligner/superread_parser.hpp>
 #include <src_jf_aligner/coarse_aligner.hpp>
+#include <src_jf_aligner/fine_aligner.hpp>
 #include <src_jf_aligner/overlap_graph.hpp>
 
 using align_pb::coarse_aligner;
+using align_pb::fine_aligner;
+using align_pb::coords_info_type;
 
 typedef create_mega_reads_cmdline cmdline_args;
 cmdline_args args;
 
 
-void create_mega_reads(read_parser* reads, Multiplexer* output_m, const coarse_aligner* align_data,
+void create_mega_reads(read_parser* reads, Multiplexer* output_m,
+                       const coarse_aligner* align_data, const fine_aligner* short_align_data,
                        overlap_graph* graph_walker, const std::vector<std::string>* unitigs_sequences,
                        Multiplexer* dot_m) {
   parse_sequence                        parser;
   coarse_aligner::thread                aligner(*align_data);
+  std::unique_ptr<fine_aligner::thread> short_aligner;
+  std::unique_ptr<short_parse_sequence> short_parser;
+
   overlap_graph::thread                 graph(*graph_walker);
   std::string                           name;
   Multiplexer::ostream                  output(output_m);
   std::unique_ptr<Multiplexer::ostream> dot(dot_m ? new Multiplexer::ostream(dot_m) : 0);
+
+  if(short_align_data) {
+    short_aligner.reset(new fine_aligner::thread(*short_align_data));
+    short_parser.reset(new short_parse_sequence);
+  }
 
   while(true) {
     read_parser::job job(*reads);
@@ -34,9 +46,15 @@ void create_mega_reads(read_parser* reads, Multiplexer* output_m, const coarse_a
       parser.reset(job->data[i].seq);
       aligner.align_sequence_max(parser, pb_size);
 
-      const auto& coords = aligner.coords();
+      const coords_info_type* coords = &aligner.coords();
 
-      graph.reset(coords, name, dot.get());
+      if(short_aligner) { // Lets recompute the alignment with smaller mers
+        short_parser->reset(job->data[i].seq);
+        short_aligner->align_sequence(*short_parser, pb_size, *coords);
+        coords = &short_aligner->coords();
+      }
+
+      graph.reset(*coords, name, dot.get());
       graph.traverse();
       graph.term_node_per_comp(pb_size, args.density_arg, args.min_length_arg);
       if(!args.no_tiling_flag)
@@ -100,26 +118,39 @@ int main(int argc, char *argv[])
 
   // Read the super reads
   mer_pos_hash_type hash(args.size_arg);
+  std::unique_ptr<short_mer_pos_hash_type> short_hash;
+  if(args.fine_mer_given) {
+    short_mer_type::k(args.fine_mer_arg);
+    short_hash.reset(new short_mer_pos_hash_type(args.size_arg, 0));
+  }
   frag_lists names(args.threads_arg);
-  superread_parse(args.threads_arg, hash, names, args.superreads_arg.cbegin(), args.superreads_arg.cend());
+  {
+    stream_manager streams(args.superreads_arg.cbegin(), args.superreads_arg.cend());
+    superreads_read_mers reader(args.threads_arg, &hash, short_hash.get(), names, streams, false /* compact */);
+    reader.exec_join(args.threads_arg);
+  }
 
   // Prepare I/O
   stream_manager streams(args.pacbio_arg.cbegin(), args.pacbio_arg.cend());
   read_parser    reads(4 * args.threads_arg, 100, 1, streams);
 
-  // Create aligner
+  // Create aligners
   coarse_aligner align_data(hash, mer_dna::k(),
                             args.stretch_constant_arg, args.stretch_factor_arg, args.stretch_cap_arg, args.window_size_arg,
                             true /* forward */, args.max_match_flag,
                             args.max_count_arg ? args.max_count_arg : std::numeric_limits<int>::max(),
                             args.mers_matching_arg / 100.0, args.bases_matching_arg / 100.0);
   align_data.unitigs_lengths(&unitigs_lengths, args.k_mer_arg);
+  std::unique_ptr<fine_aligner> short_align_data;
+  if(args.fine_mer_given)
+    short_align_data.reset(new fine_aligner(*short_hash, args.fine_mer_arg, &unitigs_lengths, args.k_mer_arg));
 
   // Output candidate mega_reads
   overlap_graph graph_walker(args.overlap_play_arg, args.k_mer_arg, unitigs_lengths, args.errors_arg, args.bases_flag);
   std::vector<std::thread> threads;
   for(unsigned int i = 0; i < args.threads_arg; ++i)
-    threads.push_back(std::thread(create_mega_reads, &reads, output.multiplexer(), &align_data,
+    threads.push_back(std::thread(create_mega_reads, &reads, output.multiplexer(),
+                                  &align_data, short_align_data.get(),
                                   &graph_walker, args.unitigs_sequences_given ? &sequences : 0,
                                   dot.multiplexer()));
   for(auto& th : threads)
