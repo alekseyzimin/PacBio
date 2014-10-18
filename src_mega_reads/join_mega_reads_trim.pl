@@ -7,7 +7,8 @@ my $pbseqfile=$ARGV[0];
 my $max_gap=$ARGV[1];
 my $allowed_gaps=$ARGV[2];
 my $kmer=$ARGV[3];
-my $good_pb=$ARGV[4];
+my $good_pb=$ARGV[5];
+my $bad_pb=$ARGV[4];
 my $fudge_factor=1.2;
 $kmer*=$fudge_factor;
 
@@ -36,6 +37,14 @@ while($line=<FILE>){
     chomp($line);
     $good_pb{$line}=1;
 }
+
+open(FILE,$good_pb);
+while($line=<FILE>){
+    chomp($line);
+    $pb=split(/\s+/,$line);
+    $bad_pb{$line}=1;
+}
+
 
 my @lines=();
 my $outread="";
@@ -104,6 +113,7 @@ sub process_sorted_lines{
             $str="$pb $k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
             $join_allowed=1 if($allowed{$str});
             $join_allowed=1 if(defined($good_pb{$pb}));
+	    $join_allowed=0 if(defined($bad_pb{$pb}));
 
             if($bgn>$last_coord){#if gap -- check if the closure is allowed
                 my $min_len=0;
@@ -140,6 +150,7 @@ sub process_sorted_lines{
 			$join_allowed=1;
 		    }
 		}
+		$join_allowed=0 if(defined($bad_pb{$pb}));
 #print "$join_allowed $last_coord $bgn INDEX $ind ",length($outread)," ",$last_coord-$bgn+1," ",length($outread)-$ind,"\n";
 		if($join_allowed){
 		    $outread.=substr($seq,$offset);

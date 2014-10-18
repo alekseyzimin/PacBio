@@ -5,13 +5,13 @@ $errorMin = 10;
 $correctnessCodeForSingletons = 0;
 &processArgs;
 
-open (FILE, $file);
+#open (FILE, $file);
 &initializeData;
-$line = <FILE>;
+$line = <STDIN>;
 &loadDataFromLine;
 $indexHold = $index;
 &addDataToRecords;
-while ($line = <FILE>) {
+while ($line = <STDIN>) {
     &loadDataFromLine;
     if ($index ne $indexHold) {
 	&analyzeGroup;
@@ -143,10 +143,10 @@ sub processArgs
 	    if ($i == $#ARGV) {
 		print STDERR "You cannot end the args with a flag. Bye!\n";
 		&reportUsage; }
-	    if (($ARGV[$i] eq "-f") || ($ARGV[$i] eq "--file")) {
-		++$i;
-		$file = $ARGV[$i];
-		next; }
+#	    if (($ARGV[$i] eq "-f") || ($ARGV[$i] eq "--file")) {
+#		++$i;
+#		$file = $ARGV[$i];
+#		next; }
 	    if ($ARGV[$i] eq "--min-range-radius") {
 		++$i;
 		$errorMin = $ARGV[$i];
@@ -160,15 +160,15 @@ sub processArgs
 		&reportUsage; }
 	}
     }
-    if ($file !~ /\S/) {
-	print STDERR "File not specified. Bye!\n";
-	&reportUsage; }
-    if (! -e $file) {
-	print STDERR "File \"$file\" doesn't exist. Bye!\n";
-	&reportUsage; }
-    if (-s $file == 0) {
-	print STDERR "File \"$file\" has size 0. Bye!\n";
-	&reportUsage; }
+#    if ($file !~ /\S/) {
+#	print STDERR "File not specified. Bye!\n";
+#	&reportUsage; }
+#    if (! -e $file) {
+#	print STDERR "File \"$file\" doesn't exist. Bye!\n";
+#	&reportUsage; }
+#    if (-s $file == 0) {
+#	print STDERR "File \"$file\" has size 0. Bye!\n";
+#	&reportUsage; }
     if ($errorMin !~ /^\d+$/) {
 	print STDERR "The flag --min-range-radius must have a non-negative integer argument. Given value is ${errorMin}. Bye!\n";
 	exit (1); }

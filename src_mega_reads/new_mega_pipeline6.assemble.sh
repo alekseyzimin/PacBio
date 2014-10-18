@@ -10,6 +10,7 @@ KUNITIGS=$3
 KUNITIGLENGTHS=$4
 SUPERREADS=$5
 PACBIO=$6
+JF_SIZE=$7
 
 #parameters
 MER=13
@@ -20,7 +21,7 @@ NUM_THREADS=16
 COORDS=$COORDS.$KMER.$MER.$B.$d
 if [ ! -e $COORDS.all.txt ];then
 
-create_mega_reads -s 20000000 -m $MER --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt
+create_mega_reads -s $JF_SIZE -m $MER  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt
 
 #first we reduce to maximal
 perl -ane '{
@@ -43,7 +44,7 @@ $out{$mega_read}=1;
 }
 }' $COORDS.txt 1> $COORDS.all_mr.fa 
 
-create_mega_reads -s 20000000 -m $MER --max-match -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt
+create_mega_reads -s $JF_SIZE -m $MER --max-match -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt
 
 perl -ane '{
 if($F[0] =~ /^\>/){
@@ -94,7 +95,10 @@ reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS
 
 fi
 
-analyze_mega_gaps.sh $COORDS  $KMER > ${COORDS}.allowed
+show-coords -lcHr  pb10x.fasta.$COORDS.maximal_mr.fa.g.delta | merge_matches_coords_file.pl 10000 | awk '{print $18" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}' > $COORDS.blasr.merged
+findGapsInCoverageOfPacbios -f $COORDS.blasr.merged > $COORDS.bad_pb.txt
+
+analyze_mega_gaps.sh $COORDS  $KMER | determineUnjoinablePacbioSubmegas.perl > ${COORDS}.allowed
 
 eval.sh $COORDS $KMER > $COORDS.report & 
 
