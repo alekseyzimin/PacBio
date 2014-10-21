@@ -100,14 +100,14 @@ findGapsInCoverageOfPacbios -f $COORDS.blasr.merged > $COORDS.bad_pb.txt
 
 analyze_mega_gaps.sh $COORDS  $KMER | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.allowed
 
-eval.sh $COORDS $KMER > $COORDS.report & 
+#eval.sh $COORDS $KMER > $COORDS.report & 
 
 cd assembly
 
-rm -rf CA.$COORDS.200.[0-9]
-rm -rf assembly.CA.$COORDS.200.[0-9]*.*
+rm -rf CA.$COORDS.200.[0-9]*
+rm -rf assembly.CA.$COORDS.200.[0-9]*
 
-./run_assembly.sh ../$COORDS $KMER ../superreads.frg ../$PACBIO CA.$COORDS
+./commands_iterate.sh ../$COORDS $KMER ../superreads.frg ../$PACBIO CA.$COORDS 5
 
 cd ..
 
