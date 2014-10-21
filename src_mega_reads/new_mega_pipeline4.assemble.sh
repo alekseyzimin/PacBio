@@ -14,11 +14,6 @@ JF_SIZE=$6
 MER=15
 B=15
 d=0.06
-
-#parameters
-MER=15
-B=15
-d=0.06
 NUM_THREADS=48
 
 COORDS=$COORDS.$KMER.$MER.$B.$d
