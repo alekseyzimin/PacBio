@@ -112,8 +112,8 @@ sub process_sorted_lines{
             $str="$pb $k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
 
 	    $join_allowed=0;
-            $join_allowed=1 if(defined($good_pb{$pb}));
 	    $join_allowed=$allowed{$str} if(defined($allowed{$str}));
+            $join_allowed=1 if(defined($good_pb{$pb}));
 
             if($bgn>$last_coord){#if gap -- check if the closure is allowed
                 my $max_gap_local;
