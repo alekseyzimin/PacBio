@@ -29,6 +29,7 @@ void fetch_local_super_reads(const short_mer_pos_hash_type& ary, short_parse_seq
 
 void fine_aligner::thread::align_sequence(short_parse_sequence& parser, const size_t pb_size, const coords_info_type& coarse_coords) {
   prime_frags_pos(coarse_coords.cbegin(), coarse_coords.cend());
+  coords_.clear();
   fetch_local_super_reads(aligner_.ary_, parser, frags_pos_);
 
   lis_align::accept_all all_mers;
