@@ -23,8 +23,8 @@ while ($line = <STDIN>) {
 	if (($prevFlds[3] < $prevFlds[4]) && ($prevMidpoint < $currentMidpoint)) {
             push(@matches,join(" ",@currentFlds));
 	    my $gap_diff=($currentFlds[0]-$prevFlds[1])-($currentFlds[3]-$prevFlds[4]); #this is the gap difference
-	    #we do not allow deletions in the quiery
-	    if($gap_diff >$max_gap_diff || $gap_diff < -5 || $currentFlds[3]-$prevFlds[4] < 0){
+	    my $covered = ($prevFlds[1]-$prevFlds[0] + $currentFlds[1] - $currentFlds[0]);
+	    if($gap_diff >$max_gap_diff || 2*$covered < $currentFlds[0] - $prevFlds[1]){
                 $badJoin=1;
             }else{
                 $keepMatchLine = 1;
@@ -32,8 +32,8 @@ while ($line = <STDIN>) {
 	}elsif (($prevFlds[3] >= $prevFlds[4]) && ($prevMidpoint >= $currentMidpoint)) {
 	    push(@matches,join(" ",@currentFlds));
             my $gap_diff = ($currentFlds[0]-$prevFlds[1])-($prevFlds[4]-$currentFlds[3]); #this is the gap difference
-            #we do not allow deletions in the quiery
-            if($gap_diff >$max_gap_diff || $gap_diff < -5 || $prevFlds[4]-$currentFlds[3] < 0){
+	    my $covered = ($prevFlds[1]-$prevFlds[0] + $currentFlds[1] - $currentFlds[0]);
+            if($gap_diff >$max_gap_diff || 2*$covered < $currentFlds[0] - $prevFlds[1]){
 	        $badJoin=1;
 	    }else{
 		$keepMatchLine = 1; 
@@ -56,6 +56,7 @@ while ($line = <STDIN>) {
 	$prev_match = $current_match;
 	$match_direction = $local_direction;
 	$match_bases = 0;
+	$matching_bases=0;
 	$badJoin=0;
 	@matches=();
 	push(@matches,join(" ",@currentFlds));
@@ -63,7 +64,8 @@ while ($line = <STDIN>) {
     if ($keepMatchLine) {
 	$match_ref_end = $currentFlds[1];
 	$match_qry_end = $currentFlds[4];
-	$match_bases += $currentFlds[7]*$currentFlds[9]/100;
+	$matching_bases += $currentFlds[7]*$currentFlds[9]/100;
+	$match_bases += $currentFlds[7];
 	@prevFlds = @currentFlds;
 	$prevMidpoint = $currentMidpoint;
     }
@@ -97,7 +99,7 @@ sub outputMatchGroup
 {
     $qry_match_len = abs($match_qry_end-$match_qry_beg) + 1;
     $ref_match_len = $match_ref_end-$match_ref_beg + 1;
-    $pctIdentity = $match_bases*100 / $qry_match_len;
+    $pctIdentity = $matching_bases*100 / $match_bases;
     $pctRefMatchLen = 100 * ($ref_match_len/$prevFlds[11]);
     $pctQueryMatchLen = 100 * ($qry_match_len/$prevFlds[12]);
     $pctIdentityStr = &makeHundredths ($pctIdentity);

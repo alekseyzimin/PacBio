@@ -90,13 +90,14 @@ sub analyzeGroup
 	print "@flds[0..3] $correctnessCodeForSingletons\n";
 	return; }
     $goodCode = &findStartingNumber; # Sets $minGood, $maxGood
-    if ($goodCode eq "bad") {
-	for (@lines) {
-	    $line = $_;
-	    @flds = split (" ", $line);
-	    print "@flds[0..3] 0\n"; }
-	return;
-    }
+#commented out to return one if the whole group is bad
+#   if ($goodCode eq "bad") {
+#	for (@lines) {
+#	    $line = $_;
+#	    @flds = split (" ", $line);
+#	    print "@flds[0..3] 0\n"; }
+#	return;
+#    }
     for (@lines) {
 	$line = $_;
 	@flds = split (" ", $line);
