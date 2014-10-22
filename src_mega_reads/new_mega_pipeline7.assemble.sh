@@ -93,22 +93,22 @@ run_big_nucmer_job_parallel.sh pb10x.fasta $COORDS.maximal_mr.fa 1000000 1000000
 show-coords -lcHr  pb10x.fasta.$COORDS.maximal_mr.fa.g.delta | awk '{print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}' > $COORDS.blasr.out
 reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $COORDS.blasr.out > $COORDS.all.txt
 
+show-coords -lcHr  pb10x.fasta.$COORDS.maximal_mr.fa.g.delta | perl -e '{@lines=();$pb="";while($line=<STDIN>){chomp($line);$line=~s/^\s+//;@f=split(/\s+/,$line);if(not($pb eq $f[17])){if($#lines>=0){print join("\n",sort by18thenby0 @lines),"\n";}$pb=$f[17];@lines=();}push(@lines,$line);} sub by18thenby0 { my @ffa=split(/\s+/,$a); my @ffb=split(/\s+/,$b);return($ffa[18] <=> $ffb[18] || $ffa[0] <=> $ffb[0])}}' | merge_matches_coords_file.pl 2000 | awk '{print $18" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}' > $COORDS.blasr.merged
+findGapsInCoverageOfPacbios -f $COORDS.blasr.merged > $COORDS.bad_pb.txt
+
 fi
 
-show-coords -lcHr  pb10x.fasta.$COORDS.maximal_mr.fa.g.delta | perl -e '{@lines=();$pb="";while($line=<STDIN>){chomp($line);$line=~s/^\s+//;@f=split(/\s+/,$line);if(not($pb eq $f[17])){if($#lines>=0){print join("\n",sort by18thenby0 @lines),"\n";}$pb=$f[17];@lines=();}push(@lines,$line);} sub by18thenby0 { my @ffa=split(/\s+/,$a); my @ffb=split(/\s+/,$b);return($ffa[18] <=> $ffb[18] || $ffa[0] <=> $ffb[0])}}' | merge_matches_coords_file.pl 2000 | awk '{print $18" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}' > $COORDS.blasr.merged
-findGapsInCoverageOfPacbios --max-gap-overlap `perl -e '{print int('$KMER'*1.2)}'`  -f $COORDS.blasr.merged > $COORDS.bad_pb.txt
-
-analyze_mega_gaps.sh $COORDS $KMER | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.allowed
+analyze_mega_gaps.sh $COORDS  $KMER | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed
 
 #eval.sh $COORDS $KMER > $COORDS.report & 
 
+join_mega_reads_trim.onepass.pl $PACBIO ${COORDS}.1.allowed $KMER $COORDS.bad_pb.txt < ${COORDS}.all.txt > $COORDS.1.fa;
+fasta2frg.pl mr  < $COORDS.1.fa > $COORDS.1.frg;
+/home/alekseyz/myprogs/getNumBasesPerReadInFastaFile.perl  $COORDS.1.fa   | awk '{n+=$1;m++}END{print n" "m" "n/m}'
+
 cd assembly
 
-rm -rf CA.$COORDS.200.[0-9]*
-rm -rf assembly.CA.$COORDS.200.[0-9]*
-
-./commands_iterate.sh ../$COORDS $KMER ../superreads.frg ../$PACBIO CA.$COORDS 5
+rm -rf CA.$COORDS
+./run_assembly.sh ../superreads.frg ../$COORDS.1.frg CA.$COORDS 
 
 cd ..
-
-

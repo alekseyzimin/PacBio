@@ -4,11 +4,9 @@
 #
 #first we read in PB sequences
 my $pbseqfile=$ARGV[0];
-my $max_gap=300;
 my $allowed_gaps=$ARGV[1];
 my $kmer=$ARGV[2];
 my $bad_pb=$ARGV[3];
-my $good_pb=$ARGV[4];
 my $fudge_factor=1.2;
 $kmer*=$fudge_factor;
 
@@ -32,19 +30,12 @@ while($line=<FILE>){
     $allowed{"$f[0] $f[2] $f[3]"}=$f[-1];
 }
 
-open(FILE,$good_pb);
-while($line=<FILE>){
-    chomp($line);
-    $good_pb{$line}=1;
-}
-
 open(FILE,$bad_pb);
 while($line=<FILE>){
     chomp($line);
     ($pb,$badstart,$badend)=split(/\s+/,$line);
     $bad_pb{$pb}="$badstart $badend";
 }
-
 
 my @lines=();
 my $outread="";
@@ -70,7 +61,7 @@ while($line=<STDIN>){
 	push(@lines, $line);
     }
 }
-#do not forgrt the last one
+#do not forget the last one
         if(@lines){
             @lines_sorted = sort by_first_number @lines;
             $outread=&process_sorted_lines(@lines_sorted);
@@ -104,6 +95,8 @@ sub process_sorted_lines{
         if($outread eq ""){
 	    $outread=$seq;
         }else{
+            $join_allowed=0;
+
             my @k1s=split(/_/,$last_mr);
             my @k2s=split(/_/,$name);
             $k1s[$#k1s] =substr($k1s[$#k1s],0,-1);
@@ -111,10 +104,11 @@ sub process_sorted_lines{
             $str="$pb $k1s[$#k1s] $k2s[0]";
             $str="$pb $k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
 
-	    $join_allowed=0;
-	    $join_allowed=$allowed{$str} if(defined($allowed{$str}));
-            $join_allowed=1 if(defined($good_pb{$pb}));
-
+	    if(defined($allowed{$str})){
+		$join_allowed=$allowed{$str};
+	    }else{
+		$join_allowed=1;
+	    }
 
             if($bgn>$last_coord){#if gap -- check if the closure is allowed
                 my $max_gap_local;
@@ -126,41 +120,36 @@ sub process_sorted_lines{
                 $join_allowed=0 if($last_coord>=$bad_start && $bgn<=$bad_end);
                 }
 
-                if(defined($good_pb{$pb})){
-		    $max_gap_local=length($outread)>length($seq)?length($outread):length($seq);
-		    $max_gap_local=500 if($max_gap_local>500);
-                }else{
-		    $max_gap_local=0.3*(length($outread)>length($seq)?length($outread):length($seq));
-		    $max_gap_local=$max_gap if($max_gap_local>$max_gap);
-		    $max_gap_local=25 if($max_gap_local<25);
-                }
+		$max_gap_local=(length($outread)>length($seq)?length($outread):length($seq));
+		$max_gap_local=500 if($max_gap_local>500);
 
-                if($bgn-$last_coord<=$max_gap_local && $join_allowed){#then join 
+                if($bgn-$last_coord<$max_gap_local && $join_allowed){#then put N's and later split
 		    $outread.=lc(substr($pbseq{$pb},$last_coord+1,$bgn-$last_coord)).$seq;
                 }else{
 		    $outread.="N".$seq;
                 }
             }else{#overlapping
 		$join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads
+		#here we check for overlaps
 	        my $offset; 
-                my $min_match=25;
+	 	my $min_match=25;
 
-                if($last_coord-$bgn > $min_match){
+		if($last_coord-$bgn > $min_match){
                     $ind=index($outread,substr($seq,0,$min_match),length($outread)-($last_coord-$bgn)*1.2);
                     if($ind==-1 || abs(($last_coord-$bgn)-(length($outread)-$ind))>(0.2*($last_coord-$bgn)+10)){
                         $offset=$last_coord-$bgn+1;
                         if($offset > $kmer){
-                                $join_allowed=0;
-                        }else{  
-                                $join_allowed=1;
-                        }
-                    }else{
-                        $offset=length($outread)-$ind;
-                        $join_allowed=1;
-                    }
-                }else{  
-                        $join_allowed=1  unless($allowed{$str}==0);
-                }
+				$join_allowed=0;
+			}else{
+				$join_allowed=1;
+			}
+		    }else{
+			$offset=length($outread)-$ind;
+			$join_allowed=1;
+		    }
+		}else{
+			$join_allowed=1  unless($allowed{$str}==0);
+		}
 
 		if(defined($bad_pb{$pb})){
                 my ($bad_start,$bad_end)=split(/\s+/,$bad_pb{$pb});
