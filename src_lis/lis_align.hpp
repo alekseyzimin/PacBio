@@ -187,16 +187,27 @@ void indices_reversed(P_type& P, const unsigned int len, unsigned int start, Out
 template<typename InputIterator, typename F1, typename F2,
          typename T=typename std::iterator_traits<InputIterator>::value_type::first_type>
 unsigned int indices(const InputIterator X, const InputIterator Xend,
-                     std::forward_list<element<T> >& L, std::vector<unsigned int>& res,
+                     std::forward_list<element<T> >& L, std::vector<unsigned int>& P,std::vector<unsigned int>& res,
                      size_t window_size, F1& accept_mer, F2& accept_sequence) {
   const size_t N = std::distance(X, Xend);
-  std::vector<unsigned int> P(N);
+  if(P.size() < N)
+    P.resize(N);
   const std::pair<unsigned int, unsigned int> lis = compute_L_P(X, Xend, L, P, window_size, accept_mer, accept_sequence);
 
   if(res.size() < lis.first)
     res.resize(lis.first);
   indices_reversed(P, lis.first, lis.second, res.rbegin());
   return lis.first;
+}
+
+
+template<typename InputIterator, typename F1, typename F2,
+         typename T=typename std::iterator_traits<InputIterator>::value_type::first_type>
+unsigned int indices(const InputIterator X, const InputIterator Xend,
+                     std::forward_list<element<T> >& L, std::vector<unsigned int>& res,
+                     size_t window_size, F1& accept_mer, F2& accept_sequence) {
+  std::vector<unsigned int> P;
+  return indices(X, Xend, L, P, res, window_size, accept_mer, accept_sequence);
 }
 
 template<typename InputIterator, typename F1, typename F2,

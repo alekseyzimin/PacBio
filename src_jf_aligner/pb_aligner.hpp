@@ -28,6 +28,14 @@ struct off_lis {
   std::vector<unsigned int>    lis;
 
   template<typename F1, typename F2>
+  void do_LIS(F1& accept_mer, F2& accept_sequence, size_t window_size, lis_buffer_type& L, std::vector<unsigned int>& P) {
+    L.clear();
+    lis.clear();
+    lis_align::indices(offsets.cbegin(), offsets.cend(), L, P, lis, window_size, accept_mer, accept_sequence);
+  }
+
+
+  template<typename F1, typename F2>
   void do_LIS(F1& accept_mer, F2& accept_sequence, size_t window_size, lis_buffer_type& L) {
     L.clear();
     lis.clear();
@@ -68,11 +76,23 @@ struct mer_lists {
     bwd.do_LIS(accept_mer, accept_sequence, window_size, L);
   }
   template<typename F1, typename F2>
+  void do_LIS(F1& accept_mer, F2& accept_sequence, size_t window_size, lis_buffer_type& L, std::vector<unsigned int>& P) {
+    fwd.do_LIS(accept_mer, accept_sequence, window_size, L, P);
+    bwd.do_LIS(accept_mer, accept_sequence, window_size, L, P);
+  }
+  template<typename F1, typename F2>
   void discard_update_LIS(F1& accept_mer, F2& accept_sequence, size_t window_size, lis_buffer_type& L) {
     if(fwd.lis.size() > bwd.lis.size())
       fwd.discard_update_LIS(accept_mer, accept_sequence, window_size, L);
     else
       bwd.discard_update_LIS(accept_mer, accept_sequence, window_size, L);
+  }
+  template<typename F1, typename F2>
+  void discard_update_LIS(F1& accept_mer, F2& accept_sequence, size_t window_size, lis_buffer_type& L, std::vector<unsigned int>& P) {
+    if(fwd.lis.size() > bwd.lis.size())
+      fwd.discard_update_LIS(accept_mer, accept_sequence, window_size, L, P);
+    else
+      bwd.discard_update_LIS(accept_mer, accept_sequence, window_size, L, P);
   }
 };
 
