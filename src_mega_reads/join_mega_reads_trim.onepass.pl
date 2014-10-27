@@ -121,7 +121,7 @@ sub process_sorted_lines{
                 }
 
 		$max_gap_local=(length($outread)>length($seq)?length($outread):length($seq));
-		$max_gap_local=500 if($max_gap_local>500);
+		$max_gap_local=1000 if($max_gap_local>1000);
 
                 if($bgn-$last_coord<$max_gap_local && $join_allowed){#then put N's and later split
 		    $outread.=lc(substr($pbseq{$pb},$last_coord+1,$bgn-$last_coord)).$seq;

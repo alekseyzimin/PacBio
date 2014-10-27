@@ -4,7 +4,7 @@
 #
 #first we read in PB sequences
 my $pbseqfile=$ARGV[0];
-my $max_gap=300;
+my $max_gap=200;
 my $allowed_gaps=$ARGV[1];
 my $kmer=$ARGV[2];
 my $bad_pb=$ARGV[3];
@@ -130,7 +130,7 @@ sub process_sorted_lines{
 		    $max_gap_local=length($outread)>length($seq)?length($outread):length($seq);
 		    $max_gap_local=500 if($max_gap_local>500);
                 }else{
-		    $max_gap_local=0.3*(length($outread)>length($seq)?length($outread):length($seq));
+		    $max_gap_local=0.3*(length($outread)<length($seq)?length($outread):length($seq));
 		    $max_gap_local=$max_gap if($max_gap_local>$max_gap);
 		    $max_gap_local=25 if($max_gap_local<25);
                 }

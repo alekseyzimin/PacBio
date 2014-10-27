@@ -13,15 +13,15 @@ PACBIO=$6
 JF_SIZE=$7
 
 #parameters
-MER=13
-B=25
+MER=15
+B=17
 d=0.1
-NUM_THREADS=16
+NUM_THREADS=48
 
 COORDS=$COORDS.$KMER.$MER.$B.$d
 if [ ! -e $COORDS.all.txt ];then
 
-create_mega_reads -s $JF_SIZE -m $MER --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt
+create_mega_reads -s $JF_SIZE -m $MER -F 13 --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt
 
 #first we reduce to maximal
 perl -ane '{
@@ -89,14 +89,14 @@ $mr_number++;
 }
 }' 1>$COORDS.maximal_mr.fa 2>$COORDS.maximal_mr.names
 
-run_big_nucmer_job_parallel.sh pb10x.fasta $COORDS.maximal_mr.fa 1000000 100000000 '--maxmatch -d 0.2 -f -g 200 -l 15 -b 150 -c 100' $NUM_THREADS
+run_big_nucmer_job_parallel.sh pb10x.fasta $COORDS.maximal_mr.fa 2000000 100000000 '--maxmatch -d 0.2 -f -g 200 -l 15 -b 150 -c 100' $NUM_THREADS
 show-coords -lcHr  pb10x.fasta.$COORDS.maximal_mr.fa.g.delta | awk '{print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}' > $COORDS.blasr.out
 reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $COORDS.blasr.out > $COORDS.all.txt
 
-show-coords -lcHr  pb10x.fasta.$COORDS.maximal_mr.fa.g.delta | perl -e '{@lines=();$pb="";while($line=<STDIN>){chomp($line);$line=~s/^\s+//;@f=split(/\s+/,$line);if(not($pb eq $f[17])){if($#lines>=0){print join("\n",sort by18thenby0 @lines),"\n";}$pb=$f[17];@lines=();}push(@lines,$line);} sub by18thenby0 { my @ffa=split(/\s+/,$a); my @ffb=split(/\s+/,$b);return($ffa[18] <=> $ffb[18] || $ffa[0] <=> $ffb[0])}}' | merge_matches_coords_file.pl 2000 | awk '{print $18" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}' > $COORDS.blasr.merged
-findGapsInCoverageOfPacbios -f $COORDS.blasr.merged > $COORDS.bad_pb.txt
-
 fi
+
+show-coords -lcHr  pb10x.fasta.$COORDS.maximal_mr.fa.g.delta | perl -e '{@lines=();$pb="";while($line=<STDIN>){chomp($line);$line=~s/^\s+//;@f=split(/\s+/,$line);if(not($pb eq $f[17])){if($#lines>=0){print join("\n",sort by18thenby0 @lines),"\n";}$pb=$f[17];@lines=();}push(@lines,$line);} sub by18thenby0 { my @ffa=split(/\s+/,$a); my @ffb=split(/\s+/,$b);return($ffa[18] <=> $ffb[18] || $ffa[0] <=> $ffb[0])}}' | merge_matches_coords_file.pl 5000 | awk '{print $18" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}' > $COORDS.blasr.merged
+findGapsInCoverageOfPacbios --max-gap-overlap 100  -f $COORDS.blasr.merged > $COORDS.bad_pb.txt
 
 analyze_mega_gaps.sh $COORDS  $KMER | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed
 
