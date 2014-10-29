@@ -88,7 +88,7 @@ sub process_sorted_lines{
     $last_coord =-1000000000;
     foreach $l(@_){
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=split(/\s+/,$l);
-	$seq=substr($mseq,$mbgn,$mend-$mbgn+1);
+	$seq=substr($mseq,$mbgn-1,$mend-$mbgn+1);
         die("inconsistent sequence length") if(not(length($mseq)==$mlen));
         die("pacbio read $pb does not exist in the sequence file!!!") if(not(defined($pbseq{$pb})));
 
@@ -124,7 +124,7 @@ sub process_sorted_lines{
 		$max_gap_local=1000 if($max_gap_local>1000);
 
                 if($bgn-$last_coord<$max_gap_local && $join_allowed){#then put N's and later split
-		    $outread.=lc(substr($pbseq{$pb},$last_coord+1,$bgn-$last_coord)).$seq;
+		    $outread.=lc(substr($pbseq{$pb},$last_coord,$bgn-$last_coord-1)).$seq;
                 }else{
 		    $outread.="N".$seq;
                 }

@@ -34,6 +34,7 @@ sub findStartingNumber # Calculates $gapMin, $gapMax
 	$allowedGapDiff = $errorMin;
 	if ($errorRateAllowed * $absGap > $errorMin) {
 	    $allowedGapDiff = $errorRateAllowed * $absGap; }
+	$allowedGapDiff*=2;  #because there may be a center that satisfies the condition for two numbers
 	for ($j=$i; $j>=0; --$j) {
 	    last if ($gaps[$j] < $gaps[$i] - $allowedGapDiff);
 	    $currentGapMin = $gaps[$j];

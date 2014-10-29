@@ -107,7 +107,7 @@ if(not($f[6] eq $last_mr)){
             @ff1=split(/\s+/,$curr_intervals_output[$merge_index]);
             @ff2=split(/\s+/,$curr_intervals[$j]);
             if(($ff2[0]-$ff1[1])-($ff2[2]-$ff1[3])>-.02*(($ff2[0]-$ff1[1])+($ff2[2]-$ff1[3])) && $ff2[2]-$ff1[3]>-5 && $ff2[2]-$ff1[3]<($ff1[3]-$ff1[2]+$ff2[3]-$ff2[2])){ # if insertion in pb
-		my $qlt=$ff1[4]+$ff2[4];
+		my $qlt=$ff1[8]+$ff2[8];
                 $curr_intervals_output[$merge_index]="$ff1[0] $ff2[1] $ff1[2] $ff2[3] $ff1[4] $ff1[5] $ff1[6] $ff1[7] $qlt $ff1[9]"; #do the merging
             }else{
                 $merge_index++;
@@ -134,7 +134,7 @@ for($j=1;$j<=$#curr_intervals;$j++){
     @ff1=split(/\s+/,$curr_intervals_output[$merge_index]);
     @ff2=split(/\s+/,$curr_intervals[$j]);
     if(($ff2[0]-$ff1[1])-($ff2[2]-$ff1[3])>-.02*(($ff2[0]-$ff1[1])+($ff2[2]-$ff1[3])) && $ff2[2]-$ff1[3]>-5  && $ff2[2]-$ff1[3]<($ff1[3]-$ff1[2]+$ff2[3]-$ff2[2])){ # if insertion in pb
-	my $qlt=$ff1[4]+$ff2[4];
+	my $qlt=$ff1[8]+$ff2[8];
 	$curr_intervals_output[$merge_index]="$ff1[0] $ff2[1] $ff1[2] $ff2[3] $ff1[4] $ff1[5] $ff1[6] $ff1[7] $qlt $ff1[9]";
     }else{
 	$merge_index++;
@@ -148,13 +148,13 @@ for($j=0;$j<=$#curr_intervals_output;$j++){
 
 #done merging, result is in @merged_intervals
 
-@merged_intervals_sorted=sort by_tenth_field @merged_intervals;
+@merged_intervals_sorted=sort by_eigthth_field @merged_intervals;
 foreach $interval(@merged_intervals_sorted){
 ($bgn,$end,$mbgn,$mend,$mrlen,$pb,$mrseq,$mrname,$qlt,$scr)=split(/\s+/,$interval);
 $max_overlap=$max_overlap_pct*($mend-$mbgn+1)/100;
 $max_overlap=$kmer*$fudge_factor if($max_overlap<$kmer*$fudge_factor);
 $overlap=0;
-#print "DEBUG MERGING $bgn $end $mbgn $mend $mrlen $pb $mrseq $mrname\n";
+#print "DEBUG MERGING $bgn $end $mbgn $mend $mrlen $pb $qlt,$scr\n";
 for($i=0;$i<=$#interval_g_bgn;$i++){
  
     last if($bgn >= $interval_g_bgn[$i] && $end <= $interval_g_end[$i]);#contained
@@ -200,11 +200,11 @@ sub by_first_field
     return($f1[0] <=> $f2[0]);
 }
 
-sub by_tenth_field
+sub by_eigthth_field
 {
     my @f1=split(/\s+/,$a);
     my @f2=split(/\s+/,$b);
-    return($f2[9] <=> $f1[9]);
+    return($f2[8] <=> $f1[8]);
 }
 
 sub by_ninth_then_first_field 
