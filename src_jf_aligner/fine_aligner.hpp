@@ -33,10 +33,11 @@ public:
   { }
 
   class thread {
-    const fine_aligner&  aligner_;
-    frags_local_pos_type frags_pos_;
-    lis_buffer_type      L_;
-    coords_info_type     coords_;
+    const fine_aligner&       aligner_;
+    frags_local_pos_type      frags_pos_;
+    lis_buffer_type           L_;
+    std::vector<unsigned int> P_;
+    coords_info_type          coords_;
 
   public:
     thread(const fine_aligner& a) : aligner_(a) { }

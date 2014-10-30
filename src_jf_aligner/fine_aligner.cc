@@ -35,7 +35,7 @@ void fine_aligner::thread::align_sequence(short_parse_sequence& parser, const si
   lis_align::accept_all all_mers;
   for(auto& it : frags_pos_) {
     for(auto& local_ml : it.second) {
-      local_ml.ml.do_LIS(all_mers, all_mers, 1, L_);
+      local_ml.ml.do_LIS(all_mers, all_mers, 1, L_, P_);
       coords_.push_back(compute_coords_info(local_ml.ml, pb_size, aligner_.align_k_, aligner_.unitigs_k_,
                                             aligner_.unitigs_lengths_, true));
     }
