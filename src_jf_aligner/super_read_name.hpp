@@ -35,10 +35,14 @@ public:
   explicit super_read_name(const std::string& name) : unitigs_(parse(name)) { }
   //  explicit super_read_name(std::vector<long>&& unitigs) : unitigs_(std::move(unitigs)) { }
   // super_read_name(super_read_name&& rhs) : unitigs_(std::move(rhs.unitigs_)) { }
-  // super_read_name(const super_read_name& rhs) : unitigs_(rhs.unitigs_) { }
+  super_read_name(const super_read_name& rhs) : unitigs_(rhs.unitigs_) { }
 
   super_read_name& operator=(const std::string& name) {
     unitigs_ = parse(name);
+    return *this;
+  }
+  super_read_name& operator=(const super_read_name& rhs) {
+    unitigs_ = rhs.unitigs_;
     return *this;
   }
   bool operator==(const super_read_name& rhs) const { return unitigs_ == rhs.unitigs_; }

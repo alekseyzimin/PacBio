@@ -8,7 +8,7 @@ void fetch_local_super_reads(const short_mer_pos_hash_type& ary, short_parse_seq
     auto list = ary.equal_range(is_canonical ? parser.mer<0>().m : parser.mer<0>().rm);
 
     for(auto it = list.first ; it != list.second; ++it) { // For each instance of the k-mer in a super read
-      auto local_mls = frags_pos.find(it->frag->name);
+      auto local_mls = frags_pos.find(it->frag->fwd.name.c_str());
       if(local_mls == frags_pos.end()) continue;
       const auto mls_end = local_mls->second.end();
       for(auto local_ml = local_mls->second.begin(); local_ml != mls_end; ++local_ml) {

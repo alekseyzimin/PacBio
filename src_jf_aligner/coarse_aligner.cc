@@ -65,7 +65,7 @@ void fetch_super_reads(const mer_pos_hash_type& ary, parse_sequence& parser,
     if(max_mer_count && list.second >= max_mer_count) continue;
     const auto end = ary.pos_end();
     for(auto it = list.first ; it != end; ++it) { // For each instance of the k-mer in a super read
-      mer_lists& ml = frags_pos[it->frag->name];
+      mer_lists& ml = frags_pos[it->frag->fwd.name.c_str()];
       ml.frag       = it->frag;
       const int offset = is_canonical ? it->offset : -it->offset;
       if(offset > 0)

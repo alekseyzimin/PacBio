@@ -20,11 +20,11 @@ coords_info compute_coords_info(const mer_lists& ml, const size_t pb_size, const
   // too short, etc.), an empty vector is returned.
   coords_info                       info(ml.frag, align_k, pb_size, ml.frag->len, nb_mers);
   if(forward && !fwd_align)
-    info.unitigs.reverse();
+    info.name_u = &info.qfrag->bwd;
   if(nb_mers == 0) return info;
   const std::vector<pb_sr_offsets>& offsets = fwd_align ? ml.fwd.offsets : ml.bwd.offsets;
   const std::vector<unsigned int>&  lis     = fwd_align ? ml.fwd.lis : ml.bwd.lis;
-  compute_kmers_info                kmers_info(info.kmers_info, info.bases_info, info.unitigs,
+  compute_kmers_info                kmers_info(info.kmers_info, info.bases_info, info.name_u->unitigs,
                                                unitigs_k, align_k, unitigs_lengths);
   least_square_2d                   least_square;
   {

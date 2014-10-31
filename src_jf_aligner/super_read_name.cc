@@ -57,14 +57,18 @@ int super_read_name::overlap(const super_read_name& rhs) const {
 
 super_read_name::unitigs_list super_read_name::parse(const std::string& name) {
   unitigs_list res;
-  if(!name.empty()) {
-    size_t pn = 0;
-    for(size_t n = name.find_first_of('_'); n != std::string::npos; pn = n + 1, n = name.find_first_of('_', pn)) {
+  try {
+    if(!name.empty()) {
+      size_t pn = 0;
+      for(size_t n = name.find_first_of('_'); n != std::string::npos; pn = n + 1, n = name.find_first_of('_', pn)) {
+        uint64_t id = std::stoul(name.c_str() + pn);
+        res.push_back(u_id_ori(id, name[n - 1]));
+      }
       uint64_t id = std::stoul(name.c_str() + pn);
-      res.push_back(u_id_ori(id, name[n - 1]));
+      res.push_back(u_id_ori(id, name[name.size() - 1]));
     }
-    uint64_t id = std::stoul(name.c_str() + pn);
-    res.push_back(u_id_ori(id, name[name.size() - 1]));
+  } catch(std::invalid_argument) {
+    res.clear();
   }
   return res;
 }

@@ -18,13 +18,13 @@ void overlap_graph::traverse(const std::vector<int>& sort_array, const align_pb:
 
       const double position_len = node_i.imp_e - node_j.imp_s;
       if(position_len * overlap_play < k_len) break; // maximum implied overlap is less than a k-mer length
-      const int nb_u_overlap = coords_i.unitigs.overlap(coords_j.unitigs);
+      const int nb_u_overlap = coords_i.name_u->unitigs.overlap(coords_j.name_u->unitigs);
       if(!nb_u_overlap) continue; // No overlap according to unitig names
-      if(coords_i.unitigs == coords_j.unitigs) continue;
+      if(coords_i.name_u->unitigs == coords_j.name_u->unitigs) continue;
       int u_overlap_len  = 0;
       int common_overlap = 0;
       for(int u = 0; u < nb_u_overlap; ++u) {
-        u_overlap_len    += unitigs_lengths[coords_j.unitigs.unitig_id(u)];
+        u_overlap_len    += unitigs_lengths[coords_j.name_u->unitigs.unitig_id(u)];
         common_overlap   += maximize_bases ? coords_j.bases_info[2 * u] : coords_j.kmers_info[2 * u];
         if(u > 0)
           common_overlap -= maximize_bases ? coords_j.bases_info[2 * u - 1] : coords_j.kmers_info[2 * u - 1];
@@ -46,7 +46,7 @@ void overlap_graph::traverse(const std::vector<int>& sort_array, const align_pb:
         node_j.lpath  = nlpath;
         node_j.lstart = node_i.lstart == -1 ? it_i : node_i.lstart;
         node_j.lprev  = it_i;
-        node_j.lunitigs = node_i.lunitigs + coords_j.unitigs.size() - nb_u_overlap;
+        node_j.lunitigs = node_i.lunitigs + coords_j.name_u->unitigs.size() - nb_u_overlap;
       }
       if(dot)
         *dot << "n" << it_i << " -> n" << it_j << " [tooltip=\"" << "..." << "\", label=\"" << common_overlap << "\"];\n";
@@ -188,14 +188,14 @@ void overlap_graph::print_mega_reads(std::ostream& output, const std::vector<int
     const super_read_name *asr;
     super_read_name sr(end_n.lunitigs);
     if(end_n.lstart == -1) {
-      asr = &coords[cnode].unitigs;
+      asr = &coords[cnode].name_u->unitigs;
     } else {
-      size_t offset = sr.prepend(coords[cnode].unitigs);
+      size_t offset = sr.prepend(coords[cnode].name_u->unitigs);
       int    node_j = cnode;
       int    node_i = end_n.lprev;
       while(node_i >= 0) {
-        const size_t overlap = nodes[node_i].lunitigs + coords[node_j].unitigs.size() - nodes[node_j].lunitigs;
-        offset = sr.prepend(coords[node_i].unitigs, overlap, offset);
+        const size_t overlap = nodes[node_i].lunitigs + coords[node_j].name_u->unitigs.size() - nodes[node_j].lunitigs;
+        offset = sr.prepend(coords[node_i].name_u->unitigs, overlap, offset);
         if(dot) *dot << "n" << node_i << " -> n" << node_j << " [color=\"red\"];\n";
         node_j = node_i;
         node_i = nodes[node_i].lprev;

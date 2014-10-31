@@ -98,41 +98,42 @@ struct mer_lists {
 
 // Contains the summary information of an alignment of a pac-bio and a super read (named qname).
 struct coords_info {
-  int                          rs, re;
-  int                          qs, qe;
-  int                          nb_mers;
-  unsigned int                 pb_cons, sr_cons;
-  unsigned int                 pb_cover, sr_cover;
-  size_t                       rl, ql;
-  bool                         rn;
-  const frag_lists::frag_info* qfrag;
-  super_read_name              unitigs;
-  std::vector<int>             kmers_info; // Number of k-mers in k-unitigs and common between unitigs
-  std::vector<int>             bases_info; // Number of bases in k-unitigs and common between unitigs
-  double                       stretch, offset, avg_err; // Least square stretch, offset and average error
-  unsigned int                 align_k_;
+  int                             rs, re;
+  int                             qs, qe;
+  int                             nb_mers;
+  unsigned int                    pb_cons, sr_cons;
+  unsigned int                    pb_cover, sr_cover;
+  size_t                          rl, ql;
+  bool                            rn;
+  const frag_lists::frag_info*    qfrag;
+  const frag_lists::name_unitigs* name_u;
+  //  super_read_name              unitigs;
+  std::vector<int>                kmers_info; // Number of k-mers in k-unitigs and common between unitigs
+  std::vector<int>                bases_info; // Number of bases in k-unitigs and common between unitigs
+  double                          stretch, offset, avg_err; // Least square stretch, offset and average error
+  unsigned int                    align_k_;
 
   coords_info() = default;
-  coords_info(const frag_lists::frag_info* frag, unsigned int align_k, size_t rl, size_t ql, int n) :
-    nb_mers(n),
-    pb_cons(0), sr_cons(0), pb_cover(align_k), sr_cover(align_k),
-    rl(rl), ql(ql), rn(false), qfrag(frag),
-    unitigs(frag->name),
-    stretch(0), offset(0), avg_err(0),
-    align_k_(align_k)
+  coords_info(const frag_lists::frag_info* frag, unsigned int align_k, size_t rl, size_t ql, int n)
+    : nb_mers(n)
+    , pb_cons(0), sr_cons(0), pb_cover(align_k), sr_cover(align_k)
+    , rl(rl), ql(ql), rn(false), qfrag(frag)
+    , name_u(&frag->fwd)
+    , stretch(0), offset(0), avg_err(0)
+    , align_k_(align_k)
   { }
   coords_info(int rs_, int re_, int qs_, int qe_, int nb_mers_,
               unsigned int pb_cons_, unsigned sr_cons_,
               unsigned int pb_cover_, unsigned int sr_cover_,
               size_t rl_, size_t ql_, bool rn_,
               double stretch_, double offset_, double avg_err_,
-              const frag_lists::frag_info* frag) :
-    rs(rs_), re(re_), qs(qs_), qe(qe_), nb_mers(nb_mers_),
-    pb_cons(pb_cons_), sr_cons(sr_cons_),
-    pb_cover(pb_cover_), sr_cover(sr_cover_),
-    rl(rl_), ql(ql_), rn(rn_), qfrag(frag),
-    unitigs(frag->name),
-    stretch(stretch_), offset(offset_), avg_err(avg_err_)
+              const frag_lists::frag_info* frag)
+    : rs(rs_), re(re_), qs(qs_), qe(qe_), nb_mers(nb_mers_)
+    , pb_cons(pb_cons_), sr_cons(sr_cons_)
+    , pb_cover(pb_cover_), sr_cover(sr_cover_)
+    , rl(rl_), ql(ql_), rn(rn_), qfrag(frag)
+    , name_u(&frag->fwd)
+    , stretch(stretch_), offset(offset_), avg_err(avg_err_)
   { }
 
   bool operator<(const coords_info& rhs) const {
