@@ -3,6 +3,7 @@
 
 #include <limits>
 #include <atomic>
+#include <type_traits>
 
 
 template<bool LF, typename T>
@@ -11,7 +12,6 @@ struct bounded_counter;
 template<typename T>
 struct bounded_counter<false, T> {
   T counter_;
-  bounded_counter() : counter_(0) { }
 
   bool inc(const T max = std::numeric_limits<T>::max()) {
     if(counter_ < max) {
@@ -26,19 +26,20 @@ struct bounded_counter<false, T> {
 
 template<typename T>
 struct bounded_counter<true, T> {
-  std::atomic<T> counter_;
-  bounded_counter() : counter_(0) { }
+  T counter_;
 
   bool inc(const T max = std::numeric_limits<T>::max()) {
-    T val = counter_.load();
-    while(!max || val < max) {
-      if(counter_.compare_exchange_weak(val, val + 1))
+    T oval = counter_;
+    while(!max || oval < max) {
+      T nval = __sync_val_compare_and_swap(&counter_, oval, oval + 1);
+      if(nval == oval)
         return true;
+      oval = nval;
     }
     return false;
   }
 
-  operator T() const noexcept { return counter_.load(); }
+  operator T() const noexcept { return counter_; }
 };
 
 #endif /* __BOUNDED_COUNTER_H__ */

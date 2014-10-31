@@ -30,7 +30,7 @@ struct node_info {
     lstart     = -1;
     lprev      = -1;
     lpath      = bases ? coords.sr_cover : coords.nb_mers;
-    lunitigs   = coords.unitigs.size();
+    lunitigs   = coords.name_u->unitigs.size();
   }
 
   node_info& l_start_node(std::vector<node_info>& nodes) {
@@ -157,7 +157,7 @@ struct overlap_graph {
         *dot << "digraph \"" << pb_name << "\" {\nnode [fontsize=\"10\"];\n";
         for(size_t i = 0; i < sort_nodes_.size(); ++i) {
           const size_t it_i = sort_nodes_[i];
-          *dot << "n" << it_i << "[tooltip=\"" << coords[it_i].unitigs << "\"];\n";
+          *dot << "n" << it_i << "[tooltip=\"" << coords[it_i].name_u->unitigs << "\"];\n";
         }
       }
     }
