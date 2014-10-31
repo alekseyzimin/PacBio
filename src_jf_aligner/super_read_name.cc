@@ -1,4 +1,5 @@
 #include <src_jf_aligner/super_read_name.hpp>
+#include <stdexcept>
 
 const uint64_t super_read_name::invalid_id;
 
