@@ -6,6 +6,7 @@
 #include <src_jf_aligner/superread_parser.hpp>
 #include <src_jf_aligner/coarse_aligner.hpp>
 #include <src_jf_aligner/fine_aligner.hpp>
+#include <src_jf_aligner/misc.hpp>
 #include <debug.hpp>
 
 using align_pb::coarse_aligner;
@@ -170,19 +171,20 @@ int main(int argc, char *argv[])
 
   // Read k-unitig lengths
   std::unique_ptr<std::vector<int> > unitigs_lengths;
-  if(args.unitigs_lengths_given) {
+  if(args.unitigs_lengths_given || args.unitigs_sequences_given) {
     if(!args.k_mer_given)
-      jf_aligner_cmdline::error() << "The mer length used for generating the k-unitigs (-k, --k-mer) is required if the unitig lengths switch (-l, --unitig-lengths) is passed.";
+      jf_aligner_cmdline::error() << "The mer length used for generating the k-unitigs (-k, --k-mer) is required if the unitig lengths (-l, --unitig-lengths or -u, --unitigs-sequences) is passed.";
     unitigs_lengths.reset(new std::vector<int>);
-    std::ifstream is(args.unitigs_lengths_arg);
-    if(!is.good())
-      jf_aligner_cmdline::error() << "Failed to open unitig lengths map file '" << args.unitigs_lengths_arg << "'";
-    std::string unitig;
-    unsigned int len;
-    is >> unitig >> len;
-    while(is.good()) {
-      unitigs_lengths->push_back(len);
-      is >> unitig >> len;
+    if(args.unitigs_lengths_given) {
+      std::ifstream is(args.unitigs_lengths_arg);
+      if(!is.good())
+        jf_aligner_cmdline::error() << "Failed to open unitig lengths map file '" << args.unitigs_lengths_arg << "'";
+      read_unitigs_lengths(is, *unitigs_lengths);
+    } else {
+      std::ifstream is(args.unitigs_sequences_arg);
+      if(!is.good())
+        jf_aligner_cmdline::error() << "Failed to open unitig sequence file '" << args.unitigs_sequences_arg << "'";
+      read_unitigs_sequences(is, *unitigs_lengths);
     }
   }
 

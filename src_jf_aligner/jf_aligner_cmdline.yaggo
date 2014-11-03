@@ -53,6 +53,10 @@ option("l", "unitigs-lengths") {
   description "Length of k-unitigs"
   imply "forward"
   c_string; typestr "path" }
+option("u", "unitigs-sequences") {
+  description "Fasta file containing the sequence of the k-unitigs"
+  imply "forward"; conflict "unitigs-lengths"
+  c_string; typestr "path" }
 option("compact") {
   description "Compact output format"
   off }
