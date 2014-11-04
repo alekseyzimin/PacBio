@@ -53,7 +53,7 @@ void print_coords(Multiplexer::ostream& out, const std::string& pb_name, const s
         << " " << it.stretch << " " << it.offset << " " << it.avg_err;
     if(!compact)
       out << " " << pb_name;
-    out << " " << it.name_u->unitigs.name();
+    out << " " << it.name_u->name;
     auto mit = it.kmers_info.cbegin();
     auto bit = it.bases_info.cbegin();
     for( ; mit != it.kmers_info.cend(); ++mit, ++bit)

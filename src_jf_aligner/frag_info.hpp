@@ -21,9 +21,13 @@ public:
     {
       fwd.name    = s;
       fwd.unitigs = fwd.name;
-      bwd.unitigs = fwd.unitigs;
-      bwd.unitigs.reverse();
-      bwd.name    = bwd.unitigs.name();
+      if(fwd.unitigs.size() > 0) {
+        bwd.unitigs = fwd.unitigs;
+        bwd.unitigs.reverse();
+        bwd.name    = bwd.unitigs.name();
+      } else {
+        bwd.name    = fwd.name;
+      }
     }
   };
 
