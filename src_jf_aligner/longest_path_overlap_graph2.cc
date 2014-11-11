@@ -13,22 +13,25 @@
 typedef longest_path_overlap_graph2_cmdline cmdline_args;
 cmdline_args args;
 
-void fill_coords(std::vector<std::string>& lines, align_pb::coords_info_type& coords) {
+void fill_coords(int thid, std::vector<std::string>& lines, align_pb::coords_info_type& coords, frag_lists& frags) {
   coords.resize(lines.size());
+  frags.clear(thid);
+
   for(size_t i = 0; i < lines.size(); ++i) {
     std::istringstream is(lines[i]);
-    is >> coords[i];
+    parse_coords(thid, is, coords[i], frags);
   }
 }
 
-void create_mega_reads(coords_parser* parser, Multiplexer* output_m, overlap_graph* graph_walker, Multiplexer* dot_m) {
+void create_mega_reads(int thid, coords_parser* parser, frag_lists* frags,
+                       Multiplexer* output_m, overlap_graph* graph_walker, Multiplexer* dot_m) {
   align_pb::coords_info_type            coords;
   overlap_graph::thread                 graph(*graph_walker);
   Multiplexer::ostream                  output(output_m);
   std::unique_ptr<Multiplexer::ostream> dot(dot_m ? new Multiplexer::ostream(dot_m) : 0);
 
   for(coords_parser::stream coords_stream(*parser); coords_stream; ++coords_stream) {
-    fill_coords(coords_stream->lines, coords);
+    fill_coords(thid, coords_stream->lines, coords, *frags);
 
     graph.reset(coords, coords_stream->header, dot.get());
     graph.traverse();
@@ -91,11 +94,12 @@ int main(int argc, char* argv[]) {
 
   coords_parser parser(args.threads_arg, args.coords_arg);
   parser.start_parsing();
+  frag_lists frags(args.threads_arg);
 
   overlap_graph graph_walker(args.overlap_play_arg, args.k_mer_arg, unitigs_lengths, args.errors_arg, args.bases_flag);
   std::vector<std::thread> threads;
   for(unsigned int i = 0; i < args.threads_arg; ++i)
-    threads.push_back(std::thread(create_mega_reads, &parser, output.multiplexer(), &graph_walker, dot.multiplexer()));
+    threads.push_back(std::thread(create_mega_reads, i, &parser, &frags, output.multiplexer(), &graph_walker, dot.multiplexer()));
   for(auto& th : threads)
     th.join();
 

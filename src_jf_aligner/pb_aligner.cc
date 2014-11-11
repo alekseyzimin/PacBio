@@ -20,11 +20,11 @@ coords_info compute_coords_info(const mer_lists& ml, const size_t pb_size, const
   // too short, etc.), an empty vector is returned.
   coords_info                       info(ml.frag, align_k, pb_size, ml.frag->len, nb_mers);
   if(forward && !fwd_align)
-    info.unitigs.reverse();
+    info.name_u = &info.qfrag->bwd;
   if(nb_mers == 0) return info;
   const std::vector<pb_sr_offsets>& offsets = fwd_align ? ml.fwd.offsets : ml.bwd.offsets;
   const std::vector<unsigned int>&  lis     = fwd_align ? ml.fwd.lis : ml.bwd.lis;
-  compute_kmers_info                kmers_info(info.kmers_info, info.bases_info, info.unitigs,
+  compute_kmers_info                kmers_info(info.kmers_info, info.bases_info, info.name_u->unitigs,
                                                unitigs_k, align_k, unitigs_lengths);
   least_square_2d                   least_square;
   {
@@ -81,7 +81,7 @@ coords_info compute_coords_info(const mer_lists& ml, const size_t pb_size, const
 compute_kmers_info::compute_kmers_info(std::vector<int>& mers, std::vector<int>& bases, const super_read_name& sr_name,
                                                  unsigned int unitigs_k, unsigned int align_k, const std::vector<int>* const ul) :
   mers_(mers), bases_(bases), sr_name_(sr_name),
-  cunitig_(0), cend_(0), prev_pos_(-align_k_),
+  cunitig_(0), cend_(0), prev_pos_(-align_k),
   align_k_(align_k), unitigs_k_(unitigs_k), unitigs_lengths_(ul)
 {
   if(unitigs_k_) {
@@ -105,6 +105,7 @@ void compute_kmers_info::add_mer(const int pos) {
   const int new_bases   = std::min((int)align_k_, sr_pos - prev_pos_);
   while(sr_pos + (int)align_k_ > cend_ + 1) {
     if(cend_ >= sr_pos) {
+      if(cunitig_ >= sr_name_.size() - 1) goto error;
       const int nb_bases = cend_ - std::max(sr_pos, prev_pos_ + (int)align_k_) + 1;
       bases_[2 * cunitig_]     += nb_bases;
       bases_[2 * cunitig_ + 1] += nb_bases;

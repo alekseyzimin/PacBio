@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 #include <jellyfish/hash_counter.hpp>
+#include <jellyfish/allocators_mmap.hpp>
 #include <src_jf_aligner/lf_forward_size_list.hpp>
 
 template<typename T, typename mer_type = jellyfish::mer_dna, typename mer_array_type = jellyfish::large_hash::array<mer_type> >
@@ -44,15 +45,16 @@ private:
 public:
   mer_pos_hash(size_t size, uint16_t max_count = std::numeric_limits<uint16_t>::max()) :
     mers_(size, 2 * mer_type::k(), 0, 126),
-    pos_(0),
+    data_(mers_.size() * sizeof(head_node)),
+    pos_((head_node*)data_.get_ptr()),
     max_count_(max_count)
   {
-    pos_ = new head_node[mers_.size()];
-    memset(pos_, '\0', sizeof(head_node) * mers_.size());
+    //    std::cout << sizeof(head_node) << ' ' << sizeof(node) << "\n";
+    if(!pos_)
+      throw std::runtime_error("Can't allocate mer pos hash");
   }
 
   ~mer_pos_hash() {
-    delete [] pos_;
     for(auto it = data_pages_.begin(); it != data_pages_.end(); ++it)
       delete [] *it;
   }
@@ -142,6 +144,7 @@ public:
 
 private:
   mer_array_type                   mers_;
+  allocators::mmap                 data_;
   typename mapped_type::head_node* pos_;
   lf_forward_list<node*>           data_pages_;
   const uint16_t                   max_count_;

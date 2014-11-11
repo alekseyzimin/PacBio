@@ -33,10 +33,11 @@ public:
   { }
 
   class thread {
-    const fine_aligner&  aligner_;
-    frags_local_pos_type frags_pos_;
-    lis_buffer_type      L_;
-    coords_info_type     coords_;
+    const fine_aligner&       aligner_;
+    frags_local_pos_type      frags_pos_;
+    lis_buffer_type           L_;
+    std::vector<unsigned int> P_;
+    coords_info_type          coords_;
 
   public:
     thread(const fine_aligner& a) : aligner_(a) { }
@@ -45,7 +46,7 @@ public:
     void prime_frags_pos(Iterator it, const Iterator end) {
       frags_pos_.clear();
       for( ; it != end; ++it) {
-        auto&  local_mls = frags_pos_[it->qfrag->name];
+        auto&  local_mls = frags_pos_[it->qfrag->fwd.name.c_str()];
         double begin     = std::max((double)0, it->stretch - it->avg_err);
         double end       = std::min((double)it->rl, it->stretch * it->ql + it->offset + it->avg_err - aligner_.align_k_);
         local_mls.push_back(sr_local_ml(it->qfrag, begin, end));

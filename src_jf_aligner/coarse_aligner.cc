@@ -18,10 +18,10 @@ coords_info coarse_aligner::compute_coords_info(const mer_lists& ml, const size_
 }
 
 void coarse_aligner::align_sequence(parse_sequence& parser, const size_t pb_size,
-                              coords_info_type& coords, frags_pos_type& frags_pos,
-                              lis_buffer_type& L) const {
+                                    coords_info_type& coords, frags_pos_type& frags_pos,
+                                    lis_buffer_type& L, std::vector<unsigned int>& P) const {
   fetch_super_reads(ary_, parser, frags_pos, max_mer_count_);
-  do_all_LIS(frags_pos, L, accept_mer_, accept_sequence_, window_size_);
+  do_all_LIS(frags_pos, L, P, accept_mer_, accept_sequence_, window_size_);
   compute_coords(frags_pos, pb_size, coords);
 }
 
@@ -48,7 +48,7 @@ void coarse_aligner::align_sequence_max (parse_sequence& parser, const size_t pb
 void coarse_aligner::thread::align_sequence(parse_sequence& parser, const size_t pb_size) {
   frags_pos_.clear();
   coords_.clear();
-  aligner_.align_sequence(parser, pb_size, coords_, frags_pos_, L_);
+  aligner_.align_sequence(parser, pb_size, coords_, frags_pos_, L_, P_);
 }
 
 void coarse_aligner::thread::align_sequence_max(parse_sequence& parser, const size_t pb_size) {
@@ -65,7 +65,7 @@ void fetch_super_reads(const mer_pos_hash_type& ary, parse_sequence& parser,
     if(max_mer_count && list.second >= max_mer_count) continue;
     const auto end = ary.pos_end();
     for(auto it = list.first ; it != end; ++it) { // For each instance of the k-mer in a super read
-      mer_lists& ml = frags_pos[it->frag->name];
+      mer_lists& ml = frags_pos[it->frag->fwd.name.c_str()];
       ml.frag       = it->frag;
       const int offset = is_canonical ? it->offset : -it->offset;
       if(offset > 0)

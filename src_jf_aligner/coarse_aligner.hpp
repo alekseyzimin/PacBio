@@ -9,16 +9,18 @@ namespace align_pb {
 typedef std::unordered_map<const char*, mer_lists> frags_pos_type;
 
 template<typename F1, typename F2>
-void do_all_LIS(frags_pos_type& frags_pos, lis_buffer_type& L, F1& accept_mer, F2& accept_sequence, size_t window_size) {
+void do_all_LIS(frags_pos_type& frags_pos, lis_buffer_type& L, std::vector<unsigned int>& P,
+                F1& accept_mer, F2& accept_sequence, size_t window_size) {
   // Compute LIS forward and backward on every super reads.
   for(auto& it : frags_pos)
-    it.second.do_LIS(accept_mer, accept_sequence, window_size, L);
+    it.second.do_LIS(accept_mer, accept_sequence, window_size, L, P);
 }
 
 template<typename F1, typename F2>
 static void do_all_LIS(frags_pos_type& frags_pos, F1& accept_mer, F2& accept_sequence, size_t window_size) {
   lis_buffer_type L;
-  do_all_LIS(frags_pos, L, accept_mer, accept_sequence, window_size);
+  std::vector<unsigned int> P;
+  do_all_LIS(frags_pos, L, P, accept_mer, accept_sequence, window_size);
 }
 
 // Find all super reads that have k-mers in common with a PacBio
@@ -86,11 +88,12 @@ public:
   }
 
   void align_sequence(parse_sequence& parser, const size_t pb_size,
-                      coords_info_type& coords, frags_pos_type& frags, lis_buffer_type& L) const;
+                      coords_info_type& coords, frags_pos_type& frags, lis_buffer_type& L, std::vector<unsigned int>& P) const;
   std::pair<coords_info_type, frags_pos_type> align_sequence(parse_sequence& parser, const size_t pb_size) const {
     std::pair<coords_info_type, frags_pos_type> res;
     lis_buffer_type                             L;
-    align_sequence(parser, pb_size, res.first, res.second, L);
+    std::vector<unsigned int>                   P;
+    align_sequence(parser, pb_size, res.first, res.second, L, P);
     return res;
   }
   std::pair<coords_info_type, frags_pos_type> align_sequence(const std::string& seq) const {
@@ -116,10 +119,11 @@ public:
   static std::string reverse_super_read_name(const std::string& name);
 
   class thread {
-    const coarse_aligner& aligner_;
-    frags_pos_type        frags_pos_;
-    coords_info_type      coords_;
-    lis_buffer_type       L_;
+    const coarse_aligner&     aligner_;
+    frags_pos_type            frags_pos_;
+    coords_info_type          coords_;
+    lis_buffer_type           L_;
+    std::vector<unsigned int> P_;
 
   public:
     thread(const coarse_aligner& a) : aligner_(a) { }

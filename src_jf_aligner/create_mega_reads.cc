@@ -7,6 +7,7 @@
 #include <src_jf_aligner/coarse_aligner.hpp>
 #include <src_jf_aligner/fine_aligner.hpp>
 #include <src_jf_aligner/overlap_graph.hpp>
+#include <src_jf_aligner/misc.hpp>
 
 using align_pb::coarse_aligner;
 using align_pb::fine_aligner;
@@ -67,10 +68,6 @@ void create_mega_reads(read_parser* reads, Multiplexer* output_m,
  }
 }
 
-inline static std::istream& skip_header(std::istream& is) {
-  return is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-}
-
 int main(int argc, char *argv[])
 {
   args.parse(argc, argv);
@@ -92,28 +89,16 @@ int main(int argc, char *argv[])
   // Read k-unitig lengths
   std::vector<int> unitigs_lengths;
   std::vector<std::string> sequences;
-  {
-    if(args.unitigs_lengths_given) { // File with lengths
-      std::ifstream is(args.unitigs_lengths_arg);
-      if(!is.good())
-        cmdline_args::error() << "Failed to open unitig lengths map file '" << args.unitigs_lengths_arg << "'";
-      std::string unitig;
-      unsigned int len;
-      is >> unitig >> len;
-      while(is.good()) {
-        unitigs_lengths.push_back(len);
-        is >> unitig >> len;
-      }
-    } else { // Sequence in fasta file given
-      std::ifstream is(args.unitigs_sequences_arg);
-      if(!is.good())
-        cmdline_args::error() << "Failed to open unitigs sequence file '" << args.unitigs_sequences_arg << "'";
-      while(skip_header(is)) {
-        sequences.push_back("");
-        std::getline(is, sequences.back());
-        unitigs_lengths.push_back(sequences.back().size());
-      }
-    }
+  if(args.unitigs_lengths_given) { // File with lengths
+    std::ifstream is(args.unitigs_lengths_arg);
+    if(!is.good())
+      cmdline_args::error() << "Failed to open unitig lengths map file '" << args.unitigs_lengths_arg << "'";
+    read_unitigs_lengths(is, unitigs_lengths);
+  } else { // Sequence in fasta file given
+    std::ifstream is(args.unitigs_sequences_arg);
+    if(!is.good())
+      cmdline_args::error() << "Failed to open unitigs sequence file '" << args.unitigs_sequences_arg << "'";
+    read_unitigs_sequences(is, unitigs_lengths, sequences);
   }
 
   // Read the super reads

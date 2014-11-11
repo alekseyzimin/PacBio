@@ -1,20 +1,42 @@
 #ifndef __FRAG_INFO_H__
 #define __FRAG_INFO_H__
 
+#include <src_jf_aligner/super_read_name.hpp>
+
+
 // Multiple vector to hold names of fragments. There is a vector for
 // each thread and the string is copied when push_back is called.
 class frag_lists {
 public:
+  struct name_unitigs {
+    std::string     name;
+    super_read_name unitigs;
+  };
   struct frag_info {
-    unsigned int len;
-    char         name[];
+    unsigned int    len;
+    name_unitigs    fwd;
+    name_unitigs    bwd;
+    frag_info(unsigned int l, const char* s)
+      : len(l)
+    {
+      fwd.name    = s;
+      fwd.unitigs = fwd.name;
+      if(fwd.unitigs.size() > 0) {
+        bwd.unitigs = fwd.unitigs;
+        bwd.unitigs.reverse();
+        bwd.name    = bwd.unitigs.name();
+      } else {
+        bwd.name    = fwd.name;
+      }
+    }
   };
 
   frag_lists(size_t threads) : names_(threads) { }
   ~frag_lists() {
     for(auto it = names_.cbegin(); it != names_.cend(); ++it)
       for(auto it2 = it->cbegin(); it2 != it->cend(); ++it2)
-        ::operator delete((void*)*it2);
+        delete *it2;
+    //        ::operator delete((void*)*it2);
   }
 
   size_t size() const { return names_.size(); }
@@ -24,10 +46,13 @@ public:
       names_.resize(threads);
   }
 
+  void clear(size_t thid) {
+    for(auto it2 = names_[thid].cbegin(); it2 != names_[thid].cend(); ++it2)
+      delete *it2;
+  }
+
   const frag_info* push_back(int thid, unsigned int len, const char* s) {
-    auto fi = (frag_info*) ::operator new(sizeof(frag_info) + strlen(s) + 1);
-    fi->len = len;
-    strcpy(fi->name, s);
+    auto fi = new frag_info(len, s);
     names_[thid].push_back(fi);
     return fi;
   }

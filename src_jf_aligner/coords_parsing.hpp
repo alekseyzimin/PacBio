@@ -8,7 +8,8 @@
 #include <src_jf_aligner/pb_aligner.hpp>
 
 // parse one coords_info record in compact format
-std::istream& operator>>(std::istream& is, align_pb::coords_info& c);
+//std::istream& operator>>(std::istream& is, align_pb::coords_info& c);
+void parse_coords(int thid, std::istream& is, align_pb::coords_info& c, frag_lists& frags);
 
 struct coords_lines {
   std::string              header;

@@ -48,7 +48,7 @@ TEST(SuperReadParser, OneRead) {
     EXPECT_EQ(1, std::distance(list.first, list.second));
     //    const mer_pos_hash_type::position_type& pos = *list->cbegin();
     const auto it = list.first;
-    EXPECT_STREQ("superread", it->frag->name);
+    EXPECT_EQ("superread", it->frag->fwd.name);
     EXPECT_EQ((int)(i + 1) * (is_canonical ? 1 : -1), it->offset);
   }
 }
@@ -108,7 +108,7 @@ TEST(SuperReadParser, ManyReads) {
     int count = 0;
     for(auto it = list.first; it != list.second; ++it, ++count) {
       EXPECT_EQ(read_len, (int)it->frag->len);
-      int read_id = std::atoi(it->frag->name);
+      int read_id = std::atoi(it->frag->fwd.name.c_str());
       // Is id valid?
       EXPECT_TRUE(read_id >= 0 && read_id < nb_reads);
       // Is the read covering position i?

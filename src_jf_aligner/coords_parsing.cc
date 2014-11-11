@@ -1,13 +1,15 @@
 #include <src_jf_aligner/coords_parsing.hpp>
+#include <src_jf_aligner/frag_info.hpp>
 
-std::istream& operator>>(std::istream& is, align_pb::coords_info& c) {
+//std::istream& operator>>(std::istream& is, align_pb::coords_info& c) {
+void parse_coords(int thid, std::istream& is, align_pb::coords_info& c, frag_lists& frags) {
   std::string qname;
   is >> c.rs >> c.re >> c.qs >> c.qe >> c.nb_mers >> c.pb_cons >> c.sr_cons
      >> c.pb_cover >> c.sr_cover >> c.rl >> c.ql
      >> c.stretch >> c.offset >> c.avg_err
      >> qname;
-  c.qfrag   = 0;
-  c.unitigs = qname;
+  c.qfrag   = frags.push_back(thid, c.ql, qname.c_str());
+  c.name_u  = &c.qfrag->fwd;
   c.kmers_info.clear();
   c.bases_info.clear();
   char sep;
@@ -16,7 +18,6 @@ std::istream& operator>>(std::istream& is, align_pb::coords_info& c) {
     c.kmers_info.push_back(mers);
     c.bases_info.push_back(bases);
   }
-  return is;
 }
 
 inline static void skip_line(std::istream& is) {

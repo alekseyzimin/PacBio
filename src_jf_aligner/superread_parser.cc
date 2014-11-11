@@ -49,13 +49,13 @@ void superreads_read_mers::parse_two_mers(int thid) {
       parser.reset(job->data[i].seq);
 
       while(parser.next()) { // Process each k-mer
-        if(!parser.mer<0>().m.is_homopolymer()) {
+        if(parser.mer<0>().valid && !parser.mer<0>().m.is_homopolymer()) {
           const bool is_canonical = parser.mer<0>().is_canonical();
           at_long.push_front(is_canonical ? parser.mer<0>().m : parser.mer<0>().rm,
                              header,
                              is_canonical ? parser.offset<0>() : -parser.offset<0>());
         }
-        if(!parser.mer<1>().m.is_homopolymer()) {
+        if(parser.mer<0>().valid && !parser.mer<1>().m.is_homopolymer()) {
           const bool is_canonical = parser.mer<1>().is_canonical();
           at_short.push_front(is_canonical ? parser.mer<1>().m : parser.mer<1>().rm,
                               header,
