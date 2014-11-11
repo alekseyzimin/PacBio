@@ -24,7 +24,7 @@ while ($line = <STDIN>) {
             push(@matches,join(" ",@currentFlds));
 	    my $gap_diff=abs(($currentFlds[0]-$prevFlds[1])-($currentFlds[3]-$prevFlds[4])); #this is the gap difference
 	    my $covered = ($prevFlds[1]-$prevFlds[0] + $currentFlds[1] - $currentFlds[0]);
-	    if($gap_diff >$max_gap_diff || $covered < $currentFlds[0] - $prevFlds[1]){
+	    if($gap_diff >$max_gap_diff || 2*$covered < $currentFlds[0] - $prevFlds[1]){
                 $badJoin=1;
             }else{
                 $keepMatchLine = 1;
@@ -33,7 +33,7 @@ while ($line = <STDIN>) {
 	    push(@matches,join(" ",@currentFlds));
             my $gap_diff = abs(($currentFlds[0]-$prevFlds[1])-($prevFlds[4]-$currentFlds[3])); #this is the gap difference
 	    my $covered = ($prevFlds[1]-$prevFlds[0] + $currentFlds[1] - $currentFlds[0]);
-            if($gap_diff >$max_gap_diff || $covered < $currentFlds[0] - $prevFlds[1]){
+            if($gap_diff >$max_gap_diff || 2*$covered < $currentFlds[0] - $prevFlds[1]){
 	        $badJoin=1;
 	    }else{
 		$keepMatchLine = 1; 
