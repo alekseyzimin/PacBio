@@ -19,6 +19,9 @@ while($line=<FILE>){
 	$rn=substr($line,1);
     }else{
 	$seq{$rn}=$line;
+	$line=reverse($line);
+	$line=~tr/ACGTNacgtn/TGCANtgcan/;
+	$seq{$rn+1}=$line;
     }
 }
 
