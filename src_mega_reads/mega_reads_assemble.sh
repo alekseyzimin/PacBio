@@ -90,14 +90,13 @@ run_big_nucmer_job_parallel.sh pb10x.fasta $COORDS.maximal_mr.fa 1000000 1000000
 delta-filter -g -o 20 pb10x.fasta.$COORDS.maximal_mr.fa.g.delta > pb10x.fasta.$COORDS.maximal_mr.fa.gg.delta
 show-coords -lcHr  pb10x.fasta.$COORDS.maximal_mr.fa.gg.delta | awk '{if($4<$5){print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}else{print $18"/0_"$12" "$19+1" 0 0 0 "$10" "$13-$4+1" "$13-$5+1" "$13" "$1" "$2" "$12" 0"}}' > $COORDS.blasr.out
 
-reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $COORDS.blasr.out > $COORDS.all.txt
+reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $COORDS.blasr.out 1> $COORDS.all.txt 2>$COORDS.blasr.merged
 
-show-coords -lcHr  pb10x.fasta.$COORDS.maximal_mr.fa.gg.delta | perl -e '{@lines=();$pb="";while($line=<STDIN>){chomp($line);$line=~s/^\s+//;@f=split(/\s+/,$line);if(not($pb eq $f[17])){if($#lines>=0){print join("\n",sort by18thenby0 @lines),"\n";}$pb=$f[17];@lines=();}push(@lines,$line);} sub by18thenby0 { my @ffa=split(/\s+/,$a); my @ffb=split(/\s+/,$b);return($ffa[18] <=> $ffb[18] || $ffa[0] <=> $ffb[0])}}' | merge_matches_coords_file.pl 5000 | awk '{if($4<$5){print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}else{print $18"/0_"$12" "$19+1" 0 0 0 "$10" "$13-$4+1" "$13-$5+1" "$13" "$1" "$2" "$12" 0"}}' > $COORDS.blasr.merged
+fi
+
 findGapsInCoverageOfPacbios --max-gap-overlap 100  -f $COORDS.blasr.merged > $COORDS.bad_pb.txt
 
 analyze_mega_gaps.sh $COORDS  $KMER | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed
-
-fi
 
 join_mega_reads_trim.onepass.pl $PACBIO ${COORDS}.1.allowed $KMER $COORDS.bad_pb.txt < ${COORDS}.all.txt > $COORDS.1.fa;
 fasta2frg.pl mr  < $COORDS.1.fa > $COORDS.1.frg;
@@ -111,7 +110,7 @@ runCA utgGraphErrorLimit=1000 utgGraphErrorRate=0.035 utgMergeErrorLimit=1000 ut
 tigStore -g $CA/genome.gkpStore -t $CA/genome.tigStore 2 -U -nreads 2 100000000 -d consensus >assembly.$CA.fa
 split_long_unitigs.pl ur < assembly.${CA}.fa 2>assembly.${CA}.short_unitigs.fa | fasta2frg.pl ur > assembly.${CA}.unitig_reads.frg
 
-runCA unitigger=bogart utgGraphErrorLimit=1000 utgGraphErrorRate=0.0 utgMergeErrorLimit=1000 utgMergeErrorRate=0.01 ovlMerThreshold=5 ovlMinLen=200  doFragmentCorrection=0 doUnitigSplitting=0 ovlMerSize=31 doChimeraDetection=off stopAfter=consensusAfterUnitigger cnsMinFrags=100 cnsConcurrency=16 -p genome -d ${CA}u ovlThreads=$NUM_THREADS merylThreads=$NUM_THREADS doOverlapBasedTrimming=0 utgErrorLimit=100000 assembly.${CA}.unitig_reads.frg  1>> $CA.log 2>&1
+runCA unitigger=bogart utgGraphErrorLimit=1 utgGraphErrorRate=0.0 utgMergeErrorLimit=1000 utgMergeErrorRate=0.01 ovlMerThreshold=5 ovlMinLen=250  doFragmentCorrection=0 doUnitigSplitting=0 ovlMerSize=31 doChimeraDetection=off stopAfter=consensusAfterUnitigger cnsMinFrags=100 cnsConcurrency=16 -p genome -d ${CA}u ovlThreads=$NUM_THREADS merylThreads=$NUM_THREADS doOverlapBasedTrimming=0 utgErrorLimit=100000 assembly.${CA}.unitig_reads.frg  1>> $CA.log 2>&1
 
 #final output
 tigStore -g ${CA}u/genome.gkpStore -t ${CA}u/genome.tigStore  2 -U -d consensus >assembly.${CA}u.fa

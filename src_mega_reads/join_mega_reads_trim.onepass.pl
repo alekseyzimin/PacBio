@@ -85,7 +85,9 @@ return($a <=> $b);
 
 sub process_sorted_lines{
     my $outread="";
+    my $last_seq="";
     $last_coord =-1000000000;
+    
     foreach $l(@_){
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=split(/\s+/,$l);
 	$seq=substr($mseq,$mbgn-1,$mend-$mbgn+1);
@@ -111,7 +113,6 @@ sub process_sorted_lines{
 	    }
 
             if($bgn>$last_coord){#if gap -- check if the closure is allowed
-                my $max_gap_local;
 
 		if(defined($bad_pb{$pb})){
                 my ($bad_start,$bad_end)=split(/\s+/,$bad_pb{$pb});
@@ -168,7 +169,6 @@ sub process_sorted_lines{
         }
 	$last_coord=$end;
 	$last_mr=$name;
-	$last_len=length($seq);
 	$last_seq=$seq;
 	$last_mend=$mend;
         last if($last_coord>=length($pbseq{$pb}));	
