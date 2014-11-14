@@ -92,7 +92,7 @@ sub merge_intervals_detect{
                 my $gap_mr=$ff2[2]-$ff1[3];
                 if(abs($gap_pb-$gap_mr)<5000 && 2*$covered>=$gap_pb && $ff2[2]>$ff1[2]){ #if insertion in pb
                     my $qlt=$ff1[8]+$ff2[8];
-                    $curr_intervals_output[$merge_index]=[$ff1[0],$ff2[1],$ff1[2],$ff2[3],$ff1[4..7],$qlt,$ff1[9]]; #do the merging
+                    $curr_intervals_output[$merge_index]=[$ff1[0],$ff2[1],$ff1[2],$ff2[3],@ff1[4..7],$qlt,$ff1[9]]; #do the merging
                 }else{
                     $merge_index++;
                     $curr_intervals_output[$merge_index]=$curr_intervals[$j];
@@ -100,6 +100,7 @@ sub merge_intervals_detect{
             }
             foreach $interval(@curr_intervals_output){
                 push(@merged_intervals,$interval);
+		#print STDERR "DEBUG ",join(" ",@{$interval}),"\n";
             }
             $last_mr=$f[7];
             @curr_intervals=();
@@ -117,7 +118,7 @@ sub merge_intervals_detect{
 	my $gap_mr=$ff2[2]-$ff1[3];
 	if(abs($gap_pb-$gap_mr)<5000 && 2*$covered>=$gap_pb && $ff2[2]>$ff1[2]){ #if insertion in pb
 	    my $qlt=$ff1[8]+$ff2[8];
-	    $curr_intervals_output[$merge_index]=[$ff1[0],$ff2[1],$ff1[2],$ff2[3],$ff1[4..7],$qlt,$ff1[9]]; #do the merging
+	    $curr_intervals_output[$merge_index]=[$ff1[0],$ff2[1],$ff1[2],$ff2[3],@ff1[4..7],$qlt,$ff1[9]]; #do the merging
 	}else{
 	    $merge_index++;
 	    $curr_intervals_output[$merge_index]=$curr_intervals[$j];
@@ -125,8 +126,9 @@ sub merge_intervals_detect{
     }
     foreach $interval(@curr_intervals_output){
 	push(@merged_intervals,$interval);
+	#print STDERR "DEBUG ",join(" ",@{$interval}),"\n";
     }
-    
+  
     return(@merged_intervals);
 }
 
@@ -150,9 +152,9 @@ sub merge_intervals{
 		my $covered=$ff1[1]-$ff1[0]+$ff2[1]-$ff2[0];
 		my $gap_pb=$ff2[0]-$ff1[1];
 		my $gap_mr=$ff2[2]-$ff1[3];
-		if(abs($gap_pb-$gap_mr)<5000 && ($gap_mr <= $gap_pb-5 || $gap_mr <= $gap_pb*1.1) && $gap_pb>-5 && 2*$covered>=$gap_pb && $ff2[2]>$ff1[2]){ #if insertion in pb
+		if(abs($gap_pb-$gap_mr)<5000 && ($gap_mr <= $gap_pb+5 || $gap_mr <= $gap_pb*1.02) && $gap_pb>-5 && 2*$covered>=$gap_pb && $ff2[2]>$ff1[2]){ #if insertion in pb
 		    my $qlt=$ff1[8]+$ff2[8];
-		    $curr_intervals_output[$merge_index]=[$ff1[0],$ff2[1],$ff1[2],$ff2[3],$ff1[4..7],$qlt,$ff1[9]]; #do the merging
+		    $curr_intervals_output[$merge_index]=[$ff1[0],$ff2[1],$ff1[2],$ff2[3],@ff1[4..7],$qlt,$ff1[9]]; #do the merging
 		}else{
 		    $merge_index++;
 		    $curr_intervals_output[$merge_index]=$curr_intervals[$j];
@@ -175,9 +177,9 @@ sub merge_intervals{
 	my $covered=$ff1[1]-$ff1[0]+$ff2[1]-$ff2[0];
 	my $gap_pb=$ff2[0]-$ff1[1];
 	my $gap_mr=$ff2[2]-$ff1[3];
-	if(abs($gap_pb-$gap_mr)<5000 && ($gap_mr <= $gap_pb-5 || $gap_mr <= $gap_pb*1.1) && $gap_pb>-5 && 2*$covered>=$gap_pb && $ff2[2]>$ff1[2]){ #if insertion in pb
+	if(abs($gap_pb-$gap_mr)<5000 && ($gap_mr <= $gap_pb+5 || $gap_mr <= $gap_pb*1.02) && $gap_pb>-5 && 2*$covered>=$gap_pb && $ff2[2]>$ff1[2]){ #if insertion in pb
 	    my $qlt=$ff1[8]+$ff2[8];
-	    $curr_intervals_output[$merge_index]=[$ff1[0],$ff2[1],$ff1[2],$ff2[3],$ff1[4..7],$qlt,$ff1[9]]; #do the merging
+	    $curr_intervals_output[$merge_index]=[$ff1[0],$ff2[1],$ff1[2],$ff2[3],@ff1[4..7],$qlt,$ff1[9]]; #do the merging
 	}else{
 	    $merge_index++;
 	    $curr_intervals_output[$merge_index]=$curr_intervals[$j];
