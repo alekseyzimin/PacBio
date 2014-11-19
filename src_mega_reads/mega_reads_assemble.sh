@@ -19,7 +19,7 @@ d=0.1
 NUM_THREADS=48
 
 COORDS=$COORDS.$KMER.$MER.$B.$d
-if [ ! -e $COORDS.all.txt ];then
+if [ ! -e $COORDS.blasr.out ];then
 
 create_mega_reads -s $JF_SIZE -m $MER -F 13 --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt
 
@@ -44,7 +44,7 @@ $out{$mega_read}=1;
 }
 }' $COORDS.txt 1> $COORDS.all_mr.fa 
 
-create_mega_reads -s $JF_SIZE -m 15 -F 13 --max-match -k $KMER -u $KUNITIGS -t $NUM_THREADS -B 15 --max-count 300 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt
+create_mega_reads -s $JF_SIZE -m $MER -F 13 --max-match -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt
 
 perl -ane '{
 if($F[0] =~ /^\>/){
@@ -90,9 +90,9 @@ run_big_nucmer_job_parallel.sh pb10x.fasta $COORDS.maximal_mr.fa 1000000 1000000
 delta-filter -g -o 20 pb10x.fasta.$COORDS.maximal_mr.fa.g.delta > pb10x.fasta.$COORDS.maximal_mr.fa.gg.delta
 show-coords -lcHr  pb10x.fasta.$COORDS.maximal_mr.fa.gg.delta | awk '{if($4<$5){print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}else{print $18"/0_"$12" "$19+1" 0 0 0 "$10" "$13-$4+1" "$13-$5+1" "$13" "$1" "$2" "$12" 0"}}' > $COORDS.blasr.out
 
-reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $COORDS.blasr.out 1> $COORDS.all.txt 2>$COORDS.blasr.merged
-
 fi
+
+reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $COORDS.blasr.out 1> $COORDS.all.txt 2>$COORDS.blasr.merged
 
 findGapsInCoverageOfPacbios --max-gap-overlap 100  -f $COORDS.blasr.merged > $COORDS.bad_pb.txt
 
