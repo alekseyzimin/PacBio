@@ -44,8 +44,7 @@ while($line=<STDIN>){
     chomp($line);
     if($line =~ /^>/){
 	if(@lines){
-	    @lines_sorted = sort by_first_number @lines;
-	    $outread=&process_sorted_lines(@lines_sorted);
+	    $outread = process_sorted_lines(sort {$$a[0] <=> $$b[0]} @lines);
 	    if(not($outread eq "")){
 		$indx=0;
 		@f=split(/N/,$outread);
@@ -58,13 +57,13 @@ while($line=<STDIN>){
 	}
 	($rn,$junk)=split(/\s+/,substr($line,1));
     }else{
-	push(@lines, $line);
+	my @ttt=split(/\s+/,$line);
+	push(@lines, \@ttt);
     }
 }
 #do not forget the last one
 if(@lines){
-    @lines_sorted = sort by_first_number @lines;
-    $outread=&process_sorted_lines(@lines_sorted);
+    $outread = process_sorted_lines(sort {$$a[0] <=> $$b[0]} @lines);
     if(not($outread eq "")){
 	$indx=0;
 	@f=split(/N/,$outread);
@@ -76,20 +75,13 @@ if(@lines){
 }
 
 
-
-sub by_first_number{
-($fn1,$rest)=split(/\s+/,$a);
-($fn2,$rest)=split(/\s+/,$b);
-return($a <=> $b);
-}
-
 sub process_sorted_lines{
     my $outread="";
     my $last_seq="";
     $last_coord =-1000000000;
     
     foreach $l(@_){
-        ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=split(/\s+/,$l);
+        ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$l};
 	$seq=substr($mseq,$mbgn-1,$mend-$mbgn+1);
         die("inconsistent sequence length") if(not(length($mseq)==$mlen));
         die("pacbio read $pb does not exist in the sequence file!!!") if(not(defined($pbseq{$pb})));
