@@ -34,7 +34,7 @@ open(FILE,$bad_pb);
 while($line=<FILE>){
     chomp($line);
     ($pb,$badstart,$badend)=split(/\s+/,$line);
-    $bad_pb{$pb}="$badstart $badend";
+    $bad_pb{$pb}.="$badstart $badend ";
 }
 
 my @lines=();
@@ -54,7 +54,7 @@ while($line=<STDIN>){
 		    $indx++;
 		}
 	    }
-	@lines=();
+	    @lines=();
 	}
 	($rn,$junk)=split(/\s+/,substr($line,1));
     }else{
@@ -62,18 +62,18 @@ while($line=<STDIN>){
     }
 }
 #do not forget the last one
-        if(@lines){
-            @lines_sorted = sort by_first_number @lines;
-            $outread=&process_sorted_lines(@lines_sorted);
-            if(not($outread eq "")){
-                $indx=0;
-                @f=split(/N/,$outread);
-                for($i=0;$i<=$#f;$i++){
-                    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=400);
-                    $indx++;
-                }
-            }
-        }
+if(@lines){
+    @lines_sorted = sort by_first_number @lines;
+    $outread=&process_sorted_lines(@lines_sorted);
+    if(not($outread eq "")){
+	$indx=0;
+	@f=split(/N/,$outread);
+	for($i=0;$i<=$#f;$i++){
+	    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=400);
+	    $indx++;
+	}
+    }
+}
 
 
 
@@ -115,10 +115,14 @@ sub process_sorted_lines{
             if($bgn>$last_coord){#if gap -- check if the closure is allowed
 
 		if(defined($bad_pb{$pb})){
-                my ($bad_start,$bad_end)=split(/\s+/,$bad_pb{$pb});
-                $join_allowed=0 if($last_coord<=$bad_start && $bad_start<=$bgn);
-                $join_allowed=0 if($last_coord<=$bad_end && $bad_end<=$bgn);
-                $join_allowed=0 if($last_coord>=$bad_start && $bgn<=$bad_end);
+		    my @bad_coords=split(/\s+/,$bad_pb{$pb});
+		    for($i=0;$i<=$#bad_coords;$i+=2){
+			my $bad_start=$bad_coords[$i];
+			my $bad_end=$bad_coords[$i+1];
+			$join_allowed=0 if($last_coord<=$bad_start && $bad_start<=$bgn);
+			$join_allowed=0 if($last_coord<=$bad_end && $bad_end<=$bgn);
+			$join_allowed=0 if($last_coord>=$bad_start && $bgn<=$bad_end);
+		    }
                 }
 
 		$max_gap_local=(length($outread)>length($seq)?length($outread):length($seq));
@@ -140,25 +144,28 @@ sub process_sorted_lines{
                     if($ind==-1 || abs(($last_coord-$bgn)-(length($outread)-$ind))>(0.2*($last_coord-$bgn)+10)){
                         $offset=$last_coord-$bgn+1;
                         if($offset > $kmer){
-				$join_allowed=0;
+			    $join_allowed=0;
 			}else{
-				$join_allowed=1;
+			    $join_allowed=1;
 			}
 		    }else{
 			$offset=length($outread)-$ind;
 			$join_allowed=1;
 		    }
 		}else{
-			$join_allowed=1  unless($allowed{$str}==0);
+		    $join_allowed=1  unless($allowed{$str}==0);
 		}
 
 		if(defined($bad_pb{$pb})){
-                my ($bad_start,$bad_end)=split(/\s+/,$bad_pb{$pb});
-                $join_allowed=0 if($last_coord>=$bad_start && $bad_start>=$bgn);
-                $join_allowed=0 if($last_coord>=$bad_end && $bad_end>=$bgn);
-                $join_allowed=0 if($bgn>=$bad_start && $last_coord<=$bad_end);
-                }
-
+		    my @bad_coords=split(/\s+/,$bad_pb{$pb});
+		    for($i=0;$i<=$#bad_coords;$i+=2){
+			my $bad_start=$bad_coords[$i];
+			my $bad_end=$bad_coords[$i+1];
+			$join_allowed=0 if($last_coord>=$bad_start && $bad_start>=$bgn);
+			$join_allowed=0 if($last_coord>=$bad_end && $bad_end>=$bgn);
+			$join_allowed=0 if($bgn>=$bad_start && $last_coord<=$bad_end);
+		    }
+		}
 #print "$join_allowed $last_coord $bgn INDEX $ind ",length($outread)," ",$last_coord-$bgn+1," ",length($outread)-$ind,"\n";
 		if($join_allowed){
 		    $outread.=substr($seq,$offset);
