@@ -79,13 +79,41 @@ sub process_sorted_lines{
     my $outread="";
     my $last_seq="";
     $last_coord =-1000000000;
+    my @max_gap_local_fwd=();
+    my @max_gap_local_rev=();
+    my @args=@_;
+    my $max_gap=1250;
+    my $gap_coeff=1;
+    my $outread_len=0;
+    my $seq_len=0;
+
+    for(my $i=0;$i<=$#args;$i++){
+        ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
+	$outread_len+=$mend-$mbgn;
+	$seq_len=$mend-$mbgn;
+        $max_gap_local=$gap_coeff*($outread_len>$seq_len?$outread_len:$seq_len);
+        $max_gap_local=$max_gap if($max_gap_local>$max_gap);
+	push(@max_gap_local_fwd,$max_gap_local);
+    }
+
+    $outread_len=0;
+    $seq_len=0;
+    for(my $i=$#args;$i>=0;$i--){
+        ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
+        $outread_len+=$mend-$mbgn;
+        $seq_len=$mend-$mbgn;
+        $max_gap_local=$gap_coeff*($outread_len>$seq_len?$outread_len:$seq_len);
+        $max_gap_local=$max_gap if($max_gap_local>$max_gap);
+        unshift(@max_gap_local_rev,$max_gap_local);
+    }
     
-    foreach $l(@_){
+    my $gap_index=-1;
+    foreach $l(@args){
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$l};
 	$seq=substr($mseq,$mbgn-1,$mend-$mbgn+1);
         die("inconsistent sequence length") if(not(length($mseq)==$mlen));
         die("pacbio read $pb does not exist in the sequence file!!!") if(not(defined($pbseq{$pb})));
-
+        $gap_index++;
         if($outread eq ""){
 	    $outread=$seq;
         }else{
@@ -117,8 +145,7 @@ sub process_sorted_lines{
 		    }
                 }
 
-		$max_gap_local=(length($outread)>length($seq)?length($outread):length($seq));
-		$max_gap_local=1000 if($max_gap_local>1000);
+		$max_gap_local=$max_gap_local_fwd[$gap_index]<$max_gap_local_rev[$gap_index]?$max_gap_local_fwd[$gap_index]:$max_gap_local_rev[$gap_index];
 
                 if($bgn-$last_coord<$max_gap_local && $join_allowed){#then put N's and later split
 		    $outread.=lc(substr($pbseq{$pb},$last_coord,$bgn-$last_coord-1)).$seq;

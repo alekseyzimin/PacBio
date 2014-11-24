@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 $rn="";
-$max_len=65535;
+$max_len=65500;
 $shooting_index=0;
 if($ARGV[0] eq ""){
 $suffix="super-read";
@@ -37,10 +37,12 @@ while($line=<STDIN>){
 		print "$rn\n$seq\n";
 		}
 	    }else{
-		$max_len_local=int(($l-10000)/$l*$max_len);
-		$offset=int(($max_len_local-1)/2);
-	    	for($i=0;$i<$l;$i+=$offset){
-			print "$rn.$max_len_local.$i\n",substr($seq,$i,$max_len_local),"\n";
+		$num_pieces=int($l/$max_len)+1;
+		$max_len_local=int($l/$num_pieces)+1;
+		$offset=int(($max_len_local)/2)+1;
+		#print "DEBUG $l $num_pieces $offset $max_len_local\n";
+	    	for($i=0;$i<$num_pieces*2-1;$i++){
+			print "$rn.",$i*$offset,".",$i*$offset+$max_len_local,"\n",substr($seq,$i*$offset,$max_len_local),"\n";
 		}
 	    }
 	}
@@ -58,7 +60,11 @@ $l=length($seq);
 #$rev_seq=reverse_complement($seq);
 #$seq=$rev_seq lt $seq ? $rev_seq : $seq;
             if($l<$max_len){
+                if($l<1000){#short unitig -- to stderr
+                print STDERR "$rn\n$seq\n";
+                }else{
                 print "$rn\n$seq\n";
+                }
             }else{
                 $max_len_local=int(($l-10000)/$l*$max_len);
                 $offset=int(($max_len_local-1)/2);
