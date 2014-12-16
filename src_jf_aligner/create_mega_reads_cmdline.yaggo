@@ -73,6 +73,9 @@ option("T", "no-tiling") {
 option("maximal-tiling") {
   description "Maximize number of k-mers during tiling"
   off }
+option("trim") {
+  description "How to trim mega-read"
+  enum "none", "match", "ref"; default "none" }
 option("r", "superreads") {
   description "SuperReads sequence file"
   c_string; typestr "path"; multiple }

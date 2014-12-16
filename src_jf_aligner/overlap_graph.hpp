@@ -9,13 +9,12 @@ struct node_info {
   bool            start_node;
   bool            end_node;
   double          imp_s, imp_e; // coordinates used for longest path
-  double          ts, te; // coordinates used for tiling
   union_find::set component;
   int             lstart; // id of node starting longest path (-1 if first node in path)
   int             lprev;  // id of previous node in longest path (-1 if first)
   int             lpath;  // number of k-mers/bases in longest path
   int             lunitigs; // number of unitigs in longest path
-  double          ldensity; // density of longest path (updated only at terminal node of longest paths)
+  //  double          ldensity; // density of longest path
 
   node_info() = default;
 
@@ -24,8 +23,6 @@ struct node_info {
     end_node   = true;
     imp_s      = coords.stretch + coords.offset;
     imp_e      = coords.stretch * coords.ql + coords.offset;
-    ts         = coords.rs;
-    te         = coords.re;
     component.reset();
     lstart     = -1;
     lprev      = -1;
@@ -39,8 +36,22 @@ struct node_info {
   const node_info& l_start_node(const std::vector<node_info>& nodes) const {
     return lstart == -1 ? *this : nodes[lstart];
   }
-
 };
+
+// A mega-read is the index of two nodes, where the start node is on
+// the backward longest path from the end node. In addition, we keep
+// the offset in the unitig list of the start (resp. end) unitig to
+// use.
+struct mega_read_info {
+  int    start_node, end_node;
+  int    start_unitig, end_unitig;
+  int    nb_unitigs;
+  double tiling_start, tiling_end; // coordinates used for tiling
+  double density;
+  static mega_read_info make(int i, const std::vector<node_info>& nodes,
+                             const align_pb::coords_info_type&  coords);
+};
+
 
 struct overlap_graph {
   const double            overlap_play;
@@ -77,34 +88,39 @@ struct overlap_graph {
                 std::vector<node_info>& nodes, std::ostream* dot = 0) const;
 
   // Given the information created in 'traverse', for each connected
-  // component find the end node of the longest path.
-  typedef std::map<union_find::set*, int> comp_to_path;
-  void term_node_per_comp(const int n, size_t pb_size, std::vector<node_info>& nodes,
+  // component find the candidate mega-reads in each connected component.
+  typedef std::map<union_find::set*, mega_read_info> comp_to_path;
+  void mega_reads_per_comp(const int n, size_t pb_size, std::vector<node_info>& nodes,
                           const align_pb::coords_info_type& coords, comp_to_path& res,
                           double min_density = 0, double min_len = 0,
                           std::ostream* dot = 0) const;
-  comp_to_path term_node_per_comp(const int n, const size_t pb_size, std::vector<node_info>& nodes,
-                                  const align_pb::coords_info_type& coords,
-                                  double min_density = 0, double min_len = 0,
-                                  std::ostream* dot = 0) const {
+  comp_to_path mega_reads_per_comp(const int n, const size_t pb_size, std::vector<node_info>& nodes,
+                                   const align_pb::coords_info_type& coords,
+                                   double min_density = 0, double min_len = 0,
+                                   std::ostream* dot = 0) const {
     comp_to_path res;
-    term_node_per_comp(n, pb_size, nodes, coords, res, min_density, min_len, dot);
+    mega_reads_per_comp(n, pb_size, nodes, coords, res, min_density, min_len, dot);
     return res;
   }
+
+  void update_mr_trim(mega_read_info& mr, std::vector<node_info>& nodes,
+                      const align_pb::coords_info_type& coords) const;
 
   // Tile the mega reads in a greedy fashion. Expect sort_array to be
   // the indices of the last nodes in the mega reads, sorted by size
   // of the mega reads (e.g. number of aligned k-mers or number of
   // bases).
   int tile_greedy(const std::vector<int>& sort_array,
+                  const std::vector<const mega_read_info*>& mega_reads,
                   const std::vector<node_info>& nodes,
                   std::vector<int>& res, size_t at_most = std::numeric_limits<size_t>::max()) const;
 
   std::pair<int, std::vector<int>> tile_greedy(const std::vector<int>& sort_array,
+                                               const std::vector<const mega_read_info*>& mega_reads,
                                                const std::vector<node_info>& nodes,
                                                size_t at_most = std::numeric_limits<size_t>::max()) const {
     std::vector<int> res;
-    int score = tile_greedy(sort_array, nodes, res, at_most);
+    int score = tile_greedy(sort_array, mega_reads, nodes, res, at_most);
     return std::make_pair(score, std::move(res));
   }
 
@@ -112,18 +128,21 @@ struct overlap_graph {
   // k-mers. Expect sort_array to be the indices of the last nodes in
   // the mega reads, sorted by the number of mers aligned.
   int tile_maximal(const std::vector<int>& sort_array,
-                    const std::vector<node_info>& nodes,
-                    std::vector<int>& res) const;
+                   const std::vector<const mega_read_info*>& mega_reads,
+                   const std::vector<node_info>& nodes,
+                   std::vector<int>& res) const;
 
   std::pair<int, std::vector<int>> tile_maximal(const std::vector<int>& sort_array,
+                                                const std::vector<const mega_read_info*>& mega_reads,
                                                 const std::vector<node_info>& nodes) const {
     std::vector<int> res;
-    int score = tile_maximal(sort_array, nodes, res);
+    int score = tile_maximal(sort_array, mega_reads, nodes, res);
     return std::make_pair(score, std::move(res));
   }
 
   // Given the terminal nodes found by term_node_per_comp, print the mega reads
   void print_mega_reads(std::ostream& os, const std::vector<int>& sort_array,
+                        const std::vector<const mega_read_info*>& mega_reads,
                         const align_pb::coords_info_type& coords,
                         const std::vector<node_info>& nodes,
                         const std::vector<std::string>* unitigs_sequences,
@@ -131,12 +150,13 @@ struct overlap_graph {
 
 
   struct thread {
-    const overlap_graph&              og_;
-    std::vector<int>                  sort_nodes_, sort_mega_reads_, tiling_;
-    std::vector<node_info>            nodes_;
-    const align_pb::coords_info_type* coords_;
-    comp_to_path                      mega_reads_;
-    std::ostream*                     dot_;
+    const overlap_graph&               og_;
+    std::vector<int>                   sort_nodes_, sort_tiling_, tiled_mr_;
+    std::vector<node_info>             nodes_;
+    const align_pb::coords_info_type*  coords_;
+    comp_to_path                       comp_mega_reads_;
+    std::vector<const mega_read_info*> mega_reads_;
+    std::ostream*                      dot_;
 
     thread(const overlap_graph& og) : og_(og) { }
 
@@ -164,44 +184,45 @@ struct overlap_graph {
 
     void traverse() { og_.traverse(sort_nodes_, *coords_, nodes_, dot_); }
     void term_node_per_comp(size_t pb_size, double min_density = 0, double min_len = 0) {
+      comp_mega_reads_.clear();
+      og_.mega_reads_per_comp(coords_->size(), pb_size, nodes_, *coords_, comp_mega_reads_, min_density, min_len, dot_);
       mega_reads_.clear();
-      og_.term_node_per_comp(coords_->size(), pb_size, nodes_, *coords_, mega_reads_, min_density, min_len, dot_);
-      sort_mega_reads_.clear();
-      for(const auto& comp : mega_reads_)
-        sort_mega_reads_.push_back(comp.second);
-      tiling_.clear();
+      sort_tiling_.clear();
+      for(const auto& comp : comp_mega_reads_) {
+        sort_tiling_.push_back(mega_reads_.size());
+        mega_reads_.push_back(&comp.second);
+      }
     }
 
     void tile_greedy(size_t at_most = std::numeric_limits<size_t>::max()) {
-      std::sort(sort_mega_reads_.begin(), sort_mega_reads_.end(),
-                [&](int i, int j) { return nodes_[j].lpath < nodes_[i].lpath; });
-      og_.tile_greedy(sort_mega_reads_, nodes_, tiling_, at_most);
-      std::sort(tiling_.begin(), tiling_.end(),
+      std::sort(sort_tiling_.begin(), sort_tiling_.end(),
+                [&](int i, int j) { return nodes_[mega_reads_[i]->end_node].lpath < nodes_[mega_reads_[j]->end_node].lpath; });
+      og_.tile_greedy(sort_tiling_, mega_reads_, nodes_, tiled_mr_, at_most);
+      std::sort(tiled_mr_.begin(), tiled_mr_.end(),
                 [&](int i, int j) -> bool {
-                  auto st_i = nodes_[i].l_start_node(nodes_).imp_s, st_j = nodes_[j].l_start_node(nodes_).imp_s;
-                  return st_i < st_j || (st_i == st_j && nodes_[i].imp_e < nodes_[j].imp_e);
+                  const auto st_i = mega_reads_[i]->tiling_start, st_j = mega_reads_[j]->tiling_start;
+                  return st_i < st_j || (st_i == st_j && mega_reads_[i]->tiling_end < mega_reads_[j]->tiling_end);
                 });
     }
 
     void tile_maximal() {
-      std::sort(sort_mega_reads_.begin(), sort_mega_reads_.end(),
-                [&](int i, int j) { return nodes_[i].imp_e < nodes_[j].imp_e; });
-      og_.tile_maximal(sort_mega_reads_, nodes_, tiling_);
-      std::sort(tiling_.begin(), tiling_.end(),
+      std::sort(sort_tiling_.begin(), sort_tiling_.end(),
+                [&](int i, int j) { return mega_reads_[i]->tiling_end < mega_reads_[j]->tiling_end; });
+      og_.tile_maximal(sort_tiling_, mega_reads_, nodes_, tiled_mr_);
+      std::sort(tiled_mr_.begin(), tiled_mr_.end(),
                 [&](int i, int j) -> bool {
-                  const auto st_i = nodes_[i].l_start_node(nodes_).imp_s;
-                  const auto st_j = nodes_[j].l_start_node(nodes_).imp_s;
-                  return st_i < st_j || (st_i == st_j && nodes_[j].imp_e < nodes_[i].imp_e);
+                  const auto st_i = mega_reads_[i]->tiling_start, st_j = mega_reads_[j]->tiling_start;
+                  return st_i < st_j || (st_i == st_j && mega_reads_[i]->tiling_end < mega_reads_[j]->tiling_end);
                 });
     }
 
 
     void print_mega_reads(std::ostream& os, const std::string& name,
                           const std::vector<std::string>* unitigs_sequences = 0) const {
-      if(!mega_reads_.empty()) {
+      if(!comp_mega_reads_.empty()) {
         //        os << '>' << name << ' ' << '(' << sort_mega_reads_.size() << ',' << tiling_.size() << ')' << '\n';
         os << '>' << name << '\n';
-        og_.print_mega_reads(os, tiling_.empty() ? sort_mega_reads_ : tiling_, *coords_, nodes_, unitigs_sequences, dot_);
+        og_.print_mega_reads(os, tiled_mr_.empty() ? sort_tiling_ : tiled_mr_, mega_reads_, *coords_, nodes_, unitigs_sequences, dot_);
         if(dot_)
           *dot_ << "}\n";
       }
