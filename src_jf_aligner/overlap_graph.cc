@@ -72,7 +72,7 @@ void overlap_graph::update_mr_trim(mega_read_info& mr, std::vector<node_info>& n
   {
     const auto& coord = coords[mr.start_node];
     int offset        = 0;
-    for(mr.start_unitig = 0; mr.start_unitig < coord.kmers_info.size(); mr.start_unitig += 2) {
+    for(mr.start_unitig = 0; mr.start_unitig < (int)coord.kmers_info.size(); mr.start_unitig += 2) {
       if(coord.kmers_info[mr.start_unitig])
         break;
       offset += unitigs_lengths[mr.start_unitig / 2];
@@ -134,8 +134,6 @@ void overlap_graph::mega_reads_per_comp(const int n, size_t pb_size, std::vector
       const auto& onode = nodes[comp_it->second.end_node]; // current terminal node of longest path
       if(node.lpath > onode.lpath || (node.lpath == onode.lpath && mr.density > comp_it->second.density))
         comp_it->second = mr;
-    // if(node.lpath > onode.lpath || (node.lpath == onode.lpath &&  node.ldensity > onode.ldensity))
-    //   comp_it->second = i;
     }
   }
 }
@@ -153,7 +151,6 @@ int overlap_graph::tile_greedy(const std::vector<int>& sort_array,
 
   for(const int it_i : sort_array) {
     const auto& mr     = *mega_reads[it_i];
-    //    const auto& node_i = nodes[it_i];
     pos_interval pos_i(mr.tiling_start, mr.tiling_end);
     const double max_overlap       = std::min(k_len * overlap_play, boost::icl::length(pos_i));
     const auto   overlaps          = covered & pos_i;
@@ -239,7 +236,7 @@ void overlap_graph::print_mega_reads(std::ostream& output, const std::vector<int
   for(const int cmr : sort_array) {
     const auto& mr      = *mega_reads[cmr];
     const auto& end_n   = nodes[mr.end_node];
-    const auto& start_n = nodes[mr.start_node];
+    //    const auto& start_n = nodes[mr.start_node];
     const auto& end_c   = coords[mr.end_node];
     const auto& start_c = coords[mr.start_node];
 
@@ -260,9 +257,28 @@ void overlap_graph::print_mega_reads(std::ostream& output, const std::vector<int
       sr_len += unitigs_lengths[unitig.id()];
     sr_len -= (sr.size() - 1) * (k_len - 1);
 
+    // TODO: should the implied start and end of the mega read be
+    // computed and kept in the mega_read_info, instead of being
+    // computed when printing out results?
+    const std::vector<std::string>& us = *unitigs_sequences;
+    double imp_s = start_c.qs;
+    if(mr.start_unitig) {
+      for(int i = 0; i < mr.start_unitig; ++i)
+        imp_s += us[start_c.name_u->unitigs[i].id_].size();
+      imp_s -= (k_len - 1) * (mr.start_unitig - 1);
+    }
+    imp_s = imp_s * start_c.stretch + start_c.offset;
+
+    double imp_e = end_c.qe;
+    if(mr.end_unitig != (int)end_c.name_u->unitigs.size()) {
+      for(int i = end_c.name_u->unitigs.size() - 1; i >= 0; --i)
+        imp_e -= us[end_c.name_u->unitigs[i].id_].size();
+      imp_e += (k_len - 1) * (end_c.name_u->unitigs.size() - mr.end_unitig - 1);
+    }
+    imp_e = imp_e * end_c.stretch + end_c.offset;
 
     output << std::fixed << std::setprecision(2)
-           << start_n.imp_s << ' ' << end_n.imp_e << ' '
+           << imp_s << ' ' << imp_e << ' '
            << start_c.rs << ' ' << end_c.re << ' '
            << start_c.qs << ' ' << (sr_len - (end_c.ql - end_c.qe)) << ' '
            << end_n.lpath << ' ' << std::setprecision(4) << mr.density
