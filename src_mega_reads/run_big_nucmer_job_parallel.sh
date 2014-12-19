@@ -12,7 +12,7 @@ MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:$PATH;
 
 export pid=$$;
-export rundir=/dev/shm/$refseq.$qryseq.$pid.nucmer;
+export rundir=/dev/shm/$pid.nucmer;
 
 function cleanup {
 if [ $$ -eq $pid ];then
@@ -36,9 +36,12 @@ split_contig_file.pl $rundir $qryseq  $qnumbases 1>/dev/null 2>&1 &
 pid2=$!
 wait $pid1 $pid2
 
-(cd $rundir;parallel -j $num_cpus "nucmer $nuc_params -p deltafile.{1}.{2} {1} {2} 1>/dev/null 2>&1" ::: $refseq.* ::: $qryseq.* ;)
+reffilename=$(basename $refseq)
+qryfilename=$(basename $qryseq)
 
-head -n 2 $rundir/deltafile.$refseq.1.$qryseq.1.delta > $refseq.$qryseq.g.delta
-cat  $rundir/deltafile*.delta |grep -v NUCMER | grep -v  $refseq >> $refseq.$qryseq.g.delta
+(cd $rundir;parallel -j $num_cpus "nucmer $nuc_params -p deltafile.{1}.{2} {1} {2} 1>/dev/null 2>&1" ::: $reffilename.* ::: $qryfilename.* ;)
+
+head -n 2 $rundir/deltafile.$reffilename.1.$qryfilename.1.delta > $reffilename.$qryfilename.g.delta
+cat  $rundir/deltafile*.delta |grep -v NUCMER | grep -v  $reffilename >> $reffilename.$qryfilename.g.delta
 
 

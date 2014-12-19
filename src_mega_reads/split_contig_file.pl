@@ -2,7 +2,8 @@
 # Pass the name of a fasta file as an arg and this gives the number of
 # bases in each read of the fasta file
 open (FILE, "$ARGV[1]");
-my $outfilename="$ARGV[0]/$ARGV[1]";
+@f=split(/\//,$ARGV[1]);
+my $outfilename="$ARGV[0]/$f[-1]";
 my $fileindex=1;
 my $basestodate=0;
 my $basestosplit=$ARGV[2];
