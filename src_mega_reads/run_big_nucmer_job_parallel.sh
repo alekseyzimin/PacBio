@@ -6,6 +6,11 @@ qnumbases=$4;
 nuc_params=$5;
 num_cpus=$6
 
+
+MYPATH="`dirname \"$0\"`"
+MYPATH="`( cd \"$MYPATH\" && pwd )`"
+export PATH=$MYPATH:$PATH;
+
 export pid=$$;
 export rundir=/dev/shm/$refseq.$qryseq.$pid.nucmer;
 
