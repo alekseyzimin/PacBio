@@ -48,58 +48,71 @@ struct sequence_psa {
 
   class pos_iterator : public std::iterator<std::input_iterator_tag, const it_elt> {
     const sequence_psa* m_psa;
-    size_t              m_index, m_end;
+    size_t             m_fwd_index, m_fwd_end;
+    size_t             m_bwd_index, m_bwd_end;
     it_elt              m_elt;
     size_t              m_len;
 
   public:
-    pos_iterator() : m_psa(nullptr), m_index(0) { }
-    pos_iterator(const sequence_psa& psa, size_t index, size_t end, size_t len)
+    pos_iterator() : m_psa(nullptr), m_fwd_index(0), m_bwd_index(0) { }
+    pos_iterator(const sequence_psa& psa, size_t fwd_index, size_t fwd_end, size_t bwd_index, size_t bwd_end, size_t len)
       : m_psa(&psa)
-      , m_index(index)
-      , m_end(end)
+      , m_fwd_index(fwd_index)
+      , m_fwd_end(fwd_end)
+      , m_bwd_index(bwd_index)
+      , m_bwd_end(bwd_end)
       , m_len(len)
     { ++*this; }
     pos_iterator(const pos_iterator& rhs)
       : m_psa(rhs.m_psa)
-      , m_index(rhs.m_index)
-      , m_end(rhs.m_end)
+      , m_fwd_index(rhs.m_fwd_index)
+      , m_fwd_end(rhs.m_fwd_end)
+      , m_bwd_index(rhs.m_bwd_index)
+      , m_bwd_end(rhs.m_bwd_end)
       , m_elt(rhs.m_elt)
       , m_len(rhs.m_len)
     { }
     pos_iterator& operator=(const pos_iterator& rhs) {
-      m_psa      = rhs.m_psa;
-      m_index    = rhs.m_index;
-      m_end      = rhs.m_end;
-      m_elt      = rhs.m_elt;
-      m_len      = rhs.m_len;
+      m_psa       = rhs.m_psa;
+      m_fwd_index = rhs.m_fwd_index;
+      m_fwd_end   = rhs.m_fwd_end;
+      m_bwd_index = rhs.m_bwd_index;
+      m_bwd_end   = rhs.m_bwd_end;
+      m_elt       = rhs.m_elt;
+      m_len       = rhs.m_len;
       return *this;
     }
-    bool operator==(const pos_iterator& rhs) const { return m_index == rhs.m_index && m_psa == rhs.m_psa; }
-    bool operator!=(const pos_iterator& rhs) const { return m_index != rhs.m_index || m_psa != rhs.m_psa; }
+    bool operator==(const pos_iterator& rhs) const {
+      return m_fwd_index == rhs.m_fwd_index && m_bwd_index == rhs.m_bwd_index && m_psa == rhs.m_psa;
+    }
+    bool operator!=(const pos_iterator& rhs) const { return !operator==(rhs); }
     const it_elt& operator*() const { return m_elt; }
     const it_elt* operator->() const { return &m_elt; }
     pos_iterator& operator++() {
-      std::cout << "op++ m_index:" << m_index << " m_end:" << m_end << "\n";
-      for( ; m_index != m_end; ++m_index) {
-        const size_t x = (*m_psa->m_sa)[m_index];
-        const size_t search = x >> m_search_bits;
-        if(search >= m_psa->m_header_search.size()) continue;
-        const auto start = m_psa->m_offsets.cbegin() + m_psa->m_header_search[search];
-        const auto end = start + (search == m_psa->m_header_search.size() - 1
-                                  ? m_psa->m_header_search.size() - 1
-                                  : m_psa->m_header_search[search + 1] + 1);
-        const auto next = std::lower_bound(start, end, x, [](const offset_type& j, size_t i) { return j.sequence <= i; });
-        std::cout << "loop m_index:" << m_index << " m_end:" << m_end << " x:" << x << " m_len:" << m_len << " next:" << next->sequence << "\n";
+      bool fwd;
+      while((fwd = m_fwd_index != m_fwd_end) || m_bwd_index != m_bwd_end) {
+        const size_t x = (*m_psa->m_sa)[fwd ? m_fwd_index++ : m_bwd_index++];
+        // const size_t search = x >> m_search_bits;
+        // if(search >= m_psa->m_header_search.size()) continue;
+        // const auto start = m_psa->m_offsets.cbegin() + m_psa->m_header_search[search];
+        // std::cout << "off:" << m_psa->m_header_search[search + 1] << "\n";
+        // const auto end = start + (search == m_psa->m_header_search.size() - 1
+        //                           ? m_psa->m_header_search.size() - 1
+        //                           : m_psa->m_header_search[search + 1] + 1);
+        const auto start = m_psa->m_offsets.cbegin();
+        const auto end   = m_psa->m_offsets.cend();
+        const auto next  = std::lower_bound(start, end, x, [](const offset_type& j, size_t i) { return j.sequence <= i; });
         if(x + m_len > next->sequence) continue;
         const auto res = next - 1;
         m_elt.frag = &m_psa->m_headers[res->header];
-        m_elt.offset = x - res->sequence;
+        m_elt.offset = x - res->sequence + 1;
+        if(!fwd) m_elt.offset = -m_elt.offset;
         return *this;
       }
       // Reach the end
       m_psa   = 0;
-      m_index = 0;
+      m_fwd_index = 0;
+      m_bwd_index = 0;
       return *this;
     }
     pos_iterator operator++(int) { pos_iterator res(*this); ++*this; return res; }
@@ -126,6 +139,7 @@ struct sequence_psa {
       throw std::runtime_error(std::string("Can't open file ") + path);
     append_fasta(is);
   }
+
   size_t sequence_size() const { return m_offsets.back().sequence; }
   size_t nb_mers() const { return sequence_size() - (m_min_size - 1) * m_headers.size(); }
 
@@ -138,17 +152,29 @@ struct sequence_psa {
   }
 
   template<typename MerType>
-  std::pair<pos_iterator, pos_iterator> equal_range(const MerType& m) {
-    std::cout << "search for " << m.k() << ' ' << m << ' ' << std::hex << m.word(0) << std::endl;
-    std::cout << mer_sa_imp::str_to_mer(m.to_str().c_str(), m.k()) << std::endl;
-    auto res = SA::search(compact_dna::const_iterator_at(m_sequence.data()), sequence_size(),
-                          m_sa->begin(), nb_mers(), m_counts.data(),
-                          m_min_size, m_max_size,
-                          m.to_str().c_str(), m.k());
+  std::pair<pos_iterator, pos_iterator> equal_range(const MerType& m, const MerType& rm) {
+    auto fwd_res = SA::search(compact_dna::const_iterator_at(m_sequence.data()), sequence_size(),
+                              m_sa->begin(), nb_mers(), m_counts.data(),
+                              m_min_size, m_max_size,
+                              m.to_str().c_str(), m.k());
+    auto bwd_res = SA::search(compact_dna::const_iterator_at(m_sequence.data()), sequence_size(),
+                              m_sa->begin(), nb_mers(), m_counts.data(),
+                              m_min_size, m_max_size,
+                              rm.to_str().c_str(), m.k());
+    if(rm < m)
+      std::swap(fwd_res, bwd_res);
                           //
                           //                          mer_dna_off(m), m.k());
-    std::cout << res.first << ' ' << res.second << std::endl;
-    return std::make_pair(pos_iterator(*this, res.second, res.second + res.first, m.k()), pos_iterator());
+    std::cout << fwd_res.first << ' ' << fwd_res.second << ' ' << bwd_res.first << ' ' << bwd_res.second << ' ' << (m < rm) << std::endl;
+    return std::make_pair(pos_iterator(*this,
+                                       fwd_res.second, fwd_res.second + fwd_res.first,
+                                       bwd_res.second, bwd_res.second + bwd_res.first,
+                                       m.k()), pos_iterator());
+  }
+
+  template<typename MerType>
+  std::pair<pos_iterator, pos_iterator> equal_range(const MerType& m) {
+    return equal_range(m, m.get_reverse_complement());
   }
 
   template<typename Iterator>
