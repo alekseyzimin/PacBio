@@ -25,10 +25,10 @@ TEST(SuperReadParser, OneRead) {
   create_sequence(file.path);
 
   mer_dna::k(17);
-
-  mer_pos_hash_type hash(1024);
-  frag_lists names(1);
-  superread_parse(1, hash, names, file.path);
+  sequence_psa psa;
+  psa.append_fasta(file.path);
+  psa.compute_psa(10, mer_dna::k());
+  EXPECT_TRUE(psa.check_psa());
 
   // Check every k-mer in the sequence
   std::ifstream f(file.path);
@@ -43,7 +43,9 @@ TEST(SuperReadParser, OneRead) {
     mer_dna rm(m.get_reverse_complement());
     bool is_canonical = m < rm;
 
-    const auto list = hash.equal_range(is_canonical ? m : rm);
+    //    const auto list = psa.equal_range(is_canonical ? m : rm);
+    std::cout << "i:" << i << " m:" << m << "\n";
+    const auto list = psa.equal_range(m);
     ASSERT_TRUE(list.first != list.second);
     EXPECT_EQ(1, std::distance(list.first, list.second));
     //    const mer_pos_hash_type::position_type& pos = *list->cbegin();
@@ -53,76 +55,76 @@ TEST(SuperReadParser, OneRead) {
   }
 }
 
-std::string create_sequences(const char* path, size_t size, int nb_reads, size_t read_size) {
-  static const char bases[4] = { 'A', 'C', 'G','T' };
-  std::string sequence(size, 'A');
-  for(size_t i = 0; i < sequence.size(); ++i)
-    sequence[i] = bases[random() % 4];
+// std::string create_sequences(const char* path, size_t size, int nb_reads, size_t read_size) {
+//   static const char bases[4] = { 'A', 'C', 'G','T' };
+//   std::string sequence(size, 'A');
+//   for(size_t i = 0; i < sequence.size(); ++i)
+//     sequence[i] = bases[random() % 4];
 
-  std::ofstream f(path);
-  if(!f.good())
-    throw std::runtime_error("Failed to open sequence file");
-  for(int i = 0; i < nb_reads; ++i) {
-    f << ">" << i << "\n"
-      << sequence.substr(i * (size - read_size) / (nb_reads - 1), read_size) << "\n";
-  }
-  return sequence;
-}
+//   std::ofstream f(path);
+//   if(!f.good())
+//     throw std::runtime_error("Failed to open sequence file");
+//   for(int i = 0; i < nb_reads; ++i) {
+//     f << ">" << i << "\n"
+//       << sequence.substr(i * (size - read_size) / (nb_reads - 1), read_size) << "\n";
+//   }
+//   return sequence;
+// }
 
-template<typename T>
-T ceil_div(T x, T y) {
-  return x / y + (x % y != 0);
-}
+// template<typename T>
+// T ceil_div(T x, T y) {
+//   return x / y + (x % y != 0);
+// }
 
-TEST(SuperReadParser, ManyReads) {
-  remove_file file;
-  static const int nb_reads   = 21;
-  static const int nb_threads = 5;
-  static const int seq_len    = 1000;
-  static const int delta      = (seq_len - 100) / (nb_reads - 1);
-  static const int read_len   = 100;
-  std::string sequence = create_sequences(file.path, seq_len, nb_reads, read_len);
+// TEST(SuperReadParser, ManyReads) {
+//   remove_file file;
+//   static const int nb_reads   = 21;
+//   static const int nb_threads = 5;
+//   static const int seq_len    = 1000;
+//   static const int delta      = (seq_len - 100) / (nb_reads - 1);
+//   static const int read_len   = 100;
+//   std::string sequence = create_sequences(file.path, seq_len, nb_reads, read_len);
 
-  mer_dna::k(17);
+//   mer_dna::k(17);
 
-  mer_pos_hash_type hash(2048);
-  frag_lists        names(nb_threads);
-  superread_parse(nb_threads, hash, names, file.path);
+//   mer_pos_hash_type hash(2048);
+//   frag_lists        names(nb_threads);
+//   superread_parse(nb_threads, hash, names, file.path);
 
-  EXPECT_EQ((size_t)nb_threads, names.size());
-  {
-    size_t sum  = 0;
-    for (int i = 0; i < nb_threads; ++i)
-      sum += names[i].size();
-    EXPECT_EQ((size_t)nb_reads, sum);
-  }
+//   EXPECT_EQ((size_t)nb_threads, names.size());
+//   {
+//     size_t sum  = 0;
+//     for (int i = 0; i < nb_threads; ++i)
+//       sum += names[i].size();
+//     EXPECT_EQ((size_t)nb_reads, sum);
+//   }
 
-  for(size_t i = 0; i < sequence.size() - mer_dna::k() + 1; ++i) {
-    mer_dna m(sequence.substr(i, mer_dna::k()));
-    mer_dna rm(m.get_reverse_complement());
-    const bool is_canonical = m < rm;
-    SCOPED_TRACE(::testing::Message() << "i:" << i << " m:" << m << " canonical:" << is_canonical << " delta:" << delta);
+//   for(size_t i = 0; i < sequence.size() - mer_dna::k() + 1; ++i) {
+//     mer_dna m(sequence.substr(i, mer_dna::k()));
+//     mer_dna rm(m.get_reverse_complement());
+//     const bool is_canonical = m < rm;
+//     SCOPED_TRACE(::testing::Message() << "i:" << i << " m:" << m << " canonical:" << is_canonical << " delta:" << delta);
 
-    auto list = hash.equal_range(is_canonical ? m : rm);
-    EXPECT_TRUE(list.first != list.second);
-    int count = 0;
-    for(auto it = list.first; it != list.second; ++it, ++count) {
-      EXPECT_EQ(read_len, (int)it->frag->len);
-      int read_id = std::atoi(it->frag->fwd.name.c_str());
-      // Is id valid?
-      EXPECT_TRUE(read_id >= 0 && read_id < nb_reads);
-      // Is the read covering position i?
-      EXPECT_TRUE((size_t)(read_id * delta) <= i && (size_t)(read_id * delta + read_len) > i);
-      // Is offset valid
-      EXPECT_EQ((int)i + 1 - read_id * delta, is_canonical ? it->offset : -it->offset);
-    }
-    // Is number of reads covering position i correct?
-    if(i <= read_len - mer_dna::k())
-      EXPECT_EQ((int)i / delta + 1, count);
-    else if(i >= seq_len - read_len)
-      EXPECT_EQ((seq_len - read_len) / delta - (int)(i - read_len + mer_dna::k() - 1) / delta, count);
-    else
-      EXPECT_EQ((int)i / delta - (int)(i - read_len + mer_dna::k() - 1) / delta, count);
-  }
-}
+//     auto list = hash.equal_range(is_canonical ? m : rm);
+//     EXPECT_TRUE(list.first != list.second);
+//     int count = 0;
+//     for(auto it = list.first; it != list.second; ++it, ++count) {
+//       EXPECT_EQ(read_len, (int)it->frag->len);
+//       int read_id = std::atoi(it->frag->fwd.name.c_str());
+//       // Is id valid?
+//       EXPECT_TRUE(read_id >= 0 && read_id < nb_reads);
+//       // Is the read covering position i?
+//       EXPECT_TRUE((size_t)(read_id * delta) <= i && (size_t)(read_id * delta + read_len) > i);
+//       // Is offset valid
+//       EXPECT_EQ((int)i + 1 - read_id * delta, is_canonical ? it->offset : -it->offset);
+//     }
+//     // Is number of reads covering position i correct?
+//     if(i <= read_len - mer_dna::k())
+//       EXPECT_EQ((int)i / delta + 1, count);
+//     else if(i >= seq_len - read_len)
+//       EXPECT_EQ((seq_len - read_len) / delta - (int)(i - read_len + mer_dna::k() - 1) / delta, count);
+//     else
+//       EXPECT_EQ((int)i / delta - (int)(i - read_len + mer_dna::k() - 1) / delta, count);
+//   }
+// }
 }

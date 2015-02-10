@@ -104,7 +104,6 @@ int main(int argc, char *argv[])
     dot.open(args.dot_arg, args.threads_arg);
 
   // Read k-unitig lengths
-  // Read k-unitig lengths
   std::vector<int> unitigs_lengths;
   std::vector<std::string> sequences;
   if(args.unitigs_lengths_given) { // File with lengths
