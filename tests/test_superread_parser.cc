@@ -43,8 +43,6 @@ TEST(SuperReadParser, OneRead) {
     mer_dna rm(m.get_reverse_complement());
     bool is_canonical = m < rm;
 
-    //    const auto list = psa.equal_range(is_canonical ? m : rm);
-    std::cout << "i:" << i << " m:" << m << "\n";
     const auto list = psa.equal_range(m);
     ASSERT_TRUE(list.first != list.second);
     EXPECT_EQ(1, std::distance(list.first, list.second));

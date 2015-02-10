@@ -31,7 +31,7 @@ void sequence_psa::append_fasta(std::istream& is) {
     }
 
     if(seq_offset > old_seq_offset) {
-      m_headers.push_back(frag_lists::frag_info(seq_offset - old_seq_offset, header_line.c_str()));
+      m_headers.push_back(frag_lists::frag_info(seq_offset - old_seq_offset, header_line.c_str() + 1));
       const size_t next_search_offset = seq_offset >> m_search_bits;
       for(size_t i = search_offset + 1; i <= next_search_offset; ++i)
         m_header_search.push_back(m_offsets.size() - 1);
