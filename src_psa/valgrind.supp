@@ -1,0 +1,6 @@
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:_ZN20compact_iterator_imp10mask_storeImLb1EE5storeEPmmm
+}
