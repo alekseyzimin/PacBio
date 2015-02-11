@@ -146,7 +146,6 @@ struct sequence_psa {
   void compute_psa(unsigned int min_size, unsigned int max_size,
                    unsigned int threads = std::thread::hardware_concurrency());
   bool check_psa() const {
-    std::cout << "check " << sequence_size() << ' ' << nb_mers() << std::endl;
     return SA::check(compact_dna::iterator_at(m_sequence.data()), sequence_size(),
                      m_sa->cbegin(), nb_mers(), m_counts.data(), m_min_size, m_max_size);
   }
@@ -161,11 +160,7 @@ struct sequence_psa {
                               m_sa->begin(), nb_mers(), m_counts.data(),
                               m_min_size, m_max_size,
                               rm.to_str().c_str(), m.k());
-    if(rm < m)
-      std::swap(fwd_res, bwd_res);
-                          //
-                          //                          mer_dna_off(m), m.k());
-    std::cout << fwd_res.first << ' ' << fwd_res.second << ' ' << bwd_res.first << ' ' << bwd_res.second << ' ' << (m < rm) << std::endl;
+    if(rm < m) std::swap(fwd_res, bwd_res);
     return std::make_pair(pos_iterator(*this,
                                        fwd_res.second, fwd_res.second + fwd_res.first,
                                        bwd_res.second, bwd_res.second + bwd_res.first,
