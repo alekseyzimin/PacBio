@@ -56,6 +56,7 @@ create_thread(int thid, int nb_threads, barrier<std::mutex>* thread_barrier, sli
   // counts_end is at most nb_counts - 1, and need to zero up to
   // nb_counts.
   std::fill_n(mer_counts + counts_start, counts_end - counts_start + (thid == nb_threads), (uint64_t)0);
+  thread_barrier->wait();
 
   {
     std::unique_ptr<uint64_t[]> tmp_counts(new uint64_t[nb_counts - 1]);
@@ -92,7 +93,7 @@ void sequence_psa::compute_psa(unsigned int min_size, unsigned int max_size, uns
   slice_for<size_t, barrier<std::mutex>> slicer(SA_barrier);
   std::vector<std::thread> thread_handles;
   m_counts.resize((1 << (2 * min_size)) + 1);
-  m_sa.reset(new compact_index<uint64_t>(nb_mers()));
+  m_sa.reset(new compact_index<uint64_t>(nb_mers(), compact_index<uint64_t>::required_bits(sequence_size())));
 
   for(unsigned int i = 0; i < threads; ++i)
     thread_handles.push_back(std::thread(create_thread, i, threads, &SA_barrier, &slicer,

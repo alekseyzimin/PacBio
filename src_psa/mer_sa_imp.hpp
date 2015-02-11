@@ -449,6 +449,10 @@ struct SA {
       out << "SAsize=" << SAsize << '>' << Tsize << "=Tsize" << std::endl;
       return false;
     }
+    if(SAsize != counts[nb_counts - 1]) {
+      out << "SAsize=" << SAsize << "!=counts[-1]=" << counts[nb_counts - 1] << std::endl;
+      return false;
+    }
     global_timer.start("Check SA offsets are in range");
     for(SAIDX i = 0; i < SAsize; ++i) {
       if(SA[i] >= Tsize || is_negative(SA[i])) {
@@ -471,9 +475,9 @@ struct SA {
         for(size_t j = counts[i]; j < counts[i + 1]; ++j) {
           auto pos = SA[j];
           if(pos + mer_size < Tsize) {
-            uint64_t m = str_to_mer(T + SA[j], mer_size);
+            uint64_t m = str_to_mer(T + pos, mer_size);
             if(m != i) {
-              out << "Incorrect mer at index " << j << ": " << std::hex << i << "!=" << std::hex << m << std::endl;
+              out << "Incorrect mer at index " << j << " pos " << pos << ": " << std::hex << i << "!=" << std::hex << m << std::endl;
               return false;
             }
           }
