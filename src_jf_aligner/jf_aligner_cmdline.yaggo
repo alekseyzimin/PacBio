@@ -46,6 +46,9 @@ option("max-match") {
 option("H", "no-header") {
   description "Do not output header"
   off }
+option("0", "zero-match") {
+  description "Output header even if query has no match"
+  off }
 option("max-count") {
   description "Maximum mer count in super read to be used for alignment"
   uint32; default 200 }

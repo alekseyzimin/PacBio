@@ -37,9 +37,9 @@ void print_coords_header(Multiplexer* m, bool compact) {
 
 void print_coords(Multiplexer::ostream& out, const std::string& pb_name, const size_t pb_size,
                   const bool compact, const align_pb::coords_info_type& coords,
-                            const std::vector<int>& order) {
+                  const std::vector<int>& order, bool zero_skip = true) {
   const size_t nb_lines = coords.size();
-  if(nb_lines == 0) return;
+  if(nb_lines == 0 && zero_skip) return;
 
   if(compact)
     out << ">" << nb_lines << " " << pb_name << "\n";
@@ -103,7 +103,8 @@ void print_details(Multiplexer::ostream& out, const std::string& pb_name, const 
 }
 
 void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* coords_m,
-                      const coarse_aligner* align_data, const fine_aligner* short_align_data) {
+                      const coarse_aligner* align_data, const fine_aligner* short_align_data,
+                      bool skip_zero) {
   parse_sequence                        parser;
   coarse_aligner::thread                aligner(*align_data);
   std::unique_ptr<fine_aligner::thread> short_aligner;
@@ -157,7 +158,7 @@ void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* c
       //     //                  << it.align_k_
       //             << '\n';
       // }
-      print_coords(*coords_io, name, pb_size, args.compact_flag, *coords, sort_array);
+      print_coords(*coords_io, name, pb_size, args.compact_flag, *coords, sort_array, skip_zero);
       if(details_io) print_details(*details_io, name, aligner.frags_pos());
     }
   }
@@ -239,7 +240,7 @@ int main(int argc, char *argv[])
   std::vector<std::thread> threads;
   for(unsigned int i = 0; i < args.threads_arg; ++i)
     threads.push_back(std::thread(print_alignments, &reads, details.multiplexer(), coords.multiplexer(),
-                                  &align_data, short_align_data.get()));
+                                  &align_data, short_align_data.get(), !args.zero_match_flag));
   for(auto& th : threads)
     th.join();
 
