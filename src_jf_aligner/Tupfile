@@ -10,7 +10,7 @@ SRCS = pb_aligner.cc superread_parser.cc union_find.cc overlap_graph.cc super_re
 
 JF_ALIGNER_OBJS = jf_aligner.o pb_aligner.o superread_parser.o super_read_name.o coarse_aligner.o fine_aligner.o misc.o ../lib/libcommon.a
 CREATE_MEGA_READS_OBJS = create_mega_reads.o pb_aligner.o superread_parser.o union_find.o overlap_graph.o super_read_name.o coarse_aligner.o fine_aligner.o misc.o
-LONGEST_PATH_OBJS = longest_path_overlap_graph2.o pb_aligner.o superread_parser.o union_find.o overlap_graph.o super_read_name.o coords_parsing.o
+LONGEST_PATH_OBJS = longest_path_overlap_graph2.o pb_aligner.o superread_parser.o union_find.o overlap_graph.o super_read_name.o coords_parsing.o misc.o
 TILE_OBJS = tile_mega_reads.o overlap_graph.o super_read_name.o union_find.o
 
 : foreach $(CMDLINES) |> !yaggo |>

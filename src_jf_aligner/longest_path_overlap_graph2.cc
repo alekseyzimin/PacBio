@@ -8,6 +8,10 @@
 #include <src_jf_aligner/pb_aligner.hpp>
 #include <src_jf_aligner/overlap_graph.hpp>
 #include <src_jf_aligner/coords_parsing.hpp>
+#include <src_jf_aligner/misc.hpp>
+
+#include <debug.hpp>
+
 
 
 typedef longest_path_overlap_graph2_cmdline cmdline_args;
@@ -24,7 +28,9 @@ void fill_coords(int thid, std::vector<std::string>& lines, align_pb::coords_inf
 }
 
 void create_mega_reads(int thid, coords_parser* parser, frag_lists* frags,
-                       Multiplexer* output_m, overlap_graph* graph_walker, Multiplexer* dot_m) {
+                       Multiplexer* output_m, overlap_graph* graph_walker,
+                       const std::vector<std::string>* unitigs_sequences,
+                       Multiplexer* dot_m) {
   align_pb::coords_info_type            coords;
   overlap_graph::thread                 graph(*graph_walker);
   Multiplexer::ostream                  output(output_m);
@@ -32,11 +38,22 @@ void create_mega_reads(int thid, coords_parser* parser, frag_lists* frags,
 
   for(coords_parser::stream coords_stream(*parser); coords_stream; ++coords_stream) {
     fill_coords(thid, coords_stream->lines, coords, *frags);
-
+    // std::cerr << coords_stream->header << ' ' << coords.size() << '\n';
+    // for(const auto& it : coords) {
+    //   std::cerr << it.rs << ' ' << it.re << ' ' << it.qs << ' ' << it.qe << ' ' << it.nb_mers << ' '
+    //             << it.pb_cons << ' ' << it.sr_cons << ' ' << it.pb_cover << ' ' << it.sr_cover << ' '
+    //             << it.rl << ' ' << it.ql << ' '
+    //             << it.qfrag->len << ' ' << it.name_u->unitigs << ' '
+    //             << it.kmers_info << ' ' << it.bases_info << ' '
+    //             << std::fixed << std::setprecision(1)
+    //             << it.stretch << ' ' << it.offset << ' ' << it.avg_err << ' '
+    //     //                << it.align_k_
+    //             << '\n';
+    // }
     graph.reset(coords, coords_stream->header, dot.get());
     graph.traverse();
     graph.term_node_per_comp(coords[0].rl, args.density_arg, args.min_length_arg);
-    graph.print_mega_reads(output, coords_stream->header);
+    graph.print_mega_reads(output, coords_stream->header, unitigs_sequences);
     output.end_record();
     if(dot)
       dot->end_record();
@@ -68,38 +85,30 @@ int main(int argc, char* argv[]) {
   // Read k-unitig lengths
   std::vector<int> unitigs_lengths;
   std::vector<std::string> sequences;
-  {
-    if(args.unitigs_lengths_given) { // File with lengths
-      std::ifstream is(args.unitigs_lengths_arg);
-      if(!is.good())
-        cmdline_args::error() << "Failed to open unitig lengths map file '" << args.unitigs_lengths_arg << "'";
-      std::string unitig;
-      unsigned int len;
-      is >> unitig >> len;
-      while(is.good()) {
-        unitigs_lengths.push_back(len);
-        is >> unitig >> len;
-      }
-    } else { // Sequence in fasta file given
-      std::ifstream is(args.unitigs_sequences_arg);
-      if(!is.good())
-        cmdline_args::error() << "Failed to open unitigs sequence file '" << args.unitigs_sequences_arg << "'";
-      while(skip_header(is)) {
-        sequences.push_back("");
-        std::getline(is, sequences.back());
-        unitigs_lengths.push_back(sequences.back().size());
-      }
-    }
+  if(args.unitigs_lengths_given) { // File with lengths
+    std::ifstream is(args.unitigs_lengths_arg);
+    if(!is.good())
+      cmdline_args::error() << "Failed to open unitig lengths map file '" << args.unitigs_lengths_arg << "'";
+    read_unitigs_lengths(is, unitigs_lengths);
+  } else { // Sequence in fasta file given
+    std::ifstream is(args.unitigs_sequences_arg);
+    if(!is.good())
+      cmdline_args::error() << "Failed to open unitigs sequence file '" << args.unitigs_sequences_arg << "'";
+    read_unitigs_sequences(is, unitigs_lengths, sequences);
   }
 
   coords_parser parser(args.threads_arg, args.coords_arg);
   parser.start_parsing();
   frag_lists frags(args.threads_arg);
 
+  //  std::cerr << args.density_arg << ' ' << args.min_length_arg << '\n';
   overlap_graph graph_walker(args.overlap_play_arg, args.k_mer_arg, unitigs_lengths, args.errors_arg, args.bases_flag);
   std::vector<std::thread> threads;
   for(unsigned int i = 0; i < args.threads_arg; ++i)
-    threads.push_back(std::thread(create_mega_reads, i, &parser, &frags, output.multiplexer(), &graph_walker, dot.multiplexer()));
+    threads.push_back(std::thread(create_mega_reads, i, &parser, &frags, output.multiplexer(),
+                                  &graph_walker,
+                                  args.unitigs_sequences_given ? &sequences : nullptr,
+                                  dot.multiplexer()));
   for(auto& th : threads)
     th.join();
 
