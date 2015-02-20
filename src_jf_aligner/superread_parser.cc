@@ -103,18 +103,3 @@ void sequence_psa::compute_psa(unsigned int min_size, unsigned int max_size, uns
   for(unsigned int i = 0; i < threads; ++i)
     thread_handles[i].join();
 }
-
-// void superread_parse(int threads, mer_pos_hash_type& hash, frag_lists& names,
-//                      file_vector::const_iterator begin, file_vector::const_iterator end,
-//                      bool compress) {
-//   names.ensure(threads);
-//   stream_manager streams(begin, end);
-//   superreads_read_mers reader(threads, &hash, 0, names, streams, compress);
-//   reader.exec_join(threads);
-// }
-
-// void superread_parse(int threads, mer_pos_hash_type& hash, frag_lists& names, const char* file, bool compress) {
-//   file_vector files;
-//   files.push_back(file);
-//   superread_parse(threads, hash, names, files.cbegin(), files.cend(), compress);
-// }
