@@ -3,35 +3,35 @@
 
 #include <unordered_map>
 #include <src_jf_aligner/pb_aligner.hpp>
-
+#include <src_jf_aligner/superread_parser.hpp>
 
 namespace align_pb {
 typedef std::unordered_map<const char*, mer_lists> frags_pos_type;
 
 template<typename F1, typename F2>
 void do_all_LIS(frags_pos_type& frags_pos, lis_buffer_type& L, std::vector<unsigned int>& P,
-                F1& accept_mer, F2& accept_sequence, size_t window_size) {
+                const F1& accept_mer, const F2& accept_sequence, size_t window_size) {
   // Compute LIS forward and backward on every super reads.
   for(auto& it : frags_pos)
     it.second.do_LIS(accept_mer, accept_sequence, window_size, L, P);
 }
 
 template<typename F1, typename F2>
-static void do_all_LIS(frags_pos_type& frags_pos, F1& accept_mer, F2& accept_sequence, size_t window_size) {
+static void do_all_LIS(frags_pos_type& frags_pos, const F1& accept_mer, const F2& accept_sequence, size_t window_size) {
   lis_buffer_type L;
   std::vector<unsigned int> P;
   do_all_LIS(frags_pos, L, P, accept_mer, accept_sequence, window_size);
 }
 
 // Find all super reads that have k-mers in common with a PacBio
-// read. ary contains the k-mers from the super reads, parser is
-// initialized to parse the PacBio read. The results are stored in
-// frags_pos.
-void fetch_super_reads(const mer_pos_hash_type& ary, parse_sequence& parser,
-                       frags_pos_type& frags_pos, const int max_mer_count = 0);
+// read. psa contains the (partial) suffix array from the super reads,
+// parser is initialized to parse the PacBio read. The results are
+// stored in frags_pos.
+void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
+                       frags_pos_type& frags_pos, const int max_mer_count = std::numeric_limits<int>::max());
 
 class coarse_aligner {
-  const mer_pos_hash_type& ary_;
+  const sequence_psa&      psa_;
   const unsigned int       align_k_; // k-mer length used for alignment
   lis_align::affine_capped accept_mer_;
   lis_align::linear        accept_sequence_;
@@ -51,21 +51,22 @@ class coarse_aligner {
 
 
 public:
-  coarse_aligner(const mer_pos_hash_type& ary, const unsigned int align_k,
+  coarse_aligner(const sequence_psa& psa, const unsigned int align_k,
                  double stretch_factor, double stretch_constant, double stretch_cap, size_t window_size,
                  bool forward = false, bool max_match = false, int max_mer_count = 0,
-                 double matching_mers = 0.0, double matching_bases = 0.0) :
-    ary_(ary),
-    align_k_(align_k),
-    accept_mer_(stretch_factor, stretch_constant, stretch_cap),
-    accept_sequence_(stretch_factor),
-    window_size_(window_size),
-    forward_(forward),
-    max_match_(max_match),
-    max_mer_count_(max_mer_count),
-    matching_mers_factor_(matching_mers),
-    matching_bases_factor_(matching_bases),
-    unitigs_lengths_(0), unitigs_k_(0)
+                 double matching_mers = 0.0, double matching_bases = 0.0)
+    : psa_(psa)
+    , align_k_(align_k)
+    , accept_mer_(stretch_factor, stretch_constant, stretch_cap)
+    , accept_sequence_(stretch_factor)
+    , window_size_(window_size)
+    , forward_(forward)
+    , max_match_(max_match)
+    , max_mer_count_(max_mer_count)
+    , matching_mers_factor_(matching_mers)
+    , matching_bases_factor_(matching_bases)
+    , unitigs_lengths_(0)
+    , unitigs_k_(0)
   { }
 
   coarse_aligner& unitigs_lengths(const std::vector<int>* m, unsigned int unitigs_k) {

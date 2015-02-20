@@ -5,9 +5,10 @@ void fetch_local_super_reads(const short_mer_pos_hash_type& ary, short_parse_seq
                              frags_local_pos_type& frags_pos) {
   while(parser.next()) { // Process each k-mer
     const bool is_canonical = parser.mer<0>().is_canonical();
-    auto list = ary.equal_range(is_canonical ? parser.mer<0>().m : parser.mer<0>().rm);
+    auto list = ary.equal_range_size(parser.mer<0>().m : parser.mer<0>().rm);
+    auto& it = list.first;
 
-    for(auto it = list.first ; it != list.second; ++it) { // For each instance of the k-mer in a super read
+    for(size_t i = 0; i < list.second; ++i, ++it) { // For each instance of the k-mer in a super read
       auto local_mls = frags_pos.find(it->frag->fwd.name.c_str());
       if(local_mls == frags_pos.end()) continue;
       const auto mls_end = local_mls->second.end();

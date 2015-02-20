@@ -10,6 +10,7 @@
 typedef int32_t saint_t;
 #include <src_psa/mer_sa_imp.hpp>
 
+// TODO: use mer_dna more efficiently. Avoid mer_dna -> string -> compact_dna
 // jellyfish mer_dna are already compact dna.
 // struct mer_dna_off {
 //   const mer_dna& m_m;
@@ -48,15 +49,15 @@ struct sequence_psa {
 
   class pos_iterator : public std::iterator<std::input_iterator_tag, const it_elt> {
     const sequence_psa* m_psa;
-    size_t             m_fwd_index, m_fwd_end;
-    size_t             m_bwd_index, m_bwd_end;
+    size_t              m_fwd_index, m_fwd_end;
+    size_t              m_bwd_index, m_bwd_end;
     it_elt              m_elt;
     size_t              m_len;
 
   public:
     pos_iterator() : m_psa(nullptr), m_fwd_index(0), m_bwd_index(0) { }
-    pos_iterator(const sequence_psa& psa, size_t fwd_index, size_t fwd_end, size_t bwd_index, size_t bwd_end, size_t len)
-      : m_psa(&psa)
+    pos_iterator(const sequence_psa* psa, size_t fwd_index, size_t fwd_end, size_t bwd_index, size_t bwd_end, size_t len)
+      : m_psa(psa)
       , m_fwd_index(fwd_index)
       , m_fwd_end(fwd_end)
       , m_bwd_index(bwd_index)
@@ -92,6 +93,7 @@ struct sequence_psa {
       bool fwd;
       while((fwd = m_fwd_index != m_fwd_end) || m_bwd_index != m_bwd_end) {
         const size_t x = (*m_psa->m_sa)[fwd ? m_fwd_index++ : m_bwd_index++];
+        // TODO: use speed up search
         // const size_t search = x >> m_search_bits;
         // if(search >= m_psa->m_header_search.size()) continue;
         // const auto start = m_psa->m_offsets.cbegin() + m_psa->m_header_search[search];
@@ -111,8 +113,8 @@ struct sequence_psa {
       }
       // Reach the end
       m_psa   = 0;
-      m_fwd_index = 0;
-      m_bwd_index = 0;
+      m_fwd_index = m_fwd_end = 0;
+      m_bwd_index = m_bwd_end = 0;
       return *this;
     }
     pos_iterator operator++(int) { pos_iterator res(*this); ++*this; return res; }
@@ -142,6 +144,7 @@ struct sequence_psa {
 
   size_t sequence_size() const { return m_offsets.back().sequence; }
   size_t nb_mers() const { return sequence_size() - (m_min_size - 1) * m_headers.size(); }
+  size_t nb_sequences() const { return m_headers.size(); }
 
   void compute_psa(unsigned int min_size, unsigned int max_size,
                    unsigned int threads = std::thread::hardware_concurrency());
@@ -150,44 +153,69 @@ struct sequence_psa {
                      m_sa->cbegin(), nb_mers(), m_counts.data(), m_min_size, m_max_size);
   }
 
+  // template<typename MerType>
+  // std::pair<pos_iterator, pos_iterator> equal_range(const MerType& m, const MerType& rm) const {
+  //   auto res = equal_range_size(m, rm);
+  //   return std::make_pair(res.first, pos_iterator());
+  // }
+
   template<typename MerType>
-  std::pair<pos_iterator, pos_iterator> equal_range(const MerType& m, const MerType& rm) {
+  std::pair<pos_iterator, pos_iterator> equal_range(const MerType& m) const {
+    return equal_range(m, m.get_reverse_complement());
+  }
+
+  template<typename MerType>
+  std::pair<pos_iterator, pos_iterator> equal_range(const MerType& m, const MerType& rm,
+                                                    size_t max = std::numeric_limits<size_t>::max()) const {
     auto fwd_res = SA::search(compact_dna::const_iterator_at(m_sequence.data()), sequence_size(),
                               m_sa->begin(), nb_mers(), m_counts.data(),
                               m_min_size, m_max_size,
                               m.to_str().c_str(), m.k());
+    if(fwd_res.first >= max)
+      return std::make_pair(pos_iterator(), pos_iterator());
     auto bwd_res = SA::search(compact_dna::const_iterator_at(m_sequence.data()), sequence_size(),
                               m_sa->begin(), nb_mers(), m_counts.data(),
                               m_min_size, m_max_size,
                               rm.to_str().c_str(), m.k());
+    if(fwd_res.first + bwd_res.first >= max)
+      return std::make_pair(pos_iterator(), pos_iterator());
     if(rm < m) std::swap(fwd_res, bwd_res);
-    return std::make_pair(pos_iterator(*this,
+    return std::make_pair(pos_iterator(this,
                                        fwd_res.second, fwd_res.second + fwd_res.first,
                                        bwd_res.second, bwd_res.second + bwd_res.first,
-                                       m.k()), pos_iterator());
-  }
-
-  template<typename MerType>
-  std::pair<pos_iterator, pos_iterator> equal_range(const MerType& m) {
-    return equal_range(m, m.get_reverse_complement());
+                                       m.k()),
+                          pos_iterator());
   }
 
   template<typename Iterator>
   static sequence_psa read_files(Iterator start, Iterator end) {
     sequence_psa res;
-    for( ; start != end; ++start) {
-      //      global_timer.start(std::string("Reading file ") + *start);
+    for( ; start != end; ++start)
       res.append_fasta(*start);
-    }
-    //    global_timer.stop();
+    return res;
+  }
+
+  template<typename File>
+  static sequence_psa read_file(File& path) {
+    sequence_psa res;
+    res.append_fasta(path);
     return res;
   }
 };
 
-// void superread_parse(int threads, mer_pos_hash_type& hash, frag_lists& names,
-//                      file_vector::const_iterator begin, file_vector::const_iterator end,
-//                      bool compress = false);
+template<typename File>
+sequence_psa superread_parse(File& file, unsigned int min_size = 10, unsigned int max_size = 17) {
+  auto res = sequence_psa::read_file(file);
+  res.compute_psa(min_size, max_size);
+  return res;
+}
 
-// void superread_parse(int threads, mer_pos_hash_type& hash, frag_lists& names, const char* file, bool compress = false);
+template<typename FileIterator>
+sequence_psa superread_parse(FileIterator first, FileIterator last, unsigned int min_size = 10, unsigned int max_size = 17) {
+  auto res = sequence_psa::read_files(first, last);
+  res.compute_psa(min_size, max_size);
+  return res;
+}
+
 
 #endif /* _SUPERREAD_PARSER_HPP_ */

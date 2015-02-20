@@ -70,23 +70,22 @@ TEST(PbAligner, FakeSequences) {
   remove_file sr_file;
   std::string pacbio_sequence = generate_sequences(sr_file.path);
 
-  mer_pos_hash_type hash(2048);
-  frag_lists names(1);
-  superread_parse(1, hash, names, sr_file.path);
-  EXPECT_EQ((size_t)1, names.size());
+  auto psa = superread_parse(sr_file.path);
+  EXPECT_EQ((size_t)10, psa.nb_sequences());
 
   parse_sequence           parser(pacbio_sequence);
   align_pb::frags_pos_type frags_pos;
-  lis_align::affine_capped accept_mer(10, 2, 1e9);
-  lis_align::linear        accept_sequence(10);
-  align_pb::fetch_super_reads(hash, parser, frags_pos);
-  align_pb::do_all_LIS(frags_pos, accept_mer, accept_sequence, 1);
+  // lis_align::affine_capped accept_mer(10, 2, 1e9);
+  // lis_align::linear        accept_sequence(10);
+  align_pb::fetch_super_reads(psa, parser, frags_pos);
+  align_pb::do_all_LIS(frags_pos, lis_align::accept_all(), lis_align::accept_all(), 1);
 
   EXPECT_EQ((size_t)10, frags_pos.size());
   for(auto it = frags_pos.cbegin(); it != frags_pos.cend(); ++it) {
     const align_pb::mer_lists& ml = it->second;
     int read_id = std::atoi(it->first + 1);
     ASSERT_TRUE(read_id >= 1 && read_id <= 10); // Read id is valid
+    SCOPED_TRACE(::testing::Message() << "Read:" << read_id);
     EXPECT_TRUE(std::is_sorted(ml.fwd.offsets.cbegin(), ml.fwd.offsets.cend())); // mers offsets must be sorted
     EXPECT_TRUE(std::is_sorted(ml.bwd.offsets.cbegin(), ml.bwd.offsets.cend())); // mers offsets must be sorted
     EXPECT_EQ(ml.fwd.offsets.size(), ml.fwd.lis.size()); // lis has same size
@@ -106,7 +105,6 @@ TEST(PbAligner, FakeSequences) {
         EXPECT_EQ(it->first, ml.bwd.offsets[*iit].first); // and is equivalent
       }
     }
-    SCOPED_TRACE(::testing::Message() << "Read:" << read_id);
 
     switch(read_id) {
     case 1:

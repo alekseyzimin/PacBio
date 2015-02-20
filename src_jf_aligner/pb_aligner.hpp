@@ -28,7 +28,7 @@ struct off_lis {
   std::vector<unsigned int>    lis;
 
   template<typename F1, typename F2>
-  void do_LIS(F1& accept_mer, F2& accept_sequence, size_t window_size, lis_buffer_type& L, std::vector<unsigned int>& P) {
+  void do_LIS(const F1& accept_mer, const F2& accept_sequence, size_t window_size, lis_buffer_type& L, std::vector<unsigned int>& P) {
     L.clear();
     lis.clear();
     lis_align::indices(offsets.cbegin(), offsets.cend(), L, P, lis, window_size, accept_mer, accept_sequence);
@@ -36,7 +36,7 @@ struct off_lis {
 
 
   template<typename F1, typename F2>
-  void do_LIS(F1& accept_mer, F2& accept_sequence, size_t window_size, lis_buffer_type& L) {
+  void do_LIS(const F1& accept_mer, const F2& accept_sequence, size_t window_size, lis_buffer_type& L) {
     L.clear();
     lis.clear();
     lis_align::indices(offsets.cbegin(), offsets.cend(), L, lis, window_size, accept_mer, accept_sequence);
