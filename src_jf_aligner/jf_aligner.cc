@@ -204,25 +204,17 @@ int main(int argc, char *argv[])
   }
 
   // Read the super reads
-  mer_pos_hash_type hash(args.size_arg, args.max_count_arg);
-  std::unique_ptr<short_mer_pos_hash_type> short_hash;
-  if(args.fine_mer_given) {
+  if(args.fine_mer_given)
     short_mer_type::k(args.fine_mer_arg);
-    short_hash.reset(new short_mer_pos_hash_type(args.size_arg, 0));
-  }
-  frag_lists names(args.threads_arg);
-  {
-    stream_manager streams(args.superreads_arg.cbegin(), args.superreads_arg.cend());
-    superreads_read_mers reader(args.threads_arg, &hash, short_hash.get(), names, streams, false /* compact */);
-    reader.exec_join(args.threads_arg);
-  }
+  auto psa = superread_parse(args.superreads_arg.cbegin(), args.superreads_arg.cend(),
+                             std::min(short_mer_type::k(), (unsigned)11), mer_dna::k());
 
   // Prepare I/O
   stream_manager streams(args.pacbio_arg.cbegin(), args.pacbio_arg.cend());
   read_parser    reads(4 * args.threads_arg, 100, 1, streams);
 
   // Create aligners
-  coarse_aligner align_data(hash, mer_dna::k(),
+  coarse_aligner align_data(psa, mer_dna::k(),
                             args.stretch_factor_arg, args.stretch_constant_arg, args.stretch_cap_arg, args.window_size_arg,
                             args.forward_flag, args.max_match_flag,
                             args.max_count_arg ? args.max_count_arg : std::numeric_limits<int>::max(),
@@ -230,7 +222,7 @@ int main(int argc, char *argv[])
   if(unitigs_lengths) align_data.unitigs_lengths(unitigs_lengths.get(), args.k_mer_arg);
   std::unique_ptr<fine_aligner> short_align_data;
   if(args.fine_mer_given)
-    short_align_data.reset(new fine_aligner(*short_hash, args.fine_mer_arg, unitigs_lengths.get(), args.k_mer_arg));
+    short_align_data.reset(new fine_aligner(psa, args.fine_mer_arg, unitigs_lengths.get(), args.k_mer_arg));
 
   // Output header if necessary
   if(!args.no_header_flag)
