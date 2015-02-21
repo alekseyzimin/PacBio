@@ -20,7 +20,7 @@ public:
 
   bool wait() {
     std::unique_lock<MutexT> lock(m_mutex);
-    unsigned int gen = m_generation;
+    const unsigned int gen = m_generation;
 
     if(--m_count == 0) {
       ++m_generation;
@@ -39,8 +39,8 @@ private:
   MutexT                  m_mutex;
   std::condition_variable m_cond;
   const unsigned int      m_threshold;
-  unsigned int            m_count;
-  unsigned int            m_generation;
+  volatile unsigned int   m_count;
+  volatile unsigned int   m_generation;
 };
 
 #endif /* __BARRIER_H__ */

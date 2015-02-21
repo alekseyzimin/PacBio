@@ -58,17 +58,15 @@ create_thread(int thid, int nb_threads, barrier<std::mutex>* thread_barrier, sli
   std::fill_n(mer_counts + counts_start, counts_end - counts_start + (thid == nb_threads), (uint64_t)0);
   thread_barrier->wait();
 
-  {
-    std::unique_ptr<uint64_t[]> tmp_counts(new uint64_t[nb_counts - 1]);
-    std::fill_n(tmp_counts.get(), nb_counts - 1, (uint64_t)0);
-    slicer->loop(0, offsets.size() - 1, 10, [=](size_t i) {
-        sequence_psa::SA::count_mers(T + offsets[i].sequence,
-                                     offsets[i + 1].sequence - offsets[i].sequence,
-                                     mer_counts, mer_size);
-      });
-    for(size_t i = 0, j = counts_start; i < nb_counts - 1; ++i, j = ((j + 1) & counts_mask))
-      __sync_fetch_and_add(mer_counts + j, tmp_counts[j]);
-  }
+  std::unique_ptr<uint64_t[]> tmp_counts(new uint64_t[nb_counts - 1]);
+  std::fill_n(tmp_counts.get(), nb_counts - 1, (uint64_t)0);
+  slicer->loop(0, offsets.size() - 1, 10, [&](size_t i) {
+      sequence_psa::SA::count_mers(T + offsets[i].sequence,
+                                   offsets[i + 1].sequence - offsets[i].sequence,
+                                   tmp_counts.get(), mer_size);
+    });
+  for(size_t i = 0, j = counts_start; i < nb_counts - 1; ++i, j = ((j + 1) & counts_mask))
+    __sync_fetch_and_add(mer_counts + j, tmp_counts[j]);
 
   if(thread_barrier->wait())
     sequence_psa::SA::partial_sums(mer_counts, nb_counts);
@@ -78,7 +76,6 @@ create_thread(int thid, int nb_threads, barrier<std::mutex>* thread_barrier, sli
   slicer->loop(0, offsets.size() - 1, 10, [=](size_t i) {
     sequence_psa::SA::fill_mers(T, offsets[i].sequence, offsets[i + 1].sequence, PSA, mer_counts, mer_size);
     });
-
   slicer->loop(0, nb_counts - 1, 100, [=](size_t i) {
       sequence_psa::SA::sort_one_mer(T, n, PSA, mer_counts[i], mer_counts[i + 1], mer_size, max_size);
     });

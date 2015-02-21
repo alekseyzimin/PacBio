@@ -1,14 +1,13 @@
 #include <src_jf_aligner/fine_aligner.hpp>
 
 namespace align_pb {
-void fetch_local_super_reads(const short_mer_pos_hash_type& ary, short_parse_sequence& parser,
+void fetch_local_super_reads(const sequence_psa& psa, short_parse_sequence& parser,
                              frags_local_pos_type& frags_pos) {
   while(parser.next()) { // Process each k-mer
     const bool is_canonical = parser.mer<0>().is_canonical();
-    auto list = ary.equal_range_size(parser.mer<0>().m : parser.mer<0>().rm);
-    auto& it = list.first;
+    auto list = psa.equal_range(parser.mer<0>().m, parser.mer<0>().rm);
 
-    for(size_t i = 0; i < list.second; ++i, ++it) { // For each instance of the k-mer in a super read
+    for(auto& it = list.first; it != list.second; ++it) { // For each instance of the k-mer in a super read
       auto local_mls = frags_pos.find(it->frag->fwd.name.c_str());
       if(local_mls == frags_pos.end()) continue;
       const auto mls_end = local_mls->second.end();
@@ -31,7 +30,7 @@ void fetch_local_super_reads(const short_mer_pos_hash_type& ary, short_parse_seq
 void fine_aligner::thread::align_sequence(short_parse_sequence& parser, const size_t pb_size, const coords_info_type& coarse_coords) {
   prime_frags_pos(coarse_coords.cbegin(), coarse_coords.cend());
   coords_.clear();
-  fetch_local_super_reads(aligner_.ary_, parser, frags_pos_);
+  fetch_local_super_reads(aligner_.psa_, parser, frags_pos_);
 
   lis_align::accept_all all_mers;
   for(auto& it : frags_pos_) {
