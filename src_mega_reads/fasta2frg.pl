@@ -29,9 +29,11 @@ print STDOUT "mea:3000\n";
 print STDOUT "std:300\n";
 print STDOUT "src:\n";
 print STDOUT ".\n";
-print STDOUT "nft:1\n";
+print STDOUT "nft:3\n";
 print STDOUT "fea:\n";
-print STDOUT "doNotOverlapTrim=0\n";
+print STDOUT "doTrim_initialNone=1\n";
+print STDOUT "doRemoveChimericReads=1\n";
+print STDOUT "doRemoveSpurReads=1\n";
 print STDOUT ".\n";
 print STDOUT "}\n";
 
@@ -58,14 +60,14 @@ next if(length($sequence1)<64);
         print STDOUT "{FRG\n";
         print STDOUT "act:A\n";
         print STDOUT "acc:$readname1\n";
-        print STDOUT "rnd:0\n";
+        print STDOUT "rnd:1\n";
         print STDOUT "sta:G\n";
         print STDOUT "lib:$libId\n";
         print STDOUT "pla:0\n";
         print STDOUT "loc:0\n";
         print STDOUT "src:\n.\n";
         print STDOUT "seq:\n$sequence1\n.\n";
-$sequence1 =~ tr/ACGTNacgtn/aaaaa99999/;# create fake quality scores
+$sequence1 =~ tr/ACGTNacgtn/XXXXXDDDDD/;# create fake quality scores
         print STDOUT "qlt:\n$sequence1\n.\n";
         print STDOUT "hps:\n.\n";
         print STDOUT "clv:$clr1,$clr2\n";

@@ -47,10 +47,11 @@ while($line=<STDIN>){
 	    $outread = process_sorted_lines(sort {$$a[0] <=> $$b[0]} @lines);
 	    if(not($outread eq "")){
 		$indx=0;
-		@f=split(/N/,$outread);
-		for($i=0;$i<=$#f;$i++){
-		    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=400);
-		    $indx++;
+		@f=split(/(N{1,})/,$outread);
+		for($i=0;$i<=$#f;$i+=2){
+		    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=500);
+		    $indx+=length($f[$i]);
+		    $indx+=length($f[$i+1]) if($f[$i]<$#f);
 		}
 	    }
 	    @lines=();
@@ -65,12 +66,13 @@ while($line=<STDIN>){
 if(@lines){
     $outread = process_sorted_lines(sort {$$a[0] <=> $$b[0]} @lines);
     if(not($outread eq "")){
-	$indx=0;
-	@f=split(/N/,$outread);
-	for($i=0;$i<=$#f;$i++){
-	    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=400);
-	    $indx++;
-	}
+                $indx=0;
+                @f=split(/(N{1,})/,$outread);
+                for($i=0;$i<=$#f;$i+=2){
+                    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=500);
+                    $indx+=length($f[$i]);
+                    $indx+=length($f[$i+1]) if($f[$i]<$#f);
+                }
     }
 }
 
@@ -150,7 +152,7 @@ sub process_sorted_lines{
                 if($bgn-$last_coord<$max_gap_local && $join_allowed){#then put N's and later split
 		    $outread.=lc(substr($pbseq{$pb},$last_coord,$bgn-$last_coord-1)).$seq;
                 }else{
-		    $outread.="N".$seq;
+		    $outread.="N"x($bgn-$last_coord).$seq;
                 }
             }else{#overlapping
 		$join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads
@@ -174,7 +176,7 @@ sub process_sorted_lines{
 		}else{
 		    $join_allowed=1  unless($allowed{$str}==0);
 		}
-
+		
 		if(defined($bad_pb{$pb})){
 		    my @bad_coords=split(/\s+/,$bad_pb{$pb});
 		    for($i=0;$i<=$#bad_coords;$i+=2){
