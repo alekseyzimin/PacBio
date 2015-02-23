@@ -37,9 +37,9 @@ void print_coords_header(Multiplexer* m, bool compact) {
 
 void print_coords(Multiplexer::ostream& out, const std::string& pb_name, const size_t pb_size,
                   const bool compact, const align_pb::coords_info_type& coords,
-                            const std::vector<int>& order) {
+                  const std::vector<int>& order, bool zero_skip = true) {
   const size_t nb_lines = coords.size();
-  if(nb_lines == 0) return;
+  if(nb_lines == 0 && zero_skip) return;
 
   if(compact)
     out << ">" << nb_lines << " " << pb_name << "\n";
@@ -53,6 +53,7 @@ void print_coords(Multiplexer::ostream& out, const std::string& pb_name, const s
         << " " << it.stretch << " " << it.offset << " " << it.avg_err;
     if(!compact)
       out << " " << pb_name;
+    assert(it.name_u == &it.qfrag->fwd || it.name_u == &it.qfrag->bwd);
     out << " " << it.name_u->name;
     auto mit = it.kmers_info.cbegin();
     auto bit = it.bases_info.cbegin();
@@ -102,7 +103,8 @@ void print_details(Multiplexer::ostream& out, const std::string& pb_name, const 
 }
 
 void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* coords_m,
-                      const coarse_aligner* align_data, const fine_aligner* short_align_data) {
+                      const coarse_aligner* align_data, const fine_aligner* short_align_data,
+                      bool skip_zero) {
   parse_sequence                        parser;
   coarse_aligner::thread                aligner(*align_data);
   std::unique_ptr<fine_aligner::thread> short_aligner;
@@ -137,13 +139,26 @@ void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* c
         coords = &short_aligner->coords();
       }
 
+      //      std::cerr << name << ' ' << coords->size() << '\n';
       const int n = coords->size();
       if((int)sort_array.size() < n)
         sort_array.resize(n);
       for(int i = 0; i < n; ++i)
         sort_array[i] = i;
       std::sort(sort_array.begin(), sort_array.begin() + n, [coords] (int i, int j) { return (*coords)[i] < (*coords)[j]; });
-      print_coords(*coords_io, name, pb_size, args.compact_flag, *coords, sort_array);
+      // for(int i = 0; i < n; ++i) {
+      //   const auto& it = (*coords)[sort_array[i]];
+      //   std::cerr << it.rs << ' ' << it.re << ' ' << it.qs << ' ' << it.qe << ' ' << it.nb_mers << ' '
+      //             << it.pb_cons << ' ' << it.sr_cons << ' ' << it.pb_cover << ' ' << it.sr_cover << ' '
+      //             << it.rl << ' ' << it.ql << ' '
+      //             << it.qfrag->len << ' ' << it.name_u->unitigs << ' '
+      //             << it.kmers_info << ' ' << it.bases_info << ' '
+      //             << std::fixed << std::setprecision(1)
+      //             << it.stretch << ' ' << it.offset << ' ' << it.avg_err << ' '
+      //     //                  << it.align_k_
+      //             << '\n';
+      // }
+      print_coords(*coords_io, name, pb_size, args.compact_flag, *coords, sort_array, skip_zero);
       if(details_io) print_details(*details_io, name, aligner.frags_pos());
     }
   }
@@ -198,7 +213,7 @@ int main(int argc, char *argv[])
   frag_lists names(args.threads_arg);
   {
     stream_manager streams(args.superreads_arg.cbegin(), args.superreads_arg.cend());
-    superreads_read_mers reader(args.threads_arg, &hash, short_hash.get(), names, streams, args.compact_flag);
+    superreads_read_mers reader(args.threads_arg, &hash, short_hash.get(), names, streams, false /* compact */);
     reader.exec_join(args.threads_arg);
   }
 
@@ -225,7 +240,7 @@ int main(int argc, char *argv[])
   std::vector<std::thread> threads;
   for(unsigned int i = 0; i < args.threads_arg; ++i)
     threads.push_back(std::thread(print_alignments, &reads, details.multiplexer(), coords.multiplexer(),
-                                  &align_data, short_align_data.get()));
+                                  &align_data, short_align_data.get(), !args.zero_match_flag));
   for(auto& th : threads)
     th.join();
 

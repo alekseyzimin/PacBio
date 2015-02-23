@@ -49,6 +49,7 @@ public:
   void clear(size_t thid) {
     for(auto it2 = names_[thid].cbegin(); it2 != names_[thid].cend(); ++it2)
       delete *it2;
+    names_[thid].clear();
   }
 
   const frag_info* push_back(int thid, unsigned int len, const char* s) {

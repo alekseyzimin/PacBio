@@ -52,6 +52,8 @@ TEST(LeastSquare, Trivial) {
 
   EXPECT_NEAR(a, lst.a(), 1e-1);
   EXPECT_NEAR(b, lst.b(), 1e-1);
+  EXPECT_NEAR(a, ls.a(), 1e-1);
+  EXPECT_NEAR(b, ls.b(), 1e-1);
   EXPECT_NEAR(lst.a(), ls.a(), 1e-4);
   EXPECT_NEAR(lst.b(), ls.b(), 1e-4);
 
@@ -62,5 +64,35 @@ TEST(LeastSquare, Trivial) {
     r += a_ * v.first + b_ - v.second;
   EXPECT_NEAR(0, r, 1e-4);
 } // LeastSquare.Trivial
+
+TEST(LeastSquare, Perfect) {
+  static const int nb_points = 1000;
+
+  std::default_random_engine gen;
+  std::normal_distribution<double> normal;
+  std::uniform_real_distribution<double> uniform(-10.0, 10.0);
+  const double a = uniform(gen);
+  const double b = uniform(gen);
+
+  least_square_2d ls;
+  for(int i = 0; i < nb_points; ++i) {
+    double x = uniform(gen);
+    ls.add(x, a * x + b);
+  }
+
+  EXPECT_NEAR(a, ls.a(), 1e-6);
+  EXPECT_NEAR(b, ls.b(), 1e-6);
+} // LeastSquare.Perfect
+
+TEST(LeastSquare, PerfectInt) {
+  static const int nb_points = 100;
+  least_square_2d ls;
+
+  for(int i = 0; i < nb_points; ++i)
+    ls.add(i + 20, i + 10);
+
+  EXPECT_NEAR(1.0, ls.a(), 1e-6);
+  EXPECT_NEAR(-10.0, ls.b(), 1e-6);
+} // LeastSquare.PerfectInt
 
 } // namespace

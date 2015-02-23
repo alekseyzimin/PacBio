@@ -30,6 +30,7 @@ void create_mega_reads(read_parser* reads, Multiplexer* output_m,
   std::string                           name;
   Multiplexer::ostream                  output(output_m);
   std::unique_ptr<Multiplexer::ostream> dot(dot_m ? new Multiplexer::ostream(dot_m) : 0);
+  std::vector<int> sort_array;
 
   if(short_align_data) {
     short_aligner.reset(new fine_aligner::thread(*short_align_data));
@@ -54,8 +55,31 @@ void create_mega_reads(read_parser* reads, Multiplexer* output_m,
         short_aligner->align_sequence(*short_parser, pb_size, *coords);
         coords = &short_aligner->coords();
       }
+      const int n = coords->size();
+      if((int)sort_array.size() < n)
+        sort_array.resize(n);
+      for(int i = 0; i < n; ++i)
+        sort_array[i] = i;
+      std::sort(sort_array.begin(), sort_array.begin() + n, [coords] (int i, int j) { return (*coords)[i] < (*coords)[j]; });
+      coords_info_type sorted_coords;
+      for(int i = 0; i < n; ++i)
+        sorted_coords.push_back((*coords)[sort_array[i]]);
+      //      std::cerr << name << ' ' << coords->size() << '\n';
+      // for(int i = 0; i < n; ++i) {
+      //   const auto& it = (*coords)[sort_array[i]];
+      // for(const auto& it : sorted_coords) {
+      //   std::cerr << it.rs << ' ' << it.re << ' ' << it.qs << ' ' << it.qe << ' ' << it.nb_mers << ' '
+      //             << it.pb_cons << ' ' << it.sr_cons << ' ' << it.pb_cover << ' ' << it.sr_cover << ' '
+      //             << it.rl << ' ' << it.ql << ' '
+      //             << it.qfrag->len << ' ' << it.name_u->unitigs << ' '
+      //             << it.kmers_info << ' ' << it.bases_info << ' '
+      //             << std::fixed << std::setprecision(1)
+      //             << it.stretch << ' ' << it.offset << ' ' << it.avg_err << ' '
+      //     //                  << it.align_k_
+      //             << '\n';
+      // }
 
-      graph.reset(*coords, name, dot.get());
+      graph.reset(sorted_coords, name, dot.get());
       graph.traverse();
       graph.term_node_per_comp(pb_size, args.density_arg, args.min_length_arg);
       if(!args.no_tiling_flag)
@@ -102,7 +126,7 @@ int main(int argc, char *argv[])
   }
 
   // Read the super reads
-  mer_pos_hash_type hash(args.size_arg);
+  mer_pos_hash_type hash(args.size_arg, args.max_count_arg);
   std::unique_ptr<short_mer_pos_hash_type> short_hash;
   if(args.fine_mer_given) {
     short_mer_type::k(args.fine_mer_arg);
@@ -121,7 +145,7 @@ int main(int argc, char *argv[])
 
   // Create aligners
   coarse_aligner align_data(hash, mer_dna::k(),
-                            args.stretch_constant_arg, args.stretch_factor_arg, args.stretch_cap_arg, args.window_size_arg,
+                            args.stretch_factor_arg, args.stretch_constant_arg, args.stretch_cap_arg, args.window_size_arg,
                             true /* forward */, args.max_match_flag,
                             args.max_count_arg ? args.max_count_arg : std::numeric_limits<int>::max(),
                             args.mers_matching_arg / 100.0, args.bases_matching_arg / 100.0);
@@ -131,12 +155,13 @@ int main(int argc, char *argv[])
     short_align_data.reset(new fine_aligner(*short_hash, args.fine_mer_arg, &unitigs_lengths, args.k_mer_arg));
 
   // Output candidate mega_reads
+  //  std::cerr << args.density_arg << ' ' << args.min_length_arg << '\n';
   overlap_graph graph_walker(args.overlap_play_arg, args.k_mer_arg, unitigs_lengths, args.errors_arg, args.bases_flag);
   std::vector<std::thread> threads;
   for(unsigned int i = 0; i < args.threads_arg; ++i)
     threads.push_back(std::thread(create_mega_reads, &reads, output.multiplexer(),
                                   &align_data, short_align_data.get(),
-                                  &graph_walker, args.unitigs_sequences_given ? &sequences : 0,
+                                  &graph_walker, args.unitigs_sequences_given ? &sequences : nullptr,
                                   dot.multiplexer()));
   for(auto& th : threads)
     th.join();
