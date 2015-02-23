@@ -10,27 +10,41 @@
 typedef int32_t saint_t;
 #include <src_psa/mer_sa_imp.hpp>
 
-// TODO: use mer_dna more efficiently. Avoid mer_dna -> string -> compact_dna
-// jellyfish mer_dna are already compact dna.
-// struct mer_dna_off {
-//   const mer_dna& m_m;
-//   unsigned int m_off;
+// Bare minimum struct to behave like a pointer into a mer_dna, as far
+// as mer_sa_imp::str_to_mer and SA::search are concerned.
+template<typename T>
+struct mer_dna_ptr {
+  typedef typename jellyfish::mer_dna_ns::mer_base<T> base_type;
 
-//   mer_dna_off(const mer_dna& m) : m_m(m), m_off(0) { }
-//   mer_dna_off(const mer_dna_off& rhs) : m_m(rhs.m_m), m_off(rhs.m_off) { }
-//   mer_dna_off& operator+=(unsigned int x) {
-//     m_off += x;
-//     return *this;
-//   }
-//   mer_dna_off operator+(unsigned int x) const {
-//     mer_dna_off res(*this);
-//     return res += x;
-//   }
-// };
-// template<>
-// inline uint64_t mer_sa_imp::str_to_mer<mer_dna_off>(mer_dna_off x, unsigned int mer_size) {
-//   return x.m_m.get_bits(x.m_off, mer_size);
-// }
+  const T& m_m;
+  unsigned int m_off;
+
+  explicit mer_dna_ptr(const T& m, unsigned int off = 0) : m_m(m), m_off(off) { }
+  mer_dna_ptr(const mer_dna_ptr& rhs) : m_m(rhs.m_m), m_off(rhs.m_off) { }
+  mer_dna_ptr& operator+=(unsigned int x) {
+    m_off += x;
+    return *this;
+  }
+  mer_dna_ptr operator+(unsigned int x) const {
+    mer_dna_ptr res(*this);
+    return res += x;
+  }
+
+  uint64_t str_to_mer(unsigned int mer_size) const {
+    return m_m.get_bits(2 * (m_m.k() - mer_size - m_off), 2 * mer_size);
+  }
+};
+
+namespace mer_sa_imp {
+template<>
+inline uint64_t str_to_mer<mer_dna_ptr<jellyfish::mer_dna_ns::mer_base_static<uint64_t, 0>>>(mer_dna_ptr<jellyfish::mer_dna_ns::mer_base_static<uint64_t, 0>> x, unsigned int mer_size) {
+  return x.str_to_mer(mer_size);
+}
+template<>
+inline uint64_t str_to_mer<mer_dna_ptr<jellyfish::mer_dna_ns::mer_base_static<uint64_t, 1>>>(mer_dna_ptr<jellyfish::mer_dna_ns::mer_base_static<uint64_t, 1>> x, unsigned int mer_size) {
+  return x.str_to_mer(mer_size);
+}
+}
 
 struct sequence_psa {
   struct offset_type {
@@ -153,12 +167,6 @@ struct sequence_psa {
                      m_sa->cbegin(), nb_mers(), m_counts.data(), m_min_size, m_max_size);
   }
 
-  // template<typename MerType>
-  // std::pair<pos_iterator, pos_iterator> equal_range(const MerType& m, const MerType& rm) const {
-  //   auto res = equal_range_size(m, rm);
-  //   return std::make_pair(res.first, pos_iterator());
-  // }
-
   template<typename MerType>
   std::pair<pos_iterator, pos_iterator> equal_range(const MerType& m) const {
     return equal_range(m, m.get_reverse_complement());
@@ -170,13 +178,13 @@ struct sequence_psa {
     auto fwd_res = SA::search(compact_dna::const_iterator_at(m_sequence.data()), sequence_size(),
                               m_sa->begin(), nb_mers(), m_counts.data(),
                               m_min_size, m_max_size,
-                              m.to_str().c_str(), m.k());
+                              mer_dna_ptr<MerType>(m), m.k());
     if(fwd_res.first >= max)
       return std::make_pair(pos_iterator(), pos_iterator());
     auto bwd_res = SA::search(compact_dna::const_iterator_at(m_sequence.data()), sequence_size(),
                               m_sa->begin(), nb_mers(), m_counts.data(),
                               m_min_size, m_max_size,
-                              rm.to_str().c_str(), m.k());
+                              mer_dna_ptr<MerType>(rm), rm.k());
     if(fwd_res.first + bwd_res.first >= max)
       return std::make_pair(pos_iterator(), pos_iterator());
     if(rm < m) std::swap(fwd_res, bwd_res);
