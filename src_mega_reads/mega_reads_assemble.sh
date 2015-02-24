@@ -86,9 +86,9 @@ $mr_number++;
 }
 }' 1>$COORDS.maximal_mr.fa 2>$COORDS.maximal_mr.names
 
-run_big_nucmer_job_parallel.sh pb10x.fasta $COORDS.maximal_mr.fa 1000000 200000000 '--maxmatch -d 0.2 -g 200 -l 15 -b 120 -c 100' $NUM_THREADS
-delta-filter -g -o 20 pb10x.fasta.$COORDS.maximal_mr.fa.g.delta > pb10x.fasta.$COORDS.maximal_mr.fa.gg.delta
-show-coords -lcHr  pb10x.fasta.$COORDS.maximal_mr.fa.gg.delta | awk '{if($4<$5){print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}else{print $18"/0_"$12" "$19+1" 0 0 0 "$10" "$13-$4+1" "$13-$5+1" "$13" "$1" "$2" "$12" 0"}}' > $COORDS.blasr.out
+run_big_nucmer_job_parallel.sh $PACBIO $COORDS.maximal_mr.fa 1000000 200000000 '--maxmatch -d 0.2 -g 200 -l 15 -b 120 -c 100' $NUM_THREADS
+delta-filter -g -o 20 $PACBIO.$COORDS.maximal_mr.fa.g.delta > $PACBIO.$COORDS.maximal_mr.fa.gg.delta
+show-coords -lcHr  $PACBIO.$COORDS.maximal_mr.fa.gg.delta | awk '{if($4<$5){print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}else{print $18"/0_"$12" "$19+1" 0 0 0 "$10" "$13-$4+1" "$13-$5+1" "$13" "$1" "$2" "$12" 0"}}' > $COORDS.blasr.out
 
 reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $COORDS.blasr.out 1> $COORDS.all.txt 2>$COORDS.blasr.merged
 
