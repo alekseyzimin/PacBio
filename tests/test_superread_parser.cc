@@ -102,7 +102,6 @@ TEST(SuperReadParser, ManyReads) {
     const bool is_canonical = m < rm;
     SCOPED_TRACE(::testing::Message() << "i:" << i << " m:" << m << " canonical:" << is_canonical << " delta:" << delta);
 
-    //    auto list = hash.equal_range(is_canonical ? m : rm);
     auto list = psa.equal_range(m, rm);
     EXPECT_TRUE(list.first != list.second);
     int count = 0;
