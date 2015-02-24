@@ -108,20 +108,21 @@ struct sequence_psa {
       while((fwd = m_fwd_index != m_fwd_end) || m_bwd_index != m_bwd_end) {
         const size_t x = (*m_psa->m_sa)[fwd ? m_fwd_index++ : m_bwd_index++];
         // TODO: use speed up search
-        // const size_t search = x >> m_search_bits;
-        // if(search >= m_psa->m_header_search.size()) continue;
-        // const auto start = m_psa->m_offsets.cbegin() + m_psa->m_header_search[search];
-        // std::cout << "off:" << m_psa->m_header_search[search + 1] << "\n";
-        // const auto end = start + (search == m_psa->m_header_search.size() - 1
-        //                           ? m_psa->m_header_search.size() - 1
-        //                           : m_psa->m_header_search[search + 1] + 1);
-        const auto start = m_psa->m_offsets.cbegin();
-        const auto end   = m_psa->m_offsets.cend();
-        const auto next  = std::lower_bound(start, end, x, [](const offset_type& j, size_t i) { return j.sequence <= i; });
-        if(x + m_len > next->sequence) continue;
+        const size_t search = x >> m_search_bits;
+        if(search >= m_psa->m_header_search.size()) continue;
+        const auto start = m_psa->m_offsets.cbegin() + m_psa->m_header_search[search];
+        const auto end =
+          search == m_psa->m_header_search.size() - 1
+          ? m_psa->m_offsets.cend()
+          : m_psa->m_offsets.cbegin() + m_psa->m_header_search[search + 1];
+        const auto next  =
+          start == end ? start : std::lower_bound(start, end, x, [](const offset_type& j, size_t i) { return j.sequence <= i; });
+        const auto limit =
+          next == m_psa->m_offsets.cend() ? m_psa->sequence_size() : next->sequence;
+        if(x + m_len > limit) continue;
         const auto res = next - 1;
-        m_elt.frag = &m_psa->m_headers[res->header];
-        m_elt.offset = x - res->sequence + 1;
+        m_elt.frag     = &m_psa->m_headers[res->header];
+        m_elt.offset   = x - res->sequence + 1;
         if(!fwd) m_elt.offset = -m_elt.offset;
         return *this;
       }
