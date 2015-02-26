@@ -84,7 +84,7 @@ sub process_sorted_lines{
     my @max_gap_local_fwd=();
     my @max_gap_local_rev=();
     my @args=@_;
-    my $max_gap=1250;
+    my $max_gap=750;
     my $gap_coeff=1;
     my $outread_len=0;
     my $seq_len=0;
@@ -157,13 +157,13 @@ sub process_sorted_lines{
             }else{#overlapping
 		$join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads
 		#here we check for overlap
-	 	my $min_match=27;
+	 	my $min_match=25;
 		my $ind=-1;
 		my %ind=();
 
 		if($last_coord-$bgn > $min_match){
 		    for(my $j=0;$j<10;$j++){
-                    	my $ttt=index($outread,substr($seq,$j,$min_match),length($outread)-($last_coord-$bgn)*1.2);
+                    	my $ttt=index($outread,substr($seq,$j,$min_match),length($outread)-($last_coord-$bgn)*$fudge_factor);
 		        $ind{$ttt-$j}++ if($ttt>-1);
 		    	}
 		    my $max_ind=-1;
@@ -182,8 +182,6 @@ sub process_sorted_lines{
 		    }else{
 			$join_allowed=1;
 		    }
-		}else{
-		    $join_allowed=1  unless($allowed{$str}==0);
 		}
 		
 		if(defined($bad_pb{$pb})){

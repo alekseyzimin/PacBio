@@ -96,16 +96,21 @@ findGapsInCoverageOfPacbios --max-gap-overlap 100  -f $COORDS.blasr.merged > $CO
 
 analyze_mega_gaps.sh $COORDS  $KMER | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed
 
+fi
+
 join_mega_reads_trim.onepass.pl $PACBIO ${COORDS}.1.allowed $KMER $COORDS.bad_pb.txt < ${COORDS}.all.txt > $COORDS.1.fa;
 
 fasta2frg.pl mr  < $COORDS.1.fa > $COORDS.1.frg;
 #perl -ane 'BEGIN{$n=0}{if($F[0]=~/^>/){print ">$n\n";$n++}else{print "$F[0]\n"}}' $SUPERREADS | fasta2frg.pl sr  > $COORDS.sr.frg;
 /home/alekseyz/myprogs/getNumBasesPerReadInFastaFile.perl  $COORDS.1.fa   | awk '{n+=$1;m++}END{print n" "m" "n/m}'
 
-fi
-
 CA=CA.${COORDS}
 
+runCA unitigger=bogart merylMemory=8192 utgGraphErrorLimit=1000 utgGraphErrorRate=0.03 utgMergeErrorLimit=1000 utgMergeErrorRate=0.045 ovlCorrBatchSize=5000 ovlCorrConcurrency=$NUM_THREADS frgCorrThreads=$NUM_THREADS mbtThreads=$NUM_THREADS ovlThreads=2 ovlHashBlockLength=100000000 ovlRefBlockSize=1000 ovlConcurrency=$NUM_THREADS doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal stopAfter=unitigger cnsMinFrags=500 cnsConcurrency=16 -p genome -d $CA  merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg  1> $CA.log 2>&1
+
+echo "preliminary stats:"
+tigStore -g $CA/genome.gkpStore -t $CA/genome.tigStore 2 -U -d sizes -s 12000000
+#exit
 runCA merylMemory=8192 utgGraphErrorLimit=1000 utgGraphErrorRate=0.035 utgMergeErrorLimit=1000 utgMergeErrorRate=0.045 ovlCorrBatchSize=5000 ovlCorrConcurrency=$NUM_THREADS frgCorrThreads=$NUM_THREADS mbtThreads=$NUM_THREADS ovlThreads=2 ovlHashBlockLength=100000000 ovlRefBlockSize=10000 ovlConcurrency=$NUM_THREADS doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal stopAfter=consensusAfterUnitigger cnsMinFrags=500 cnsConcurrency=16 -p genome -d $CA unitigger=bogart merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg  1> $CA.log 2>&1
 
 tigStore -g $CA/genome.gkpStore -t $CA/genome.tigStore 3 -U -nreads 2 100000000 -d consensus >assembly.$CA.fa
