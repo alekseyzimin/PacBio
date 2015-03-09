@@ -8,6 +8,7 @@ my $allowed_gaps=$ARGV[1];
 my $kmer=$ARGV[2];
 my $bad_pb=$ARGV[3];
 my $fudge_factor=1.2;
+my $min_len_output=400;
 $kmer*=$fudge_factor;
 
 my $rn="";
@@ -49,7 +50,7 @@ while($line=<STDIN>){
 		$indx=0;
 		@f=split(/(N{1,})/,$outread);
 		for($i=0;$i<=$#f;$i+=2){
-		    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=500);
+		    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=$min_len_output);
 		    $indx+=length($f[$i]);
 		    $indx+=length($f[$i+1]) if($f[$i]<$#f);
 		}
@@ -69,7 +70,7 @@ if(@lines){
                 $indx=0;
                 @f=split(/(N{1,})/,$outread);
                 for($i=0;$i<=$#f;$i+=2){
-                    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=500);
+                    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=$min_len_output);
                     $indx+=length($f[$i]);
                     $indx+=length($f[$i+1]) if($f[$i]<$#f);
                 }

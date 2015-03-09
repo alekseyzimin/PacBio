@@ -17,6 +17,8 @@
 
 
 my $libId=$ARGV[0];
+my $min_len_output=64;
+$min_len_output=$ARGV[1] if($#ARGV>0);
 
 print STDOUT "{VER\n";
 print STDOUT "ver:2\n";
@@ -48,14 +50,9 @@ $readname1=$f[0];
 $line1=<STDIN>;
 chomp($line1);
 $sequence1=$line1;
-if(scalar(@f)==3){
-$clr1=$f[1];
-$clr2=$f[2];
-}else{
 $clr1=0;
 $clr2=length($sequence1);
-}
-next if(length($sequence1)<64);
+next if(length($sequence1)<$min_len_output);
 
         print STDOUT "{FRG\n";
         print STDOUT "act:A\n";
