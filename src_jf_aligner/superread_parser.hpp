@@ -196,6 +196,26 @@ struct sequence_psa {
                           pos_iterator());
   }
 
+  template<typename MerType>
+  std::pair<pos_iterator, size_t> find_pos_size(const MerType& m, const MerType& rm) const {
+    auto fwd_res = SA::search(compact_dna::const_iterator_at(m_sequence.data()), sequence_size(),
+                              m_sa->begin(), nb_mers(), m_counts.data(),
+                              m_min_size, m_max_size,
+                              mer_dna_ptr<MerType>(m), m.k());
+    auto bwd_res = SA::search(compact_dna::const_iterator_at(m_sequence.data()), sequence_size(),
+                              m_sa->begin(), nb_mers(), m_counts.data(),
+                              m_min_size, m_max_size,
+                              mer_dna_ptr<MerType>(rm), rm.k());
+    if(rm < m) std::swap(fwd_res, bwd_res);
+    return std::make_pair(pos_iterator(this,
+                                       fwd_res.second, fwd_res.second + fwd_res.first,
+                                       bwd_res.second, bwd_res.second + bwd_res.first,
+                                       m.k()),
+                          fwd_res.first + bwd_res.first);
+  }
+
+  const pos_iterator pos_end() const { return pos_iterator(); }
+
   template<typename Iterator>
   static sequence_psa read_files(Iterator start, Iterator end) {
     sequence_psa res;

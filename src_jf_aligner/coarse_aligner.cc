@@ -59,13 +59,18 @@ void coarse_aligner::thread::align_sequence_max(parse_sequence& parser, const si
 
 void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
                        frags_pos_type& frags_pos, const int max_mer_count) {
+  const auto end = psa.pos_end();
   while(parser.next()) { // Process each k-mer
     const bool is_canonical = parser.mer<0>().is_canonical();
-    auto list = psa.equal_range(parser.mer<0>().m, parser.mer<0>().rm, max_mer_count);
-    for(auto& it = list.first; it != list.second; ++it) { // For each instance of the k-mer in a super read
+    auto list = psa.find_pos_size(parser.mer<0>().m, parser.mer<0>().rm);
+    if(list.second == 0 ||
+       (max_mer_count && list.second >= (size_t)max_mer_count && std::distance(list.first, end) >= max_mer_count))
+      continue;
+    for(auto& it = list.first; it != end; ++it) { // For each instance of the k-mer in a super read
       mer_lists& ml = frags_pos[it->frag->fwd.name.c_str()];
       ml.frag       = it->frag;
       const int offset = is_canonical ? it->offset : -it->offset;
+      //      std::cout << is_canonical << ' ' << parser.offset<0>() << ' ' << it->offset << ' ' << offset << '\n';
       if(offset > 0)
         ml.fwd.offsets.push_back(pb_sr_offsets(parser.offset<0>(), offset));
       else
