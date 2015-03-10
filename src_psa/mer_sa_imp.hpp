@@ -333,7 +333,7 @@ struct SA {
       auto ei = std::min(n, si + extra_size);
       auto sj = std::min(n, j + (SAIDX)mer_size);
       auto ej = std::min(n, sj + extra_size);
-      return lexicographical_compare_n(T + si, ei - si, T + sj, ej - sj);
+      return lexicographical_compare_n(T + si, ei - si, T + sj, ej - sj) || (!lexicographical_compare_n(T + sj, ej - sj, T + si, ei - si) && si > sj);
     };
     std::sort(SA + start, SA + end, comp);
   }
