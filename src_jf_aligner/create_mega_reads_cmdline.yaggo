@@ -67,12 +67,9 @@ option("d", "density") {
 option("L", "min-length") {
   description "Minimum length of a mega-read"
   double; default 100.0 }
-option("T", "no-tiling") {
-  description "Do not output (mostly) non-overlaping mega-reads"
-  off }
-option("maximal-tiling") {
-  description "Maximize number of k-mers during tiling"
-  off }
+option("T", "tiling") {
+  description "Option for tiling mega-reads"
+  enum "none", "greedy", "maximal"; default "greedy" }
 option("trim") {
   description "How to trim mega-read"
   enum "none", "match", "branch"; default "none" }

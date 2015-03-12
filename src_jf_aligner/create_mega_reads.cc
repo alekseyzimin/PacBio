@@ -37,6 +37,12 @@ void create_mega_reads(read_parser* reads, Multiplexer* output_m,
     short_parser.reset(new short_parse_sequence);
   }
 
+  if(dot)
+    graph.dot(dot.get());
+  switch(args.trim_arg) {
+  case cmdline_args::trim::match: graph.trim_match(); break;
+  }
+
   while(true) {
     read_parser::job job(*reads);
     if(job.is_empty()) break;
@@ -65,11 +71,13 @@ void create_mega_reads(read_parser* reads, Multiplexer* output_m,
       for(int i = 0; i < n; ++i)
         sorted_coords.push_back((*coords)[sort_array[i]]);
 
-      graph.reset(sorted_coords, name, dot.get());
+      graph.reset(sorted_coords, name);
       graph.traverse();
       graph.term_node_per_comp(pb_size, args.density_arg, args.min_length_arg);
-      if(!args.no_tiling_flag)
-        args.maximal_tiling_flag ? graph.tile_maximal() : graph.tile_greedy();
+      switch(args.tiling_arg) {
+      case cmdline_args::tiling::maximal: graph.tile_maximal(); break;
+      case cmdline_args::tiling::greedy: graph.tile_greedy(); break;
+      }
       graph.print_mega_reads(output, name, unitigs_sequences);
 
       output.end_record();

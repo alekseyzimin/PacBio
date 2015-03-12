@@ -67,8 +67,8 @@ mega_read_info mega_read_info::make(int i, const std::vector<node_info>& nodes,
   return res;
 }
 
-void overlap_graph::update_mr_trim(mega_read_info& mr, std::vector<node_info>& nodes,
-                                   const align_pb::coords_info_type& coords) const {
+void overlap_graph::trim_match(mega_read_info& mr, std::vector<node_info>& nodes,
+                               const align_pb::coords_info_type& coords) const {
   {
     const auto& coord = coords[mr.start_node];
     int offset        = 0;
@@ -104,13 +104,18 @@ void overlap_graph::update_mr_trim(mega_read_info& mr, std::vector<node_info>& n
 
 void overlap_graph::mega_reads_per_comp(const int n, size_t pb_size, std::vector<node_info>& nodes,
                                         const align_pb::coords_info_type& coords, comp_to_path& components,
-                                        double min_density, double min_len, std::ostream* dot) const {
+                                        double min_density, double min_len,
+                                        trim_action trim, std::ostream* dot) const {
   // For each connected component, keep the index of the terminal node
   // of the longest path found
   for(int i = 0; i < n; ++i) {
     auto&        node    = nodes[i];
     auto         mr      = mega_read_info::make(i, nodes, coords);
-    update_mr_trim(mr, nodes, coords);
+    switch(trim) {
+    case BRANCH: // Currently same as MATCH
+    case MATCH: trim_match(mr, nodes, coords); break;
+    case NONE: break;
+    }
     const double imp_len = std::min((double)pb_size + 0.5, mr.tiling_end) - std::max(0.5, mr.tiling_start);
     mr.density           = (double)node.lpath / imp_len;
     //    double       density = (double)node.lpath / imp_len;

@@ -61,6 +61,8 @@ struct overlap_graph {
   const double            nb_errors;
   const bool              maximize_bases;
 
+  enum trim_action { NONE, MATCH, BRANCH };
+
   // Used to traverse a graph of overlaps between super reads. They
   // must overlap according to their position (e.g. alignment to a PB
   // read) and according to the unitigs sequence.
@@ -92,20 +94,22 @@ struct overlap_graph {
   // component find the candidate mega-reads in each connected component.
   typedef std::map<union_find::set*, mega_read_info> comp_to_path;
   void mega_reads_per_comp(const int n, size_t pb_size, std::vector<node_info>& nodes,
-                          const align_pb::coords_info_type& coords, comp_to_path& res,
-                          double min_density = 0, double min_len = 0,
-                          std::ostream* dot = 0) const;
+                           const align_pb::coords_info_type& coords, comp_to_path& res,
+                           double min_density = 0, double min_len = 0,
+                           trim_action trim = NONE,
+                          std::ostream* dot = nullptr) const;
   comp_to_path mega_reads_per_comp(const int n, const size_t pb_size, std::vector<node_info>& nodes,
                                    const align_pb::coords_info_type& coords,
                                    double min_density = 0, double min_len = 0,
-                                   std::ostream* dot = 0) const {
+                                   trim_action trim = NONE,
+                                   std::ostream* dot = nullptr) const {
     comp_to_path res;
-    mega_reads_per_comp(n, pb_size, nodes, coords, res, min_density, min_len, dot);
+    mega_reads_per_comp(n, pb_size, nodes, coords, res, min_density, min_len, trim, dot);
     return res;
   }
 
-  void update_mr_trim(mega_read_info& mr, std::vector<node_info>& nodes,
-                      const align_pb::coords_info_type& coords) const;
+  void trim_match(mega_read_info& mr, std::vector<node_info>& nodes,
+                  const align_pb::coords_info_type& coords) const;
 
   // Tile the mega reads in a greedy fashion. Expect sort_array to be
   // the indices of the last nodes in the mega reads, sorted by size
@@ -158,10 +162,14 @@ struct overlap_graph {
     comp_to_path                       comp_mega_reads_;
     std::vector<const mega_read_info*> mega_reads_;
     std::ostream*                      dot_;
+    overlap_graph::trim_action         trim_;
 
-    thread(const overlap_graph& og) : og_(og) { }
+    thread(const overlap_graph& og) : og_(og), dot_(nullptr), trim_(overlap_graph::NONE) { }
 
-    void reset(const align_pb::coords_info_type& coords, const std::string& pb_name, std::ostream* dot = 0) {
+    void dot(std::ostream* d) { dot_ = d; }
+    void trim_match() {trim_ = overlap_graph::MATCH; }
+
+    void reset(const align_pb::coords_info_type& coords, const std::string& pb_name) {
       coords_     = &coords;
       const int n = coords_->size();
       sort_nodes_.resize(n);
@@ -173,12 +181,11 @@ struct overlap_graph {
       std::sort(sort_nodes_.begin(), sort_nodes_.end(),
                 [&] (int i, int j) { return nodes_[i].imp_s < nodes_[j].imp_s || (nodes_[i].imp_s == nodes_[j].imp_s &&
                                                                                   nodes_[i].imp_e < nodes_[j].imp_e); });
-      dot_ = dot;
       if(dot_) {
-        *dot << "digraph \"" << pb_name << "\" {\nnode [fontsize=\"10\"];\n";
+        *dot_ << "digraph \"" << pb_name << "\" {\nnode [fontsize=\"10\"];\n";
         for(size_t i = 0; i < sort_nodes_.size(); ++i) {
           const size_t it_i = sort_nodes_[i];
-          *dot << "n" << it_i << "[tooltip=\"" << coords[it_i].name_u->unitigs << "\"];\n";
+          *dot_ << "n" << it_i << "[tooltip=\"" << coords[it_i].name_u->unitigs << "\"];\n";
         }
       }
     }
@@ -186,7 +193,8 @@ struct overlap_graph {
     void traverse() { og_.traverse(sort_nodes_, *coords_, nodes_, dot_); }
     void term_node_per_comp(size_t pb_size, double min_density = 0, double min_len = 0) {
       comp_mega_reads_.clear();
-      og_.mega_reads_per_comp(coords_->size(), pb_size, nodes_, *coords_, comp_mega_reads_, min_density, min_len, dot_);
+      og_.mega_reads_per_comp(coords_->size(), pb_size, nodes_, *coords_, comp_mega_reads_, min_density, min_len,
+                              trim_, dot_);
       mega_reads_.clear();
       sort_tiling_.clear();
       for(const auto& comp : comp_mega_reads_) {

@@ -35,25 +35,25 @@ void create_mega_reads(int thid, coords_parser* parser, frag_lists* frags,
   overlap_graph::thread                 graph(*graph_walker);
   Multiplexer::ostream                  output(output_m);
   std::unique_ptr<Multiplexer::ostream> dot(dot_m ? new Multiplexer::ostream(dot_m) : 0);
+  if(dot)
+    graph.dot(dot.get());
+  switch(args.trim_arg) {
+  case cmdline_args::trim::match: graph.trim_match(); break;
+  }
+
 
   for(coords_parser::stream coords_stream(*parser); coords_stream; ++coords_stream) {
     fill_coords(thid, coords_stream->lines, coords, *frags);
-    // std::cerr << coords_stream->header << ' ' << coords.size() << '\n';
-    // for(const auto& it : coords) {
-    //   std::cerr << it.rs << ' ' << it.re << ' ' << it.qs << ' ' << it.qe << ' ' << it.nb_mers << ' '
-    //             << it.pb_cons << ' ' << it.sr_cons << ' ' << it.pb_cover << ' ' << it.sr_cover << ' '
-    //             << it.rl << ' ' << it.ql << ' '
-    //             << it.qfrag->len << ' ' << it.name_u->unitigs << ' '
-    //             << it.kmers_info << ' ' << it.bases_info << ' '
-    //             << std::fixed << std::setprecision(1)
-    //             << it.stretch << ' ' << it.offset << ' ' << it.avg_err << ' '
-    //     //                << it.align_k_
-    //             << '\n';
-    // }
-    graph.reset(coords, coords_stream->header, dot.get());
+
+    graph.reset(coords, coords_stream->header);
     graph.traverse();
     graph.term_node_per_comp(coords[0].rl, args.density_arg, args.min_length_arg);
-    graph.print_mega_reads(output, coords_stream->header, unitigs_sequences);
+    switch(args.tiling_arg) {
+    case cmdline_args::tiling::maximal: graph.tile_maximal(); break;
+    case cmdline_args::tiling::greedy: graph.tile_greedy(); break;
+    }
+
+    graph.print_mega_reads(output, coords_stream->header);
     output.end_record();
     if(dot)
       dot->end_record();
