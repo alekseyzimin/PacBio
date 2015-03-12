@@ -75,11 +75,13 @@ void overlap_graph::update_mr_trim(mega_read_info& mr, std::vector<node_info>& n
     for(mr.start_unitig = 0; mr.start_unitig < (int)coord.kmers_info.size(); mr.start_unitig += 2) {
       if(coord.kmers_info[mr.start_unitig])
         break;
-      offset += unitigs_lengths[mr.start_unitig / 2];
+      offset += unitigs_lengths[coord.name_u->unitigs.unitig_id(mr.start_unitig / 2)];
     }
     mr.start_unitig /= 2;
     mr.nb_unitigs   -= mr.start_unitig;
-    mr.tiling_start  = coord.stretch * (coord.qs + offset) + coord.offset;
+    offset          -= (k_len - 1) * mr.start_unitig;
+    mr.start_offset  = offset;
+    mr.tiling_start  = coord.stretch * (offset + 1) + coord.offset;
   }
 
   {
@@ -88,11 +90,15 @@ void overlap_graph::update_mr_trim(mega_read_info& mr, std::vector<node_info>& n
     for(mr.end_unitig = coord.kmers_info.size() - 1; mr.end_unitig >= 0; mr.end_unitig -= 2) {
       if(coord.kmers_info[mr.end_unitig])
         break;
-      offset += unitigs_lengths[mr.end_unitig / 2];
+      //      offset += unitigs_lengths[mr.end_unitig / 2];
+      offset += unitigs_lengths[coord.name_u->unitigs.unitig_id(mr.end_unitig / 2)];
     }
-    mr.end_unitig /= 2;
-    mr.nb_unitigs += mr.end_unitig - (int)(coord.kmers_info.size() / 2);
-    mr.tiling_end  = coord.stretch * (coord.qe - offset) + coord.offset;
+    mr.end_unitig              /= 2;
+    const auto removed_unitigs  = (int)(coord.kmers_info.size() / 2) - mr.end_unitig;
+    mr.nb_unitigs              -= removed_unitigs;
+    offset                     -= (k_len - 1) * removed_unitigs;
+    mr.end_offset               = offset;
+    mr.tiling_end               = coord.stretch * (coord.ql - offset + 1) + coord.offset;
   }
 }
 
@@ -103,10 +109,10 @@ void overlap_graph::mega_reads_per_comp(const int n, size_t pb_size, std::vector
   // of the longest path found
   for(int i = 0; i < n; ++i) {
     auto&        node    = nodes[i];
-    const double imp_len = std::min((double)pb_size + 0.5, node.imp_e) - std::max(0.5, node.l_start_node(nodes).imp_s);
     auto         mr      = mega_read_info::make(i, nodes, coords);
     update_mr_trim(mr, nodes, coords);
-    mr.density = (double)node.lpath / (mr.tiling_end - mr.tiling_start);
+    const double imp_len = std::min((double)pb_size + 0.5, mr.tiling_end) - std::max(0.5, mr.tiling_start);
+    mr.density           = (double)node.lpath / imp_len;
     //    double       density = (double)node.lpath / imp_len;
     if(dot) {
       const char* color = "";
@@ -123,7 +129,7 @@ void overlap_graph::mega_reads_per_comp(const int n, size_t pb_size, std::vector
            << " d" << std::setprecision(2) << mr.density << "\""
            << color << "];\n";
     }
-    if(!node.end_node || mr.density < min_density || (mr.tiling_end - mr.tiling_start) - min_len) continue;
+    if(!node.end_node || mr.density < min_density || (mr.tiling_end - mr.tiling_start) < min_len) continue;
     // || node.ldensity < min_density || imp_len < min_len) continue;
 
     auto comp_root = node.component.root();
@@ -241,12 +247,14 @@ void overlap_graph::print_mega_reads(std::ostream& output, const std::vector<int
     const auto& start_c = coords[mr.start_node];
 
     super_read_name        sr(mr.nb_unitigs);
-    size_t                 offset = sr.prepend(end_c.name_u->unitigs, mr.end_unitig);
+    size_t                 offset = sr.prepend(end_c.name_u->unitigs, 0, mr.end_unitig);
     int                    node_j = mr.end_node;
     int                    node_i = end_n.lprev;
     while(node_i >= 0) {
       const size_t overlap = nodes[node_i].lunitigs + coords[node_j].name_u->unitigs.size() - nodes[node_j].lunitigs;
-      offset = sr.prepend(coords[node_i].name_u->unitigs, overlap, offset);
+      const size_t start   = node_i != mr.start_node ? 0 : mr.start_unitig;
+      const size_t end     = coords[node_i].name_u->unitigs.size() - 1 - overlap;
+      offset               = sr.prepend(offset, coords[node_i].name_u->unitigs, start, end);
       if(dot) *dot << "n" << node_i << " -> n" << node_j << " [color=\"red\"];\n";
       node_j = node_i;
       node_i = nodes[node_i].lprev;
@@ -257,30 +265,10 @@ void overlap_graph::print_mega_reads(std::ostream& output, const std::vector<int
       sr_len += unitigs_lengths[unitig.id()];
     sr_len -= (sr.size() - 1) * (k_len - 1);
 
-    // TODO: should the implied start and end of the mega read be
-    // computed and kept in the mega_read_info, instead of being
-    // computed when printing out results?
-    const std::vector<std::string>& us = *unitigs_sequences;
-    double imp_s = start_c.qs;
-    if(mr.start_unitig) {
-      for(int i = 0; i < mr.start_unitig; ++i)
-        imp_s += us[start_c.name_u->unitigs[i].id_].size();
-      imp_s -= (k_len - 1) * (mr.start_unitig - 1);
-    }
-    imp_s = imp_s * start_c.stretch + start_c.offset;
-
-    double imp_e = end_c.qe;
-    if(mr.end_unitig != (int)end_c.name_u->unitigs.size()) {
-      for(int i = end_c.name_u->unitigs.size() - 1; i >= 0; --i)
-        imp_e -= us[end_c.name_u->unitigs[i].id_].size();
-      imp_e += (k_len - 1) * (end_c.name_u->unitigs.size() - mr.end_unitig - 1);
-    }
-    imp_e = imp_e * end_c.stretch + end_c.offset;
-
     output << std::fixed << std::setprecision(2)
-           << imp_s << ' ' << imp_e << ' '
+           << mr.tiling_start << ' ' << mr.tiling_end << ' '
            << start_c.rs << ' ' << end_c.re << ' '
-           << start_c.qs << ' ' << (sr_len - (end_c.ql - end_c.qe)) << ' '
+           << (start_c.qs - mr.start_offset) << ' ' << (sr_len + mr.end_offset - (end_c.ql - end_c.qe)) << ' '
            << end_n.lpath << ' ' << std::setprecision(4) << mr.density
            << ' ' << sr << ' ' << sr_len;
 

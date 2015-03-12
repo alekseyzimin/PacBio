@@ -132,20 +132,20 @@ TEST(SuperReadName, Prepend) {
 
   {
     super_read_name sra("3F_4R");
-    offset = sr.prepend(sra);
+    offset = sr.prepend(sra, 0, 1);
     EXPECT_EQ("0F_0F_0F_0F_0F_0F_0F_0F_3F_4R", sr.name());
     EXPECT_EQ((size_t)8, offset);
   }
   super_read_name sra("1F_2F_3F_4F_5F_6F_7F_8F_9F");
-  offset = sr.prepend(sra, 0, offset);
+  offset = sr.prepend(offset, sra, 5, 4);
   EXPECT_EQ("0F_0F_0F_0F_0F_0F_0F_0F_3F_4R", sr.name());
   EXPECT_EQ((size_t)8, offset);
 
-  offset = sr.prepend(sra, 3, offset);
+  offset = sr.prepend(offset, sra, 0, 5);
   EXPECT_EQ("0F_0F_1F_2F_3F_4F_5F_6F_3F_4R", sr.name());
   EXPECT_EQ((size_t)2, offset);
 
-  offset = sr.prepend(sra, 7, offset);
+  offset = sr.prepend(offset, sra, 0, 1);
   EXPECT_EQ("1F_2F_1F_2F_3F_4F_5F_6F_3F_4R", sr.name());
   EXPECT_EQ((size_t)0, offset);
 }

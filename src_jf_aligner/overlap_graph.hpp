@@ -45,6 +45,7 @@ struct node_info {
 struct mega_read_info {
   int    start_node, end_node;
   int    start_unitig, end_unitig;
+  int    start_offset, end_offset;
   int    nb_unitigs;
   double tiling_start, tiling_end; // coordinates used for tiling
   double density;
@@ -197,6 +198,7 @@ struct overlap_graph {
     void tile_greedy(size_t at_most = std::numeric_limits<size_t>::max()) {
       std::sort(sort_tiling_.begin(), sort_tiling_.end(),
                 [&](int i, int j) { return nodes_[mega_reads_[i]->end_node].lpath < nodes_[mega_reads_[j]->end_node].lpath; });
+      tiled_mr_.clear();
       og_.tile_greedy(sort_tiling_, mega_reads_, nodes_, tiled_mr_, at_most);
       std::sort(tiled_mr_.begin(), tiled_mr_.end(),
                 [&](int i, int j) -> bool {

@@ -21,13 +21,12 @@ void super_read_name::append(const super_read_name& rhs, size_t skip) {
   std::copy(rhs.unitigs_.cbegin() + skip, rhs.unitigs_.cend(), unitigs_.begin() + osize);
 }
 
-size_t super_read_name::prepend(const super_read_name& rhs, size_t all_but, size_t offset) {
-  offset = std::min(offset, unitigs_.size());
-  if(all_but >= rhs.size()) return offset;
-  const size_t to_copy = rhs.size() - all_but;
+size_t super_read_name::prepend(size_t offset, const super_read_name& rhs, size_t first, size_t last) {
+  if(first > last || first >= rhs.size()) return offset;
+  const size_t to_copy = std::min(last, rhs.size() - 1) - first + 1;
   if(to_copy > offset) return offset;
   const size_t new_offset = offset - to_copy;
-  std::copy_n(rhs.unitigs_.cbegin(), to_copy, unitigs_.begin() + new_offset);
+  std::copy_n(rhs.unitigs_.cbegin() + first, to_copy, unitigs_.begin() + new_offset);
   return new_offset;
 }
 

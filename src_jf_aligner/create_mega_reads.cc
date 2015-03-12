@@ -64,20 +64,6 @@ void create_mega_reads(read_parser* reads, Multiplexer* output_m,
       coords_info_type sorted_coords;
       for(int i = 0; i < n; ++i)
         sorted_coords.push_back((*coords)[sort_array[i]]);
-      //      std::cerr << name << ' ' << coords->size() << '\n';
-      // for(int i = 0; i < n; ++i) {
-      //   const auto& it = (*coords)[sort_array[i]];
-      // for(const auto& it : sorted_coords) {
-      //   std::cerr << it.rs << ' ' << it.re << ' ' << it.qs << ' ' << it.qe << ' ' << it.nb_mers << ' '
-      //             << it.pb_cons << ' ' << it.sr_cons << ' ' << it.pb_cover << ' ' << it.sr_cover << ' '
-      //             << it.rl << ' ' << it.ql << ' '
-      //             << it.qfrag->len << ' ' << it.name_u->unitigs << ' '
-      //             << it.kmers_info << ' ' << it.bases_info << ' '
-      //             << std::fixed << std::setprecision(1)
-      //             << it.stretch << ' ' << it.offset << ' ' << it.avg_err << ' '
-      //     //                  << it.align_k_
-      //             << '\n';
-      // }
 
       graph.reset(sorted_coords, name, dot.get());
       graph.traverse();

@@ -54,10 +54,15 @@ public:
 
   void append(const super_read_name& rhs, size_t skip = 0);
 
-  // Prepend all but 'all_but' elements from the 'rhs' into 'this'
-  // starting at position 'offset'. Returns 'offset' minus the number
-  // of elements copied. If 'rhs' is too big, nothing is copied.
-  size_t prepend(const super_read_name& rhs, size_t all_but = 0, size_t offset = std::numeric_limits<size_t>::max());
+  // Prepend the unitigs from rhs, in the range [first, last] (note
+  // closed interval on both sides), starting at offset. If offset ==
+  // this.size(), it prepends from the end. Returns the next offset
+  // where it is free to prepend to.
+  size_t prepend(size_t offset, const super_read_name& rhs, size_t first, size_t last);
+
+  size_t prepend(const super_read_name& rhs, size_t first, size_t last) {
+    return prepend(size(), rhs, first, last);
+  }
 
   u_id_ori operator[](size_t i) const { return i < nb_unitigs() ? unitigs_[i] : u_id_ori(invalid_id, 'F'); }
 
