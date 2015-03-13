@@ -45,7 +45,8 @@ while($line=<STDIN>){
     chomp($line);
     if($line =~ /^>/){
 	if(@lines){
-	    $outread = process_sorted_lines(sort {$$a[0] <=> $$b[0]} @lines);
+	    $outread = "";
+	    $outread = process_sorted_lines(sort {$$a[0] <=> $$b[0]} @lines) if($#lines<100);#no more than 100 chunks per PB read
 	    if(not($outread eq "")){
 		$indx=0;
 		@f=split(/(N{1,})/,$outread);
@@ -89,6 +90,16 @@ sub process_sorted_lines{
     my $gap_coeff=1;
     my $outread_len=0;
     my $seq_len=0;
+    my $sum_chunk_size=0;
+    my $num_chunks=0;
+
+    for(my $i=0;$i<=$#args;$i++){
+        ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
+	$sum_chunk_size+=($mend-$mbgn);
+	$num_chunks++;
+	}
+
+    return($outread) if($sum_chunk_size/$num_chunks<500);#average chunk size must be >500bp
 
     for(my $i=0;$i<=$#args;$i++){
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
