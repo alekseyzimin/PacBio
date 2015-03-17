@@ -105,11 +105,12 @@ static void print_unitig(std::ostream& os, bool rev_comp, const std::string& seq
 }
 
 void super_read_name::print_sequence(std::ostream& os, const std::vector<std::string>& unitigs_sequences,
-                                     int k_len) const {
-  auto it = unitigs_.cbegin();
-  if(it != unitigs_.cend()) {
+                                     int k_len, size_t start_unitig, ssize_t nb_unitigs) const {
+  auto       it  = unitigs_.cbegin() + std::min(start_unitig, unitigs_.size());
+  const auto end = (nb_unitigs == -1) ? unitigs_.cend() : unitigs_.cbegin() + std::min(start_unitig + nb_unitigs, unitigs_.size());
+  if(it != end) {
     print_unitig(os, it->ori_, unitigs_sequences.at(it->id()), 0);
-    for(++it; it != unitigs_.cend(); ++it)
+    for(++it; it != end; ++it)
       print_unitig(os, it->ori_, unitigs_sequences.at(it->id()), k_len - 1);
   }
 }

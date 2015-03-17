@@ -150,9 +150,10 @@ TEST(SuperReadName, Prepend) {
   EXPECT_EQ((size_t)0, offset);
 }
 
-void expect_sr_sequence(const std::string& res, const super_read_name& sr, const std::vector<std::string>& us, int k_len) {
+void expect_sr_sequence(const std::string& res, const super_read_name& sr, const std::vector<std::string>& us, int k_len,
+                        size_t start = 0, ssize_t nb = -1) {
   std::ostringstream os;
-  sr.print_sequence(os, us, k_len);
+  sr.print_sequence(os, us, k_len, start, nb);
   EXPECT_EQ(res, os.str());
 }
 
@@ -168,6 +169,8 @@ TEST(SuperReadName, Sequence) {
   expect_sr_sequence(us[1], sr, us, k_len);
   sr = "1F_3F";
   expect_sr_sequence(us[1] + us[3].substr(k_len - 1), sr, us, k_len);
+  expect_sr_sequence(us[3], sr, us, k_len, 1);
+  expect_sr_sequence("", sr, us, k_len, 0, 0);
 
   sr = "2R";
   expect_sr_sequence(misc::rev_comp(us[2]), sr, us, k_len);
@@ -175,6 +178,9 @@ TEST(SuperReadName, Sequence) {
   expect_sr_sequence(misc::rev_comp(us[2]) + us[4].substr(k_len - 1), sr, us, k_len);
   sr = "2R_4F_0R";
   expect_sr_sequence(misc::rev_comp(us[2]) + us[4].substr(k_len - 1) + misc::rev_comp(us[0]).substr(k_len - 1), sr, us, k_len);
+  expect_sr_sequence(misc::rev_comp(us[2]) + us[4].substr(k_len - 1), sr, us, k_len, 0, 2);
+  expect_sr_sequence(us[4] + misc::rev_comp(us[0]).substr(k_len - 1), sr, us, k_len, 1, 3);
+  expect_sr_sequence(misc::rev_comp(us[0]), sr, us, k_len, 2, 1);
 } // SuperReadName.Sequence
 
 } // empty namespace

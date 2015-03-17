@@ -85,7 +85,8 @@ public:
   // overlap.
   int overlap(const super_read_name& rhs) const;
 
-  void print_sequence(std::ostream& os, const std::vector<std::string>& unitigs_sequences, int k_len) const;
+  void print_sequence(std::ostream& os, const std::vector<std::string>& unitigs_sequences, int k_len,
+                      size_t start_unitig = 0, ssize_t nb_unitigs = -1) const;
 
 protected:
   static unitigs_list parse(const std::string& name);

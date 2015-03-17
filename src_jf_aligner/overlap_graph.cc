@@ -251,24 +251,23 @@ void overlap_graph::print_mega_reads(std::ostream& output, const std::vector<int
     const auto& end_c   = coords[mr.end_node];
     const auto& start_c = coords[mr.start_node];
 
-    super_read_name        sr(mr.nb_unitigs);
-    size_t                 offset = sr.prepend(end_c.name_u->unitigs, 0, mr.end_unitig);
+    super_read_name        sr(end_n.lunitigs);
+    size_t                 offset = sr.prepend(end_c.name_u->unitigs, 0, end_c.name_u->unitigs.size() - 1);
     int                    node_j = mr.end_node;
     int                    node_i = end_n.lprev;
     while(node_i >= 0) {
       const size_t overlap = nodes[node_i].lunitigs + coords[node_j].name_u->unitigs.size() - nodes[node_j].lunitigs;
-      const size_t start   = node_i != mr.start_node ? 0 : mr.start_unitig;
       const size_t end     = coords[node_i].name_u->unitigs.size() - 1 - overlap;
-      offset               = sr.prepend(offset, coords[node_i].name_u->unitigs, start, end);
+      offset               = sr.prepend(offset, coords[node_i].name_u->unitigs, 0, end);
       if(dot) *dot << "n" << node_i << " -> n" << node_j << " [color=\"red\"];\n";
       node_j = node_i;
       node_i = nodes[node_i].lprev;
     }
 
     int sr_len = 0;
-    for(auto unitig : sr.unitigs())
-      sr_len += unitigs_lengths[unitig.id()];
-    sr_len -= (sr.size() - 1) * (k_len - 1);
+    for(int i = mr.start_unitig; i < mr.start_unitig + mr.nb_unitigs; ++i)
+      sr_len += unitigs_lengths[sr.unitig_id(i)];
+    sr_len -= (mr.nb_unitigs - 1) * (k_len - 1);
 
     output << std::fixed << std::setprecision(2)
            << mr.tiling_start << ' ' << mr.tiling_end << ' '
@@ -279,7 +278,7 @@ void overlap_graph::print_mega_reads(std::ostream& output, const std::vector<int
 
     if(unitigs_sequences) {
       output << ' ';
-      sr.print_sequence(output, *unitigs_sequences, k_len);
+      sr.print_sequence(output, *unitigs_sequences, k_len, mr.start_unitig, mr.nb_unitigs);
     }
 
     output << '\n';
