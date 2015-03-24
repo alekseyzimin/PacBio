@@ -6,7 +6,7 @@ CXXFLAGS += -I.. $(JELLYFISH_CFLAGS) -I../include
 LDFLAGS += $(JELLYFISH_LIBS)
 
 CMDLINES  = jf_aligner_cmdline.yaggo create_mega_reads_cmdline.yaggo 
-CMDLINES += longest_path_overlap_graph2_cmdline.yaggo tile_mega_reads_cmdline.yaggo
+CMDLINES += longest_path_overlap_graph2_cmdline.yaggo
 CMDLINES += merge_coords_cmdline.yaggo
 
 SRCS  = pb_aligner.cc superread_parser.cc union_find.cc overlap_graph.cc super_read_name.cc
@@ -15,7 +15,6 @@ SRCS += coords_parsing.cc coarse_aligner.cc fine_aligner.cc misc.cc
 JF_ALIGNER_OBJS = jf_aligner.o pb_aligner.o superread_parser.o super_read_name.o coarse_aligner.o fine_aligner.o misc.o ../lib/libcommon.a
 CREATE_MEGA_READS_OBJS = create_mega_reads.o pb_aligner.o superread_parser.o union_find.o overlap_graph.o super_read_name.o coarse_aligner.o fine_aligner.o misc.o
 LONGEST_PATH_OBJS = longest_path_overlap_graph2.o pb_aligner.o superread_parser.o union_find.o overlap_graph.o super_read_name.o coords_parsing.o misc.o
-TILE_OBJS = tile_mega_reads.o overlap_graph.o super_read_name.o union_find.o
 MERGE_COORDS_OBJS = merge_coords.o
 
 : foreach $(CMDLINES) |> !yaggo |>
@@ -24,11 +23,9 @@ MERGE_COORDS_OBJS = merge_coords.o
 : jf_aligner.cc                  | jf_aligner_cmdline.hpp                  |> !cxx |>
 : create_mega_reads.cc           | create_mega_reads_cmdline.hpp           |> !cxx |>
 : longest_path_overlap_graph2.cc | longest_path_overlap_graph2_cmdline.hpp |> !cxx |>
-: tile_mega_reads.cc             | tile_mega_reads_cmdline.hpp             |> !cxx |>
 : merge_coords.cc                | merge_coords_cmdline.hpp                |> !cxx |>
 
 : $(JF_ALIGNER_OBJS)        |> !lxxd |> jf_aligner
 : $(CREATE_MEGA_READS_OBJS) |> !lxxd |> create_mega_reads
 : $(LONGEST_PATH_OBJS)      |> !lxxd |> longest_path_overlap_graph2
-: $(TILE_OBJS)              |> !lxxd |> tile_mega_reads
 : $(MERGE_COORDS_OBJS)      |> !lxxd |> merge_coords
