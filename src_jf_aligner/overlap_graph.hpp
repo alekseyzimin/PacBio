@@ -47,6 +47,7 @@ struct mega_read_info {
   int    start_unitig, end_unitig;
   int    start_offset, end_offset;
   int    nb_unitigs;
+  double imp_s, imp_e;
   double tiling_start, tiling_end; // coordinates used for tiling
   double density;
   static mega_read_info make(int i, const std::vector<node_info>& nodes,
@@ -210,8 +211,8 @@ struct overlap_graph {
       og_.tile_greedy(sort_tiling_, mega_reads_, nodes_, tiled_mr_, at_most);
       std::sort(tiled_mr_.begin(), tiled_mr_.end(),
                 [&](int i, int j) -> bool {
-                  const auto st_i = mega_reads_[i]->tiling_start, st_j = mega_reads_[j]->tiling_start;
-                  return st_i < st_j || (st_i == st_j && mega_reads_[i]->tiling_end < mega_reads_[j]->tiling_end);
+                  const auto st_i = mega_reads_[i]->imp_s, st_j = mega_reads_[j]->imp_s;
+                  return st_i < st_j || (st_i == st_j && mega_reads_[i]->imp_e < mega_reads_[j]->imp_e);
                 });
     }
 
@@ -221,8 +222,8 @@ struct overlap_graph {
       og_.tile_maximal(sort_tiling_, mega_reads_, nodes_, tiled_mr_);
       std::sort(tiled_mr_.begin(), tiled_mr_.end(),
                 [&](int i, int j) -> bool {
-                  const auto st_i = mega_reads_[i]->tiling_start, st_j = mega_reads_[j]->tiling_start;
-                  return st_i < st_j || (st_i == st_j && mega_reads_[i]->tiling_end < mega_reads_[j]->tiling_end);
+                  const auto st_i = mega_reads_[i]->imp_s, st_j = mega_reads_[j]->imp_s;
+                  return st_i < st_j || (st_i == st_j && mega_reads_[i]->imp_e < mega_reads_[j]->imp_e);
                 });
     }
 
