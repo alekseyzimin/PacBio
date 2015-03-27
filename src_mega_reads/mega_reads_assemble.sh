@@ -15,7 +15,7 @@ JF_SIZE=$7
 #parameters
 MER=15
 B=17
-d=0.04
+d=0.03
 NUM_THREADS=48
 
 COORDS=$COORDS.$KMER.$MER.$B.$d
