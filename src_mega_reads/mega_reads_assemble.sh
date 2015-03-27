@@ -15,13 +15,15 @@ JF_SIZE=$7
 #parameters
 MER=15
 B=17
-d=0.1
+d=0.04
 NUM_THREADS=48
 
 COORDS=$COORDS.$KMER.$MER.$B.$d
+CA=CA.${COORDS}
+
 if [ ! -e $COORDS.blasr.out ];then
 
-create_mega_reads -s $JF_SIZE -m $MER -F 13 --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt
+create_mega_reads -s $JF_SIZE -m $MER --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt
 
 #first we reduce to maximal
 perl -ane '{
@@ -86,7 +88,7 @@ $mr_number++;
 }
 }' 1>$COORDS.maximal_mr.fa 2>$COORDS.maximal_mr.names
 
-run_big_nucmer_job_parallel.sh $PACBIO $COORDS.maximal_mr.fa 1000000 200000000 '--maxmatch -d 0.2 -g 200 -l 15 -b 120 -c 100' $NUM_THREADS
+run_big_nucmer_job_parallel.sh $PACBIO $COORDS.maximal_mr.fa 2000000 200000000 '-d 0.2 -g 200 -l 15 -b 120 -c 100' $NUM_THREADS
 delta-filter -g -o 20 $PACBIO.$COORDS.maximal_mr.fa.g.delta > $PACBIO.$COORDS.maximal_mr.fa.gg.delta
 show-coords -lcHr  $PACBIO.$COORDS.maximal_mr.fa.gg.delta | awk '{if($4<$5){print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}else{print $18"/0_"$12" "$19+1" 0 0 0 "$10" "$13-$4+1" "$13-$5+1" "$13" "$1" "$2" "$12" 0"}}' > $COORDS.blasr.out
 
@@ -100,25 +102,24 @@ fi
 
 join_mega_reads_trim.onepass.pl $PACBIO ${COORDS}.1.allowed $KMER $COORDS.bad_pb.txt < ${COORDS}.all.txt > $COORDS.1.fa;
 
-fasta2frg.pl mr  < $COORDS.1.fa > $COORDS.1.frg;
+fasta2frg.pl mr 600 < $COORDS.1.fa > $COORDS.1.frg;
 #perl -ane 'BEGIN{$n=0}{if($F[0]=~/^>/){print ">$n\n";$n++}else{print "$F[0]\n"}}' $SUPERREADS | fasta2frg.pl sr  > $COORDS.sr.frg;
-/home/alekseyz/myprogs/getNumBasesPerReadInFastaFile.perl  $COORDS.1.fa   | awk '{n+=$1;m++}END{print n" "m" "n/m}'
 
-CA=CA.${COORDS}
+make_mate_frg.pl < $COORDS.1.fa > $COORDS.1.mates.frg
 
-runCA unitigger=bogart merylMemory=8192 utgGraphErrorLimit=1000 utgGraphErrorRate=0.03 utgMergeErrorLimit=1000 utgMergeErrorRate=0.045 ovlCorrBatchSize=5000 ovlCorrConcurrency=$NUM_THREADS frgCorrThreads=$NUM_THREADS mbtThreads=$NUM_THREADS ovlThreads=2 ovlHashBlockLength=100000000 ovlRefBlockSize=1000 ovlConcurrency=$NUM_THREADS doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal stopAfter=unitigger cnsMinFrags=500 cnsConcurrency=16 -p genome -d $CA  merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg  1> $CA.log 2>&1
+runCA unitigger=bogart  merylMemory=8192 utgGraphErrorLimit=1000  utgMergeErrorLimit=1000 utgGraphErrorRate=0.04 utgMergeErrorRate=0.04 ovlCorrBatchSize=5000 ovlCorrConcurrency=$NUM_THREADS frgCorrThreads=$NUM_THREADS mbtThreads=$NUM_THREADS ovlThreads=2 ovlHashBlockLength=100000000 ovlRefBlockSize=1000 ovlConcurrency=$NUM_THREADS doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal doUnitigSplitting=0 stopAfter=unitigger cnsMinFrags=500 cnsConcurrency=32 -p genome -d $CA  merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg    $COORDS.1.mates.frg  1> $CA.log 2>&1
 
 echo "preliminary stats:"
 tigStore -g $CA/genome.gkpStore -t $CA/genome.tigStore 2 -U -d sizes -s 12000000
-#exit
-runCA merylMemory=8192 utgGraphErrorLimit=1000 utgGraphErrorRate=0.035 utgMergeErrorLimit=1000 utgMergeErrorRate=0.045 ovlCorrBatchSize=5000 ovlCorrConcurrency=$NUM_THREADS frgCorrThreads=$NUM_THREADS mbtThreads=$NUM_THREADS ovlThreads=2 ovlHashBlockLength=100000000 ovlRefBlockSize=10000 ovlConcurrency=$NUM_THREADS doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal stopAfter=consensusAfterUnitigger cnsMinFrags=500 cnsConcurrency=16 -p genome -d $CA unitigger=bogart merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg  1> $CA.log 2>&1
 
-tigStore -g $CA/genome.gkpStore -t $CA/genome.tigStore 3 -U -nreads 2 100000000 -d consensus >assembly.$CA.fa
-split_long_unitigs.pl ur < assembly.${CA}.fa 2>assembly.${CA}.short_unitigs.fa | fasta2frg.pl ur > assembly.${CA}.unitig_reads.frg
+runCA cnsReuseUnitigs=1 cgwMergeMissingThreshold=-1 cgwMergeFilterLevel=1 cgwDemoteRBP=0 cgwErrorRate=0.25 merylMemory=8192 utgGraphErrorLimit=1000 utgGraphErrorRate=0.035 utgMergeErrorLimit=1000 utgMergeErrorRate=0.045 ovlCorrBatchSize=5000 ovlCorrConcurrency=$NUM_THREADS frgCorrThreads=$NUM_THREADS mbtThreads=$NUM_THREADS ovlThreads=2 ovlHashBlockLength=100000000 ovlRefBlockSize=10000 ovlConcurrency=$NUM_THREADS doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal doUnitigSplitting=0 cnsMinFrags=300 cnsConcurrency=32 -p genome -d $CA unitigger=bogart merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg  1>> $CA.log 2>&1
 
-runCA merylMemory=8192 unitigger=bogart utgGraphErrorLimit=1000 utgGraphErrorRate=0.0 utgMergeErrorLimit=1000 utgMergeErrorRate=0.005 ovlMerThreshold=5 ovlMinLen=500 doFragmentCorrection=0 doUnitigSplitting=0 ovlMerSize=31 doChimeraDetection=off stopAfter=consensusAfterUnitigger cnsMinFrags=100 cnsConcurrency=16 -p genome -d ${CA}u ovlThreads=$NUM_THREADS merylThreads=$NUM_THREADS doOverlapBasedTrimming=0 utgErrorLimit=100000 assembly.${CA}.unitig_reads.frg  1>> $CA.log 2>&1
+#split_long_unitigs.pl cr < ${CA}/9-terminator/genome.ctg.fasta 2>assembly.${CA}.short_contigs.fa | fasta2frg.pl cr > assembly.${CA}.contig_reads.frg
+
+#runCA merylMemory=8192 unitigger=bogart utgGraphErrorLimit=1000 utgGraphErrorRate=0.0 utgMergeErrorLimit=1000 utgMergeErrorRate=0.01 ovlMerThreshold=5 ovlMinLen=1000 doFragmentCorrection=0 doUnitigSplitting=0 doChimeraDetection=off stopAfter=unitigger cnsMinFrags=100 cnsConcurrency=16 -p genome -d ${CA}u ovlThreads=$NUM_THREADS merylThreads=$NUM_THREADS doOverlapBasedTrimming=0 utgErrorLimit=100000 assembly.${CA}.contig_reads.frg  1>> $CA.log 2>&1
+
+#tigStore -g ${CA}u/genome.gkpStore -t ${CA}u/genome.tigStore 2 -U -d sizes -s 12000000
 
 #final output
-tigStore -g ${CA}u/genome.gkpStore -t ${CA}u/genome.tigStore  3 -U -d consensus >assembly.${CA}u.fa
-#cat assembly.${CA}.short_unitigs.fa >> assembly.${CA}u.fa
+#tigStore -g ${CA}u/genome.gkpStore -t ${CA}u/genome.tigStore  3 -U -d consensus >assembly.${CA}u.fa
 
