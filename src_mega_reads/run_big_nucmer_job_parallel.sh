@@ -42,6 +42,6 @@ qryfilename=$(basename $qryseq)
 (cd $rundir;parallel -j $num_cpus "nucmer $nuc_params -p deltafile.{1}.{2} {1} {2} 1>/dev/null 2>&1" ::: $reffilename.* ::: $qryfilename.* ;)
 
 head -n 2 $rundir/deltafile.$reffilename.1.$qryfilename.1.delta > $reffilename.$qryfilename.g.delta
-cat  $rundir/deltafile*.delta |grep -v NUCMER | grep -v  $reffilename >> $reffilename.$qryfilename.g.delta
+(ls  $rundir/deltafile*.delta | xargs cat) |grep -v NUCMER | grep -v  $reffilename >> $reffilename.$qryfilename.g.delta
 
 
