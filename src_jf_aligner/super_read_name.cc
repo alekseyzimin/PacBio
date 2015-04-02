@@ -21,13 +21,12 @@ void super_read_name::append(const super_read_name& rhs, size_t skip) {
   std::copy(rhs.unitigs_.cbegin() + skip, rhs.unitigs_.cend(), unitigs_.begin() + osize);
 }
 
-size_t super_read_name::prepend(const super_read_name& rhs, size_t all_but, size_t offset) {
-  offset = std::min(offset, unitigs_.size());
-  if(all_but >= rhs.size()) return offset;
-  const size_t to_copy = rhs.size() - all_but;
+size_t super_read_name::prepend(size_t offset, const super_read_name& rhs, size_t first, size_t last) {
+  if(first > last || first >= rhs.size()) return offset;
+  const size_t to_copy = std::min(last, rhs.size() - 1) - first + 1;
   if(to_copy > offset) return offset;
   const size_t new_offset = offset - to_copy;
-  std::copy_n(rhs.unitigs_.cbegin(), to_copy, unitigs_.begin() + new_offset);
+  std::copy_n(rhs.unitigs_.cbegin() + first, to_copy, unitigs_.begin() + new_offset);
   return new_offset;
 }
 
@@ -106,11 +105,12 @@ static void print_unitig(std::ostream& os, bool rev_comp, const std::string& seq
 }
 
 void super_read_name::print_sequence(std::ostream& os, const std::vector<std::string>& unitigs_sequences,
-                                     int k_len) const {
-  auto it = unitigs_.cbegin();
-  if(it != unitigs_.cend()) {
+                                     int k_len, size_t start_unitig, ssize_t nb_unitigs) const {
+  auto       it  = unitigs_.cbegin() + std::min(start_unitig, unitigs_.size());
+  const auto end = (nb_unitigs == -1) ? unitigs_.cend() : unitigs_.cbegin() + std::min(start_unitig + nb_unitigs, unitigs_.size());
+  if(it != end) {
     print_unitig(os, it->ori_, unitigs_sequences.at(it->id()), 0);
-    for(++it; it != unitigs_.cend(); ++it)
+    for(++it; it != end; ++it)
       print_unitig(os, it->ori_, unitigs_sequences.at(it->id()), k_len - 1);
   }
 }

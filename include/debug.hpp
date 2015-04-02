@@ -41,7 +41,7 @@ struct dbg {
 };
 
 // Convenience macros
-#define DBG if(1) dbg()
+#define DBG if(1) dbg() << __FILE__ << ':' << __LINE__ << ':' << __FUNCTION__
 #define W(m,x) xspace << m << ':' << (x)
 #define V(x) xspace << #x << ':' << (x)
 

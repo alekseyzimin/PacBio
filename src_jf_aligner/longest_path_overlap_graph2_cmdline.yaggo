@@ -9,7 +9,7 @@ option("t", "threads") {
 option("o", "output") {
   description "Output file"
   c_string; typestr "path" }
-# option("c", "compact") {
+# option"c", "compact") {
 #   description "Compact output"
 #   off }
 option("dot") {
@@ -39,6 +39,12 @@ option("d", "density") {
 option("L", "min-length") {
   description "Minimum length of a mega-read"
   double; default 100.0 }
+option("T", "tiling") {
+  description "Option for tiling mega-reads"
+  enum "none", "greedy", "maximal"; default "greedy" }
+option("trim") {
+  description "How to trim mega-read"
+  enum "none", "match", "branch"; default "none" }
 arg("coords") {
   description "Coords file"
   c_string; typestr "path" }

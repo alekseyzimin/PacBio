@@ -8,6 +8,7 @@ my $allowed_gaps=$ARGV[1];
 my $kmer=$ARGV[2];
 my $bad_pb=$ARGV[3];
 my $fudge_factor=1.2;
+my $min_len_output=400;
 $kmer*=$fudge_factor;
 
 my $rn="";
@@ -44,12 +45,13 @@ while($line=<STDIN>){
     chomp($line);
     if($line =~ /^>/){
 	if(@lines){
-	    $outread = process_sorted_lines(sort {$$a[0] <=> $$b[0]} @lines);
+	    $outread = "";
+	    $outread = process_sorted_lines(sort {$$a[0] <=> $$b[0]} @lines) if($#lines<100);#no more than 100 chunks per PB read
 	    if(not($outread eq "")){
 		$indx=0;
 		@f=split(/(N{1,})/,$outread);
 		for($i=0;$i<=$#f;$i+=2){
-		    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=500);
+		    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=$min_len_output);
 		    $indx+=length($f[$i]);
 		    $indx+=length($f[$i+1]) if($f[$i]<$#f);
 		}
@@ -69,7 +71,7 @@ if(@lines){
                 $indx=0;
                 @f=split(/(N{1,})/,$outread);
                 for($i=0;$i<=$#f;$i+=2){
-                    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=500);
+                    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=$min_len_output);
                     $indx+=length($f[$i]);
                     $indx+=length($f[$i+1]) if($f[$i]<$#f);
                 }
@@ -84,10 +86,20 @@ sub process_sorted_lines{
     my @max_gap_local_fwd=();
     my @max_gap_local_rev=();
     my @args=@_;
-    my $max_gap=1250;
+    my $max_gap=750;
     my $gap_coeff=1;
     my $outread_len=0;
     my $seq_len=0;
+    my $sum_chunk_size=0;
+    my $num_chunks=0;
+
+    for(my $i=0;$i<=$#args;$i++){
+        ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
+	$sum_chunk_size+=($mend-$mbgn);
+	$num_chunks++;
+	}
+
+    return($outread) if($sum_chunk_size/$num_chunks<500);#average chunk size must be >500bp
 
     for(my $i=0;$i<=$#args;$i++){
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
@@ -156,13 +168,23 @@ sub process_sorted_lines{
                 }
             }else{#overlapping
 		$join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads
-		#here we check for overlaps
-	        my $offset; 
+		#here we check for overlap
 	 	my $min_match=25;
+		my $ind=-1;
+		my %ind=();
 
 		if($last_coord-$bgn > $min_match){
-                    $ind=index($outread,substr($seq,0,$min_match),length($outread)-($last_coord-$bgn)*1.2);
-                    if($ind==-1 || abs(($last_coord-$bgn)-(length($outread)-$ind))>(0.2*($last_coord-$bgn)+10)){
+		    for(my $j=0;$j<10;$j++){
+                    	my $ttt=index($outread,substr($seq,$j,$min_match),length($outread)-($last_coord-$bgn)*$fudge_factor);
+		        $ind{$ttt-$j}++ if($ttt>-1);
+		    	}
+		    my $max_ind=-1;
+		    foreach my $ttt (keys %ind){
+			#print "DEBUG possible ind $ttt freq $ind{$ttt} implied offset ",length($outread)-($last_coord-$bgn),"\n";
+			if($ind{$ttt}>$max_ind){$max_ind=$ind{$ttt};$ind=$ttt;}
+			}
+			
+                    if($ind==-1 || ($ind>-1 && abs(($last_coord-$bgn)-(length($outread)-$ind))>(0.2*($last_coord-$bgn)+10))){
                         $offset=$last_coord-$bgn+1;
                         if($offset > $kmer){
 			    $join_allowed=0;
@@ -170,11 +192,8 @@ sub process_sorted_lines{
 			    $join_allowed=1;
 			}
 		    }else{
-			$offset=length($outread)-$ind;
 			$join_allowed=1;
 		    }
-		}else{
-		    $join_allowed=1  unless($allowed{$str}==0);
 		}
 		
 		if(defined($bad_pb{$pb})){
@@ -189,7 +208,11 @@ sub process_sorted_lines{
 		}
 #print "$join_allowed $last_coord $bgn INDEX $ind ",length($outread)," ",$last_coord-$bgn+1," ",length($outread)-$ind,"\n";
 		if($join_allowed){
-		    $outread.=substr($seq,$offset);
+		    if($ind==-1){
+		    $outread=substr($outread,0,length($outread)-($last_coord-$bgn+1)).$seq;
+			}else{
+		    $outread=substr($outread,0,$ind).$seq;
+			}
 		}else{
 		    $outread.="N".$seq;
 		}
