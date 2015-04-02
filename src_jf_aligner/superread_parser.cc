@@ -11,10 +11,11 @@ void sequence_psa::append_fasta(std::istream& is) {
   if(is.peek() != '>')
     throw std::runtime_error("Not in fasta format");
 
-  size_t       seq_offset    = m_offsets.back().sequence;
-  size_t       search_offset = m_header_search.back();
-  std::string  line;
-  std::string  header_line;
+  size_t      seq_offset    = m_offsets.back().sequence;
+  ssize_t     search_offset = m_header_search.empty() ? -1 : m_header_search.back();
+  std::string line;
+  std::string header_line;
+
   for( ; c != EOF; c = is.peek()) {
     // read header
     std::getline(is, header_line);
@@ -99,4 +100,11 @@ void sequence_psa::compute_psa(unsigned int min_size, unsigned int max_size, uns
                                          sequence_size(), m_counts.data(), min_size, max_size));
   for(unsigned int i = 0; i < threads; ++i)
     thread_handles[i].join();
+
+  // assert(check_psa());
+  // std::cerr << "SA OK" << std::endl;
+}
+
+bool sequence_psa::sequence_in_SA() const {
+  return true;
 }

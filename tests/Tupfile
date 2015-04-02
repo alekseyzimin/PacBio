@@ -10,6 +10,7 @@ CXXFLAGS += -I$(TUP_CWD)
 export PKG_CONFIG_PATH
 CXXFLAGS += -I.. $(JELLYFISH_CFLAGS) -I../include
 LDFLAGS  += -pthread -L$(TUP_CWD) -lgtest_main -L../lib $(JELLYFISH_LIBS)
+LOADLIBES += -lcommon
 
 TESTS  = test_lis.cc test_lf_forward_list.cc test_bounded_counter.cc test_mer_pos_hash.cc 
 TESTS += test_lis_align.cc test_parsesequence.cc

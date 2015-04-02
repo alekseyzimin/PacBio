@@ -107,14 +107,16 @@ struct sequence_psa {
       bool fwd;
       while((fwd = m_fwd_index != m_fwd_end) || m_bwd_index != m_bwd_end) {
         const size_t x = (*m_psa->m_sa)[fwd ? m_fwd_index++ : m_bwd_index++];
-        // TODO: use speed up search
         const size_t search = x >> m_search_bits;
         if(search >= m_psa->m_header_search.size()) continue;
         const auto start = m_psa->m_offsets.cbegin() + m_psa->m_header_search[search];
+        const bool at_end = search >= m_psa->m_header_search.size() - 1;
         const auto end =
-          search == m_psa->m_header_search.size() - 1
+          at_end || m_psa->m_header_search[search + 1] >= m_psa->m_offsets.size() - 1
           ? m_psa->m_offsets.cend()
-          : m_psa->m_offsets.cbegin() + m_psa->m_header_search[search + 1];
+          : m_psa->m_offsets.cbegin() + m_psa->m_header_search[search + 1] + 1;
+        // assert(start->sequence <= x);
+        // assert(end == m_psa->m_offsets.cend() || end->sequence > x);
         const auto next  =
           start == end ? start : std::lower_bound(start, end, x, [](const offset_type& j, size_t i) { return j.sequence <= i; });
         const auto limit =
@@ -146,7 +148,7 @@ struct sequence_psa {
   //  explicit sequence_psa(int search_bits = 20) : m_search_bits(search_bits) {
   sequence_psa() {
     m_offsets.push_back({ (size_t)0, (size_t)0 });
-    m_header_search.push_back(0);
+    //    m_header_search.push_back(0);
   }
 
   void append_fasta(std::istream& is);
@@ -163,9 +165,12 @@ struct sequence_psa {
 
   void compute_psa(unsigned int min_size, unsigned int max_size,
                    unsigned int threads = std::thread::hardware_concurrency());
+  bool sequence_in_SA() const;
   bool check_psa() const {
-    return SA::check(compact_dna::iterator_at(m_sequence.data()), sequence_size(),
-                     m_sa->cbegin(), nb_mers(), m_counts.data(), m_min_size, m_max_size);
+    return
+      SA::check(compact_dna::iterator_at(m_sequence.data()), sequence_size(),
+                m_sa->cbegin(), nb_mers(), m_counts.data(), m_min_size, m_max_size) &&
+      sequence_in_SA();
   }
 
   template<typename MerType>
