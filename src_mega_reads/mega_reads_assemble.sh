@@ -19,6 +19,9 @@ case $key in
     CA_PATH="$2"
     shift
     ;;
+    -v|--verbose)
+    set -x
+    ;;
     -h|--help|-u|--usage)
     echo "Usage: mega_reads_assemble.sh -m <path to MaSuRCA run work1 folder -p <pacbio reads fasta> -a <path to the location of runCA in wgs-8.2 instalation>"
     exit 1
@@ -133,7 +136,7 @@ $out{$mega_read}=1;
 
 echo "Alignment/tiling"
 perl -ane  '{if($F[0] =~ /^\>/){print substr($F[0],1);}else{ print " ",length($F[0]),"\n";}}' $COORDS.all_mr.mr.fa | sort -nrk2 -S 10%  > $COORDS.mr_sizes.tmp
-reduce_sr `wc -l $4 | perl -ane 'print $F[0]'`  $KUNITIGLENGTHS $KMER $COORDS.mr_sizes.tmp -o $COORDS.reduce.tmp
+reduce_sr `wc -l $KUNITIGLENGTHS | perl -ane 'print $F[0]'`  $KUNITIGLENGTHS $KMER $COORDS.mr_sizes.tmp -o $COORDS.reduce.tmp
 cat <(awk '{print $1}' $COORDS.reduce.tmp) <(awk '{print $1}'  $COORDS.mr_sizes.tmp) | sort -S 10% |uniq -u > $COORDS.maximal_mr.txt
 extractreads.pl $COORDS.maximal_mr.txt $COORDS.all_mr.mr.fa 1 | perl -ane 'BEGIN{$mr_number=0;}{
 if($F[0] =~ /^\>/){
