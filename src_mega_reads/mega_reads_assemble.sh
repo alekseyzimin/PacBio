@@ -73,7 +73,7 @@ d=0.03
 KMER=`perl -ane 'BEGIN{$min=10000}{if($F[1]<$min){$min=$F[1]}}END{print $min}' $KUNITIGLENGTHS`
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 REF_BATCH_SIZE=`grep -v '^>' $PACBIO |wc| perl -ane '{print int($F[2]/250)}'`
-QRY_BATCH_SIZE=250000000
+QRY_BATCH_SIZE=500000000
 JF_SIZE=`grep -v '^>' $SUPERREADS |wc| perl -ane '{print $F[2]}'`
 COORDS=mr.$KMER.$MER.$B.$d
 CA=CA.${COORDS}
@@ -178,22 +178,22 @@ fi
 
 if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
 echo "Tiling"
-reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $COORDS.blasr.out 1> $COORDS.all.txt 2>$COORDS.blasr.merged
+reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $COORDS.blasr.out 1> $COORDS.all.txt.tmp 2>$COORDS.blasr.merged && mv $COORDS.all.txt.tmp $COORDS.all.txt
 touch .rerun
 fi
 
 if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 echo "Joining"
-findGapsInCoverageOfPacbios --max-gap-overlap 100  -f $COORDS.blasr.merged > $COORDS.bad_pb.txt
-analyze_mega_gaps.sh $COORDS  $KMER | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed
+findGapsInCoverageOfPacbios --max-gap-overlap 100  -f $COORDS.blasr.merged > $COORDS.bad_pb.txt.tmp && mv $COORDS.bad_pb.txt.tmp $COORDS.bad_pb.txt
+analyze_mega_gaps.sh $COORDS  $KMER | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed
 echo "Generating assembly input files"
-join_mega_reads_trim.onepass.pl $PACBIO ${COORDS}.1.allowed $KMER $COORDS.bad_pb.txt < ${COORDS}.all.txt > $COORDS.1.fa;
+join_mega_reads_trim.onepass.pl $PACBIO ${COORDS}.1.allowed $KMER $COORDS.bad_pb.txt < ${COORDS}.all.txt > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa
 touch .rerun
 fi
 
 if [ -e .rerun ];then
-fasta2frg.pl mr 600 < $COORDS.1.fa > $COORDS.1.frg;
-make_mate_frg.pl < $COORDS.1.fa > $COORDS.1.mates.frg
+fasta2frg.pl mr 600 < $COORDS.1.fa > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg
+make_mate_frg.pl < $COORDS.1.fa > $COORDS.1.mates.frg.tmp && mv $COORDS.1.mates.frg.tmp $COORDS.1.mates.frg
 fi
 
 rm -f .rerun
