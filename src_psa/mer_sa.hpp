@@ -63,6 +63,9 @@ search(const CHARPTR T, SAIDX Tsize, const CSAIDPTR SA, SAIDX SAsize,
  * @param Tsize The length of the given string.
  * @param SA[0..SAsize-1] The suffix array.
  * @param SAsize The length of the suffix array.
+ * @param counts[0..Tsize-mer_size] mer_size-mer counts
+ * @param mer_size The minimum length of a pattern to query
+ * @param max_size The maximum length of a pattern to query
  * @return True if suffix array is correct.
  */
 template<typename CHARPTR, typename CSAIDPTR,
@@ -70,6 +73,26 @@ template<typename CHARPTR, typename CSAIDPTR,
 bool
 check(const CHARPTR T, SAIDX Tsize, const CSAIDPTR SA, SAIDX TAsize,
       const uint64_t* const counts, unsigned int mer_size, unsigned int max_size) {
+  return mer_sa_imp::SA<CHARPTR, CSAIDPTR>::check(T, Tsize, SA, TAsize, counts, mer_size, max_size);
+}
+
+/**
+ * Check that every suffixes in the text is in the suffix array.
+ * @param T[0..Tsize-1] The input string.
+ * @param Tsize The length of the given string.
+ * @param SA[0..SAsize-1] The suffix array.
+ * @param SAsize The length of the suffix array.
+ * @param counts[0..Tsize-mer_size] mer_size-mer counts
+ * @param mer_size The minimum length of a pattern to query
+ * @param max_size The maximum length of a pattern to query
+ * @return True if all string of length max_size from T are in SA at the correct
+ *         position.
+ */
+template<typename CHARPTR, typename CSAIDPTR,
+         typename SAIDX = typename compactsufsort::type_traits<CSAIDPTR>::SAIDX>
+bool
+check_suffixes(const CHARPTR T, SAIDX Tsize, const CSAIDPTR SA, SAIDX TAsize,
+              const uint64_t* const counts, unsigned int mer_size, unsigned int max_size) {
   return mer_sa_imp::SA<CHARPTR, CSAIDPTR>::check(T, Tsize, SA, TAsize, counts, mer_size, max_size);
 }
 } // namespace mer_sa

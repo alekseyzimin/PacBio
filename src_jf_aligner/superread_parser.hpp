@@ -165,12 +165,12 @@ struct sequence_psa {
 
   void compute_psa(unsigned int min_size, unsigned int max_size,
                    unsigned int threads = std::thread::hardware_concurrency());
-  bool sequence_in_SA() const;
+  bool check_suffixes(std::ostream& out = std::cout) const;
   bool check_psa() const {
     return
       SA::check(compact_dna::iterator_at(m_sequence.data()), sequence_size(),
                 m_sa->cbegin(), nb_mers(), m_counts.data(), m_min_size, m_max_size) &&
-      sequence_in_SA();
+      check_suffixes();
   }
 
   template<typename MerType>
