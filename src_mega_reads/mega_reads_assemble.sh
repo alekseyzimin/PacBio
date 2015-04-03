@@ -72,7 +72,7 @@ B=17
 d=0.03
 KMER=`perl -ane 'BEGIN{$min=10000}{if($F[1]<$min){$min=$F[1]}}END{print $min}' $KUNITIGLENGTHS`
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
-REF_BATCH_SIZE=`grep -v '^>' $PACBIO |wc| perl -ane '{print int($F[2]/250)}'`
+REF_BATCH_SIZE=`grep -v '^>' $PACBIO |wc| perl -ane '{print int($F[2]/1000)}'`
 QRY_BATCH_SIZE=500000000
 JF_SIZE=`grep -v '^>' $SUPERREADS |wc| perl -ane '{print $F[2]}'`
 COORDS=mr.$KMER.$MER.$B.$d
