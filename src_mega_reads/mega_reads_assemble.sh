@@ -60,10 +60,29 @@ echo "K-unitig lengths file $KUNITIGLENGTHS not found!";
 exit 1;
 fi
 
-SUPERREADS=$MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.named.fasta
+SUPERREADS=$MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta
 if [ ! -e $SUPERREADS ];then
 echo "Super reads file $SUPERREADS not found!";
 exit 1;
+else
+perl -ane 'push(@names,$F[0]);
+	END{
+	open(FILE,"'$SUPERREADS'");
+	while($line=<FILE>){
+		if($line=~/^>/){
+			chomp($line);
+			print ">",$names[substr($line,1)],"\n";
+		}else{
+			print $line;
+	}
+	}
+}' < $MASURCA_ASSEMBLY_WORK1_PATH/superReadNames.txt > superReadSequences.named.fasta.tmp && mv superReadSequences.named.fasta.tmp superReadSequences.named.fasta
+if [ -s superReadSequences.named.fasta ];then
+SUPERREADS=superReadSequences.named.fasta;
+else
+echo "Error creating named super-reads file from $MASURCA_ASSEMBLY_WORK1_PATH/superReadNames.txt and $SUPERREADS!";
+exit 1;
+fi
 fi
 
 ################setting parameters#########################
