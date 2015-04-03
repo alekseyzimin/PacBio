@@ -65,6 +65,7 @@ if [ ! -e $SUPERREADS ];then
 echo "Super reads file $SUPERREADS not found!";
 exit 1;
 else
+if [ ! -e superReadSequences.named.fasta ];then
 perl -ane 'push(@names,$F[0]);
 	END{
 	open(FILE,"'$SUPERREADS'");
@@ -77,10 +78,12 @@ perl -ane 'push(@names,$F[0]);
 	}
 	}
 }' < $MASURCA_ASSEMBLY_WORK1_PATH/superReadNames.txt > superReadSequences.named.fasta.tmp && mv superReadSequences.named.fasta.tmp superReadSequences.named.fasta
+fi
 if [ -s superReadSequences.named.fasta ];then
 SUPERREADS=superReadSequences.named.fasta;
 else
 echo "Error creating named super-reads file from $MASURCA_ASSEMBLY_WORK1_PATH/superReadNames.txt and $SUPERREADS!";
+rm superReadSequences.named.fasta
 exit 1;
 fi
 fi
@@ -101,6 +104,7 @@ echo "Running mega-reads correction/assembly"
 echo "Using mer size $MER for mapping, B=$B, d=$d"
 echo "Using MaSuRCA files from $MASURCA_ASSEMBLY_WORK1_PATH, k-unitig mer $KMER"
 echo "Using CA installation from $CA_PATH"
+echo "Using $NUM_THREADS threads"
 echo "Output prefix $COORDS"
 
 rm -f .rerun
@@ -215,22 +219,19 @@ fi
 if [ -e .rerun ];then
 fasta2frg.pl mr 600 < $COORDS.1.fa > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg
 make_mate_frg.pl < $COORDS.1.fa > $COORDS.1.mates.frg.tmp && mv $COORDS.1.mates.frg.tmp $COORDS.1.mates.frg
+rm -rf $CA
 fi
 
 rm -f .rerun
 
-if [ -e $CA ];then
-echo "WARNING: CA folder $CA exists!";
-fi
-
 echo "Running assembly"
 
-runCA unitigger=bogart  merylMemory=8192 utgGraphErrorLimit=1000  utgMergeErrorLimit=1000 utgGraphErrorRate=0.04 utgMergeErrorRate=0.04 ovlCorrBatchSize=5000 ovlCorrConcurrency=$NUM_THREADS frgCorrThreads=$NUM_THREADS mbtThreads=$NUM_THREADS ovlThreads=2 ovlHashBlockLength=100000000 ovlRefBlockSize=1000 ovlConcurrency=$NUM_THREADS doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal doUnitigSplitting=0 stopAfter=unitigger cnsMinFrags=500 cnsConcurrency=32 -p genome -d $CA  merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg    $COORDS.1.mates.frg  1> $CA.log 2>&1
+runCA unitigger=bogart  merylMemory=8192 utgGraphErrorLimit=1000  utgMergeErrorLimit=1000 utgGraphErrorRate=0.04 utgMergeErrorRate=0.04 ovlCorrBatchSize=5000 ovlCorrConcurrency=$NUM_THREADS frgCorrThreads=$NUM_THREADS mbtThreads=$NUM_THREADS ovlThreads=2 ovlHashBlockLength=100000000 ovlRefBlockSize=10000 ovlConcurrency=$NUM_THREADS doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal stopAfter=unitigger -p genome -d $CA  merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg    $COORDS.1.mates.frg  1> $CA.log 2>&1
 
 echo "Unitig stats:"
 tigStore -g $CA/genome.gkpStore -t $CA/genome.tigStore 2 -U -d sizes 
 
-runCA cnsReuseUnitigs=1 cgwMergeMissingThreshold=-1 cgwMergeFilterLevel=1 cgwDemoteRBP=0 cgwErrorRate=0.25 merylMemory=8192 utgGraphErrorLimit=1000 utgGraphErrorRate=0.035 utgMergeErrorLimit=1000 utgMergeErrorRate=0.045 ovlCorrBatchSize=5000 ovlCorrConcurrency=$NUM_THREADS frgCorrThreads=$NUM_THREADS mbtThreads=$NUM_THREADS ovlThreads=2 ovlHashBlockLength=100000000 ovlRefBlockSize=10000 ovlConcurrency=$NUM_THREADS doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal doUnitigSplitting=0 cnsMinFrags=300 cnsConcurrency=16 -p genome -d $CA unitigger=bogart merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg  1>> $CA.log 2>&1
+runCA cnsReuseUnitigs=1 cgwMergeMissingThreshold=-1 cgwMergeFilterLevel=1 cgwDemoteRBP=0 cgwErrorRate=0.25  doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal cnsMinFrags=300 cnsConcurrency=$NUM_THREADS -p genome -d $CA unitigger=bogart merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg  1>> $CA.log 2>&1
 
 
 #split_long_unitigs.pl cr < ${CA}/9-terminator/genome.ctg.fasta 2>assembly.${CA}.short_contigs.fa | fasta2frg.pl cr > assembly.${CA}.contig_reads.frg
