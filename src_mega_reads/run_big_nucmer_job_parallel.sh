@@ -40,9 +40,9 @@ wait $pid1 $pid2
 reffilename=$(basename $refseq)
 qryfilename=$(basename $qryseq)
 
-mkdir -p $curdir/tmp.nucmer.$refseq.$qryseq
+mkdir -p tmp.nucmer.$refseq.$qryseq
 (cd $rundir;parallel -j $num_cpus "if [ ! -e $curdir/deltafile.{1}.{2} ];then nucmer $nuc_params -p tmpdeltafile.{1}.{2} {1} {2} 1>/dev/null 2>&1 && mv tmpdeltafile.{1}.{2}.delta $curdir/tmp.nucmer.$refseq.$qryseq/deltafile.{1}.{2}.delta;fi" ::: $reffilename.* ::: $qryfilename.* && mv $curdir/tmp.nucmer.$refseq.$qryseq $curdir/nucmer.$refseq.$qryseq);
 
-if [ -d $curdir/nucmer.$refseq.$qryseq ];then
-head -n 2 $curdir/nucmer.$refseq.$qryseq/deltafile.$reffilename.1.$qryfilename.1.delta > $reffilename.$qryfilename.g.delta && ls  $curdir/nucmer.$refseq.$qryseq/deltafile*.delta | xargs cat |grep -v NUCMER | grep -v  $reffilename >> $reffilename.$qryfilename.g.delta && rm -rf $curdir/tmp.nucmer.$refseq.$qryseq && rm -rf $curdir/nucmer.$refseq.$qryseq
+if [ -d nucmer.$refseq.$qryseq ];then
+head -n 2 nucmer.$refseq.$qryseq/deltafile.$reffilename.1.$qryfilename.1.delta > $reffilename.$qryfilename.g.delta.tmp && ls  nucmer.$refseq.$qryseq/deltafile*.delta | xargs cat |grep -v NUCMER | grep -v  $reffilename >> $reffilename.$qryfilename.g.delta.tmp && mv $reffilename.$qryfilename.g.delta.tmp $reffilename.$qryfilename.g.delta && rm -rf nucmer.$refseq.$qryseq
 fi
