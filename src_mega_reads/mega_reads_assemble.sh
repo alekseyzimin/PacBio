@@ -84,12 +84,15 @@ echo "Using MaSuRCA files from $MASURCA_ASSEMBLY_WORK1_PATH, k-unitig mer $KMER"
 echo "Using CA installation from $CA_PATH"
 echo "Output prefix $COORDS"
 
-if [ ! -e $COORDS.blasr.out ];then
+rm -f .rerun
 
+if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 1"
-create_mega_reads -s $JF_SIZE -m $MER --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt
+create_mega_reads -s $JF_SIZE -m $MER --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
+touch .rerun
+fi
 
-#first we reduce to maximal
+if [ ! -s $COORDS.all_mr.fa ] || [ -e .rerun ];then
 perl -ane '{
 if($F[0] =~ /^\>/){
 $pb=substr($F[0],1);
@@ -108,11 +111,17 @@ print ">$mega_read\n$sequence\n";
 $out{$mega_read}=1;
 }
 }
-}' $COORDS.txt 1> $COORDS.all_mr.fa 
+}' $COORDS.txt 1> $COORDS.all_mr.fa.tmp && mv $COORDS.all_mr.fa.tmp $COORDS.all_mr.fa 
+touch .rerun
+fi
 
+if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 2"
-create_mega_reads -s $JF_SIZE -m $MER -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d 0.05  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt
+create_mega_reads -s $JF_SIZE -m $MER -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d 0.05  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
+touch .rerun
+fi
 
+if [ ! -s $COORDS.all_mr.mr.fa ] || [ -e .rerun ];then
 perl -ane '{
 if($F[0] =~ /^\>/){
 $pb=substr($F[0],1);
@@ -131,10 +140,12 @@ print ">$mega_read\n$sequence\n";
 $out{$mega_read}=1;
 }
 }
-}' $COORDS.mr.txt 1> $COORDS.all_mr.mr.fa 
+}' $COORDS.mr.txt 1> $COORDS.all_mr.mr.fa.tmp  && mv $COORDS.all_mr.mr.fa.tmp $COORDS.all_mr.mr.fa
+touch .rerun
+fi
 
-
-echo "Alignment/tiling"
+if [ ! -s $PACBIO.$COORDS.maximal_mr.fa.g.delta ] || [ -e .rerun ];then
+echo "Maximal alignment"
 perl -ane  '{if($F[0] =~ /^\>/){print substr($F[0],1);}else{ print " ",length($F[0]),"\n";}}' $COORDS.all_mr.mr.fa | sort -nrk2 -S 10%  > $COORDS.mr_sizes.tmp
 reduce_sr `wc -l $KUNITIGLENGTHS | perl -ane 'print $F[0]'`  $KUNITIGLENGTHS $KMER $COORDS.mr_sizes.tmp -o $COORDS.reduce.tmp
 cat <(awk '{print $1}' $COORDS.reduce.tmp) <(awk '{print $1}'  $COORDS.mr_sizes.tmp) | sort -S 10% |uniq -u > $COORDS.maximal_mr.txt
@@ -155,24 +166,37 @@ $mr_number++;
 }' 1>$COORDS.maximal_mr.fa 2>$COORDS.maximal_mr.names
 
 run_big_nucmer_job_parallel.sh $PACBIO $COORDS.maximal_mr.fa $REF_BATCH_SIZE $QRY_BATCH_SIZE '-d 0.2 -g 200 -l 15 -b 120 -c 100' $NUM_THREADS
-delta-filter -g -o 20 $PACBIO.$COORDS.maximal_mr.fa.g.delta > $PACBIO.$COORDS.maximal_mr.fa.gg.delta
-show-coords -lcHr  $PACBIO.$COORDS.maximal_mr.fa.gg.delta | awk '{if($4<$5){print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}else{print $18"/0_"$12" "$19+1" 0 0 0 "$10" "$13-$4+1" "$13-$5+1" "$13" "$1" "$2" "$12" 0"}}' > $COORDS.blasr.out
-
-reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $COORDS.blasr.out 1> $COORDS.all.txt 2>$COORDS.blasr.merged
-
-findGapsInCoverageOfPacbios --max-gap-overlap 100  -f $COORDS.blasr.merged > $COORDS.bad_pb.txt
-
-analyze_mega_gaps.sh $COORDS  $KMER | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed
-
+touch .rerun
 fi
 
+if [ ! -s $COORDS.blasr.out ] || [ -e .rerun ];then
+echo "Alignments filtering"
+delta-filter -g -o 20 $PACBIO.$COORDS.maximal_mr.fa.g.delta > $PACBIO.$COORDS.maximal_mr.fa.gg.delta
+show-coords -lcHr  $PACBIO.$COORDS.maximal_mr.fa.gg.delta | awk '{if($4<$5){print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}else{print $18"/0_"$12" "$19+1" 0 0 0 "$10" "$13-$4+1" "$13-$5+1" "$13" "$1" "$2" "$12" 0"}}' > $COORDS.blasr.out
+touch .rerun
+fi
+
+if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
+echo "Tiling"
+reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $COORDS.blasr.out 1> $COORDS.all.txt 2>$COORDS.blasr.merged
+touch .rerun
+fi
+
+if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
+echo "Joining"
+findGapsInCoverageOfPacbios --max-gap-overlap 100  -f $COORDS.blasr.merged > $COORDS.bad_pb.txt
+analyze_mega_gaps.sh $COORDS  $KMER | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed
 echo "Generating assembly input files"
 join_mega_reads_trim.onepass.pl $PACBIO ${COORDS}.1.allowed $KMER $COORDS.bad_pb.txt < ${COORDS}.all.txt > $COORDS.1.fa;
+touch .rerun
+fi
 
+if [ -e .rerun ];then
 fasta2frg.pl mr 600 < $COORDS.1.fa > $COORDS.1.frg;
-#perl -ane 'BEGIN{$n=0}{if($F[0]=~/^>/){print ">$n\n";$n++}else{print "$F[0]\n"}}' $SUPERREADS | fasta2frg.pl sr  > $COORDS.sr.frg;
-
 make_mate_frg.pl < $COORDS.1.fa > $COORDS.1.mates.frg
+fi
+
+rm -f .rerun
 
 if [ -e $CA ];then
 echo "WARNING: CA folder $CA exists!";
