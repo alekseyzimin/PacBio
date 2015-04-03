@@ -13,6 +13,7 @@ export PATH=$MYPATH:$PATH;
 
 export pid=$$;
 export rundir=/dev/shm/$pid.nucmer;
+export curdir=$PWD
 
 function cleanup {
 if [ $$ -eq $pid ];then
@@ -39,9 +40,9 @@ wait $pid1 $pid2
 reffilename=$(basename $refseq)
 qryfilename=$(basename $qryseq)
 
-(cd $rundir;parallel -j $num_cpus "nucmer $nuc_params -p deltafile.{1}.{2} {1} {2} 1>/dev/null 2>&1" ::: $reffilename.* ::: $qryfilename.* ;)
+mkdir -p $curdir/tmp.nucmer.$refseq.$qryseq
+(cd $rundir;parallel -j $num_cpus "if [ ! -e $curdir/deltafile.{1}.{2} ];then nucmer $nuc_params -p tmpdeltafile.{1}.{2} {1} {2} 1>/dev/null 2>&1 && mv tmpdeltafile.{1}.{2}.delta $curdir/tmp.nucmer.$refseq.$qryseq/deltafile.{1}.{2}.delta;fi" ::: $reffilename.* ::: $qryfilename.* );
 
-head -n 2 $rundir/deltafile.$reffilename.1.$qryfilename.1.delta > $reffilename.$qryfilename.g.delta
-ls  $rundir/deltafile*.delta | xargs cat |grep -v NUCMER | grep -v  $reffilename >> $reffilename.$qryfilename.g.delta
-
+head -n 2 $curdir/tmp.nucmer.$refseq.$qryseq/deltafile.$reffilename.1.$qryfilename.1.delta > $reffilename.$qryfilename.g.delta
+ls  $curdir/tmp.nucmer.$refseq.$qryseq/deltafile*.delta | xargs cat |grep -v NUCMER | grep -v  $reffilename >> $reffilename.$qryfilename.g.delta && rm -rf $curdir/tmp.nucmer.$refseq.$qryseq
 

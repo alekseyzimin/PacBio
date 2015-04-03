@@ -183,7 +183,9 @@ print STDERR "$mega_read\n";
 $mr_number++;
 }
 }' 1>$COORDS.maximal_mr.fa 2>$COORDS.maximal_mr.names
-
+if [ -e .rerun ];then
+rm -rf tmp.nucmer.$PACBIO.$COORDS.maximal_mr.fa;
+fi
 run_big_nucmer_job_parallel.sh $PACBIO $COORDS.maximal_mr.fa $REF_BATCH_SIZE $QRY_BATCH_SIZE '--maxmatch -d 0.2 -g 200 -l 15 -b 120 -c 100' $NUM_THREADS
 touch .rerun
 fi
