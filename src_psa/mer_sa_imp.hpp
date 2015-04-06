@@ -442,7 +442,8 @@ struct SA {
 
   static bool
   check(const CHARPTR T, SAIDX Tsize, const CSAIDPTR SA, SAIDX SAsize,
-        const uint64_t* const counts, unsigned int mer_size, unsigned int max_size, std::ostream& out = std::cerr) {
+        const uint64_t* const counts, unsigned int mer_size, unsigned int max_size,
+        std::ostream& out = std::cerr) {
     const size_t nb_counts   = (1 << (2 * mer_size)) + 1;
 
     if(SAsize > Tsize) {
@@ -495,6 +496,65 @@ struct SA {
     global_timer.stop();
     return true;
   }
+
+  static bool
+  check_suffixes(const CHARPTR T, SAIDX Tsize, const CSAIDPTR SA, SAIDX SAsize,
+                const uint64_t* const counts,
+                unsigned int mer_size, unsigned int max_size,
+        std::ostream& out = std::cerr) {
+    if(SAsize > Tsize) {
+      out << "SAsize=" << SAsize << '>' << Tsize << "=Tsize" << std::endl;
+      return false;
+    }
+
+    // occurrences contains for each suffix size, the number of time we
+    // saw a suffix occurring k times found at position j (with 1<=k<=M
+    // and 0<=j<M).
+    global_timer.start("Check all suffixes present in SA");
+    const unsigned int M = 10;
+    size_t occurences[max_size - mer_size + 1][M][M];
+    memset(occurences, '\0', sizeof(size_t) * (max_size - mer_size + 1) * M * M);
+
+    for(SAIDX i = 0; i < Tsize - mer_size + 1; ++i) {
+      for(unsigned int j = mer_size; j <= std::min((SAIDX)max_size, Tsize - i); ++j) {
+        auto res = search(T, Tsize, SA, SAsize, counts, mer_size, max_size,
+                          T + i, j);
+        if(res.first == 0) {
+          out << "Suffix at position " << i << " and length " << j << " not found"
+              << std::endl;
+          return false;
+        }
+        SAIDX k = 0;
+        for(k = 0; k < res.first; ++k)
+          if(SA[res.second + k] == i) break;
+        if(k >= res.first) {
+          out << "Suffix at position " << i << " and length " << j
+              << " has no match at that position" << std::endl;
+          return false;
+        }
+        if(res.first <= M)
+          ++occurences[j - mer_size][res.first - 1][k];
+      }
+    }
+
+    // Check that the suffixes with k occurrences have been seen at all
+    // positions (0<=j<k) the same number of times.
+    global_timer.start("Check aggregate number of occurences of suffixes");
+    for(unsigned int i = 0; i <= max_size - mer_size; ++i) {
+      for(unsigned int k = 1; k <= M; ++k) {
+        for(unsigned int j = 1; j < k; ++j) {
+          if(occurences[i][k - 1][j] != occurences[i][k - 1][0]) {
+            // out << "For length " << (i + mer_size) << " occuring " << k << " times, " << j << " not seen the right number of times: "
+            //     << occurences[i][k - 1][j] << " != " << occurences[i][k - 1][0] << '\n';
+            //            return false;
+          }
+        }
+      }
+    }
+    global_timer.stop();
+    return true;
+  }
+
 };
 } // namespace mer_sa_imp
 

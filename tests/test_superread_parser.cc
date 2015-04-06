@@ -27,7 +27,7 @@ TEST(SuperReadParser, OneRead) {
   mer_dna::k(17);
   sequence_psa psa;
   psa.append_fasta(file.path);
-  psa.compute_psa(10, mer_dna::k());
+  psa.compute_psa(10, mer_dna::k(), 1);
   EXPECT_TRUE(psa.check_psa());
 
   // Check every k-mer in the sequence

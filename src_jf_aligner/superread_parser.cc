@@ -105,6 +105,36 @@ void sequence_psa::compute_psa(unsigned int min_size, unsigned int max_size, uns
   // std::cerr << "SA OK" << std::endl;
 }
 
-bool sequence_psa::sequence_in_SA() const {
+bool sequence_psa::check_suffixes(std::ostream& out) const {
+  const auto T     = compact_dna::const_iterator_at(m_sequence.data());
+  const auto Tsize = sequence_size();
+  const auto sa    = m_sa->cbegin();
+
+  for(size_t off = 0; off < m_offsets.size() - 1; ++off) {
+    for(size_t i = m_offsets[off].sequence; i < m_offsets[off + 1].sequence - m_min_size + 1; ++i) {
+      unsigned int limit_j = std::min((size_t)m_max_size, m_offsets[off+1].sequence - i);
+      for(unsigned int j = m_min_size; j <= limit_j; ++j) {
+        auto res = SA::search(T, Tsize, sa, nb_mers(), m_counts.data(),
+                              m_min_size, m_max_size,
+                              T + i, j);
+        if(res.first == 0) {
+          out << "Suffix at position " << i << " and length " << j << " not found"
+              << std::endl;
+          return false;
+        }
+        size_t k = 0;
+        for(k = 0; k < res.first; ++k)
+          if(sa[res.second + k] == i) break;
+        if(k >= res.first) {
+          out << "Suffix at position " << i << " and length " << j
+              << " has no match at that position" << std::endl;
+          return false;
+        }
+        // if(res.first <= M)
+        //   ++occurences[j - mer_size][res.first - 1][k];
+      }
+    }
+  }
   return true;
 }
+
