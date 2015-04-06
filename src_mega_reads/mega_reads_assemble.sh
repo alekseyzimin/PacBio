@@ -94,7 +94,7 @@ B=17
 d=0.03
 KMER=`perl -ane 'BEGIN{$min=10000}{if($F[1]<$min){$min=$F[1]}}END{print $min}' $KUNITIGLENGTHS`
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
-REF_BATCH_SIZE=`grep -v '^>' $PACBIO |wc| perl -ane '{print int($F[2]/500)}'`
+REF_BATCH_SIZE=`grep -v '^>' $PACBIO |wc| perl -ane '{$s=int($F[2]/1000);$s=100000000 if($s>100000000); print $s;}'`
 QRY_BATCH_SIZE=500000000
 JF_SIZE=`grep -v '^>' $SUPERREADS |wc| perl -ane '{print $F[2]}'`
 COORDS=mr.$KMER.$MER.$B.$d
@@ -191,7 +191,7 @@ if [ -e .rerun ];then
 rm -rf tmp.nucmer.$PACBIO.$COORDS.maximal_mr.fa;
 rm -rf nucmer.$PACBIO.$COORDS.maximal_mr.fa;
 fi
-run_big_nucmer_job_parallel.sh $PACBIO $COORDS.maximal_mr.fa $REF_BATCH_SIZE $QRY_BATCH_SIZE '--maxmatch -d 0.2 -g 200 -l 15 -b 120 -c 100' $NUM_THREADS
+run_big_nucmer_job_parallel.sh $PACBIO $COORDS.maximal_mr.fa $REF_BATCH_SIZE $QRY_BATCH_SIZE '--max-match -d 0.2 -g 200 -l 15 -b 120 -c 100' $NUM_THREADS
 touch .rerun
 fi
 

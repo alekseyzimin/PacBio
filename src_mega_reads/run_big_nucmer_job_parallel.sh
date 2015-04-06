@@ -17,7 +17,7 @@ export curdir=$PWD
 
 function cleanup {
 if [ $$ -eq $pid ];then
-rm -rf $rundir;
+rm -rf $rundir &
 fi
 }
 trap cleanup EXIT SIGHUP SIGINT SIGTERM
