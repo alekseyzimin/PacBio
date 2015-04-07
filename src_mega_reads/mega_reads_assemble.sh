@@ -47,7 +47,6 @@ echo "PacBio reads file $PACBIO not found!";
 exit 1 ;
 fi
 
-
 KUNITIGS=$MASURCA_ASSEMBLY_WORK1_PATH/../guillaumeKUnitigsAtLeast32bases_all.fasta
 if [ ! -e $KUNITIGS ];then
 echo "K-unitigs file $KUNITIGS not found!";
@@ -94,7 +93,7 @@ B=17
 d=0.03
 KMER=`perl -ane 'BEGIN{$min=10000}{if($F[1]<$min){$min=$F[1]}}END{print $min}' $KUNITIGLENGTHS`
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
-REF_BATCH_SIZE=`grep -v '^>' $PACBIO |wc| perl -ane '{$s=int($F[2]/500);$s=100000000 if($s>100000000); print $s;}'`
+REF_BATCH_SIZE=`grep -v '^>' $PACBIO |wc| perl -ane '{$s=int($F[2]/1000);$s=100000000 if($s>100000000); print $s;}'`
 QRY_BATCH_SIZE=500000000
 JF_SIZE=`grep -v '^>' $SUPERREADS |wc| perl -ane '{print $F[2]}'`
 COORDS=mr.$KMER.$MER.$B.$d
@@ -210,14 +209,35 @@ fi
 if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 echo "Joining"
 findGapsInCoverageOfPacbios --max-gap-overlap 100  -f $COORDS.blasr.merged > $COORDS.bad_pb.txt.tmp && mv $COORDS.bad_pb.txt.tmp $COORDS.bad_pb.txt
-analyze_mega_gaps.sh $COORDS  $KMER | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed
-echo "Generating assembly input files"
+awk 'BEGIN{flag=0}{
+        if($0 ~ /^>/){
+                flag=0;
+                pb=substr($1,2);
+        }else{
+                flag++;
+        }; 
+        if(flag>1 && last_mr!=$8){
+                l=split(last_mr,a,"_");
+                split($8,b,"_");
+                k1=int(substr(a[l],1,length(a[l])-1));
+                k2=int(substr(b[1],1,length(b[1])-1));
+                if(k1<k2){
+                        print pb" "$1-$3-last_coord" "k1" "k2
+                }else 
+                        if(k1>k2){
+                                print pb" "$1-$3-last_coord" "k2" "k1
+                        }
+        };
+        last_mr=$8;
+        last_coord=$2+$5-$4;
+}' ${COORDS}.all.txt |sort -nk3 -k4n -S 20%|uniq -D -f 2 | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed
 join_mega_reads_trim.onepass.pl $PACBIO ${COORDS}.1.allowed $KMER $COORDS.bad_pb.txt < ${COORDS}.all.txt > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa
 touch .rerun
 fi
 
 if [ -e .rerun ];then
-fasta2frg.pl mr 600 < $COORDS.1.fa > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg
+echo "Generating assembly input files"
+make_mr_frg.pl mr 600 < $COORDS.1.fa > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg
 make_mate_frg.pl < $COORDS.1.fa > $COORDS.1.mates.frg.tmp && mv $COORDS.1.mates.frg.tmp $COORDS.1.mates.frg
 rm -rf $CA
 fi
@@ -233,13 +253,4 @@ tigStore -g $CA/genome.gkpStore -t $CA/genome.tigStore 2 -U -d sizes
 
 runCA cnsReuseUnitigs=1 cgwMergeMissingThreshold=-1 cgwMergeFilterLevel=1 cgwDemoteRBP=0 cgwErrorRate=0.25  doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal cnsMinFrags=300 cnsConcurrency=$NUM_THREADS -p genome -d $CA unitigger=bogart merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg  1>> $CA.log 2>&1
 
-
-#split_long_unitigs.pl cr < ${CA}/9-terminator/genome.ctg.fasta 2>assembly.${CA}.short_contigs.fa | fasta2frg.pl cr > assembly.${CA}.contig_reads.frg
-
-#runCA merylMemory=8192 unitigger=bogart utgGraphErrorLimit=1000 utgGraphErrorRate=0.0 utgMergeErrorLimit=1000 utgMergeErrorRate=0.01 ovlMerThreshold=5 ovlMinLen=1000 doFragmentCorrection=0 doUnitigSplitting=0 doChimeraDetection=off stopAfter=unitigger cnsMinFrags=100 cnsConcurrency=16 -p genome -d ${CA}u ovlThreads=$NUM_THREADS merylThreads=$NUM_THREADS doOverlapBasedTrimming=0 utgErrorLimit=100000 assembly.${CA}.contig_reads.frg  1>> $CA.log 2>&1
-
-#tigStore -g ${CA}u/genome.gkpStore -t ${CA}u/genome.tigStore 2 -U -d sizes -s 12000000
-
-#final output
-#tigStore -g ${CA}u/genome.gkpStore -t ${CA}u/genome.tigStore  3 -U -d consensus >assembly.${CA}u.fa
-
+echo "Assembly complete. Results are in $CA/9-terminator"
