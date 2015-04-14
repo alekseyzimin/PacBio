@@ -101,6 +101,7 @@ REF_BATCH_SIZE=`grep -v '^>' $PACBIO |wc| perl -ane '{$s=int($F[2]/1000);$s=1000
 QRY_BATCH_SIZE=500000000
 JF_SIZE=`grep -v '^>' $SUPERREADS |wc| perl -ane '{print $F[2]}'`
 COORDS=mr.$KMER.$MER.$B.$d
+PACBIO_FILE=`basename $PACBIO`;
 CA=CA.${COORDS}
 
 echo "Running mega-reads correction/assembly"
@@ -170,7 +171,7 @@ $out{$mega_read}=1;
 touch .rerun
 fi
 
-if [ ! -s $PACBIO.$COORDS.maximal_mr.fa.g.delta ] || [ -e .rerun ];then
+if [ ! -s $PACBIO_FILE.$COORDS.maximal_mr.fa.g.delta ] || [ -e .rerun ];then
 echo "Maximal alignment"
 perl -ane  '{if($F[0] =~ /^\>/){print substr($F[0],1);}else{ print " ",length($F[0]),"\n";}}' $COORDS.all_mr.mr.fa | sort -nrk2 -S 10%  > $COORDS.mr_sizes.tmp
 reduce_sr `wc -l $KUNITIGLENGTHS | perl -ane 'print $F[0]'`  $KUNITIGLENGTHS $KMER $COORDS.mr_sizes.tmp -o $COORDS.reduce.tmp
@@ -191,8 +192,8 @@ $mr_number++;
 }
 }' 1>$COORDS.maximal_mr.fa 2>$COORDS.maximal_mr.names
 if [ -e .rerun ];then
-rm -rf tmp.nucmer.$PACBIO.$COORDS.maximal_mr.fa;
-rm -rf nucmer.$PACBIO.$COORDS.maximal_mr.fa;
+rm -rf tmp.nucmer.$PACBIO_FILE.$COORDS.maximal_mr.fa;
+rm -rf nucmer.$PACBIO_FILE.$COORDS.maximal_mr.fa;
 fi
 run_big_nucmer_job_parallel.sh $PACBIO $COORDS.maximal_mr.fa $REF_BATCH_SIZE $QRY_BATCH_SIZE '--maxmatch -d 0.2 -g 200 -l 15 -b 120 -c 100' $NUM_THREADS
 touch .rerun
@@ -200,7 +201,7 @@ fi
 
 if [ ! -s $COORDS.blasr.out ] || [ -e .rerun ];then
 echo "Alignments filtering"
-delta-filter -g -o 20 $PACBIO.$COORDS.maximal_mr.fa.g.delta > $PACBIO.$COORDS.maximal_mr.fa.gg.delta && show-coords -lcHr  $PACBIO.$COORDS.maximal_mr.fa.gg.delta | awk '{if($4<$5){print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}else{print $18"/0_"$12" "$19+1" 0 0 0 "$10" "$13-$4+1" "$13-$5+1" "$13" "$1" "$2" "$12" 0"}}' > $COORDS.blasr.out.tmp && mv $COORDS.blasr.out.tmp $COORDS.blasr.out
+delta-filter -g -o 20 $PACBIO_FILE.$COORDS.maximal_mr.fa.g.delta > $PACBIO_FILE.$COORDS.maximal_mr.fa.gg.delta && show-coords -lcHr  $PACBIO_FILE.$COORDS.maximal_mr.fa.gg.delta | awk '{if($4<$5){print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}else{print $18"/0_"$12" "$19+1" 0 0 0 "$10" "$13-$4+1" "$13-$5+1" "$13" "$1" "$2" "$12" 0"}}' > $COORDS.blasr.out.tmp && mv $COORDS.blasr.out.tmp $COORDS.blasr.out
 touch .rerun
 fi
 
