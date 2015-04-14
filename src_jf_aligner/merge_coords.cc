@@ -1,8 +1,8 @@
 #include <vector>
 #include <fstream>
 
-#include <src_jf_aligner/merge_coords_cmdline.hpp>
 #include <src_jf_aligner/coords_parsing.hpp>
+#include <src_jf_aligner/merge_coords_cmdline.hpp>
 
 
 

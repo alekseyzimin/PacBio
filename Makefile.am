@@ -1,6 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
 
-AM_LDFLAGS = -lpthread
 AM_CPPFLAGS = -Wall -I$(top_srcdir) -I$(top_srcdir)/include
 AM_CXXFLAGS = $(ALL_CXXFLAGS) -g -O3 $(JELLYFISH2_0_CFLAGS)
 AM_LDFLAGS = $(JELLYFISH2_0_LIBS)
@@ -18,43 +17,70 @@ V_YAGGO = $(V_YAGGO_$(V))
 V_YAGGO_ = $(V_YAGGO_$(AM_DEFAULT_VERBOSITY))
 V_YAGGO_0 = @echo "  YAGGO   " $@;
 .yaggo.hpp:
-	$(V_YAGGO)$(YAGGO) --license $(srcdir)/header-license -o $@ $<
+#	$(V_YAGGO)$(YAGGO) --license $(srcdir)/header-license -o $@ $<
+	$(V_YAGGO)$(YAGGO) -o $@ $<
 
 YAGGO_SOURCES = # Append all file to be built by yaggo
 
 ##################
 # Build binaries #
 ##################
-bin_PROGRAMS += bin/jf_aligner bin/create_mega_reads bin/longest_path bin/merge_coords
+bin_PROGRAMS += bin/jf_aligner bin/create_mega_reads bin/longest_path	\
+                bin/merge_coords bin/findGapsInCoverageOfPacbios
 
-AL_SRC = src_jf_aligner
-bin_jf_aligner_SOURCES = src_jf_aligner/jf_aligner.cc src_jf_aligner/pb_aligner.cc	\
-                      src_jf_aligner/superread_parser.cc			\
-                      src_jf_aligner/super_read_name.cc			\
-                      src_jf_aligner/coarse_aligner.cc			\
-                      src_jf_aligner/fine_aligner.cc src_jf_aligner/misc.cc
+bin_jf_aligner_SOURCES = src_jf_aligner/jf_aligner.cc		\
+                         src_jf_aligner/pb_aligner.cc		\
+                         src_jf_aligner/superread_parser.cc	\
+                         src_jf_aligner/super_read_name.cc	\
+                         src_jf_aligner/coarse_aligner.cc	\
+                         src_jf_aligner/fine_aligner.cc		\
+                         src_jf_aligner/misc.cc
 bin_create_mega_reads_SOURCES = src_jf_aligner/create_mega_reads.cc	\
-                             src_jf_aligner/pb_aligner.cc		\
-                             src_jf_aligner/superread_parser.cc	\
-                             src_jf_aligner/union_find.cc		\
-                             src_jf_aligner/overlap_graph.cc		\
-                             src_jf_aligner/super_read_name.cc	\
-                             src_jf_aligner/coarse_aligner.cc		\
-                             src_jf_aligner/fine_aligner.cc		\
-                             src_jf_aligner/misc.cc
-bin_longest_path_SOURCES = src_jf_aligner/longest_path_overlap_graph2.cc		\
-                        src_jf_aligner/pb_aligner.cc				\
-                        src_jf_aligner/superread_parser.cc			\
-                        src_jf_aligner/union_find.cc				\
-                        src_jf_aligner/overlap_graph.cc			\
-                        src_jf_aligner/super_read_name.cc			\
-                        src_jf_aligner/coords_parsing.cc src_jf_aligner/misc.cc
+                                src_jf_aligner/pb_aligner.cc		\
+                                src_jf_aligner/superread_parser.cc	\
+                                src_jf_aligner/union_find.cc		\
+                                src_jf_aligner/overlap_graph.cc		\
+                                src_jf_aligner/super_read_name.cc	\
+                                src_jf_aligner/coarse_aligner.cc	\
+                                src_jf_aligner/fine_aligner.cc		\
+                                src_jf_aligner/misc.cc
+bin_longest_path_SOURCES =							\
+                           src_jf_aligner/longest_path_overlap_graph2.cc	\
+                           src_jf_aligner/pb_aligner.cc				\
+                           src_jf_aligner/superread_parser.cc			\
+                           src_jf_aligner/union_find.cc				\
+                           src_jf_aligner/overlap_graph.cc			\
+                           src_jf_aligner/super_read_name.cc			\
+                           src_jf_aligner/coords_parsing.cc			\
+                           src_jf_aligner/misc.cc
 bin_merge_coords_SOURCES = src_jf_aligner/merge_coords.cc
+
+bin_findGapsInCoverageOfPacbios_SOURCES = src_mega_reads/findGapsInCoverageOfPacbios.cc
+
+dist_bin_SCRIPTS = src_mega_reads/build_mega_read_graph.sh			\
+                   src_mega_reads/mega_reads_assemble.sh			\
+                   src_mega_reads/mega_reads_assemble_nomatch.sh		\
+                   src_mega_reads/run_big_nucmer_job_parallel.sh		\
+                   src_mega_reads/build_mega_reads.pl				\
+                   src_mega_reads/make_mr_frg.pl				\
+                   src_mega_reads/extract_best_match_coords.pl			\
+                   src_mega_reads/merge_matches_coords_file.pl			\
+                   src_mega_reads/filter_matches.pl				\
+                   src_mega_reads/reconciliate_mega_reads.maximal.nucmer.pl	\
+                   src_mega_reads/join_mega_reads_trim.onepass.nomatch.pl	\
+                   src_mega_reads/split_contig_file.pl				\
+                   src_mega_reads/join_mega_reads_trim.onepass.pl		\
+                   src_mega_reads/split_long_unitigs.pl				\
+                   src_mega_reads/make_mate_frg.pl				\
+                   src_mega_reads/tile_mega_reads.pl
+
+
 
 YAGGO_SOURCES += src_jf_aligner/jf_aligner_cmdline.hpp			\
 	         src_jf_aligner/create_mega_reads_cmdline.hpp		\
 	         src_jf_aligner/longest_path_overlap_graph2_cmdline.hpp	\
-	         src_jf_aligner/merge_coords_cmdline.hpp
+	         src_jf_aligner/merge_coords_cmdline.hpp		\
+	         src_mega_reads/findGapsInCoverageOfPacbios_cmdline.hpp
 
 # ###############
 # # Build tests #

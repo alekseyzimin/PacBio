@@ -3,12 +3,12 @@
 #include <ios>
 #include <thread>
 
-#include <src_jf_aligner/longest_path_overlap_graph2_cmdline.hpp>
 #include <src_jf_aligner/output_file.hpp>
 #include <src_jf_aligner/pb_aligner.hpp>
 #include <src_jf_aligner/overlap_graph.hpp>
 #include <src_jf_aligner/coords_parsing.hpp>
 #include <src_jf_aligner/misc.hpp>
+#include <src_jf_aligner/longest_path_overlap_graph2_cmdline.hpp>
 
 #include <debug.hpp>
 
