@@ -66,7 +66,7 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
     const bool is_canonical = parser.mer<0>().is_canonical();
     auto list = psa.find_pos_size(parser.mer<0>().m, parser.mer<0>().rm);
     if(list.second == 0 ||
-       (max_mer_count && list.second >= (size_t)max_mer_count && std::distance(list.first, end) >= max_mer_count))
+       (max_mer_count && list.second >= (size_t)max_mer_count)) // && std::distance(list.first, end) >= max_mer_count))
       continue;
     for(auto& it = list.first; it != end; ++it) { // For each instance of the k-mer in a super read
       mer_lists& ml = frags_pos[it->frag->fwd.name.c_str()];
