@@ -44,7 +44,7 @@ echo "runCA not found at $CA_PATH!";
 exit 1;
 fi
 
-export PATH=$MYPATH:/home/alekseyz/myprogs/masurca-devel/build/inst/bin/:$MYPATH/../build-default:$MYPATH/../build-default/src_jf_aligner:$MYPATH/../build-default/src_mega_reads:$CA_PATH:$PATH
+export PATH=$MYPATH:$CA_PATH:$PATH
 
 if [ ! -e $PACBIO ];then
 echo "PacBio reads file $PACBIO not found!";
