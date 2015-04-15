@@ -97,7 +97,7 @@ B=17
 d=0.03
 KMER=`perl -ane 'BEGIN{$min=10000}{if($F[1]<$min){$min=$F[1]}}END{print $min}' $KUNITIGLENGTHS`
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
-REF_BATCH_SIZE=`grep -v '^>' $PACBIO |wc| perl -ane '{$s=int($F[2]/1000);$s=100000000 if($s>100000000); print $s;}'`
+REF_BATCH_SIZE=`grep -v '^>' $PACBIO |wc| perl -ane '{$s=int($F[2]/2048);$s=100000000 if($s>100000000); print $s;}'`
 QRY_BATCH_SIZE=500000000
 JF_SIZE=`grep -v '^>' $SUPERREADS |wc| perl -ane '{print $F[2]}'`
 COORDS=mr.$KMER.$MER.$B.$d
@@ -201,7 +201,8 @@ fi
 
 if [ ! -s $COORDS.blasr.out ] || [ -e .rerun ];then
 echo "Alignments filtering"
-delta-filter -g -o 20 $PACBIO_FILE.$COORDS.maximal_mr.fa.g.delta > $PACBIO_FILE.$COORDS.maximal_mr.fa.gg.delta && show-coords -lcHr  $PACBIO_FILE.$COORDS.maximal_mr.fa.gg.delta | awk '{if($4<$5){print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}else{print $18"/0_"$12" "$19+1" 0 0 0 "$10" "$13-$4+1" "$13-$5+1" "$13" "$1" "$2" "$12" 0"}}' > $COORDS.blasr.out.tmp && mv $COORDS.blasr.out.tmp $COORDS.blasr.out
+#delta-filter -g -o 20 $PACBIO_FILE.$COORDS.maximal_mr.fa.g.delta > $PACBIO_FILE.$COORDS.maximal_mr.fa.gg.delta && show-coords -lcHr  $PACBIO_FILE.$COORDS.maximal_mr.fa.gg.delta | awk '{if($4<$5){print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}else{print $18"/0_"$12" "$19+1" 0 0 0 "$10" "$13-$4+1" "$13-$5+1" "$13" "$1" "$2" "$12" 0"}}' > $COORDS.blasr.out.tmp && mv $COORDS.blasr.out.tmp $COORDS.blasr.out
+show-coords -lcHr  $PACBIO_FILE.$COORDS.maximal_mr.fa.g.delta | awk '{if($4<$5){print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}else{print $18"/0_"$12" "$19+1" 0 0 0 "$10" "$13-$4+1" "$13-$5+1" "$13" "$1" "$2" "$12" 0"}}' > $COORDS.blasr.out.tmp && mv $COORDS.blasr.out.tmp $COORDS.blasr.out
 touch .rerun
 fi
 
