@@ -28,7 +28,7 @@ static void do_all_LIS(frags_pos_type& frags_pos, const F1& accept_mer, const F2
 // parser is initialized to parse the PacBio read. The results are
 // stored in frags_pos.
 void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
-                       frags_pos_type& frags_pos, const int max_mer_count = std::numeric_limits<int>::max());
+                       frags_pos_type& frags_pos, const int max_mer_count = 0);
 
 class coarse_aligner {
   const sequence_psa&      psa_;

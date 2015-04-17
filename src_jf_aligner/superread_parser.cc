@@ -100,9 +100,6 @@ void sequence_psa::compute_psa(unsigned int min_size, unsigned int max_size, uns
                                          sequence_size(), m_counts.data(), min_size, max_size));
   for(unsigned int i = 0; i < threads; ++i)
     thread_handles[i].join();
-
-  // assert(check_psa());
-  // std::cerr << "SA OK" << std::endl;
 }
 
 bool sequence_psa::check_suffixes(std::ostream& out) const {

@@ -313,7 +313,7 @@ struct SA {
   static void fill_mers(CHARPTR T, SAIDX start, const SAIDX end,
                         SA_TYPE SA,
                         uint64_t* counts, unsigned int mer_size) {
-    uint64_t* offsets = counts + 1;
+    uint64_t*     offsets = counts + 1;
     const CHARPTR endptr(T + end);
     for(mer_iterator<CHARPTR> mit(T + start, mer_size); mit != endptr; ++mit, ++start) {
       const uint64_t m   = *mit;
@@ -347,6 +347,7 @@ struct SA {
     const auto  min_size  = std::min((unsigned int)Psize, mer_size);
     uint64_t    mer       = str_to_mer(P, min_size);
     if(Psize <= mer_size) {
+      // XXX: should the 2 here be changed by the number of bits per letter of the alphabet?
       const SAIDX shift   = 2 * (mer_size - Psize);
       uint64_t    lmer    = ~(~mer << shift);
       mer               <<= shift;
@@ -360,28 +361,45 @@ struct SA {
     CSAIDPTR       first    = SA + counts[mer];
     SAIDX          step     = 0;
 
+    // Return mer and lenght at it
     auto get_mer = [=](CSAIDPTR it) {
       const SAIDX pos = *it + mer_size;
       const SAIDX cs  = pos < Tsize ? std::min(left, Tsize - pos) : 0;
       return std::make_pair(str_to_mer(T + pos, cs), cs);
     };
+    // Compare mer returned by get_mer with left_mer. Return -1, 0, or
+    // 1 if mer is less, equal or greater than left_mer.
+    auto compare_mer = [left, left_mer](const std::pair<uint64_t, SAIDX>& mer) {
+      if(left == mer.second)
+        return mer.first < left_mer ? -1 : (mer.first > left_mer ? 1 : 0);
+      // Only possibility is mer.second < left_mer. Then mer and
+      // left_mer cannot be equal.
+      const uint64_t lmer = left_mer >> (2 * (left - mer.second));
+      return mer.first <= lmer ? -1 : 1;
+    };
 
     uint64_t start_mer = get_mer(first).first;
     uint64_t end_mer   = get_mer(first + count - 1).first;
 
-    while(count > 0) {
+    bool found = false;
+    while(count > 0 && !found) {
       step            = std::min(count - 1,
                                  (SAIDX)lrint(count * (double)(2 * (left_mer - start_mer) + 1) / (double)(2 * (end_mer - start_mer + 1))));
       auto       it   = first + step;
       const auto cmer = get_mer(it);
-      if(cmer.first == left_mer && cmer.second == left) break; // Found it
-      if(cmer.first < left_mer || (cmer.first == left_mer && cmer.second < left)) {
+      switch(compare_mer(cmer)) {
+      case 0:
+        found = true;
+        break;
+      case -1:
         first      = ++it;
         count     -= step + 1;
-        start_mer  = cmer.first;
-      } else {
+        start_mer  = cmer.first + 1;
+        break;
+      case 1:
         count   = step;
         end_mer = cmer.first;
+        break;
       }
     }
 
@@ -397,7 +415,7 @@ struct SA {
                                    (SAIDX)rint(ncount * (double)(left_mer - start_mer) / (double)(lend_mer - start_mer + 1)));
         auto       it   = lower + lstep;
         const auto cmer = get_mer(it);
-        if(cmer.first < left_mer || (cmer.first == left_mer && cmer.second < left)) {
+        if(compare_mer(cmer) < 0) {
           lower      = ++it;
           ncount    -= lstep + 1;
           start_mer  = cmer.first;
@@ -419,7 +437,7 @@ struct SA {
         ustep           = std::min(ncount - 1, ustep);
         auto       it   = upper + ustep;
         const auto cmer = get_mer(it);
-        if(!(left_mer < cmer.first || (left_mer == cmer.first && left < cmer.second))) {
+        if(compare_mer(cmer) <= 0) {
           upper       = ++it;
           ncount     -= ustep + 1;
           ustart_mer  = cmer.first;

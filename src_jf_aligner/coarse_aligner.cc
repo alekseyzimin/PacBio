@@ -72,6 +72,7 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
       mer_lists& ml = frags_pos[it->frag->fwd.name.c_str()];
       ml.frag       = it->frag;
       const int offset = is_canonical ? it->offset : -it->offset;
+
       if(offset > 0)
         ml.fwd.offsets.push_back(pb_sr_offsets(parser.offset<0>(), offset));
       else
