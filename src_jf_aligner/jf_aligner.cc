@@ -2,12 +2,12 @@
 #include <ios>
 #include <thread>
 
-#include <src_jf_aligner/jf_aligner_cmdline.hpp>
 #include <src_jf_aligner/superread_parser.hpp>
 #include <src_jf_aligner/coarse_aligner.hpp>
 #include <src_jf_aligner/fine_aligner.hpp>
 #include <src_jf_aligner/misc.hpp>
 #include <debug.hpp>
+#include <src_jf_aligner/jf_aligner_cmdline.hpp>
 
 using align_pb::coarse_aligner;
 using align_pb::fine_aligner;

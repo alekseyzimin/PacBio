@@ -45,3 +45,5 @@ ifdef JELLYFISH_LIBS
 else
   JELLYFISH_LIBS = `pkg-config --libs jellyfish-2.0` -Wl,--rpath=`pkg-config --libs jellyfish-2.0 | sed -e 's/-L//g'`
 endif
+
+export CCACHE_DIR
