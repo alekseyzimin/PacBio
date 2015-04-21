@@ -230,9 +230,11 @@ struct SA {
       });
 
     global_timer.start(*thread_barrier, "sorting");
-    slicer->loop(0, nb_counts - 1, 100, [=](size_t i) {
-        sort_one_mer(T, n, PSA, mer_counts[i], mer_counts[i + 1], mer_size, max_size);
-      });
+    if(mer_size < max_size) {
+      slicer->loop(0, nb_counts - 1, 100, [=](size_t i) {
+          sort_one_mer(T, n, PSA, mer_counts[i], mer_counts[i + 1], mer_size, max_size);
+        });
+    }
     global_timer.stop(*thread_barrier);
   }
 
