@@ -9,6 +9,8 @@
 #include <src_jf_aligner/misc.hpp>
 #include <src_jf_aligner/create_mega_reads_cmdline.hpp>
 
+#include <src_psa/global_timer.hpp>
+
 using align_pb::coarse_aligner;
 using align_pb::fine_aligner;
 using align_pb::coords_info_type;
@@ -121,8 +123,10 @@ int main(int argc, char *argv[])
   // Read the super reads
   if(args.fine_mer_given)
     short_mer_type::k(args.fine_mer_arg);
+  global_timer.start("Super read parse");
   auto psa = superread_parse(args.superreads_arg.cbegin(), args.superreads_arg.cend(),
                              std::min(short_mer_type::k(), args.psa_min_arg), mer_dna::k());
+  global_timer.stop();
 
   // Prepare I/O
   stream_manager streams(args.pacbio_arg.cbegin(), args.pacbio_arg.cend());
@@ -141,6 +145,7 @@ int main(int argc, char *argv[])
 
   // Output candidate mega_reads
   //  std::cerr << args.density_arg << ' ' << args.min_length_arg << '\n';
+  global_timer.start("create mega reads");
   overlap_graph graph_walker(args.overlap_play_arg, args.k_mer_arg, unitigs_lengths, args.errors_arg, args.bases_flag);
   std::vector<std::thread> threads;
   for(unsigned int i = 0; i < args.threads_arg; ++i)
@@ -150,6 +155,7 @@ int main(int argc, char *argv[])
                                   dot.multiplexer()));
   for(auto& th : threads)
     th.join();
+  global_timer.stop();
 
   return 0;
 }
