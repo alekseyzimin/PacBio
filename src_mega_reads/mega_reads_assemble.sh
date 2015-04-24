@@ -248,17 +248,19 @@ fi
 
 if [ ! -s $COORDS.1.frg ] || [ ! -s $COORDS.1.mates.frg ] || [ -e .rerun ];then
 echo "Generating assembly input files"
+make_mr_frg.pl mr 600 < $COORDS.1.fa > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg
+make_mate_frg.pl < $COORDS.1.fa > $COORDS.1.mates.frg.tmp && mv $COORDS.1.mates.frg.tmp $COORDS.1.mates.frg
+rm -rf $CA
+fi
+
 if [ $ESTIMATED_GENOME_SIZE -gt 1 ];then
 MR_SIZE=$(stat -c%s "$COORDS.1.fa");
 COVERAGE=$((MR_SIZE/ESTIMATED_GENOME_SIZE));
 if [ $COVERAGE -le 9 ];then
+echo "Coverage of the mega-reads less than 10 -- using the super reads as well";
 SR_FRG=$COORDS.sr.frg
 make_mr_frg.pl mr 200 < $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > $SR_FRG.tmp && mv  $SR_FRG.tmp  $SR_FRG;
 fi
-fi
-make_mr_frg.pl mr 600 < $COORDS.1.fa > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg
-make_mate_frg.pl < $COORDS.1.fa > $COORDS.1.mates.frg.tmp && mv $COORDS.1.mates.frg.tmp $COORDS.1.mates.frg
-rm -rf $CA
 fi
 
 rm -f .rerun
