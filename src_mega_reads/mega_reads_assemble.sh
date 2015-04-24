@@ -1,6 +1,7 @@
 #!/bin/bash
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
+ESTIMATED_GENOME_SIZE=0
 #parsing arguments
 while [[ $# > 0 ]]
 do
@@ -17,6 +18,10 @@ case $key in
     ;;
     -a|--assembler_path)
     CA_PATH="$2"
+    shift
+    ;;
+    -e|--estimated-genome-size)
+    ESTIMATED_GENOME_SIZE="$2"
     shift
     ;;
     -o|--other_frg)
@@ -242,6 +247,14 @@ fi
 
 if [ -e .rerun ];then
 echo "Generating assembly input files"
+if [ $ESTIMATED_GENOME_SIZE -gt 1 ];then
+MR_SIZE=$(stat -c%s "$COORDS.1.fa");
+COVERAGE=$((MR_SIZE/ESTIMATED_GENOME_SIZE));
+if [ $COVERAGE -le 9 ];then
+SR_FRG=$COORDS.sr.frg
+make_mr_frg.pl mr 200 < $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > $SR_FRG.tmp && mv  $SR_FRG.tmp  $SR_FRG;
+fi
+fi
 make_mr_frg.pl mr 600 < $COORDS.1.fa > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg
 make_mate_frg.pl < $COORDS.1.fa > $COORDS.1.mates.frg.tmp && mv $COORDS.1.mates.frg.tmp $COORDS.1.mates.frg
 rm -rf $CA
@@ -251,7 +264,7 @@ rm -f .rerun
 
 echo "Running assembly"
 
-runCA unitigger=bogart  merylMemory=8192 utgGraphErrorLimit=1000  utgMergeErrorLimit=1000 utgGraphErrorRate=0.04 utgMergeErrorRate=0.04 ovlCorrBatchSize=5000 ovlCorrConcurrency=$NUM_THREADS frgCorrThreads=$NUM_THREADS mbtThreads=$NUM_THREADS ovlThreads=2 ovlHashBlockLength=100000000 ovlRefBlockSize=10000 ovlConcurrency=$NUM_THREADS doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal stopAfter=unitigger -p genome -d $CA  merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg    $COORDS.1.mates.frg $OTHER_FRG 1> $CA.log 2>&1
+runCA unitigger=bogart  merylMemory=8192 utgGraphErrorLimit=1000  utgMergeErrorLimit=1000 utgGraphErrorRate=0.04 utgMergeErrorRate=0.04 ovlCorrBatchSize=5000 ovlCorrConcurrency=$NUM_THREADS frgCorrThreads=$NUM_THREADS mbtThreads=$NUM_THREADS ovlThreads=2 ovlHashBlockLength=100000000 ovlRefBlockSize=10000 ovlConcurrency=$NUM_THREADS doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal stopAfter=unitigger -p genome -d $CA  merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1> $CA.log 2>&1
 
 echo "Unitig stats:"
 tigStore -g $CA/genome.gkpStore -t $CA/genome.tigStore 2 -U -d sizes 
