@@ -28,7 +28,7 @@ case $key in
     ;;
     -h|--help|-u|--usage)
     echo "Usage: mega_reads_assemble.sh -m <path to MaSuRCA run work1 folder contents> -p <pacbio reads fasta> -a <path to the location of runCA in wgs-8.2 instalation>"
-    exit 1
+    exit 0
     ;;
     *)
     echo "Unknown option $1"
