@@ -69,7 +69,7 @@ option("L", "min-length") {
   double; default 100.0 }
 option("T", "tiling") {
   description "Option for tiling mega-reads"
-  enum "none", "greedy", "maximal"; default "greedy" }
+  enum "none", "greedy", "maximal", "weighted"; default "greedy" }
 option("trim") {
   description "How to trim mega-read"
   enum "none", "match", "branch"; default "none" }

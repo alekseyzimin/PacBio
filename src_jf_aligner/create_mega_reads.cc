@@ -77,6 +77,7 @@ void create_mega_reads(read_parser* reads, Multiplexer* output_m,
       switch(args.tiling_arg) {
       case cmdline_args::tiling::maximal: graph.tile_maximal(); break;
       case cmdline_args::tiling::greedy: graph.tile_greedy(); break;
+      case cmdline_args::tiling::weighted: graph.tile_weighted(); break;
       }
       graph.print_mega_reads(output, name, unitigs_sequences);
 
