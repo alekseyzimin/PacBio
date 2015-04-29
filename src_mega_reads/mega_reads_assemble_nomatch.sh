@@ -139,7 +139,7 @@ fi
 
 if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 2"
-create_mega_reads -F 13 -s $JF_SIZE -m $MER -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d 0.1  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
+create_mega_reads --stretch-cap 5000 -s $JF_SIZE -m $MER -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d 0.05  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
 touch .rerun
 fi
 
