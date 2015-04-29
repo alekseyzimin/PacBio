@@ -158,6 +158,7 @@ struct overlap_graph {
   struct thread {
     const overlap_graph&               og_;
     std::vector<int>                   sort_nodes_, sort_tiling_, tiled_mr_;
+    std::vector<double>                weights_;
     std::vector<node_info>             nodes_;
     const align_pb::coords_info_type*  coords_;
     comp_to_path                       comp_mega_reads_;
@@ -207,6 +208,24 @@ struct overlap_graph {
     void tile_greedy(size_t at_most = std::numeric_limits<size_t>::max()) {
       std::sort(sort_tiling_.begin(), sort_tiling_.end(),
                 [&](int i, int j) { return nodes_[mega_reads_[j]->end_node].lpath < nodes_[mega_reads_[i]->end_node].lpath; });
+      tiled_mr_.clear();
+      og_.tile_greedy(sort_tiling_, mega_reads_, nodes_, tiled_mr_, at_most);
+      std::sort(tiled_mr_.begin(), tiled_mr_.end(),
+                [&](int i, int j) -> bool {
+                  const auto st_i = mega_reads_[i]->imp_s, st_j = mega_reads_[j]->imp_s;
+                  return st_i < st_j || (st_i == st_j && mega_reads_[i]->imp_e < mega_reads_[j]->imp_e);
+                });
+    }
+
+    void tile_weighted(size_t at_most = std::numeric_limits<size_t>::max()) {
+      const auto& coords = *coords_;
+      if(mega_reads_.size() > weights_.size())
+        weights_.resize(mega_reads_.size());
+      for(const auto i : sort_tiling_)
+        weights_[i] = mega_reads_[i]->density * mega_reads_[i]->density *
+          (coords[mega_reads_[i]->end_node].re - coords[mega_reads_[i]->start_node].rs + 1);
+      std::sort(sort_tiling_.begin(), sort_tiling_.end(),
+                [&](int i, int j) { return weights_[j] < weights_[i]; });
       tiled_mr_.clear();
       og_.tile_greedy(sort_tiling_, mega_reads_, nodes_, tiled_mr_, at_most);
       std::sort(tiled_mr_.begin(), tiled_mr_.end(),
