@@ -44,5 +44,5 @@ mkdir -p tmp.nucmer.$reffilename.$qryfilename
 (cd $rundir;parallel -j $num_cpus "if [ ! -e $curdir/tmp.nucmer.$reffilename.$qryfilename/deltafile.{1}.{2}.delta ];then nucmer $nuc_params -p tmpdeltafile.{1}.{2} {1} {2} 1>/dev/null 2>&1 && mv tmpdeltafile.{1}.{2}.delta $curdir/tmp.nucmer.$reffilename.$qryfilename/deltafile.{1}.{2}.delta;fi" ::: $reffilename.* ::: $qryfilename.* && mv $curdir/tmp.nucmer.$reffilename.$qryfilename $curdir/nucmer.$reffilename.$qryfilename);
 
 if [ -d nucmer.$reffilename.$qryfilename ];then
-head -n 2 nucmer.$reffilename.$qryfilename/deltafile.$reffilename.1.$qryfilename.1.delta > $reffilename.$qryfilename.g.delta.tmp && ls  nucmer.$reffilename.$qryfilename/deltafile*.delta | xargs cat |grep -v NUCMER | grep -v  nucmer >> $reffilename.$qryfilename.g.delta.tmp && mv $reffilename.$qryfilename.g.delta.tmp $reffilename.$qryfilename.g.delta && rm -rf nucmer.$reffilename.$qryfilename
+cd nucmer.$reffilename.$qryfilename && head -n 2 deltafile.$reffilename.1.$qryfilename.1.delta > $reffilename.$qryfilename.g.delta.tmp && find -type f -name 'deltafile.*.delta'  | xargs cat |grep -v NUCMER | grep -v  nucmer >> $reffilename.$qryfilename.g.delta.tmp && mv $reffilename.$qryfilename.g.delta.tmp ../$reffilename.$qryfilename.g.delta && cd .. && rm -rf nucmer.$reffilename.$qryfilename
 fi
