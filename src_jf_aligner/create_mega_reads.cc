@@ -142,7 +142,9 @@ int main(int argc, char *argv[])
   std::unique_ptr<fine_aligner> short_align_data;
   if(args.fine_mer_given)
     short_align_data.reset(new fine_aligner(psa, args.fine_mer_arg, &unitigs_lengths, args.k_mer_arg));
-
+  else
+    short_mer_type::k(mer_dna::k());
+  
   // Output candidate mega_reads
   //  std::cerr << args.density_arg << ' ' << args.min_length_arg << '\n';
   global_timer.start("create mega reads");

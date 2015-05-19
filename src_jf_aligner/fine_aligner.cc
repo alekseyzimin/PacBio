@@ -3,13 +3,16 @@
 namespace align_pb {
 void fetch_local_super_reads(const sequence_psa& psa, short_parse_sequence& parser,
                              frags_local_pos_type& frags_pos) {
+  const auto end = psa.pos_end();
+
   while(parser.next()) { // Process each k-mer
     const bool is_canonical = parser.mer<0>().is_canonical();
-    auto list = psa.equal_range(parser.mer<0>().m, parser.mer<0>().rm);
+    auto list = psa.find_pos_size(parser.mer<0>().m, parser.mer<0>().rm);
 
-    for(auto& it = list.first; it != list.second; ++it) { // For each instance of the k-mer in a super read
+    for(auto& it = list.first; it != end; ++it) { // For each instance of the k-mer in a super read
       auto local_mls = frags_pos.find(it->frag->fwd.name.c_str());
       if(local_mls == frags_pos.end()) continue;
+
       const auto mls_end = local_mls->second.end();
       for(auto local_ml = local_mls->second.begin(); local_ml != mls_end; ++local_ml) {
         if(parser.offset<0>() >= local_ml->begin && parser.offset<0>() <= local_ml->end) {
