@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <boost/icl/interval_set.hpp>
 #include <src_jf_aligner/overlap_graph.hpp>
+#include <random>
 
 namespace {
 std::vector<int> range(int n) {

@@ -5,6 +5,7 @@
 
 #include <sstream>
 #include <iostream>
+#include <vector>
 
 // Convenience: print vectors
 template<typename T>
