@@ -47,7 +47,7 @@ public:
       frags_pos_.clear();
       for( ; it != end; ++it) {
         auto&  local_mls = frags_pos_[it->qfrag->fwd.name.c_str()];
-        double begin     = std::max((double)0, it->stretch - it->avg_err);
+        double begin     = std::max((double)0, it->stretch + it->offset - it->avg_err);
         double end       = std::min((double)it->rl, it->stretch * it->ql + it->offset + it->avg_err - aligner_.align_k_);
         local_mls.push_back(sr_local_ml(it->qfrag, begin, end));
       }
