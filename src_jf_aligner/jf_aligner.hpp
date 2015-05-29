@@ -8,7 +8,7 @@
 
 #include <multiplexer.hpp>
 #include <src_jf_aligner/frag_info.hpp>
-#include <src_jf_aligner/mer_pos_hash.hpp>
+#include <jellyfish/mer_dna.hpp>
 #include <jellyfish/stream_manager.hpp>
 #include <jellyfish/whole_sequence_parser.hpp>
 #include <src_jf_aligner/output_file.hpp>
@@ -17,8 +17,6 @@ namespace err = jellyfish::err;
 using jellyfish::mer_dna;
 typedef mer_dna long_mer_type;
 typedef jellyfish::mer_dna_ns::mer_base_static<uint64_t, 1> short_mer_type;
-typedef mer_pos_hash<frag_lists::frag_info, mer_dna> mer_pos_hash_type;
-typedef mer_pos_hash<frag_lists::frag_info, short_mer_type> short_mer_pos_hash_type;
 typedef std::vector<const char*> file_vector;
 typedef jellyfish::stream_manager<file_vector::const_iterator> stream_manager;
 typedef jellyfish::whole_sequence_parser<stream_manager> read_parser;

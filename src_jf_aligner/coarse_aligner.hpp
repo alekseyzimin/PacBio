@@ -45,11 +45,6 @@ class coarse_aligner {
   const std::vector<int>*  unitigs_lengths_; // Lengths of unitigs
   unsigned int             unitigs_k_; // k-mer length used for creating k-unitigs
 
-
-  typedef const mer_pos_hash_type::mapped_type list_type;
-  typedef const mer_pos_hash_type::position_type position_type;
-
-
 public:
   coarse_aligner(const sequence_psa& psa, const unsigned int align_k,
                  double stretch_factor, double stretch_constant, double stretch_cap, size_t window_size,

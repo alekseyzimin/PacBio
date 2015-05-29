@@ -15,7 +15,7 @@ struct sr_local_ml {
 typedef std::vector<sr_local_ml> local_mer_lists_type;
 typedef std::map<const char*, local_mer_lists_type> frags_local_pos_type;
 
-void fetch_local_super_reads(const short_mer_pos_hash_type& ary, short_parse_sequence& parser,
+void fetch_local_super_reads(const sequence_psa& ary, short_parse_sequence& parser,
                              frags_local_pos_type& frags_pos);
 
 class fine_aligner {
