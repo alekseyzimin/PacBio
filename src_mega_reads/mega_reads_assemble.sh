@@ -256,8 +256,8 @@ fi
 if [ $ESTIMATED_GENOME_SIZE -gt 1 ];then
 MR_SIZE=$(stat -c%s "$COORDS.1.fa");
 COVERAGE=$((MR_SIZE/ESTIMATED_GENOME_SIZE));
-if [ $COVERAGE -le 9 ];then
-echo "Coverage of the mega-reads less than 10 -- using the super reads as well";
+if [ $COVERAGE -le 5 ];then
+echo "Coverage of the mega-reads less than 5 -- using the super reads as well";
 SR_FRG=$COORDS.sr.frg
 fasta2frg.pl sr 200 < $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > $SR_FRG.tmp && mv  $SR_FRG.tmp  $SR_FRG;
 fi
