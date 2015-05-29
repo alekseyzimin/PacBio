@@ -43,10 +43,10 @@ TEST(SuperReadParser, OneRead) {
     mer_dna rm(m.get_reverse_complement());
     bool is_canonical = m < rm;
 
-    const auto list = psa.equal_range(m);
-    ASSERT_TRUE(list.first != list.second);
-    EXPECT_EQ(1, std::distance(list.first, list.second));
-    //    const mer_pos_hash_type::position_type& pos = *list->cbegin();
+    const auto list = psa.find_pos_size(m);
+    ASSERT_NE((size_t)0, list.second);
+    ASSERT_NE(list.first, psa.pos_end());
+    EXPECT_EQ(1, std::distance(list.first, psa.pos_end()));
     const auto it = list.first;
     EXPECT_EQ("superread", it->frag->fwd.name);
     EXPECT_EQ((int)(i + 1) * (is_canonical ? 1 : -1), it->offset);
@@ -102,10 +102,13 @@ TEST(SuperReadParser, ManyReads) {
     const bool is_canonical = m < rm;
     SCOPED_TRACE(::testing::Message() << "i:" << i << " m:" << m << " canonical:" << is_canonical << " delta:" << delta);
 
-    auto list = psa.equal_range(m, rm);
-    EXPECT_TRUE(list.first != list.second);
-    int count = 0;
-    for(auto it = list.first; it != list.second; ++it, ++count) {
+    auto list = is_canonical
+      ? psa.find_pos_size(m, rm)
+      : psa.find_pos_size(rm, m);
+    EXPECT_NE((size_t)0, list.second);
+    EXPECT_NE(list.first, psa.pos_end());
+    size_t count = 0;
+    for(auto it = list.first; it != psa.pos_end(); ++it, ++count) {
       EXPECT_EQ(read_len, (int)it->frag->len);
       int read_id = std::atoi(it->frag->fwd.name.c_str());
       // Is id valid?
@@ -115,13 +118,14 @@ TEST(SuperReadParser, ManyReads) {
       // Is offset valid
       EXPECT_EQ((int)i + 1 - read_id * delta, is_canonical ? it->offset : -it->offset);
     }
+    EXPECT_GE(list.second, count);
     // Is number of reads covering position i correct?
     if(i <= read_len - mer_dna::k())
-      EXPECT_EQ((int)i / delta + 1, count);
+      EXPECT_EQ(i / delta + 1, count);
     else if(i >= seq_len - read_len)
-      EXPECT_EQ((seq_len - read_len) / delta - (int)(i - read_len + mer_dna::k() - 1) / delta, count);
+      EXPECT_EQ((seq_len - read_len) / delta - (i - read_len + mer_dna::k() - 1) / delta, count);
     else
-      EXPECT_EQ((int)i / delta - (int)(i - read_len + mer_dna::k() - 1) / delta, count);
+      EXPECT_EQ(i / delta - (i - read_len + mer_dna::k() - 1) / delta, count);
   }
 }
 }

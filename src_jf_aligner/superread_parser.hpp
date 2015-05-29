@@ -172,32 +172,15 @@ struct sequence_psa {
   }
 
   template<typename MerType>
-  std::pair<pos_iterator, pos_iterator> equal_range(const MerType& m) const {
-    return equal_range(m, m.get_reverse_complement());
-  }
-
-  template<typename MerType>
-  std::pair<pos_iterator, pos_iterator> equal_range(const MerType& m, const MerType& rm,
-                                                    size_t max = std::numeric_limits<size_t>::max()) const {
-    auto fwd_res = m_sa->search(mer_dna_ptr<MerType>(m), m.k());
-    if(fwd_res.first >= max)
-      return std::make_pair(pos_iterator(), pos_iterator());
-    auto bwd_res = m_sa->search(mer_dna_ptr<MerType>(rm), rm.k());
-    if(fwd_res.first + bwd_res.first >= max)
-      return std::make_pair(pos_iterator(), pos_iterator());
-    if(rm < m) std::swap(fwd_res, bwd_res);
-    return std::make_pair(pos_iterator(this,
-                                       fwd_res.second, fwd_res.second + fwd_res.first,
-                                       bwd_res.second, bwd_res.second + bwd_res.first,
-                                       m.k()),
-                          pos_iterator());
+  std::pair<pos_iterator, size_t> find_pos_size(const MerType& m) const {
+    const MerType rm = m.get_reverse_complement();
+    return m < rm ? find_pos_size(m, rm) : find_pos_size(rm, m);
   }
 
   template<typename MerType>
   std::pair<pos_iterator, size_t> find_pos_size(const MerType& m, const MerType& rm) const {
     auto fwd_res = m_sa->search(mer_dna_ptr<MerType>(m), m.k());
     auto bwd_res = m_sa->search(mer_dna_ptr<MerType>(rm), rm.k());
-    if(rm < m) std::swap(fwd_res, bwd_res);
     return std::make_pair(pos_iterator(this,
                                        fwd_res.second, fwd_res.second + fwd_res.first,
                                        bwd_res.second, bwd_res.second + bwd_res.first,

@@ -7,7 +7,9 @@ void fetch_local_super_reads(const sequence_psa& psa, short_parse_sequence& pars
 
   while(parser.next()) { // Process each k-mer
     const bool is_canonical = parser.mer<0>().is_canonical();
-    auto list = psa.find_pos_size(parser.mer<0>().m, parser.mer<0>().rm);
+    auto list = is_canonical
+      ? psa.find_pos_size(parser.mer<0>().m, parser.mer<0>().rm)
+      : psa.find_pos_size(parser.mer<0>().rm, parser.mer<0>().m);
 
     for(auto& it = list.first; it != end; ++it) { // For each instance of the k-mer in a super read
       auto local_mls = frags_pos.find(it->frag->fwd.name.c_str());

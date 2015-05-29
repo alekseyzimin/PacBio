@@ -64,7 +64,9 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
   while(parser.next()) { // Process each k-mer
     if(parser.mer<0>().m.is_homopolymer()) continue;
     const bool is_canonical = parser.mer<0>().is_canonical();
-    auto list = psa.find_pos_size(parser.mer<0>().m, parser.mer<0>().rm);
+    auto list = is_canonical
+      ? psa.find_pos_size(parser.mer<0>().m, parser.mer<0>().rm)
+      : psa.find_pos_size(parser.mer<0>().rm, parser.mer<0>().m);
     if(list.second == 0 ||
        (max_mer_count && list.second >= (size_t)max_mer_count)) // && std::distance(list.first, end) >= max_mer_count))
       continue;
