@@ -42,96 +42,96 @@ void sequence_psa::append_fasta(std::istream& is) {
   }
 }
 
-static void
-create_thread(int thid, int nb_threads, barrier<std::mutex>* thread_barrier, slice_for<size_t, barrier<std::mutex>>* slicer,
-              compact_dna::const_iterator T, compact_index<uint64_t>::iterator SA,
-              const sequence_psa::offsets_type& offsets,
-              size_t n, uint64_t* mer_counts, unsigned int mer_size, unsigned int max_size) {
-  const size_t nb_counts    = (1 << (2 * mer_size)) + 1;
-  const size_t counts_mask  = ~(size_t)0 >> (8 * sizeof(size_t) - 2 * mer_size);
-  const size_t counts_start = (nb_counts - 1) * thid / nb_threads;
-  const size_t counts_end   = (nb_counts - 1) * (thid + 1) / nb_threads;
-  //  const size_t n_step       = std::min((size_t)(1024 * 1024), std::max((size_t)1, n / nb_threads));
+// static void
+// create_thread(int thid, int nb_threads, barrier<std::mutex>* thread_barrier, slice_for<size_t, barrier<std::mutex>>* slicer,
+//               compact_dna::const_iterator T, compact_index<uint64_t>::iterator SA,
+//               const sequence_psa::offsets_type& offsets,
+//               size_t n, uint64_t* mer_counts, unsigned int mer_size, unsigned int max_size) {
+//   const size_t nb_counts    = (1 << (2 * mer_size)) + 1;
+//   const size_t counts_mask  = ~(size_t)0 >> (8 * sizeof(size_t) - 2 * mer_size);
+//   const size_t counts_start = (nb_counts - 1) * thid / nb_threads;
+//   const size_t counts_end   = (nb_counts - 1) * (thid + 1) / nb_threads;
+//   //  const size_t n_step       = std::min((size_t)(1024 * 1024), std::max((size_t)1, n / nb_threads));
 
-  // Add 1 to length of zeroing if thid == nb_threads because
-  // counts_end is at most nb_counts - 1, and need to zero up to
-  // nb_counts.
-  std::fill_n(mer_counts + counts_start, counts_end - counts_start + (thid == nb_threads), (uint64_t)0);
-  thread_barrier->wait();
+//   // Add 1 to length of zeroing if thid == nb_threads because
+//   // counts_end is at most nb_counts - 1, and need to zero up to
+//   // nb_counts.
+//   std::fill_n(mer_counts + counts_start, counts_end - counts_start + (thid == nb_threads), (uint64_t)0);
+//   thread_barrier->wait();
 
-  std::unique_ptr<uint64_t[]> tmp_counts(new uint64_t[nb_counts - 1]);
-  std::fill_n(tmp_counts.get(), nb_counts - 1, (uint64_t)0);
-  slicer->loop(0, offsets.size() - 1, 10, [&](size_t i) {
-      sequence_psa::SA::count_mers(T + offsets[i].sequence,
-                                   offsets[i + 1].sequence - offsets[i].sequence,
-                                   tmp_counts.get(), mer_size);
-    });
-  for(size_t i = 0, j = counts_start; i < nb_counts - 1; ++i, j = ((j + 1) & counts_mask))
-    __sync_fetch_and_add(mer_counts + j, tmp_counts[j]);
+//   std::unique_ptr<uint64_t[]> tmp_counts(new uint64_t[nb_counts - 1]);
+//   std::fill_n(tmp_counts.get(), nb_counts - 1, (uint64_t)0);
+//   slicer->loop(0, offsets.size() - 1, 10, [&](size_t i) {
+//       sequence_psa::SA::count_mers(T + offsets[i].sequence,
+//                                    offsets[i + 1].sequence - offsets[i].sequence,
+//                                    tmp_counts.get(), mer_size);
+//     });
+//   for(size_t i = 0, j = counts_start; i < nb_counts - 1; ++i, j = ((j + 1) & counts_mask))
+//     __sync_fetch_and_add(mer_counts + j, tmp_counts[j]);
 
-  if(thread_barrier->wait())
-    sequence_psa::SA::partial_sums(mer_counts, nb_counts);
+//   if(thread_barrier->wait())
+//     sequence_psa::SA::partial_sums(mer_counts, nb_counts);
 
-  typedef typename compactsufsort_imp::parallel_iterator_traits<compact_index<uint64_t>::iterator>::type PSAIDPTR;
-  PSAIDPTR PSA(SA);
-  slicer->loop(0, offsets.size() - 1, 10, [=](size_t i) {
-    sequence_psa::SA::fill_mers(T, offsets[i].sequence, offsets[i + 1].sequence, PSA, mer_counts, mer_size);
-    });
-  slicer->loop(0, nb_counts - 1, 100, [=](size_t i) {
-      sequence_psa::SA::sort_one_mer(T, n, PSA, mer_counts[i], mer_counts[i + 1], mer_size, max_size);
-    });
-}
+//   typedef typename compactsufsort_imp::parallel_iterator_traits<compact_index<uint64_t>::iterator>::type PSAIDPTR;
+//   PSAIDPTR PSA(SA);
+//   slicer->loop(0, offsets.size() - 1, 10, [=](size_t i) {
+//     sequence_psa::SA::fill_mers(T, offsets[i].sequence, offsets[i + 1].sequence, PSA, mer_counts, mer_size);
+//     });
+//   slicer->loop(0, nb_counts - 1, 100, [=](size_t i) {
+//       sequence_psa::SA::sort_one_mer(T, n, PSA, mer_counts[i], mer_counts[i + 1], mer_size, max_size);
+//     });
+// }
 
 
-void sequence_psa::compute_psa(unsigned int min_size, unsigned int max_size, unsigned int threads) {
-  m_min_size = min_size;
-  m_max_size = max_size;
+// void sequence_psa::compute_psa(unsigned int min_size, unsigned int max_size, unsigned int threads) {
+//   m_min_size = min_size;
+//   m_max_size = max_size;
 
-  barrier<std::mutex>      SA_barrier(threads);
-  slice_for<size_t, barrier<std::mutex>> slicer(SA_barrier);
-  std::vector<std::thread> thread_handles;
-  m_counts.resize((1 << (2 * min_size)) + 1);
-  m_sa.reset(new compact_index<uint64_t>(nb_mers(), compact_index<uint64_t>::required_bits(sequence_size())));
+//   barrier<std::mutex>      SA_barrier(threads);
+//   slice_for<size_t, barrier<std::mutex>> slicer(SA_barrier);
+//   std::vector<std::thread> thread_handles;
+//   m_counts.resize((1 << (2 * min_size)) + 1);
+//   m_sa.reset(new compact_index<uint64_t>(nb_mers(), compact_index<uint64_t>::required_bits(sequence_size())));
 
-  for(unsigned int i = 0; i < threads; ++i)
-    thread_handles.push_back(std::thread(create_thread, i, threads, &SA_barrier, &slicer,
-                                         compact_dna::const_iterator_at(m_sequence.data()),
-                                         m_sa->begin(), m_offsets,
-                                         sequence_size(), m_counts.data(), min_size, max_size));
-  for(unsigned int i = 0; i < threads; ++i)
-    thread_handles[i].join();
-}
+//   for(unsigned int i = 0; i < threads; ++i)
+//     thread_handles.push_back(std::thread(create_thread, i, threads, &SA_barrier, &slicer,
+//                                          compact_dna::const_iterator_at(m_sequence.data()),
+//                                          m_sa->begin(), m_offsets,
+//                                          sequence_size(), m_counts.data(), min_size, max_size));
+//   for(unsigned int i = 0; i < threads; ++i)
+//     thread_handles[i].join();
+// }
 
-bool sequence_psa::check_suffixes(std::ostream& out) const {
-  const auto T     = compact_dna::const_iterator_at(m_sequence.data());
-  const auto Tsize = sequence_size();
-  const auto sa    = m_sa->cbegin();
+// bool sequence_psa::check_suffixes(std::ostream& out) const {
+//   const auto T     = compact_dna::const_iterator_at(m_sequence.data());
+//   const auto Tsize = sequence_size();
+//   const auto sa    = m_sa->cbegin();
 
-  for(size_t off = 0; off < m_offsets.size() - 1; ++off) {
-    for(size_t i = m_offsets[off].sequence; i < m_offsets[off + 1].sequence - m_min_size + 1; ++i) {
-      unsigned int limit_j = std::min((size_t)m_max_size, m_offsets[off+1].sequence - i);
-      for(unsigned int j = m_min_size; j <= limit_j; ++j) {
-        auto res = SA::search(T, Tsize, sa, nb_mers(), m_counts.data(),
-                              m_min_size, m_max_size,
-                              T + i, j);
-        if(res.first == 0) {
-          out << "Suffix at position " << i << " and length " << j << " not found"
-              << std::endl;
-          return false;
-        }
-        size_t k = 0;
-        for(k = 0; k < res.first; ++k)
-          if(sa[res.second + k] == i) break;
-        if(k >= res.first) {
-          out << "Suffix at position " << i << " and length " << j
-              << " has no match at that position" << std::endl;
-          return false;
-        }
-        // if(res.first <= M)
-        //   ++occurences[j - mer_size][res.first - 1][k];
-      }
-    }
-  }
-  return true;
-}
+//   for(size_t off = 0; off < m_offsets.size() - 1; ++off) {
+//     for(size_t i = m_offsets[off].sequence; i < m_offsets[off + 1].sequence - m_min_size + 1; ++i) {
+//       unsigned int limit_j = std::min((size_t)m_max_size, m_offsets[off+1].sequence - i);
+//       for(unsigned int j = m_min_size; j <= limit_j; ++j) {
+//         auto res = SA::search(T, Tsize, sa, nb_mers(), m_counts.data(),
+//                               m_min_size, m_max_size,
+//                               T + i, j);
+//         if(res.first == 0) {
+//           out << "Suffix at position " << i << " and length " << j << " not found"
+//               << std::endl;
+//           return false;
+//         }
+//         size_t k = 0;
+//         for(k = 0; k < res.first; ++k)
+//           if(sa[res.second + k] == i) break;
+//         if(k >= res.first) {
+//           out << "Suffix at position " << i << " and length " << j
+//               << " has no match at that position" << std::endl;
+//           return false;
+//         }
+//         // if(res.first <= M)
+//         //   ++occurences[j - mer_size][res.first - 1][k];
+//       }
+//     }
+//   }
+//   return true;
+// }
 

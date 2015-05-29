@@ -35,7 +35,6 @@ public:
       const T slice_start = start + step * m_slice++;
       if(slice_start >= end) break;
       const T slice_end = std::min(slice_start + step, end);
-      //      for(T i = slice_start; i < slice_end; ++i)
       block(slice_start, slice_end);
     }
   }

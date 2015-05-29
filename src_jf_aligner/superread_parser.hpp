@@ -8,7 +8,8 @@
 #include <src_psa/compact_dna.hpp>
 #include <src_psa/compact_index.hpp>
 typedef int32_t saint_t;
-#include <src_psa/mer_sa_imp.hpp>
+#include <src_psa/psa.hpp>
+
 
 // Bare minimum struct to behave like a pointer into a mer_dna, as far
 // as mer_sa_imp::str_to_mer and SA::search are concerned.
@@ -137,18 +138,14 @@ struct sequence_psa {
     pos_iterator operator++(int) { pos_iterator res(*this); ++*this; return res; }
   };
 
-  std::vector<frag_lists::frag_info>       m_headers;
-  std::vector<uint64_t>                    m_sequence;
-  std::vector<size_t>                      m_header_search;
-  offsets_type                             m_offsets;
-  std::vector<uint64_t>                    m_counts;
-  std::unique_ptr<compact_index<uint64_t>> m_sa;
-  unsigned int                             m_min_size, m_max_size;
+  std::vector<frag_lists::frag_info> m_headers;
+  std::vector<uint64_t>              m_sequence;
+  std::vector<size_t>                m_header_search;
+  offsets_type                       m_offsets;
+  std::unique_ptr<PSA<compact_dna::const_iterator> > m_sa;
 
-  //  explicit sequence_psa(int search_bits = 20) : m_search_bits(search_bits) {
   sequence_psa() {
     m_offsets.push_back({ (size_t)0, (size_t)0 });
-    //    m_header_search.push_back(0);
   }
 
   void append_fasta(std::istream& is);
@@ -160,17 +157,18 @@ struct sequence_psa {
   }
 
   size_t sequence_size() const { return m_offsets.back().sequence; }
-  size_t nb_mers() const { return sequence_size() - (m_min_size - 1) * m_headers.size(); }
+  size_t nb_mers() const { return sequence_size() - (m_sa->min_size() - 1) * m_headers.size(); }
   size_t nb_sequences() const { return m_headers.size(); }
 
   void compute_psa(unsigned int min_size, unsigned int max_size,
-                   unsigned int threads = std::thread::hardware_concurrency());
+                   unsigned int threads = std::thread::hardware_concurrency()) {
+    std::cerr << "compute_psa " << m_headers.size() << ' ' << sequence_size() << '\n';
+    m_sa.reset(new PSA<compact_dna::const_iterator>(compact_dna::const_iterator_at(m_sequence.data()),
+                                                    sequence_size(), min_size, max_size, threads));
+  }
   bool check_suffixes(std::ostream& out = std::cout) const;
   bool check_psa() const {
-    return
-      SA::check(compact_dna::iterator_at(m_sequence.data()), sequence_size(),
-                m_sa->cbegin(), nb_mers(), m_counts.data(), m_min_size, m_max_size) &&
-      check_suffixes();
+    return m_sa->check() && m_sa->check_suffixes();
   }
 
   template<typename MerType>
@@ -181,16 +179,10 @@ struct sequence_psa {
   template<typename MerType>
   std::pair<pos_iterator, pos_iterator> equal_range(const MerType& m, const MerType& rm,
                                                     size_t max = std::numeric_limits<size_t>::max()) const {
-    auto fwd_res = SA::search(compact_dna::const_iterator_at(m_sequence.data()), sequence_size(),
-                              m_sa->begin(), nb_mers(), m_counts.data(),
-                              m_min_size, m_max_size,
-                              mer_dna_ptr<MerType>(m), m.k());
+    auto fwd_res = m_sa->search(mer_dna_ptr<MerType>(m), m.k());
     if(fwd_res.first >= max)
       return std::make_pair(pos_iterator(), pos_iterator());
-    auto bwd_res = SA::search(compact_dna::const_iterator_at(m_sequence.data()), sequence_size(),
-                              m_sa->begin(), nb_mers(), m_counts.data(),
-                              m_min_size, m_max_size,
-                              mer_dna_ptr<MerType>(rm), rm.k());
+    auto bwd_res = m_sa->search(mer_dna_ptr<MerType>(rm), rm.k());
     if(fwd_res.first + bwd_res.first >= max)
       return std::make_pair(pos_iterator(), pos_iterator());
     if(rm < m) std::swap(fwd_res, bwd_res);
@@ -203,14 +195,8 @@ struct sequence_psa {
 
   template<typename MerType>
   std::pair<pos_iterator, size_t> find_pos_size(const MerType& m, const MerType& rm) const {
-    auto fwd_res = SA::search(compact_dna::const_iterator_at(m_sequence.data()), sequence_size(),
-                              m_sa->begin(), nb_mers(), m_counts.data(),
-                              m_min_size, m_max_size,
-                              mer_dna_ptr<MerType>(m), m.k());
-    auto bwd_res = SA::search(compact_dna::const_iterator_at(m_sequence.data()), sequence_size(),
-                              m_sa->begin(), nb_mers(), m_counts.data(),
-                              m_min_size, m_max_size,
-                              mer_dna_ptr<MerType>(rm), rm.k());
+    auto fwd_res = m_sa->search(mer_dna_ptr<MerType>(m), m.k());
+    auto bwd_res = m_sa->search(mer_dna_ptr<MerType>(rm), rm.k());
     if(rm < m) std::swap(fwd_res, bwd_res);
     return std::make_pair(pos_iterator(this,
                                        fwd_res.second, fwd_res.second + fwd_res.first,

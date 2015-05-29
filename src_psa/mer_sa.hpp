@@ -14,7 +14,7 @@ namespace mer_sa {
  * @param max_size Maximum pattern length for query (i.e. length of suffix sorting)
  * @return total number of mers in T if no error occurred, a negative number otherwise
  */
-template<typename CHARPTR, typename SAIDPTR, typename SAIDX = typename compactsufsort::type_traits<SAIDPTR>::SAIDX>
+template<typename CHARPTR, typename SAIDPTR, typename SAIDX = typename compactsufsort_imp::type_traits<SAIDPTR>::SAIDX>
 SAIDX
 create(CHARPTR T, SAIDPTR SA, SAIDX n, uint64_t* mer_counts, unsigned int mer_size, unsigned int max_size) {
   return mer_sa_imp::SA<CHARPTR, SAIDPTR>::create(T, SA, n, mer_counts, mer_size, max_size);
@@ -31,7 +31,7 @@ create(CHARPTR T, SAIDPTR SA, SAIDX n, uint64_t* mer_counts, unsigned int mer_si
  * @param max_size Maximum pattern length for query (i.e. length of suffix sorting)
  * @return total number of mers in T if no error occurred, a negative number otherwise
  */
-template<typename CHARPTR, typename SAIDPTR, typename SAIDX = typename compactsufsort::type_traits<SAIDPTR>::SAIDX>
+template<typename CHARPTR, typename SAIDPTR, typename SAIDX = typename compactsufsort_imp::type_traits<SAIDPTR>::SAIDX>
 SAIDX
 create_mt(CHARPTR T, SAIDPTR SA, SAIDX n, unsigned int t, uint64_t* mer_counts, unsigned int mer_size, unsigned int max_size) {
   return mer_sa_imp::SA<CHARPTR, SAIDPTR>::create_mt(T, SA, n, t, mer_counts, mer_size, max_size);
@@ -49,7 +49,7 @@ create_mt(CHARPTR T, SAIDPTR SA, SAIDX n, unsigned int t, uint64_t* mer_counts, 
  * @return The count of matches and output index if no error occurred. -1 otherwise.
  */
 template<typename CHARPTR, typename CSAIDPTR, typename CHARPTR2,
-         typename SAIDX = typename compactsufsort::type_traits<CSAIDPTR>::SAIDX>
+         typename SAIDX = typename compactsufsort_imp::type_traits<CSAIDPTR>::SAIDX>
 std::pair<SAIDX, SAIDX>
 search(const CHARPTR T, SAIDX Tsize, const CSAIDPTR SA, SAIDX SAsize,
        const uint64_t* const counts, unsigned int mer_size, unsigned int max_size,
@@ -69,7 +69,7 @@ search(const CHARPTR T, SAIDX Tsize, const CSAIDPTR SA, SAIDX SAsize,
  * @return True if suffix array is correct.
  */
 template<typename CHARPTR, typename CSAIDPTR,
-         typename SAIDX = typename compactsufsort::type_traits<CSAIDPTR>::SAIDX>
+         typename SAIDX = typename compactsufsort_imp::type_traits<CSAIDPTR>::SAIDX>
 bool
 check(const CHARPTR T, SAIDX Tsize, const CSAIDPTR SA, SAIDX TAsize,
       const uint64_t* const counts, unsigned int mer_size, unsigned int max_size) {
@@ -89,7 +89,7 @@ check(const CHARPTR T, SAIDX Tsize, const CSAIDPTR SA, SAIDX TAsize,
  *         position.
  */
 template<typename CHARPTR, typename CSAIDPTR,
-         typename SAIDX = typename compactsufsort::type_traits<CSAIDPTR>::SAIDX>
+         typename SAIDX = typename compactsufsort_imp::type_traits<CSAIDPTR>::SAIDX>
 bool
 check_suffixes(const CHARPTR T, SAIDX Tsize, const CSAIDPTR SA, SAIDX TAsize,
               const uint64_t* const counts, unsigned int mer_size, unsigned int max_size) {

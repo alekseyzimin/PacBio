@@ -8,6 +8,7 @@
 
 #include "const_iterator_traits.hpp"
 #include "parallel_iterator_traits.hpp"
+#include "prefetch_iterator_traits.hpp"
 
 template<typename IDX, typename W>
 class const_compact_iterator;
@@ -19,15 +20,15 @@ namespace compact_iterator_imp {
 template<typename IDX, typename W>
 static IDX get(const W* p, unsigned int b, unsigned int o) {
   static const size_t Wbits = sizeof(W) * 8;
-  W mask = ((W)-1 >> (Wbits - b)) << o;
+  W mask = (~(W)0 >> (Wbits - b)) << o;
   IDX res = (*p & mask) >> o;
   if(o + b > Wbits) {
     unsigned int over = o + b - Wbits;
-    mask = (W)-1 >> (Wbits - over);
+    mask = ~(W)0 >> (Wbits - over);
     res |= (*(p + 1) & mask) << (b - over);
   }
   if(std::is_signed<IDX>::value && res & ((IDX)1 << (b - 1)))
-    res |= (IDX)-1 << b;
+    res |= ~(IDX)0 << b;
 
   return res;
 }
@@ -58,11 +59,11 @@ template<typename IDX, typename W, bool TS = false>
 static void set(IDX x, W* p, unsigned int b, unsigned int o) {
   static const size_t Wbits = sizeof(W) * 8;
   const W y = x;
-  W   mask  = ((W)-1 >> (Wbits - b)) << o;
+  W   mask  = (~(W)0 >> (Wbits - b)) << o;
   mask_store<W, TS>::store(p, mask, y << o);
   if(o + b > Wbits) {
     unsigned int over = o + b - Wbits;
-    mask              = (W)-1 >> (Wbits - over);
+    mask              = ~(W)0 >> (Wbits - over);
     mask_store<W, TS>::store(p + 1, mask, y >> (b - over));
   }
 }
@@ -450,6 +451,24 @@ struct parallel_iterator_traits<compact_iterator<I, W, TS>> {
 template<typename I, typename W>
 struct parallel_iterator_traits<const_compact_iterator<I, W>> {
   typedef const_compact_iterator<I, W> type;
+};
+
+template<typename I, typename W>
+struct prefetch_iterator_traits<compact_iterator<I, W> > {
+  template<int level = 0>
+  static void read(const compact_iterator<I, W>& p) { prefetch_iterator_traits<W*>::template read<level>(p.get_ptr()); }
+  template<int level = 0>
+  static void write(const compact_iterator<I, W>& p) { prefetch_iterator_traits<W*>::template write<level>(p.get_ptr()); }
+
+};
+
+template<typename I, typename W>
+struct prefetch_iterator_traits<const_compact_iterator<I, W> > {
+  template<int level = 0>
+  static void read(const const_compact_iterator<I, W>& p) { prefetch_iterator_traits<const W*>::template read<level>(p.get_ptr()); }
+  template<int level = 0>
+  static void write(const const_compact_iterator<I, W>& p) { prefetch_iterator_traits<const W*>::template write<level>(p.get_ptr()); }
+
 };
 }
 

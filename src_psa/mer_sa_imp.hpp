@@ -1,14 +1,15 @@
 #ifndef __MER_SA_IMP_H__
 #define __MER_SA_IMP_H__
 
+#include <cmath>
 #include <iterator>
 #include <atomic>
 #include <algorithm>
 
-#include "divsufsort_private.h"
 #include "barrier.hpp"
 #include "slice.hpp"
 #include "global_timer.hpp"
+#include "said_traits.hpp"
 
 template<typename T>
 bool lexicographical_compare_n(T* first1, const size_t len1,
@@ -66,44 +67,44 @@ inline uint64_t word_reverse(uint64_t w) {
 
 template<>
 inline uint64_t str_to_mer<const_compact_iterator<uint8_t, uint64_t>>(const_compact_iterator<uint8_t, uint64_t> p, unsigned int mer_size) {
-  return word_reverse(p.get_bits(2 * mer_size)) >> (sizeof(uint64_t) * 8 - 2 * mer_size);
+  return mer_size ? word_reverse(p.get_bits(2 * mer_size)) >> (sizeof(uint64_t) * 8 - 2 * mer_size) : 0;
 }
 
 template<>
 inline uint64_t str_to_mer<compact_iterator<uint8_t, uint64_t>>(compact_iterator<uint8_t, uint64_t> p, unsigned int mer_size) {
-  return p.get_bits(2 * mer_size);
+  return mer_size ? p.get_bits(2 * mer_size) : 0;
 }
 
 template<typename CHARPTR>
 struct mer_iterator : std::iterator<std::input_iterator_tag, const uint64_t>{
-  CHARPTR          p;
-  mutable uint64_t m;
-  const uint64_t   mask;
+  CHARPTR          m_p;
+  mutable uint64_t m_m;
+  const uint64_t   m_mask;
   mer_iterator() = default;
-  mer_iterator(CHARPTR start, unsigned int mer_size) : p(start), m(0), mask(~(uint64_t)0 >> (8 * sizeof(uint64_t) - 2 * mer_size)) {
-    for(unsigned int i = 0; i < mer_size - 1; ++i, ++p)
-      m = (m << 2) | base_to_code(*p);
-    m <<= 2;
+  mer_iterator(CHARPTR start, unsigned int mer_size) : m_p(start), m_m(0), m_mask(~(uint64_t)0 >> (8 * sizeof(uint64_t) - 2 * mer_size)) {
+    for(unsigned int i = 0; i < mer_size - 1; ++i, ++m_p)
+      m_m = (m_m << 2) | base_to_code(*m_p);
+    m_m <<= 2;
   }
   // Iterator used as a guard. It is not deferencable
-  mer_iterator(CHARPTR pos) : p(pos), m(0), mask(0) { }
+  mer_iterator(CHARPTR pos) : m_p(pos), m_m(0), m_mask(0) { }
 
-  mer_iterator(const mer_iterator& rhs) : p(rhs.p), m(rhs.m), mask(rhs.mask) { }
+  mer_iterator(const mer_iterator& rhs) : m_p(rhs.m_p), m_m(rhs.m_m), m_mask(rhs.m_mask) { }
 
-  bool operator==(const mer_iterator& rhs) const { return p == rhs.p; }
-  bool operator!=(const mer_iterator& rhs) const { return p != rhs.p; }
-  bool operator==(const CHARPTR& rhs) const { return p == rhs; }
-  bool operator!=(const CHARPTR& rhs) const { return p != rhs; }
+  bool operator==(const mer_iterator& rhs) const { return m_p == rhs.m_p; }
+  bool operator!=(const mer_iterator& rhs) const { return m_p != rhs.m_p; }
+  bool operator==(const CHARPTR& rhs) const { return m_p == rhs; }
+  bool operator!=(const CHARPTR& rhs) const { return m_p != rhs; }
 
 
   const uint64_t operator*() const {
-    m = m | base_to_code(*p);
-    return m & mask;
+    m_m = m_m | base_to_code(*m_p);
+    return m_m & m_mask;
   }
 
   mer_iterator& operator++() {
-    ++p;
-    m <<= 2;
+    ++m_p;
+    m_m <<= 2;
     return *this;
   }
 
@@ -181,7 +182,7 @@ struct SA {
     const size_t nb_counts = (1 << (2 * mer_size)) + 1;
     std::fill_n(mer_counts, nb_counts, (uint64_t)0);
 
-    count_mers(T, n, mer_counts, mer_size);
+    count_mers(T, n - mer_size + 1, mer_counts, mer_size);
     SAIDX total_mers = partial_sums(mer_counts, nb_counts);
     fill_mers(T, 0, n, SA, mer_counts, mer_size);
     for(size_t i = 0; i < nb_counts - 1; ++i)
@@ -191,8 +192,10 @@ struct SA {
   }
 
   static void
-  create_thread(int thid, int nb_threads, barrier<std::mutex>* thread_barrier, slice_for<size_t, barrier<std::mutex>>* slicer,
-                CHARPTR T, SAIDPTR SA, SAIDX n, uint64_t* mer_counts, unsigned int mer_size, unsigned int max_size) {
+  create_thread(int thid, int nb_threads, barrier<std::mutex>* thread_barrier,
+                slice_for<SAIDX, barrier<std::mutex>>* slicer,
+                CHARPTR T, SAIDPTR SA, SAIDX n, uint64_t* mer_counts,
+                unsigned int mer_size, unsigned int max_size) {
     const size_t nb_counts    = (1 << (2 * mer_size)) + 1;
     const size_t counts_mask  = ~(size_t)0 >> (8 * sizeof(size_t) - 2 * mer_size);
     const size_t counts_start = (nb_counts - 1) * thid / nb_threads;
@@ -209,8 +212,8 @@ struct SA {
     {
       std::unique_ptr<uint64_t[]> tmp_counts(new uint64_t[nb_counts - 1]);
       std::fill_n(tmp_counts.get(), nb_counts - 1, (uint64_t)0);
-      slicer->chunk(0, n, n_step, [=,&tmp_counts](size_t s, size_t e) {
-          e = std::min((size_t)n, e + mer_size - 1);
+      slicer->chunk(0, n, n_step, [=,&tmp_counts](SAIDX s, SAIDX e) {
+          e = std::max(s, std::min((SAIDX)(n - mer_size + 1), e));
           count_mers(T + s, e - s, tmp_counts.get(), mer_size);
         });
       for(size_t i = 0, j = counts_start; i < nb_counts - 1; ++i, j = ((j + 1) & counts_mask))
@@ -218,20 +221,28 @@ struct SA {
     }
 
     global_timer.start(*thread_barrier, "partial sums");
-    if(thread_barrier->wait())
-      partial_sums(mer_counts, nb_counts);
+    if(thread_barrier->wait()) {
+#ifndef NDEBUG
+      const SAIDX total =
+#endif
+        partial_sums(mer_counts, nb_counts);
+      assert(total == (SAIDX)(n - mer_size + 1));
+    }
 
     typedef typename compactsufsort_imp::parallel_iterator_traits<SAIDPTR>::type PSAIDPTR;
     PSAIDPTR PSA(SA);
     global_timer.start(*thread_barrier, "fill_mers");
-    slicer->chunk(0, n, n_step, [=](size_t s, size_t e) {
-        e = std::min((size_t)n, e + mer_size - 1);
+    slicer->chunk(0, n, n_step, [=](SAIDX s, SAIDX e) {
+        e = std::min(n, (SAIDX)(e + mer_size - 1));
         fill_mers(T, s, e, PSA, mer_counts, mer_size);
       });
-
+#ifndef NDEBUG
+    if(thread_barrier->wait())
+      assert(mer_counts[nb_counts - 1] == (SAIDX)(n - mer_size + 1));
+#endif
     global_timer.start(*thread_barrier, "sorting");
     if(mer_size < max_size) {
-      slicer->loop(0, nb_counts - 1, 100, [=](size_t i) {
+      slicer->loop(0, nb_counts - 1, 100, [=](SAIDX i) {
           sort_one_mer(T, n, PSA, mer_counts[i], mer_counts[i + 1], mer_size, max_size);
         });
     }
@@ -241,7 +252,7 @@ struct SA {
   SAIDX
   static create_mt(CHARPTR T, SAIDPTR SA, SAIDX n, unsigned int t, uint64_t* mer_counts, unsigned int mer_size, unsigned int max_size) {
     barrier<std::mutex>      SA_barrier(t);
-    slice_for<size_t, barrier<std::mutex>> slicer(SA_barrier);
+    slice_for<SAIDX, barrier<std::mutex>> slicer(SA_barrier);
     std::vector<std::thread> threads;
 
     for(unsigned int i = 0; i < t; ++i)
@@ -255,28 +266,34 @@ struct SA {
 
   // Mer counting minimizing cache misses
   static void count_mers(CHARPTR T, SAIDX n, uint64_t* counts, unsigned int mer_size) {
-    static const int cache_size = 16;
+
+    static const unsigned int cache_size = 16;
     uint64_t mers[cache_size];
-    const CHARPTR end(T + n);
     mer_iterator<CHARPTR> mit(T, mer_size);
 
-    // Warm up cache
-    for(int i = 0; i < cache_size; ++mit, ++i) {
-      mers[i] = *mit;
-      __builtin_prefetch(counts + mers[i], 1, 0);
-    }
+    if(n >= (SAIDX)cache_size) {
+      // Warm up cache
+      SAIDX i;
+      for(i = 0; i < cache_size; ++mit, ++i) {
+        mers[i] = *mit;
+        __builtin_prefetch(counts + mers[i], 1, 0);
+      }
 
-    // Count with a delay
-    int i = 0;
-    for( ; mit != end; ++mit, i = (i + 1) % cache_size) {
-      ++counts[mers[i]];
-      mers[i] = *mit;
-      __builtin_prefetch(counts + mers[i]);
-    }
+      // Count with a delay
+      for( ; i < n; ++mit, ++i) {
+        const int j = i % cache_size;
+        ++counts[mers[j]];
+        const auto m = mers[j] = *mit;
+        __builtin_prefetch(counts + m);
+      }
 
-    // Finish up
-    for(int j = 0; j < cache_size; ++j, i = (i + 1) % cache_size)
-      ++counts[mers[i]];
+      // Finish up
+      for(unsigned int j = 0; j < cache_size; ++j, ++i)
+        ++counts[mers[i % cache_size]];
+    } else { // n < cache_size
+      for(SAIDX i = 0; i < n; ++mit, ++i)
+        ++counts[*mit];
+    }
   }
 
   // static void count_mers(CHARPTR T, SAIDX n, uint64_t* counts, unsigned int mer_size) {
@@ -315,9 +332,14 @@ struct SA {
   static void fill_mers(CHARPTR T, SAIDX start, const SAIDX end,
                         SA_TYPE SA,
                         uint64_t* counts, unsigned int mer_size) {
+    if(end - start < mer_size) return;
     uint64_t*     offsets = counts + 1;
+#ifndef NDEBUG
     const CHARPTR endptr(T + end);
-    for(mer_iterator<CHARPTR> mit(T + start, mer_size); mit != endptr; ++mit, ++start) {
+#endif
+    
+    for(mer_iterator<CHARPTR> mit(T + start, mer_size); start < end - mer_size + 1; ++mit, ++start) {
+      assert(mit.m_p < endptr);
       const uint64_t m   = *mit;
       const uint64_t off = __sync_fetch_and_add(offsets + m, (uint64_t)1);
       SA[off] = start;
@@ -386,7 +408,7 @@ struct SA {
     bool found = false;
     while(count > 0 && !found) {
       step            = std::min(count - 1,
-                                 (SAIDX)lrint(count * (double)(2 * (left_mer - start_mer) + 1) / (double)(2 * (end_mer - start_mer + 1))));
+                                 (SAIDX)std::lrint(count * (double)(2 * (left_mer - start_mer) + 1) / (double)(2 * (end_mer - start_mer + 1))));
       auto       it   = first + step;
       const auto cmer = get_mer(it);
       switch(compare_mer(cmer)) {
@@ -414,7 +436,7 @@ struct SA {
       uint64_t lend_mer = left_mer;
       for(SAIDX ncount = step; ncount > 0; ) {
         lstep           = std::min(ncount - 1,
-                                   (SAIDX)rint(ncount * (double)(left_mer - start_mer) / (double)(lend_mer - start_mer + 1)));
+                                   (SAIDX)std::rint(ncount * (double)(left_mer - start_mer) / (double)(lend_mer - start_mer + 1)));
         auto       it   = lower + lstep;
         const auto cmer = get_mer(it);
         if(compare_mer(cmer) < 0) {
@@ -435,7 +457,7 @@ struct SA {
       uint64_t ustart_mer = left_mer;
       for(SAIDX ncount = count - step - 1; ncount > 0; ) {
         ustep           = std::min(ncount - 1,
-                                   (SAIDX)lrint(ncount * (double)(left_mer + 1 - ustart_mer) / (double)(end_mer - ustart_mer + 1)));
+                                   (SAIDX)std::lrint(ncount * (double)(left_mer + 1 - ustart_mer) / (double)(end_mer - ustart_mer + 1)));
         ustep           = std::min(ncount - 1, ustep);
         auto       it   = upper + ustep;
         const auto cmer = get_mer(it);
