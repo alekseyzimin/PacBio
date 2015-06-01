@@ -165,7 +165,7 @@ struct coords_info {
 
   double imp_s() const { return std::max(1.0, std::min((double)rl, stretch + offset)); }
   double imp_e() const { return std::max(1.0, std::min((double)rl, stretch * ql + offset)); }
-  int imp_len() const { return abs(lrint(imp_e() - imp_s())) + 1; }
+  int imp_len() const { return std::abs(lrint(imp_e() - imp_s())) + 1; }
   bool min_bases(double factor) { return factor * (imp_len() - 2 * (int)align_k_) <= pb_cover; }
 
   bool min_mers(double factor) { return factor * (imp_len() - align_k_ + 1) <= nb_mers; }
