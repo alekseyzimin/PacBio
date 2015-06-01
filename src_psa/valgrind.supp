@@ -1,0 +1,6 @@
+{
+   Multi-threaded bit-packed store
+   Memcheck:Cond
+   ...
+   fun:_ZN20compact_iterator_imp10mask_storeImLb1EE5storeEPmmm
+}

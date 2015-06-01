@@ -9,6 +9,8 @@
 #include <src_jf_aligner/misc.hpp>
 #include <src_jf_aligner/create_mega_reads_cmdline.hpp>
 
+#include <src_psa/global_timer.hpp>
+
 using align_pb::coarse_aligner;
 using align_pb::fine_aligner;
 using align_pb::coords_info_type;
@@ -105,7 +107,6 @@ int main(int argc, char *argv[])
     dot.open(args.dot_arg, args.threads_arg);
 
   // Read k-unitig lengths
-  // Read k-unitig lengths
   std::vector<int> unitigs_lengths;
   std::vector<std::string> sequences;
   if(args.unitigs_lengths_given) { // File with lengths
@@ -121,25 +122,19 @@ int main(int argc, char *argv[])
   }
 
   // Read the super reads
-  mer_pos_hash_type hash(args.size_arg, args.max_count_arg);
-  std::unique_ptr<short_mer_pos_hash_type> short_hash;
-  if(args.fine_mer_given) {
+  if(args.fine_mer_given)
     short_mer_type::k(args.fine_mer_arg);
-    short_hash.reset(new short_mer_pos_hash_type(args.size_arg, 0));
-  }
-  frag_lists names(args.threads_arg);
-  {
-    stream_manager streams(args.superreads_arg.cbegin(), args.superreads_arg.cend());
-    superreads_read_mers reader(args.threads_arg, &hash, short_hash.get(), names, streams, false /* compact */);
-    reader.exec_join(args.threads_arg);
-  }
+  global_timer.start("Super read parse");
+  auto psa = superread_parse(args.superreads_arg.cbegin(), args.superreads_arg.cend(),
+                             std::min(short_mer_type::k(), args.psa_min_arg), mer_dna::k());
+  global_timer.stop();
 
   // Prepare I/O
   stream_manager streams(args.pacbio_arg.cbegin(), args.pacbio_arg.cend());
   read_parser    reads(4 * args.threads_arg, 100, 1, streams);
 
   // Create aligners
-  coarse_aligner align_data(hash, mer_dna::k(),
+  coarse_aligner align_data(psa, mer_dna::k(),
                             args.stretch_factor_arg, args.stretch_constant_arg, args.stretch_cap_arg, args.window_size_arg,
                             true /* forward */, args.max_match_flag,
                             args.max_count_arg ? args.max_count_arg : std::numeric_limits<int>::max(),
@@ -147,10 +142,13 @@ int main(int argc, char *argv[])
   align_data.unitigs_lengths(&unitigs_lengths, args.k_mer_arg);
   std::unique_ptr<fine_aligner> short_align_data;
   if(args.fine_mer_given)
-    short_align_data.reset(new fine_aligner(*short_hash, args.fine_mer_arg, &unitigs_lengths, args.k_mer_arg));
-
+    short_align_data.reset(new fine_aligner(psa, args.fine_mer_arg, &unitigs_lengths, args.k_mer_arg));
+  else
+    short_mer_type::k(mer_dna::k());
+  
   // Output candidate mega_reads
   //  std::cerr << args.density_arg << ' ' << args.min_length_arg << '\n';
+  global_timer.start("create mega reads");
   overlap_graph graph_walker(args.overlap_play_arg, args.k_mer_arg, unitigs_lengths, args.errors_arg, args.bases_flag);
   std::vector<std::thread> threads;
   for(unsigned int i = 0; i < args.threads_arg; ++i)
@@ -160,6 +158,7 @@ int main(int argc, char *argv[])
                                   dot.multiplexer()));
   for(auto& th : threads)
     th.join();
+  global_timer.stop();
 
   return 0;
 }

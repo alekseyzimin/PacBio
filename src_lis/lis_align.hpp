@@ -137,7 +137,7 @@ template<typename InputIterator, typename F1, typename F2,
          typename T=typename std::iterator_traits<InputIterator>::value_type::first_type>
 std::pair<unsigned int, unsigned int> compute_L_P(const InputIterator X, const InputIterator Xend,
                                                   std::forward_list<element<T> >& L, std::vector<unsigned int>& P,
-                                                  size_t window_size, F1& accept_mer, F2& accept_sequence) {
+                                                  size_t window_size, const F1& accept_mer, const F2& accept_sequence) {
   unsigned int longest = 0, longest_ind = 0;
   const size_t N       = std::distance(X, Xend);
 
@@ -188,7 +188,7 @@ template<typename InputIterator, typename F1, typename F2,
          typename T=typename std::iterator_traits<InputIterator>::value_type::first_type>
 unsigned int indices(const InputIterator X, const InputIterator Xend,
                      std::forward_list<element<T> >& L, std::vector<unsigned int>& P,std::vector<unsigned int>& res,
-                     size_t window_size, F1& accept_mer, F2& accept_sequence) {
+                     size_t window_size, const F1& accept_mer, const F2& accept_sequence) {
   const size_t N = std::distance(X, Xend);
   if(P.size() < N)
     P.resize(N);
@@ -205,7 +205,7 @@ template<typename InputIterator, typename F1, typename F2,
          typename T=typename std::iterator_traits<InputIterator>::value_type::first_type>
 unsigned int indices(const InputIterator X, const InputIterator Xend,
                      std::forward_list<element<T> >& L, std::vector<unsigned int>& res,
-                     size_t window_size, F1& accept_mer, F2& accept_sequence) {
+                     size_t window_size, const F1& accept_mer, const F2& accept_sequence) {
   std::vector<unsigned int> P;
   return indices(X, Xend, L, P, res, window_size, accept_mer, accept_sequence);
 }
@@ -213,14 +213,14 @@ unsigned int indices(const InputIterator X, const InputIterator Xend,
 template<typename InputIterator, typename F1, typename F2,
          typename T=typename std::iterator_traits<InputIterator>::value_type::first_type>
 unsigned int indices(const InputIterator X, const InputIterator Xend, std::vector<unsigned int>& res,
-                     size_t window_size, F1& accept_mer, F2& accept_sequence) {
+                     size_t window_size, const F1& accept_mer, const F2& accept_sequence) {
   std::forward_list<element<T> > L;
   return indices(X, Xend, L, res, window_size, accept_mer, accept_sequence);
 }
 
 template<typename InputIterator, typename F1, typename F2>
 std::vector<unsigned int> indices(const InputIterator X, const InputIterator Xend,
-                                  size_t window_size, F1& accept_mer, F2& accept_sequence) {
+                                  size_t window_size, const F1& accept_mer, const F2& accept_sequence) {
   std::vector<unsigned int> res;
 
   indices(X, Xend, res, window_size, accept_mer, accept_sequence);

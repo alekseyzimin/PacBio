@@ -10,19 +10,21 @@ CXXFLAGS += -I$(TUP_CWD)
 export PKG_CONFIG_PATH
 CXXFLAGS += -I.. $(JELLYFISH_CFLAGS) -I../include
 LDFLAGS  += -pthread -L$(TUP_CWD) -lgtest_main -L../lib $(JELLYFISH_LIBS)
+LOADLIBES += -lcommon
 
-TESTS  = test_lis.cc test_lf_forward_list.cc test_bounded_counter.cc test_mer_pos_hash.cc 
+TESTS  = test_lis.cc test_lf_forward_list.cc test_bounded_counter.cc
 TESTS += test_lis_align.cc test_parsesequence.cc
 TESTS += test_multiplexer.cc test_MurmurHash3.cc test_super_read_name.cc test_least_square_2d.cc
 TESTS += test_pb_aligner.cc test_superread_parser.cc test_align_coordinates.cc test_kmers_info.cc
 TESTS += test_union_find.cc test_coords_parsing.cc test_tiling.cc
-TESTS += test_caching_map.cc test_compute_coords_info.cc
+TESTS += test_caching_map.cc test_compute_coords_info.cc test_jf_mer.cc
 
 SRC = ../src_jf_aligner
 
 LDFLAGS_test_MurmurHash3        = -lcommon
 LDLIBS_test_super_read_name     = $(SRC)/super_read_name.o
 LDLIBS_test_pb_aligner          = $(SRC)/pb_aligner.o $(SRC)/coarse_aligner.o $(SRC)/superread_parser.o $(SRC)/super_read_name.o
+LDFLAGS_test_superread_parser   = -lcommon
 LDLIBS_test_superread_parser    = $(SRC)/superread_parser.o $(SRC)/super_read_name.o
 LDLIBS_test_align_coordinates   = $(SRC)/pb_aligner.o $(SRC)/superread_parser.o $(SRC)/super_read_name.o
 LDLIBS_test_kmers_info          = $(SRC)/pb_aligner.o $(SRC)/super_read_name.o
@@ -30,6 +32,7 @@ LDLIBS_test_union_find          = $(SRC)/union_find.o
 LDLIBS_test_coords_parsing      = $(SRC)/coords_parsing.o $(SRC)/super_read_name.o
 LDLIBS_test_tiling              = $(SRC)/overlap_graph.o $(SRC)/super_read_name.o $(SRC)/union_find.o
 LDLIBS_test_compute_coords_info = $(SRC)/pb_aligner.o $(SRC)/super_read_name.o
+LDLIBS_test_jf_mer              =
 CLIBS  = libgtest_main.a ../lib/libcommon.a 
 
 !run_test = |> ^ RUN   %f^ export TEST_TMP=%B.tmp; touch $TEST_TMP; @(VALGRIND) ./%f > %o 2>&1 |> %B.log | %B.tmp

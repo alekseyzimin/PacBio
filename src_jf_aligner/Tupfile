@@ -13,8 +13,8 @@ SRCS  = pb_aligner.cc superread_parser.cc union_find.cc overlap_graph.cc super_r
 SRCS += coords_parsing.cc coarse_aligner.cc fine_aligner.cc misc.cc
 
 JF_ALIGNER_OBJS = jf_aligner.o pb_aligner.o superread_parser.o super_read_name.o coarse_aligner.o fine_aligner.o misc.o ../lib/libcommon.a
-CREATE_MEGA_READS_OBJS = create_mega_reads.o pb_aligner.o superread_parser.o union_find.o overlap_graph.o super_read_name.o coarse_aligner.o fine_aligner.o misc.o
-LONGEST_PATH_OBJS = longest_path_overlap_graph2.o pb_aligner.o superread_parser.o union_find.o overlap_graph.o super_read_name.o coords_parsing.o misc.o
+CREATE_MEGA_READS_OBJS = create_mega_reads.o pb_aligner.o superread_parser.o union_find.o overlap_graph.o super_read_name.o coarse_aligner.o fine_aligner.o misc.o ../lib/libcommon.a
+LONGEST_PATH_OBJS = longest_path_overlap_graph2.o pb_aligner.o superread_parser.o union_find.o overlap_graph.o super_read_name.o coords_parsing.o misc.o ../lib/libcommon.a
 MERGE_COORDS_OBJS = merge_coords.o
 
 : foreach $(CMDLINES) |> !yaggo |>

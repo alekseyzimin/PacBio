@@ -25,17 +25,17 @@ TEST(Multiplexer, OneThread) {
 
   std::ifstream is(tmp.path);
   std::string line;
-  EXPECT_TRUE(std::getline(is, line));
+  EXPECT_TRUE((bool)std::getline(is, line));
   EXPECT_EQ("Hello", line);
-  EXPECT_TRUE(std::getline(is, line));
+  EXPECT_TRUE((bool)std::getline(is, line));
   EXPECT_EQ("5", line);
-  EXPECT_TRUE(std::getline(is, line));
+  EXPECT_TRUE((bool)std::getline(is, line));
   EXPECT_EQ("6", line);
-  EXPECT_TRUE(std::getline(is, line));
+  EXPECT_TRUE((bool)std::getline(is, line));
   EXPECT_EQ("toto", line);
-  EXPECT_TRUE(std::getline(is, line));
+  EXPECT_TRUE((bool)std::getline(is, line));
   EXPECT_EQ("Test 3.14", line);
-  EXPECT_FALSE(std::getline(is, line));
+  EXPECT_FALSE((bool)std::getline(is, line));
 } // Multiplexer.OneThread
 
 void output_lines(int id, Multiplexer* m, const int nb_lines) {

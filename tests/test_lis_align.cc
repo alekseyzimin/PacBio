@@ -3,6 +3,7 @@
 #include <src_lis/lis_align.hpp>
 #include <vector>
 #include <utility>
+#include <random>
 
 namespace {
 // struct pair {

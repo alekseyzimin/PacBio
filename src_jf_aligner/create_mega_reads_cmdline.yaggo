@@ -10,6 +10,9 @@ option("m", "mer") {
 option("F", "fine-mer") {
   description "Mer size for fine alignment"
   uint32 }
+option("psa-min") {
+  description "Min suffix length in SA. Increase for speed up at the cost of memory"
+  uint32; default 11 }
 option("l", "unitigs-lengths") {
   description "Length of k-unitigs"
   c_string; typestr "path" }
