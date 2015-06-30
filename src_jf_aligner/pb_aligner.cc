@@ -61,7 +61,7 @@ coords_info compute_coords_info(const mer_lists& ml, const size_t pb_size, const
     const double b = info.offset = least_square.b();
     for(auto v : lis) {
       auto& c = offsets[v];
-      e += abs(a * c.second + b - c.first);
+      e += std::abs(a * c.second + b - c.first);
     }
     info.avg_err = e / least_square.n;
   }

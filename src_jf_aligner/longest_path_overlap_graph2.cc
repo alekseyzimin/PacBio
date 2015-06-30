@@ -60,9 +60,9 @@ void create_mega_reads(int thid, coords_parser* parser, frag_lists* frags,
   }
 }
 
-inline static std::istream& skip_header(std::istream& is) {
-  return is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-}
+// inline static std::istream& skip_header(std::istream& is) {
+//   return is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+// }
 
 int main(int argc, char* argv[]) {
   args.parse(argc, argv);

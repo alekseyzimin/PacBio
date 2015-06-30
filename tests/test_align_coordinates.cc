@@ -58,7 +58,7 @@ protected:
   static constexpr const char* sr_file           = "aligner_output/test_super_reads.fa";
   static constexpr const char* ul_file           = "aligner_output/test_unitigs_lengths";
   std::vector<int> unitigs_lengths;
-  static const int mer_len = 65; // mer len for k-unitigs
+  //  static const int mer_len = 65; // mer len for k-unitigs
 };
 
 void FragsCoords::check_mers_sequence(const align_pb::frags_pos_type& frags_pos) const {
