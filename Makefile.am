@@ -97,6 +97,7 @@ dist_bin_SCRIPTS += src_mega_reads/build_mega_read_graph.sh			\
                     src_mega_reads/mega_reads_assemble.sh			\
                     src_mega_reads/mega_reads_assemble_nomatch.sh		\
                     src_mega_reads/run_big_nucmer_job_parallel.sh		\
+                    src_mega_reads/run_big_nucmer_job_parallel_blasr_out.sh     \
                     src_mega_reads/build_mega_reads.pl				\
                     src_mega_reads/make_mr_frg.pl				\
                     src_mega_reads/extract_best_match_coords.pl			\
