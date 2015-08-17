@@ -176,7 +176,7 @@ $out{$mega_read}=1;
 touch .rerun
 fi
 
-if [ ! -s $PACBIO.$COORDS.maximal_mr.fa.blasr.out ] || [ -e .rerun ];then
+if [ ! -s $PACBIO_FILE.$COORDS.maximal_mr.fa.blasr.out ] || [ -e .rerun ];then
 echo "Maximal alignment"
 perl -ane  '{if($F[0] =~ /^\>/){print substr($F[0],1);}else{ print " ",length($F[0]),"\n";}}' $COORDS.all_mr.mr.fa | sort -nrk2 -S 10%  > $COORDS.mr_sizes.tmp
 reduce_sr `wc -l $KUNITIGLENGTHS | perl -ane 'print $F[0]'`  $KUNITIGLENGTHS $KMER $COORDS.mr_sizes.tmp -o $COORDS.reduce.tmp
@@ -206,7 +206,7 @@ fi
 
 if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
 echo "Tiling"
-reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $PACBIO.$COORDS.maximal_mr.fa.blasr.out 1> $COORDS.all.txt.tmp 2>$COORDS.blasr.merged && mv $COORDS.all.txt.tmp $COORDS.all.txt
+reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $PACBIO_FILE.$COORDS.maximal_mr.fa.blasr.out 1> $COORDS.all.txt.tmp 2>$COORDS.blasr.merged && mv $COORDS.all.txt.tmp $COORDS.all.txt
 touch .rerun
 fi
 
