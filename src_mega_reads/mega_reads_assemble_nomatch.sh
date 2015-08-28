@@ -168,7 +168,7 @@ awk 'BEGIN{flag=0}{
         last_mr=$8;
         last_coord=$2+$5-$4;
 }' ${COORDS}.all.txt |sort -nk3 -k4n -S 20%|uniq -D -f 2 | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed
-join_mega_reads_trim.onepass.nomatch.pl $PACBIO ${COORDS}.1.allowed $KMER  < ${COORDS}.all.txt > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa
+join_mega_reads_trim.onepass.nomatch.pl $PACBIO ${COORDS}.1.allowed $KMER  < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.inserts.txt && mv $COORDS.1.fa.tmp $COORDS.1.fa
 touch .rerun
 fi
 
