@@ -104,7 +104,7 @@ KMER=`perl -ane 'BEGIN{$min=10000}{if($F[1]<$min){$min=$F[1]}}END{print $min}' $
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 REF_BATCH_SIZE=`ls -l $PACBIO | perl -ane '{$s=int($F[4]/10000);$s=100000000 if($s>100000000); print $s;}'`
 QRY_BATCH_SIZE=4000000000
-JF_SIZE=`grep -v '^>' $SUPERREADS |wc| perl -ane '{print $F[2]}'`
+JF_SIZE=`ls -l $SUPERREADS | perl -ane '{print $F[4]}'`
 COORDS=mr.$KMER.$MER.$B.$d
 PACBIO_FILE=`basename $PACBIO`;
 CA=CA.${COORDS}
