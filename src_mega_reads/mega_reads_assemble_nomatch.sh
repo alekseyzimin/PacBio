@@ -19,11 +19,19 @@ case $key in
     CA_PATH="$2"
     shift
     ;;
+    -e|--estimated-genome-size)
+    ESTIMATED_GENOME_SIZE="$2"
+    shift
+    ;;
+    -o|--other_frg)
+    OTHER_FRG="$2"
+    shift
+    ;;
     -v|--verbose)
     set -x
     ;;
     -h|--help|-u|--usage)
-    echo "Usage: mega_reads_assemble.sh -m <path to MaSuRCA run work1 folder -p <pacbio reads fasta> -a <path to the location of runCA in wgs-8.2 instalation>"
+    echo "Usage: mega_reads_assemble.sh -m <path to MaSuRCA run work1 folder contents> -p <pacbio reads fasta> -a <path to the location of runCA in wgs-8.2 instalation>"
     exit 0
     ;;
     *)
@@ -93,9 +101,7 @@ B=17
 d=0.03
 KMER=`perl -ane 'BEGIN{$min=10000}{if($F[1]<$min){$min=$F[1]}}END{print $min}' $KUNITIGLENGTHS`
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
-REF_BATCH_SIZE=`ls -l $PACBIO | perl -ane '{$s=int($F[4]/10000);$s=100000000 if($s>100000000); print $s;}'`
-QRY_BATCH_SIZE=500000000
-JF_SIZE=`grep -v '^>' $SUPERREADS |wc| perl -ane '{print $F[2]}'`
+JF_SIZE=`ls -l $SUPERREADS | perl -ane '{print $F[4]}'`
 COORDS=mr.$KMER.$MER.$B.$d
 CA=CA.${COORDS}
 
@@ -179,11 +185,21 @@ make_mate_frg.pl < $COORDS.1.fa > $COORDS.1.mates.frg.tmp && mv $COORDS.1.mates.
 rm -rf $CA
 fi
 
+if [ $ESTIMATED_GENOME_SIZE -gt 1 ];then
+MR_SIZE=$(stat -c%s "$COORDS.1.fa");
+COVERAGE=$((MR_SIZE/ESTIMATED_GENOME_SIZE));
+if [ $COVERAGE -le 5 ];then
+echo "Coverage of the mega-reads less than 5 -- using the super reads as well";
+SR_FRG=$COORDS.sr.frg
+fasta2frg.pl sr 200 < $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > $SR_FRG.tmp && mv  $SR_FRG.tmp  $SR_FRG;
+fi
+fi
+
 rm -f .rerun
 
 echo "Running assembly"
 
-runCA unitigger=bogart  merylMemory=8192 utgGraphErrorLimit=1000  utgMergeErrorLimit=1000 utgGraphErrorRate=0.04 utgMergeErrorRate=0.04 ovlCorrBatchSize=5000 ovlCorrConcurrency=$NUM_THREADS frgCorrThreads=$NUM_THREADS mbtThreads=$NUM_THREADS ovlThreads=2 ovlHashBlockLength=100000000 ovlRefBlockSize=10000 ovlConcurrency=$NUM_THREADS doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal stopAfter=unitigger -p genome -d $CA  merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg    $COORDS.1.mates.frg  1> $CA.log 2>&1
+runCA unitigger=bogart  merylMemory=32768 utgGraphErrorLimit=1000  utgMergeErrorLimit=1000 utgGraphErrorRate=0.04 utgMergeErrorRate=0.04  ovlCorrConcurrency=$NUM_THREADS frgCorrThreads=$NUM_THREADS mbtThreads=$NUM_THREADS ovlThreads=2 ovlConcurrency=$NUM_THREADS doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal stopAfter=unitigger -p genome -d $CA  merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg  $SR_FRG  $COORDS.1.mates.frg $OTHER_FRG  1> $CA.log 2>&1
 
 echo "Unitig stats:"
 tigStore -g $CA/genome.gkpStore -t $CA/genome.tigStore 2 -U -d sizes 
