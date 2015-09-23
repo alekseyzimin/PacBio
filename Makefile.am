@@ -63,13 +63,14 @@ noinst_HEADERS += include/charb.hpp include/exp_buffer.hpp		\
                   include/boost/asio/coroutine.hpp			\
                   include/boost/asio/yield.hpp
 
-bin_jf_aligner_SOURCES = src_jf_aligner/jf_aligner.cc		\
-                         src_jf_aligner/pb_aligner.cc		\
-                         src_jf_aligner/superread_parser.cc	\
-                         src_jf_aligner/super_read_name.cc	\
-                         src_jf_aligner/coarse_aligner.cc	\
-                         src_jf_aligner/fine_aligner.cc		\
-                         src_jf_aligner/misc.cc
+bin_jf_aligner_SOURCES = src_jf_aligner/jf_aligner.cc			\
+                         src_jf_aligner/pb_aligner.cc			\
+                         src_jf_aligner/superread_parser.cc		\
+                         src_jf_aligner/super_read_name.cc		\
+                         src_jf_aligner/coarse_aligner.cc		\
+                         src_jf_aligner/fine_aligner.cc			\
+                         src_jf_aligner/misc.cc lib/global_timer.cc
+
 bin_create_mega_reads_SOURCES = src_jf_aligner/create_mega_reads.cc	\
                                 src_jf_aligner/pb_aligner.cc		\
                                 src_jf_aligner/superread_parser.cc	\
