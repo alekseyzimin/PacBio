@@ -103,7 +103,6 @@ d=0.03
 KMER=`perl -ane 'BEGIN{$min=10000}{if($F[1]<$min){$min=$F[1]}}END{print $min}' $KUNITIGLENGTHS`
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 REF_BATCH_SIZE=`ls -l $PACBIO | perl -ane '{$s=int($F[4]/10000);$s=100000000 if($s>100000000); print $s;}'`
-QRY_BATCH_SIZE=4000000000
 JF_SIZE=`ls -l $SUPERREADS | perl -ane '{print $F[4]}'`
 COORDS=mr.$KMER.$MER.$B.$d
 PACBIO_FILE=`basename $PACBIO`;
@@ -149,7 +148,7 @@ fi
 
 if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 2"
-create_mega_reads --stretch-cap 5000 -s $JF_SIZE -m $MER -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d 0.05  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
+create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m 17 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B 13 --max-count 300 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
 touch .rerun
 fi
 
@@ -200,7 +199,7 @@ if [ -e .rerun ];then
 rm -rf tmp.nucmer.$PACBIO_FILE.$COORDS.maximal_mr.fa;
 rm -rf nucmer.$PACBIO_FILE.$COORDS.maximal_mr.fa;
 fi
-run_big_nucmer_job_parallel_blasr_out.sh $PACBIO $COORDS.maximal_mr.fa $REF_BATCH_SIZE $QRY_BATCH_SIZE '-d 0.2 -g 200 -l 15 -b 120 -c 100' $NUM_THREADS
+run_big_nucmer_job_parallel_blasr_out.sh $PACBIO $COORDS.maximal_mr.fa $REF_BATCH_SIZE '-d 0.2 -g 200 -l 15 -b 120 -c 100' $NUM_THREADS
 touch .rerun
 fi
 
