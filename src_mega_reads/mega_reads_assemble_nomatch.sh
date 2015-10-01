@@ -149,9 +149,18 @@ create_mega_reads --tiling=weighted --stretch-cap 5000 -s $JF_SIZE -m $MER -k $K
 touch .rerun
 fi
 
+if [ ! -s $COORDS.blasr.out ] || [ -e .rerun ];then
+echo "Refining alignments"
+awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt | refine_alignments.pl $PACBIO $COORDS | delta-filter -g -o 20 /dev/stdin | show-coords -lcHr /dev/stdin | awk '{if($4<$5){print $18"/0_"$12" "$19" 0 0 0 "$10" "$4" "$5" "$13" "$1" "$2" "$12" 0"}else{print $18"/0_"$12" "$19+1" 0 0 0 "$10" "$13-$4+1" "$13-$5+1" "$13" "$1" "$2" "$12" 0"}}' > $COORDS.blasr.out
+fi
+
+if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
+echo "Tiling"
+reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $COORDS.blasr.out  1> $COORDS.all.txt.tmp 2>$COORDS.blasr.merged && mv $COORDS.all.txt.tmp $COORDS.all.txt
+fi
+
 if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 echo "Joining"
-awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt > $COORDS.all.txt
 awk 'BEGIN{flag=0}{
         if($0 ~ /^>/){
                 flag=0;

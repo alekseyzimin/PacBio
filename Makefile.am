@@ -110,7 +110,7 @@ dist_bin_SCRIPTS += src_mega_reads/build_mega_read_graph.sh			\
                     src_mega_reads/join_mega_reads_trim.onepass.pl		\
                     src_mega_reads/split_long_unitigs.pl			\
                     src_mega_reads/make_mate_frg.pl				\
-                    src_mega_reads/determineUnjoinablePacbioSubmegas.perl
+                    src_mega_reads/determineUnjoinablePacbioSubmegas.perl refine_alignments.pl
 
 
 
