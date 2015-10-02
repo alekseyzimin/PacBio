@@ -1,6 +1,7 @@
 #!/bin/bash
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
+ESTIMATED_GENOME_SIZE=0
 #parsing arguments
 while [[ $# > 0 ]]
 do
@@ -48,7 +49,7 @@ echo "runCA not found at $CA_PATH!";
 exit 1;
 fi
 
-export PATH=$MYPATH:/home/alekseyz/myprogs/masurca-devel/build/inst/bin/:$MYPATH/../build-default:$MYPATH/../build-default/src_jf_aligner:$MYPATH/../build-default/src_mega_reads:$CA_PATH:$PATH
+export PATH=$MYPATH:$CA_PATH:$PATH
 
 if [ ! -e $PACBIO ];then
 echo "PacBio reads file $PACBIO not found!";
@@ -116,7 +117,7 @@ rm -f .rerun
 
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 1"
-create_mega_reads --tiling=weighted -s $JF_SIZE -m $MER --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
+create_mega_reads -s $JF_SIZE -m $MER --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
 touch .rerun
 fi
 
@@ -145,17 +146,19 @@ fi
 
 if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 2"
-create_mega_reads --tiling=weighted --stretch-cap 5000 -s $JF_SIZE -m $MER -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 300 -d 0.05  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
+create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m 17 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B 13 --max-count 300 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
 touch .rerun
 fi
 
-if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
-echo "Refining alignments"
-split_matches_file.pl 500 .matches < $COORDS.mr.txt && parallel "refine.sh $PACBIO $COORDS {1} $KMER" ::: .matches.* && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp
-touch .rerun
-fi
+#not ready for primetime
+#if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
+#echo "Refining alignments"
+#split_matches_file.pl 500 .matches < $COORDS.mr.txt && parallel "refine.sh $PACBIO $COORDS {1} $KMER" ::: .matches.* && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp
+#touch .rerun
+#fi
 
 if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
+awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt > $COORDS.all.txt
 echo "Joining"
 awk 'BEGIN{flag=0}{
         if($0 ~ /^>/){
