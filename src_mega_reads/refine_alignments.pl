@@ -6,11 +6,21 @@ use mummer;
 #first we read in PB sequences
 my $pbseqfile=$ARGV[0];
 my $PREFIX=$ARGV[1];
-
+my %needed_pb;
 my $rn="";
 my %pbseq;
 my $readnumber=0;
 my %readnames;
+
+while($line=<STDIN>){
+    push(@file,$line);
+    chomp($line);
+    if($line =~ /^>/){
+	($rn,$junk)=split(/\s+/,substr($line,1));
+        $needed_pb{$rn}=1;
+	}
+}
+
 open(FILE,$pbseqfile);
 while($line=<FILE>){
     chomp($line);
@@ -18,20 +28,21 @@ while($line=<FILE>){
 	@f=split(/\s+/,$line);
 	$rn=substr($f[0],1);
     }else{
-	$pbseq{$rn}.=$line;
+	$pbseq{$rn}.=$line if($needed_pb{$rn});
     }
 }
+
 print "pacbio mega-reads\nNUCMER\n";
 my @lines=();
 my $outread="";
-open(OUTFILE1,">$PREFIX.maximal_mr.fa");
-open(OUTFILE2,">$PREFIX.maximal_mr.names")
+open(OUTFILE1,">t.$PREFIX.maximal_mr.fa");
+open(OUTFILE2,">t.$PREFIX.maximal_mr.names");
 #now we process the pb+mega-reads file
-while($line=<STDIN>){
+foreach $line(@file){
     chomp($line);
     if($line =~ /^>/){
-	if(@lines){
-	    process_lines(@lines) if($#lines<100);#no more than 100 chunks per PB read
+	if(@lines && $#lines<100){
+	    process_lines(@lines);#no more than 100 chunks per PB read
 	    @lines=();
 	}
 	($rn,$junk)=split(/\s+/,substr($line,1));
@@ -41,10 +52,7 @@ while($line=<STDIN>){
     }
 }
 #do not forget the last one
-if(@lines){
-    process_lines(@lines);
-  }
-
+process_lines(@lines) if(@lines);
 
 sub process_lines{
     my @args=@_;
@@ -57,11 +65,11 @@ sub process_lines{
     $o->forward();
     my $seq="";
     my $sum_chunk_size=0;
-    my $$num_chunks=0;
+    my $num_chunks=0;
 
     for(my $i=0;$i<=$#args;$i++){
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
-        $sum_chunk_size+=($mend-$mbgn);
+        $sum_chunk_size+=$mlen;
         $num_chunks++;
         }
 
