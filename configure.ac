@@ -16,6 +16,10 @@ AC_PROG_CXX
 # Checks for Jellyfish module
 PKG_CHECK_MODULES([JELLYFISH2_0], [jellyfish-2.0])
 
+# Checks for Boost
+BOOST_REQUIRE([1.46.0])
+BOOST_FIND_HEADER([boost/icl/interval_set.hpp])
+
 # Check for yaggo
 AC_ARG_VAR([YAGGO], [Yaggo switch parser generator])
 AS_IF([test "x$YAGGO" = "x"], [AC_PATH_PROG([YAGGO], [yaggo], [false])])

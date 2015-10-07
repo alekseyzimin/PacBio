@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS = -Wall -I$(srcdir) -I$(srcdir)/include
+AM_CPPFLAGS = -Wall -I$(srcdir) -I$(srcdir)/include $(BOOST_CPPFLAGS)
 AM_CXXFLAGS = $(ALL_CXXFLAGS) -g -O3 $(JELLYFISH2_0_CFLAGS)
 AM_LDFLAGS = $(JELLYFISH2_0_LIBS)
 
