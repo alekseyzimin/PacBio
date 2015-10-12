@@ -57,26 +57,32 @@ process_lines(@lines) if(@lines);
 sub process_lines{
     my @args=@_;
     my $o=mummer::Options->new;
-    $o->minmatch(15);
-    $o->mincluster(100);
+    $o->minmatch(10);
+    $o->mincluster(60);
     $o->diagfactor(0.2);
     $o->maxgap(200);
-    $o->breaklen(100);
+    $o->breaklen(120);
     $o->forward();
     my $seq="";
     my $sum_chunk_size=0;
     my $num_chunks=0;
-
-    for(my $i=0;$i<=$#args;$i++){
-        ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
-        $sum_chunk_size+=$mlen;
-        $num_chunks++;
-        }
-
-    return() if($sum_chunk_size/$num_chunks<200);#average chunk size must be >200bp
+    my $pb_offset=0;
+    my $mr_offset=0;
+    my $slack=200;
 
     for(my $i=0;$i<=$#args;$i++){
        my ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
+       if($bgn>$slack){
+	$pb_offset=$bgn-$slack;
+	}else{
+	$pb_offset=0;
+	}	
+	if($mbgn>$slack){
+	$mr_offset=$mbgn-$slack;
+	}else{
+	$mr_offset=0;
+	}
+
        if(not defined($readnames{$name})){
 	$readnames{$name}=$readnumber;
 	print OUTFILE1 ">$readnumber\n$mseq\n";
@@ -84,10 +90,14 @@ sub process_lines{
         $readnumber++;
        }
        #print "$bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name\n";
-       my $a = mummer::align_sequences($pbseq{$pb}, $mseq, $o);
+       $lpb=$end-$bgn+2*$slack;
+       $lpb=length($pbseq{$pb})-$pb_offset-1 if($lpb+$pb_offset>length($pbseq{$pb}));
+       $lmr=$mend-$mbgn+2*$slack;
+       $lmr=$mlen-$mr_offset-1 if($lmr+$mr_offset>$mlen);
+       my $a = mummer::align_sequences(substr($pbseq{$pb},$pb_offset,$lpb), substr($mseq,$mr_offset,$lmr), $o);
        for($j=0;$j<@$a;$j++){
 	print ">$pb $readnames{$name} ",length($pbseq{$pb})," $mlen\n";
-	print "$$a[$j]{sA} $$a[$j]{eA} $$a[$j]{sB} $$a[$j]{eB} $$a[$j]{Errors} $$a[$j]{SimErrors} $$a[$j]{NonAlphas}\n";
+	print $$a[$j]{sA}+$pb_offset," ",$$a[$j]{eA}+$pb_offset," ",$$a[$j]{sB}+$mr_offset," ",$$a[$j]{eB}+$mr_offset," $$a[$j]{Errors} $$a[$j]{SimErrors} $$a[$j]{NonAlphas}\n";
 #foreach my $d($$a[$j]{delta}){
 #		print $d,"\n";
 #	}
