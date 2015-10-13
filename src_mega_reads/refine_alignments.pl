@@ -41,12 +41,12 @@ open(OUTFILE2,">t.$PREFIX.maximal_mr.names");
 foreach $line(@file){
     chomp($line);
     if($line =~ /^>/){
-	if(@lines && $#lines<100){
-	    process_lines(@lines);#no more than 100 chunks per PB read
+	if(@lines){
+	    process_lines(@lines);
 	    @lines=();
 	}
-	($rn,$junk)=split(/\s+/,substr($line,1));
     }else{
+	#print STDERR "Pushed $line\n";
 	my @ttt=split(/\s+/,$line);
 	push(@lines, \@ttt);
     }
@@ -68,17 +68,21 @@ sub process_lines{
     my $num_chunks=0;
     my $pb_offset=0;
     my $mr_offset=0;
-    my $slack=200;
+    my $slack=50;
 
     for(my $i=0;$i<=$#args;$i++){
+    
        my ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
+       next if($mbgn>$mend);
+       next if($bgn>$end);
+       #print STDERR "received $bgn,$end,$mbgn,$mend,$mlen,$pb\n";
        if($bgn>$slack){
-	$pb_offset=$bgn-$slack;
+	$pb_offset=$bgn-$slack-1;
 	}else{
 	$pb_offset=0;
 	}	
 	if($mbgn>$slack){
-	$mr_offset=$mbgn-$slack;
+	$mr_offset=$mbgn-$slack-1;
 	}else{
 	$mr_offset=0;
 	}
@@ -94,13 +98,12 @@ sub process_lines{
        $lpb=length($pbseq{$pb})-$pb_offset-1 if($lpb+$pb_offset>length($pbseq{$pb}));
        $lmr=$mend-$mbgn+2*$slack;
        $lmr=$mlen-$mr_offset-1 if($lmr+$mr_offset>$mlen);
+       #print STDERR "Refine $bgn,$end,$mbgn,$mend,$mlen,$pb\n";
        my $a = mummer::align_sequences(substr($pbseq{$pb},$pb_offset,$lpb), substr($mseq,$mr_offset,$lmr), $o);
        for($j=0;$j<@$a;$j++){
-	print ">$pb $readnames{$name} ",length($pbseq{$pb})," $mlen\n";
-	print $$a[$j]{sA}+$pb_offset," ",$$a[$j]{eA}+$pb_offset," ",$$a[$j]{sB}+$mr_offset," ",$$a[$j]{eB}+$mr_offset," $$a[$j]{Errors} $$a[$j]{SimErrors} $$a[$j]{NonAlphas}\n";
-#foreach my $d($$a[$j]{delta}){
-#		print $d,"\n";
-#	}
+
+        #print STDERR ">$pb $readnames{$name} ",length($pbseq{$pb})," $mlen\n",$$a[$j]{sA}+$pb_offset," ",$$a[$j]{eA}+$pb_offset," ",$$a[$j]{sB}+$mr_offset," ",$$a[$j]{eB}+$mr_offset," $$a[$j]{Errors} $$a[$j]{SimErrors} $$a[$j]{NonAlphas}\n";
+	print ">$pb $readnames{$name} ",length($pbseq{$pb})," $mlen\n",$$a[$j]{sA}+$pb_offset," ",$$a[$j]{eA}+$pb_offset," ",$$a[$j]{sB}+$mr_offset," ",$$a[$j]{eB}+$mr_offset," $$a[$j]{Errors} $$a[$j]{SimErrors} $$a[$j]{NonAlphas}\n";
 	print "0\n";
 	}
 	}

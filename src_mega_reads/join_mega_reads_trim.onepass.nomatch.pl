@@ -149,6 +149,7 @@ sub process_sorted_lines{
 		    $outread.="N"x($bgn-$last_coord).$seq;
                 }
             }else{#overlapping
+		#print ">overlap\n";
 		$join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads
 		#here we check for overlap
 	 	my $min_match=25;
@@ -156,16 +157,17 @@ sub process_sorted_lines{
 		my %ind=();
 
 		if($last_coord-$bgn > $min_match){
+		    #print ">gt than min match\n";
 		    for(my $j=0;$j<10;$j++){
                     	my $ttt=index($outread,substr($seq,$j,$min_match),length($outread)-($last_coord-$bgn)*$fudge_factor);
 		        $ind{$ttt-$j}++ if($ttt>-1);
 		    	}
 		    my $max_ind=-1;
 		    foreach my $ttt (keys %ind){
-			#print "DEBUG possible ind $ttt freq $ind{$ttt} implied offset ",length($outread)-($last_coord-$bgn),"\n";
+			#print ">DEBUG possible ind $ttt freq $ind{$ttt} implied offset ",length($outread)-($last_coord-$bgn),"\n";
 			if($ind{$ttt}>$max_ind){$max_ind=$ind{$ttt};$ind=$ttt;}
 			}
-			
+			#print ">DEBUG ind $ind freq $max_ind implied offset ",length($outread)-($last_coord-$bgn),"\n";
                     if($ind==-1 || ($ind>-1 && abs(($last_coord-$bgn)-(length($outread)-$ind))>(0.2*($last_coord-$bgn)+10))){
                         $offset=$last_coord-$bgn+1;
                         if($offset > $kmer){
@@ -174,7 +176,8 @@ sub process_sorted_lines{
 			    $join_allowed=1;
 			}
 		    }else{
-			$join_allowed=0;
+			#print ">DEBUG else\n";
+			$join_allowed=1;
 		    }
 		}
 		

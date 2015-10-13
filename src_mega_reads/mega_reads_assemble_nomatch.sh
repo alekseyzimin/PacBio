@@ -153,7 +153,7 @@ fi
 #refine not ready for primetime
 if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
 echo "Refining alignments"
-split_matches_file.pl 500 .matches < $COORDS.mr.txt && parallel "refine.sh $PACBIO $COORDS {1} $KMER" ::: .matches.* && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp
+awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt | split_matches_file.pl 500 .matches && parallel "refine.sh $PACBIO $COORDS {1} $KMER" ::: .matches.* && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp
 #awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt > $COORDS.all.txt.tmp && mv $COORDS.all.txt.tmp $COORDS.all.txt
 touch .rerun
 fi
