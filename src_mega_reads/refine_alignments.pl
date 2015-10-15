@@ -68,13 +68,18 @@ sub process_lines{
     my $num_chunks=0;
     my $pb_offset=0;
     my $mr_offset=0;
-    my $slack=50;
+    my $slack=200;
 
     for(my $i=0;$i<=$#args;$i++){
     
        my ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
        next if($mbgn>$mend);
        next if($bgn>$end);
+       #$pb_offset=$bgn-int($mbgn*1.2);
+       #$pb_offset=0 if($pb_offset<0);
+       #$lpb=($mlen-$mend)*1.2+$end-$pb_offset;
+       #$lpb=length($pbseq{$pb})-$pb_offset if($lpb+$pb_offset>length($pbseq{$pb}));
+       #$lmr=$mlen;
        #print STDERR "received $bgn,$end,$mbgn,$mend,$mlen,$pb\n";
        if($bgn>$slack){
 	$pb_offset=$bgn-$slack-1;
@@ -94,9 +99,9 @@ sub process_lines{
         $readnumber++;
        }
        #print "$bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name\n";
-       $lpb=$end-$bgn+2*$slack;
+       $lpb=$pb_offset>0?$end-$bgn+2*$slack:$end+$slack;
        $lpb=length($pbseq{$pb})-$pb_offset-1 if($lpb+$pb_offset>length($pbseq{$pb}));
-       $lmr=$mend-$mbgn+2*$slack;
+       $lmr=$mr_offset>0?$mend-$mbgn+2*$slack:$mend+$slack;
        $lmr=$mlen-$mr_offset-1 if($lmr+$mr_offset>$mlen);
        #print STDERR "Refine $bgn,$end,$mbgn,$mend,$mlen,$pb\n";
        my $a = mummer::align_sequences(substr($pbseq{$pb},$pb_offset,$lpb), substr($mseq,$mr_offset,$lmr), $o);
