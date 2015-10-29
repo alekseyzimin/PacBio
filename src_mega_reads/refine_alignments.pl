@@ -92,12 +92,8 @@ sub process_lines{
 	$mr_offset=0;
 	}
 
-       if(not defined($readnames{$name})){
-	$readnames{$name}=$readnumber;
 	print OUTFILE1 ">$readnumber\n$mseq\n";
 	print OUTFILE2 "$name\n";
-        $readnumber++;
-       }
        #print "$bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name\n";
        $lpb=$pb_offset>0?$end-$bgn+2*$slack:$end+$slack;
        $lpb=length($pbseq{$pb})-$pb_offset-1 if($lpb+$pb_offset>length($pbseq{$pb}));
@@ -107,10 +103,11 @@ sub process_lines{
        my $a = mummer::align_sequences(substr($pbseq{$pb},$pb_offset,$lpb), substr($mseq,$mr_offset,$lmr), $o);
        for($j=0;$j<@$a;$j++){
 
-        #print STDERR ">$pb $readnames{$name} ",length($pbseq{$pb})," $mlen\n",$$a[$j]{sA}+$pb_offset," ",$$a[$j]{eA}+$pb_offset," ",$$a[$j]{sB}+$mr_offset," ",$$a[$j]{eB}+$mr_offset," $$a[$j]{Errors} $$a[$j]{SimErrors} $$a[$j]{NonAlphas}\n";
-	print ">$pb $readnames{$name} ",length($pbseq{$pb})," $mlen\n",$$a[$j]{sA}+$pb_offset," ",$$a[$j]{eA}+$pb_offset," ",$$a[$j]{sB}+$mr_offset," ",$$a[$j]{eB}+$mr_offset," $$a[$j]{Errors} $$a[$j]{SimErrors} $$a[$j]{NonAlphas}\n";
+        #print STDERR ">$pb $readnumber ",length($pbseq{$pb})," $mlen\n",$$a[$j]{sA}+$pb_offset," ",$$a[$j]{eA}+$pb_offset," ",$$a[$j]{sB}+$mr_offset," ",$$a[$j]{eB}+$mr_offset," $$a[$j]{Errors} $$a[$j]{SimErrors} $$a[$j]{NonAlphas}\n";
+	print ">$pb $readnumber ",length($pbseq{$pb})," $mlen\n",$$a[$j]{sA}+$pb_offset," ",$$a[$j]{eA}+$pb_offset," ",$$a[$j]{sB}+$mr_offset," ",$$a[$j]{eB}+$mr_offset," $$a[$j]{Errors} $$a[$j]{SimErrors} $$a[$j]{NonAlphas}\n";
 	print "0\n";
 	}
+	$readnumber++;
 	}
     return();
 }
