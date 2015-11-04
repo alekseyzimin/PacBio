@@ -42,7 +42,7 @@ tmp_nucdir=$curdir/tmp.nucmer.$reffilename.$qryfilename;
 if [ ! -d $nucdir ];then
 mkdir -p $tmp_nucdir
 (cd $rundir;
-parallel -j 1 "if [ ! -e $tmp_nucdir/deltafile.{1}.$qryfilename.1.delta ];then nucmer $nuc_params --delta tmpdeltafile.{1}.$qryfilename.1.delta {1} $qryfilename.1 1>$tmp_nucdir/deltafile.{1}.$qryfilename.1.delta.log 2>&1 && mv tmpdeltafile.{1}.$qryfilename.1.delta $tmp_nucdir/deltafile.{1}.$qryfilename.1.delta;fi" ::: $reffilename.* && mv $tmp_nucdir $nucdir);
+parallel "if [ ! -e $tmp_nucdir/deltafile.{1}.$qryfilename.1.delta ];then nucmer -t 2 $nuc_params --delta tmpdeltafile.{1}.$qryfilename.1.delta {1} $qryfilename.1 1>$tmp_nucdir/deltafile.{1}.$qryfilename.1.delta.log 2>&1 && mv tmpdeltafile.{1}.$qryfilename.1.delta $tmp_nucdir/deltafile.{1}.$qryfilename.1.delta;fi" ::: $reffilename.* && mv $tmp_nucdir $nucdir);
 fi
 
 if [ -d $nucdir ];then
