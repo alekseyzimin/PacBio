@@ -170,7 +170,7 @@ int overlap_graph::tile_greedy(const std::vector<int>& sort_array,
   for(const int it_i : sort_array) {
     const auto& mr     = *mega_reads[it_i];
     pos_interval pos_i(mr.tiling_start, mr.tiling_end);
-    const double max_overlap       = std::min(k_len * overlap_play, boost::icl::length(pos_i));
+    const double max_overlap       = std::max(k_len * overlap_play, boost::icl::length(pos_i) * (overlap_play-0.9));
     const auto   overlaps          = covered & pos_i;
     const bool   has_large_overlap =
       std::any_of(overlaps.begin(), overlaps.end(),
