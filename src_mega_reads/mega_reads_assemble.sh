@@ -98,8 +98,8 @@ fi
 
 ################setting parameters#########################
 MER=15
-B=17
-d=0.03
+B=20
+d=0.029
 KMER=`perl -ane 'BEGIN{$min=10000}{if($F[1]<$min){$min=$F[1]}}END{print $min}' $KUNITIGLENGTHS`
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 REF_BATCH_SIZE=`ls -l $PACBIO | perl -ane '{$s=int($F[4]/10000);$s=100000000 if($s>100000000); print $s;}'`
