@@ -124,3 +124,9 @@ YAGGO_SOURCES += src_jf_aligner/jf_aligner_cmdline.hpp			\
 # # Print the value of a variable
 # print-%:
 # 	@echo -n $($*)
+
+#########
+# Tests #
+#########
+include tests/Makefile.am
+
