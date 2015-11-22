@@ -1,7 +1,7 @@
 #include <src_jf_aligner/super_read_name.hpp>
 #include <stdexcept>
 
-const uint64_t super_read_name::invalid_id;
+const uint32_t super_read_name::invalid_id;
 
 std::string super_read_name::name() const {
   std::string res;
@@ -43,7 +43,31 @@ void super_read_name::reverse() {
 
 int super_read_name::overlap(const super_read_name& rhs) const {
   if(rhs.unitigs_.empty()) return 0;
-  const auto fu = rhs.unitigs_.front();
+  const u_id_ori *plhs,*prhs;
+  uint32_t slhs=unitigs_.size(),srhs=rhs.unitigs_.size(),start_offset;
+  if(slhs<2 || srhs<2) return 0;
+  plhs=unitigs_.data();
+  prhs=rhs.unitigs_.data();
+  start_offset=(slhs>=srhs)?(slhs-srhs+1):1;
+  uint32_t res=0;
+  for(uint32_t i=start_offset;i<slhs;i++){
+	if(prhs[0]==plhs[i]){
+	//found the candidate
+	res=1;
+	for(uint32_t j=i+1,k=1;j<slhs;j++,k++){
+		if(plhs[j]==prhs[k]){
+		res++;
+		}else{
+		res=0;
+		break;
+		}
+	}
+	if(res>0)
+		return res;
+	}
+  }
+  
+/*  const auto fu = rhs.unitigs_.front();
 
   for(auto it = std::find(unitigs_.cbegin(), unitigs_.cend(), fu);
       it != unitigs_.cend();
@@ -51,7 +75,7 @@ int super_read_name::overlap(const super_read_name& rhs) const {
     const int olen = unitigs_.cend() - it;
     if((size_t)olen <= rhs.unitigs_.size() && std::equal(it, unitigs_.cend(), rhs.unitigs_.cbegin()))
       return olen;
-  }
+  }*/
   return 0;
 }
 
@@ -61,10 +85,10 @@ super_read_name::unitigs_list super_read_name::parse(const std::string& name) {
     if(!name.empty()) {
       size_t pn = 0;
       for(size_t n = name.find_first_of('_'); n != std::string::npos; pn = n + 1, n = name.find_first_of('_', pn)) {
-        uint64_t id = std::stoul(name.c_str() + pn);
+        uint32_t id = std::stoul(name.c_str() + pn);
         res.push_back(u_id_ori(id, name[n - 1]));
       }
-      uint64_t id = std::stoul(name.c_str() + pn);
+      uint32_t id = std::stoul(name.c_str() + pn);
       res.push_back(u_id_ori(id, name[name.size() - 1]));
     }
   } catch(std::invalid_argument) {

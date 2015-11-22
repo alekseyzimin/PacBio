@@ -8,22 +8,22 @@
 class super_read_name {
 public:
   struct u_id_ori {
-    uint64_t ori_:1; // 0 -> F, 1 -> R
-    uint64_t id_:63;
+    uint32_t ori_:1; // 0 -> F, 1 -> R
+    uint32_t id_:31;
     u_id_ori() : ori_(0), id_(0) { }
-    u_id_ori(uint64_t i, char c) : ori_(c == 'R'), id_(i) { }
-    u_id_ori(uint64_t o, uint64_t n) : ori_(o), id_(n) { }
+    u_id_ori(uint32_t i, char c) : ori_(c == 'R'), id_(i) { }
+    u_id_ori(uint32_t o, uint32_t n) : ori_(o), id_(n) { }
 
     char ori() const { return ori_ ? 'R' : 'F'; }
-    uint64_t id() const { return id_; }
+    uint32_t id() const { return id_; }
     std::string name() const { return std::to_string(id_) + ori(); }
     void reverse() { ori_ = ~ori_; }
-    u_id_ori reversed() const { return u_id_ori((uint64_t)1 - ori_, id_); }
+    u_id_ori reversed() const { return u_id_ori((uint32_t)1 - ori_, id_); }
     bool operator==(const u_id_ori& rhs) const { return ori_ == rhs.ori_ && id_ == rhs.id_; }
     bool operator!=(const u_id_ori& rhs) const { return ori_ == rhs.ori_ && id_ == rhs.id_; }
   };
   typedef std::vector<u_id_ori> unitigs_list;
-  static const uint64_t invalid_id = std::numeric_limits<uint64_t>::max() >> 1;
+  static const uint32_t invalid_id = std::numeric_limits<uint32_t>::max() >> 1;
   //  static const u_id_ori invalid_unitig;
 
 private:
@@ -66,7 +66,7 @@ public:
 
   u_id_ori operator[](size_t i) const { return i < nb_unitigs() ? unitigs_[i] : u_id_ori(invalid_id, 'F'); }
 
-  uint64_t unitig_id(size_t i) const { return i < nb_unitigs() ? unitigs_[i].id_ : invalid_id; }
+  uint32_t unitig_id(size_t i) const { return i < nb_unitigs() ? unitigs_[i].id_ : invalid_id; }
 
   void reverse();
 
