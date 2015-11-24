@@ -1,5 +1,6 @@
 #include <src_jf_aligner/super_read_name.hpp>
 #include <stdexcept>
+#include<algorithm>
 
 const uint32_t super_read_name::invalid_id;
 
@@ -44,38 +45,24 @@ void super_read_name::reverse() {
 int super_read_name::overlap(const super_read_name& rhs) const {
   if(rhs.unitigs_.empty()) return 0;
   const u_id_ori *plhs,*prhs;
-  uint32_t slhs=unitigs_.size(),srhs=rhs.unitigs_.size(),start_offset;
+  uint32_t slhs=unitigs_.size(),srhs=rhs.unitigs_.size();
   if(slhs<2 || srhs<2) return 0;
   plhs=unitigs_.data();
   prhs=rhs.unitigs_.data();
-  start_offset=(slhs>=srhs)?(slhs-srhs+1):1;
-  uint32_t res=0;
+  __builtin_prefetch(prhs);
+  uint32_t start_offset=(slhs>srhs)?(slhs-srhs+1):1;
+  __builtin_prefetch(plhs+start_offset);
   for(uint32_t i=start_offset;i<slhs;i++){
 	if(prhs[0]==plhs[i]){
-	//found the candidate
-	res=1;
-	for(uint32_t j=i+1,k=1;j<slhs;j++,k++){
-		if(plhs[j]==prhs[k]){
-		res++;
-		}else{
-		res=0;
-		break;
-		}
+	uint32_t j;
+	for(j=i+1;j<slhs;j++){
+		if(plhs[j]!=prhs[j-i])
+			break;
 	}
-	if(res>0)
-		return res;
+	if(j==slhs)
+		return slhs-i;
 	}
-  }
-  
-/*  const auto fu = rhs.unitigs_.front();
-
-  for(auto it = std::find(unitigs_.cbegin(), unitigs_.cend(), fu);
-      it != unitigs_.cend();
-      it = std::find(it + 1, unitigs_.cend(), fu)) {
-    const int olen = unitigs_.cend() - it;
-    if((size_t)olen <= rhs.unitigs_.size() && std::equal(it, unitigs_.cend(), rhs.unitigs_.cbegin()))
-      return olen;
-  }*/
+  }  
   return 0;
 }
 
@@ -133,8 +120,8 @@ void super_read_name::print_sequence(std::ostream& os, const std::vector<std::st
   auto       it  = unitigs_.cbegin() + std::min(start_unitig, unitigs_.size());
   const auto end = (nb_unitigs == -1) ? unitigs_.cend() : unitigs_.cbegin() + std::min(start_unitig + nb_unitigs, unitigs_.size());
   if(it != end) {
-    print_unitig(os, it->ori_, unitigs_sequences.at(it->id()), 0);
+    print_unitig(os,  it->orib(), unitigs_sequences.at(it->id()), 0);
     for(++it; it != end; ++it)
-      print_unitig(os, it->ori_, unitigs_sequences.at(it->id()), k_len - 1);
+      print_unitig(os, it->orib(), unitigs_sequences.at(it->id()), k_len - 1);
   }
 }
