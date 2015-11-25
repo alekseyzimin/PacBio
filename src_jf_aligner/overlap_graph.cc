@@ -15,9 +15,10 @@ void overlap_graph::traverse(const std::vector<int>& sort_array, const align_pb:
       const auto&  coords_j = coords[it_j];
 
       if(node_j.imp_s <= 1) continue; // Hanging off 5' end of PacBio read: no overlap
-
+      //if(node_i.imp_e > node_j.imp_e + k_len) continue;//not advancing -- not interested
       const double position_len = node_i.imp_e - node_j.imp_s;
       if(position_len * overlap_play < k_len) break; // maximum implied overlap is less than a k-mer length
+      //if(position_len < 0) break; // no implied overlap
       const int nb_u_overlap = coords_i.name_u->unitigs.overlap(coords_j.name_u->unitigs);
       if(!nb_u_overlap) continue; // No overlap according to unitig names
       if(coords_i.name_u->unitigs == coords_j.name_u->unitigs) continue;

@@ -98,7 +98,7 @@ fi
 
 ################setting parameters#########################
 MER=15
-B=17
+B=20
 d=0.029
 KMER=`perl -ane 'BEGIN{$min=10000}{if($F[1]<$min){$min=$F[1]}}END{print $min}' $KUNITIGLENGTHS`
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`

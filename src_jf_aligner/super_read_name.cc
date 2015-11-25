@@ -50,7 +50,10 @@ int super_read_name::overlap(const super_read_name& rhs) const {
   plhs=unitigs_.data();
   prhs=rhs.unitigs_.data();
   __builtin_prefetch(prhs);
-  uint32_t start_offset=(slhs>srhs)?(slhs-srhs+1):1;
+  //uint32_t start_offset=(slhs>srhs)?(slhs-srhs+1):1;
+  //non-branching way to do the above start_offset = max(slhs-srhs+1,1)
+  int32_t start_offset=slhs-srhs+1;
+  start_offset=start_offset ^ ((start_offset^1) & -(start_offset<1)); 
   __builtin_prefetch(plhs+start_offset);
   for(uint32_t i=start_offset;i<slhs;i++){
 	if(prhs[0]==plhs[i]){
