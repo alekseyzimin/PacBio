@@ -18,7 +18,7 @@ void overlap_graph::traverse(const std::vector<int>& sort_array, const align_pb:
       if(node_i.imp_e > node_j.imp_e + k_len) continue;//not advancing -- not interested
       const double position_len = node_i.imp_e - node_j.imp_s;
       //if(position_len * overlap_play < k_len) break; // maximum implied overlap is less than a k-mer length
-      if(position_len < 1.) break; // no implied overlap
+      if(position_len < 0) break; // no implied overlap
       const int nb_u_overlap = coords_i.name_u->unitigs.overlap(coords_j.name_u->unitigs);
       if(!nb_u_overlap) continue; // No overlap according to unitig names
       if(coords_i.name_u->unitigs == coords_j.name_u->unitigs) continue;
@@ -32,7 +32,7 @@ void overlap_graph::traverse(const std::vector<int>& sort_array, const align_pb:
       }
       u_overlap_len -= (nb_u_overlap - 1) * (k_len - 1);
       double error = nb_errors * (coords_i.avg_err + coords_j.avg_err);
-      if(u_overlap_len > overlap_play * position_len + error || position_len > overlap_play * u_overlap_len + error)
+      if(u_overlap_len > overlap_play * position_len + error || position_len > overlap_play * ( u_overlap_len + error ))
         continue; // Overlap lengths (position, unitigs) do not agree
 
       // We have an overlap between nodes i and j
