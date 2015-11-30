@@ -3,7 +3,8 @@ UNITTESTS = %D%/test_super_read_name %D%/test_union_find		\
 %D%/test_pb_aligner %D%/test_superread_parser				\
 %D%/test_align_coordinates %D%/test_kmers_info				\
 %D%/test_coords_parsing %D%/test_tiling %D%/test_compute_coords_info
-check_PROGRAMS = %D%/speed_super_read_name $(UNITTESTS)
+# check_PROGRAMS = %D%/speed_super_read_name $(UNITTESTS)
+check_PROGRAMS = $(UNITTESTS)
 check_LIBRARIES = %D%/libgtest.a %D%/libgtest_main.a
 
 AM_CPPFLAGS += -I$(srcdir)/%D%
@@ -23,7 +24,8 @@ TEST_LDADD = -L%D% -lgtest_main
                               src_jf_aligner/pb_aligner.cc		\
                               src_jf_aligner/coarse_aligner.cc		\
                               src_jf_aligner/superread_parser.cc	\
-                              src_jf_aligner/super_read_name.cc
+                              src_jf_aligner/super_read_name.cc		\
+                              lib/global_timer.cc
 %C%_test_pb_aligner_LDADD = $(TEST_LDADD)
 
 %C%_test_superread_parser_SOURCES = %D%/test_superread_parser.cc	\

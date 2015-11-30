@@ -65,7 +65,7 @@ TEST(SuperReadName, Overlap) {
   EXPECT_EQ(0, sr1.overlap(sr2r));
   EXPECT_EQ(0, sr2r.overlap(sr1));
   EXPECT_EQ(2, sr3.overlap(sr1));
-  EXPECT_EQ(1, sr3.overlap(sr4));
+  EXPECT_EQ(0, sr3.overlap(sr4));
   EXPECT_EQ(0, sr3.overlap(sr2));
 } // SuperReadName.Overlap
 
