@@ -51,9 +51,9 @@ int super_read_name::overlap(const super_read_name& rhs) const {
   prhs=rhs.unitigs_.data();
   //uint32_t start_offset=(slhs>srhs)?(slhs-srhs+1):1;
   //non-branching way to do the above start_offset = max(slhs-srhs+1,1)
-  //int32_t start_offset=slhs-srhs+1;
-  //start_offset=start_offset ^ ((start_offset^1) & -(start_offset<1)); 
-  for(uint32_t i=1;i<slhs;i++){
+  int32_t start_offset=slhs-srhs+1;
+  start_offset=start_offset ^ ((start_offset^1) & -(start_offset<1)); 
+  for(uint32_t i=start_offset;i<slhs;i++){
     if(prhs[0]==plhs[i]){
       uint32_t j;
       for(j=i+1;j<slhs;j++){
