@@ -169,4 +169,20 @@ TEST(PbAligner, FakeSequences) {
     }
   }
 }
+
+TEST(NTH_MIN, Random) {
+  static const int n = 10;
+  static const int N = 1000;
+  std::vector<int> nbs;
+  for(int i = 0; i < N; ++i)
+    nbs.push_back(i);
+  unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+  std::shuffle(nbs.begin(), nbs.end(), std::default_random_engine(seed));
+
+  align_pb::nth_min<int> l(n);
+  for(int i : nbs)
+    l.add(i);
+  EXPECT_EQ(n - 1, l.highest());
+} // NTH_MIN.Random
+
 } // namespace {

@@ -95,6 +95,8 @@ struct parser_base {
   template<size_t I>
   int offset() const { return seq_offset - std::tuple_element<I, mer_list_type>::type::mer_type::k() + 1; }
 
+  size_t size() const { return end - base; }
+
 
   void reset(const std::string& s) {
     seq_offset = 0;

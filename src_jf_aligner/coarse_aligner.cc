@@ -1,4 +1,5 @@
 #include <src_jf_aligner/coarse_aligner.hpp>
+#include <cmath>
 
 namespace align_pb {
 void coarse_aligner::compute_coords(const frags_pos_type& frags_pos, const size_t pb_size,
@@ -20,7 +21,7 @@ coords_info coarse_aligner::compute_coords_info(const mer_lists& ml, const size_
 void coarse_aligner::align_sequence(parse_sequence& parser, const size_t pb_size,
                                     coords_info_type& coords, frags_pos_type& frags_pos,
                                     lis_buffer_type& L, std::vector<unsigned int>& P) const {
-  fetch_super_reads(psa_, parser, frags_pos, max_mer_count_);
+  fetch_super_reads(psa_, parser, frags_pos, max_mer_count_, max_percent_);
   do_all_LIS(frags_pos, L, P, accept_mer_, accept_sequence_, window_size_);
   compute_coords(frags_pos, pb_size, coords);
 }
@@ -28,7 +29,7 @@ void coarse_aligner::align_sequence(parse_sequence& parser, const size_t pb_size
 void coarse_aligner::align_sequence_max (parse_sequence& parser, const size_t pb_size,
                                    coords_info_type& coords, frags_pos_type& frags_pos,
                                    lis_buffer_type& L) const {
-  fetch_super_reads(psa_, parser, frags_pos, max_mer_count_);
+  fetch_super_reads(psa_, parser, frags_pos, max_mer_count_, max_percent_);
   for(auto& it : frags_pos) {
     auto& ml = it.second;
     ml.do_LIS(accept_mer_, accept_sequence_, window_size_, L);
@@ -57,10 +58,21 @@ void coarse_aligner::thread::align_sequence_max(parse_sequence& parser, const si
   aligner_.align_sequence_max(parser, pb_size, coords_, frags_pos_, L_);
 }
 
+struct mer_list_info {
+  sequence_psa::pos_iterator list;
+  size_t                     size;
+  bool                       is_canonical;
+  int                        offset;
+};
+
 void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
-                       frags_pos_type& frags_pos, const int max_mer_count) {
+                       frags_pos_type& frags_pos, const int max_mer_count, const float max_percent) {
   const auto end = psa.pos_end();
 
+  std::vector<mer_list_info> lists_info;
+  uint32_t counts[max_mer_count + 1];
+
+  memset(counts, '\0', sizeof(counts));
   while(parser.next()) { // Process each k-mer
     if(parser.mer<0>().m.is_homopolymer()) continue;
     const bool is_canonical = parser.mer<0>().is_canonical();
@@ -68,17 +80,33 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
       ? psa.find_pos_size(parser.mer<0>().m, parser.mer<0>().rm)
       : psa.find_pos_size(parser.mer<0>().rm, parser.mer<0>().m);
     if(list.second == 0 ||
-       (max_mer_count && list.second >= (size_t)max_mer_count)) // && std::distance(list.first, end) >= max_mer_count))
+       (max_mer_count && list.second >= (size_t)max_mer_count)) { // && std::distance(list.first, end) >= max_mer_count))
       continue;
-    for(auto& it = list.first; it != end; ++it) { // For each instance of the k-mer in a super read
+    }
+    ++counts[std::min(max_mer_count, (int)list.second)];
+    lists_info.push_back({list.first, list.second, is_canonical, parser.offset<0>()});
+  }
+
+  uint32_t sum        = 0;
+  uint32_t sum_thresh = std::round(lists_info.size() * 0.98);
+  uint32_t threshold  = 1;
+  for( ; threshold <= (uint32_t)max_mer_count; ++threshold) {
+    sum += counts[threshold];
+    if(sum > sum_thresh)
+      break;
+  }
+
+  for(auto& info : lists_info) {
+    if(info.size >= threshold)
+      continue;
+    for(auto& it = info.list; it != end; ++it) { // For each instance of the k-mer in a super read
       mer_lists& ml = frags_pos[it->frag->fwd.name.c_str()];
       ml.frag       = it->frag;
-      const int offset = is_canonical ? it->offset : -it->offset;
-
+      const int offset = info.is_canonical ? it->offset : -it->offset;
       if(offset > 0)
-        ml.fwd.offsets.push_back(pb_sr_offsets(parser.offset<0>(), offset));
+        ml.fwd.offsets.push_back(pb_sr_offsets(info.offset, offset));
       else
-        ml.bwd.offsets.push_back(pb_sr_offsets(parser.offset<0>(), offset));
+        ml.bwd.offsets.push_back(pb_sr_offsets(info.offset, offset));
     }
   }
 }

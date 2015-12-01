@@ -2,6 +2,8 @@
 #define __COARSE_ALIGNER_H__
 
 #include <unordered_map>
+#include <queue>
+#include <algorithm>
 #include <src_jf_aligner/pb_aligner.hpp>
 #include <src_jf_aligner/superread_parser.hpp>
 
@@ -28,7 +30,7 @@ static void do_all_LIS(frags_pos_type& frags_pos, const F1& accept_mer, const F2
 // parser is initialized to parse the PacBio read. The results are
 // stored in frags_pos.
 void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
-                       frags_pos_type& frags_pos, const int max_mer_count = 0);
+                       frags_pos_type& frags_pos, const int max_mer_count = 0, const float max_percent = 100.0f);
 
 class coarse_aligner {
   const sequence_psa&      psa_;
@@ -41,6 +43,7 @@ class coarse_aligner {
   int                      max_mer_count_; // max mer count to be used for alignment
   double                   matching_mers_factor_;
   double                   matching_bases_factor_;
+  double                   max_percent_; // Compute mer count threshold to keep max_percent_% mers
 
   const std::vector<int>*  unitigs_lengths_; // Lengths of unitigs
   unsigned int             unitigs_k_; // k-mer length used for creating k-unitigs
@@ -60,9 +63,12 @@ public:
     , max_mer_count_(max_mer_count)
     , matching_mers_factor_(matching_mers)
     , matching_bases_factor_(matching_bases)
+    , max_percent_(100.0f)
     , unitigs_lengths_(0)
     , unitigs_k_(0)
   { }
+
+  coarse_aligner max_percent(double v) { max_percent_ = v; return *this; }
 
   coarse_aligner& unitigs_lengths(const std::vector<int>* m, unsigned int unitigs_k) {
     if(!forward_) throw std::logic_error("Forward flag must be used if passing unitigs lengths");
@@ -138,6 +144,23 @@ public:
     const frags_pos_type& frags_pos() const { return frags_pos_; }
   };
   friend class thread;
+};
+
+
+// Compute the n-th lowest element
+template<typename T>
+struct nth_min {
+  std::priority_queue<T> queue;
+  const size_t n;
+  nth_min(size_t s) : n(s) { }
+  void add(const T& x) {
+    if(queue.size() < n || x < queue.top()) {
+      if(queue.size() == n)
+        queue.pop();
+      queue.push(x);
+    }
+  }
+  T highest() const { return queue.top(); }
 };
 
 } // namespace align_pb

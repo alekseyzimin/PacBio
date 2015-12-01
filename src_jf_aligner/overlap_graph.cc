@@ -180,7 +180,7 @@ int overlap_graph::tile_greedy(const std::vector<int>& sort_array,
     if(has_large_overlap) continue;
     const bool contains =
       std::any_of(placed.begin(), placed.end(),
-                  [&](const pos_interval& x) { return boost::icl::contains(pos_i, x); });
+                  [&](const pos_interval& x) { return boost::icl::contains(x, pos_i); });
     if(contains) continue;
 
     covered += pos_i;
