@@ -90,15 +90,15 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
   uint32_t sum        = 0;
   uint32_t sum_thresh = std::round(lists_info.size() * 0.99);
   uint32_t threshold  = 1;
-  for(int i=0;i<=max_mer_count;i++)
-    std::cerr << i << ' ' << counts[i]  <<'\n';
+  //for(int i=0;i<=max_mer_count;i++)
+   // std::cerr << i << ' ' << counts[i]  <<'\n';
 
   for( ; threshold <= (uint32_t)max_mer_count; ++threshold) {
     sum += counts[threshold];
     if(sum > sum_thresh)
       break;
   }
-  std::cerr << threshold <<'\n';
+  //std::cerr << threshold <<'\n';
   for(auto& info : lists_info) {
     if(info.size > threshold)
       continue;
