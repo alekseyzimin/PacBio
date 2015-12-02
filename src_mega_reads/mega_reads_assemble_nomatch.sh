@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 ESTIMATED_GENOME_SIZE=0
@@ -117,7 +118,11 @@ rm -f .rerun
 
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 1"
+if numactl --show 1> /dev/null 2>&1;then
+numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 14  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
+else
 create_mega_reads -s $JF_SIZE -m $MER --psa-min 14  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
+fi
 touch .rerun
 fi
 
@@ -146,7 +151,11 @@ fi
 
 if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 2"
-create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 14 -m 17 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B 13 --max-count 2000 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
+if numactl --show 1> /dev/null 2>&1;then
+numactl --interleave=all create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 14 -m 17 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B 13 --max-count 1000 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
+else
+create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 14 -m 17 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B 13 --max-count 1000 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
+fi
 touch .rerun
 fi
 
