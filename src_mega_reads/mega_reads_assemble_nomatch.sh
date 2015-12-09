@@ -217,7 +217,7 @@ fi
 rm -f .rerun
 
 echo "Running assembly"
-runCA cnsConcurrency=8 unitigger=bogart merylMemory=32768 ovlStoreMemory=32768 utgGraphErrorLimit=1000  utgMergeErrorLimit=1000 utgGraphErrorRate=0.04 utgMergeErrorRate=0.04 ovlCorrBatchSize=100000 ovlCorrConcurrency=4 frgCorrThreads=$NUM_THREADS mbtThreads=$NUM_THREADS ovlThreads=2 ovlHashBlockLength=100000000 ovlRefBlockSize=1000000 ovlConcurrency=$NUM_THREADS doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal stopAfter=consensusAfterUnitigger consensus=pbutgcns -p genome -d $CA  merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1> $CA.log 2>&1
+runCA cnsConcurrency=8 unitigger=bogart merylMemory=32768 ovlStoreMemory=32768 utgGraphErrorLimit=1000  utgMergeErrorLimit=1000 utgGraphErrorRate=0.04 utgMergeErrorRate=0.04 ovlCorrBatchSize=100000 ovlCorrConcurrency=4 frgCorrThreads=$NUM_THREADS mbtThreads=$NUM_THREADS ovlThreads=2 ovlHashBlockLength=100000000 ovlRefBlockSize=1000000 ovlConcurrency=$NUM_THREADS doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal stopAfter=unitigger -p genome -d $CA  merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1> $CA.log 2>&1
 
 echo "Unitig stats:"
 tigStore -g $CA/genome.gkpStore -t $CA/genome.tigStore 2 -U -d sizes
