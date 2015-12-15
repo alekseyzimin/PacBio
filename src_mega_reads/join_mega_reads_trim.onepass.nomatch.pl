@@ -133,11 +133,13 @@ sub process_sorted_lines{
             $str="$pb $k1s[$#k1s] $k2s[0]";
             $str="$pb $k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
 
-	    if(defined($allowed{$str}) || $last_mr eq $name){ #allow joins that are in multiple pacbios or rejoining broken megareads
+	    if(defined($allowed{$str})){ #allow joins that are in multiple pacbios or rejoining broken megareads
 		$join_allowed=$allowed{$str};
 	    }else{
 		$join_allowed=0;
 	    }
+              
+            $join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads
 
             if($bgn>$last_coord){#if gap -- check if the closure is allowed
 
