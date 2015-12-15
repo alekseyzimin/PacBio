@@ -133,7 +133,7 @@ sub process_sorted_lines{
 
             $join_allowed=0;
 	    $join_allowed=$allowed{$str} if(defined($allowed{$str})); #allow joins that are in multiple pacbios or rejoining broken megareads  
-            $join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads
+            $join_allowed=1 if($last_mr eq $name && $bgn-$last_coord<5); #allow rejoining broken megareads when overlapping ends/gap small
 
             if($bgn>$last_coord){#if gap -- check if the closure is allowed
 		$max_gap_local=$max_gap_local_fwd[$gap_index]<$max_gap_local_rev[$gap_index]?$max_gap_local_fwd[$gap_index]:$max_gap_local_rev[$gap_index];
