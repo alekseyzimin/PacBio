@@ -168,7 +168,7 @@ sub process_sorted_lines{
                     }else{
                         $join_allowed=1;
                     }
-		}elsif($last_coord-$bgn>=5){#overlap short, but >= 5bp -- we allow the join
+		}elsif($last_coord-$bgn>=5 || $join_allowed==1){#overlap short, but >= 5bp -- we allow the join or join was previously allowed for rejoining the broken read
                     $offset=$last_coord-$bgn+1;
 		    $join_allowed=1;
 		}
