@@ -152,9 +152,9 @@ fi
 if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 2"
 if numactl --show 1> /dev/null 2>&1;then
-numactl --interleave=all create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 14 -m 17 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B 13 --max-count 2000 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
+numactl --interleave=all create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m 17 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B 13 --max-count 2000 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
 else
-create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 14 -m 17 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B 13 --max-count 2000 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
+create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m 17 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B 13 --max-count 2000 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
 fi
 touch .rerun
 fi
