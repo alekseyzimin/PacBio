@@ -133,7 +133,7 @@ sub process_sorted_lines{
             $str="$pb $k1s[$#k1s] $k2s[0]";
             $str="$pb $k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
 
-	    if(defined($allowed{$str})){
+	    if(defined($allowed{$str}) || $last_mr eq $name){ #allow joins that are in multiple pacbios or rejoining broken megareads
 		$join_allowed=$allowed{$str};
 	    }else{
 		$join_allowed=0;
@@ -150,7 +150,7 @@ sub process_sorted_lines{
                 }
             }else{#overlapping
 		#print ">overlap\n";
-		$join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads
+		# we now allowing this globally $join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads
 		#here we check for overlap
 	 	my $min_match=25;
 		my $ind=-1;
