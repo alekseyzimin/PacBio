@@ -9,9 +9,9 @@ AC_PROG_LIBTOOL
 
 # Change default compilation flags
 AC_SUBST([ALL_CXXFLAGS], [-std=c++0x])
-CXXFLAGS="-std=c++0x $CXXFLAGS"
 AC_LANG(C++)
 AC_PROG_CXX
+CXXFLAGS="-std=c++0x $CXXFLAGS"
 
 # Checks for Jellyfish module
 PKG_CHECK_MODULES([JELLYFISH2_0], [jellyfish-2.0])
