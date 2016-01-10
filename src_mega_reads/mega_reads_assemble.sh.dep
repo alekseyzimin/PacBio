@@ -103,8 +103,10 @@ B=17
 d=0.029
 KMER=`perl -ane 'BEGIN{$min=10000}{if($F[1]<$min){$min=$F[1]}}END{print $min}' $KUNITIGLENGTHS`
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
+REF_BATCH_SIZE=`ls -l $PACBIO | perl -ane '{$s=int($F[4]/10000);$s=100000000 if($s>100000000); print $s;}'`
 JF_SIZE=`ls -l $SUPERREADS | perl -ane '{print $F[4]}'`
 COORDS=mr.$KMER.$MER.$B.$d
+PACBIO_FILE=`basename $PACBIO`;
 CA=CA.${COORDS}
 
 echo "Running mega-reads correction/assembly"
@@ -118,11 +120,7 @@ rm -f .rerun
 
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 1"
-if numactl --show 1> /dev/null 2>&1;then
-numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 14  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
-else
-create_mega_reads -s $JF_SIZE -m $MER --psa-min 14  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
-fi
+create_mega_reads -s $JF_SIZE -m $MER --psa-min 14 --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
 touch .rerun
 fi
 
@@ -151,24 +149,70 @@ fi
 
 if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 2"
-if numactl --show 1> /dev/null 2>&1;then
-numactl --interleave=all create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m 17 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B 13 --max-count 2000 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
-else
 create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m 17 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B 13 --max-count 2000 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
-fi
 touch .rerun
 fi
 
-#refine not ready for primetime
+if [ ! -s $COORDS.all_mr.mr.fa ] || [ -e .rerun ];then
+perl -ane '{
+if($F[0] =~ /^\>/){
+$pb=substr($F[0],1);
+}else{
+$mega_read=$F[8];
+@kunis=split(/_/,$mega_read);
+$sequence=$F[10];
+if(substr($kunis[0],0,-1)>substr($kunis[-1],0,-1)){
+        $mega_read=join("_",reverse(@kunis));
+        $mega_read=~tr/FR/RF/;
+        $sequence=reverse($sequence);
+        $sequence=~tr/ACGTNacgtn/TGCANtgcan/;
+}
+if(not(defined($out{$mega_read}))){
+print ">$mega_read\n$sequence\n";
+$out{$mega_read}=1;
+}
+}
+}' $COORDS.mr.txt 1> $COORDS.all_mr.mr.fa.tmp  && mv $COORDS.all_mr.mr.fa.tmp $COORDS.all_mr.mr.fa
+touch .rerun
+fi
+
+if [ ! -s $PACBIO_FILE.$COORDS.maximal_mr.fa.blasr.out ] || [ -e .rerun ];then
+echo "Maximal alignment"
+perl -ane  '{if($F[0] =~ /^\>/){print substr($F[0],1);}else{ print " ",length($F[0]),"\n";}}' $COORDS.all_mr.mr.fa | sort -nrk2 -S 10%  > $COORDS.mr_sizes.tmp
+reduce_sr `wc -l $KUNITIGLENGTHS | perl -ane 'print $F[0]'`  $KUNITIGLENGTHS $KMER $COORDS.mr_sizes.tmp -o $COORDS.reduce.tmp
+cat <(awk '{print $1}' $COORDS.reduce.tmp) <(awk '{print $1}'  $COORDS.mr_sizes.tmp) | sort -S 10% |uniq -u > $COORDS.maximal_mr.txt
+extractreads.pl $COORDS.maximal_mr.txt $COORDS.all_mr.mr.fa 1 | perl -ane 'BEGIN{$mr_number=0;}{
+if($F[0] =~ /^\>/){
+$mega_read=substr($F[0],1);
+}else{
+$sequence=$F[0];
+print ">$mr_number\n$sequence\n";
+print STDERR "$mega_read\n";
+$mr_number++;
+@kunis=split(/_/,$mega_read);
+$mega_read=join("_",reverse(@kunis));
+$mega_read=~tr/FR/RF/;
+print STDERR "$mega_read\n";
+$mr_number++;
+}
+}' 1>$COORDS.maximal_mr.fa 2>$COORDS.maximal_mr.names
+if [ -e .rerun ];then
+rm -rf tmp.nucmer.$PACBIO_FILE.$COORDS.maximal_mr.fa;
+rm -rf nucmer.$PACBIO_FILE.$COORDS.maximal_mr.fa;
+fi
+run_big_nucmer_job_parallel_blasr_out.sh $PACBIO $COORDS.maximal_mr.fa $REF_BATCH_SIZE '-d 0.2 -g 200 -l 15 -b 120 -c 100' $NUM_THREADS
+touch .rerun
+fi
+
 if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
-echo "Refining alignments"
-awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt | split_matches_file.pl 1000 .matches && parallel "refine.sh $PACBIO $COORDS {1} $KMER" ::: .matches.* && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp
-#awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt > $COORDS.all.txt.tmp && mv $COORDS.all.txt.tmp $COORDS.all.txt
+echo "Tiling"
+reconciliate_mega_reads.maximal.nucmer.pl 20 $KMER $COORDS.maximal_mr.fa $COORDS.maximal_mr.names < $PACBIO_FILE.$COORDS.maximal_mr.fa.blasr.out 1> $COORDS.all.txt.tmp 2>$COORDS.blasr.merged && mv $COORDS.all.txt.tmp $COORDS.all.txt
 touch .rerun
 fi
 
 if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 echo "Joining"
+findGapsInCoverageOfPacbios --max-gap-overlap 100  -f $COORDS.blasr.merged > $COORDS.bad_pb.txt.tmp && mv $COORDS.bad_pb.txt.tmp $COORDS.bad_pb.txt
 awk 'BEGIN{flag=0}{
         if($0 ~ /^>/){
                 flag=0;
@@ -191,23 +235,20 @@ awk 'BEGIN{flag=0}{
         last_mr=$8;
         last_coord=$2+$5-$4;
 }' ${COORDS}.all.txt |sort -nk3 -k4n -S 20%|uniq -D -f 2 | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed
-join_mega_reads_trim.onepass.nomatch.pl $PACBIO ${COORDS}.1.allowed $KMER  < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.inserts.txt && mv $COORDS.1.fa.tmp $COORDS.1.fa
+join_mega_reads_trim.onepass.pl $PACBIO ${COORDS}.1.allowed $KMER $COORDS.bad_pb.txt < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.inserts.txt && mv $COORDS.1.fa.tmp $COORDS.1.fa
 touch .rerun
 fi
 
-if [ ! -s $COORDS.1.frg ] || [ -e .rerun ];then
+if [ ! -s $COORDS.1.frg ] || [ ! -s $COORDS.1.mates.frg ] || [ -e .rerun ];then
 echo "Generating assembly input files"
 make_mr_frg.pl mr 600 < $COORDS.1.fa > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg
 make_mate_frg.pl < $COORDS.1.fa > $COORDS.1.mates.frg.tmp && mv $COORDS.1.mates.frg.tmp $COORDS.1.mates.frg
 rm -rf $CA
 fi
 
-TCOVERAGE=20
 if [ $ESTIMATED_GENOME_SIZE -gt 1 ];then
 MR_SIZE=$(stat -c%s "$COORDS.1.fa");
-COVERAGE=$((MR_SIZE/ESTIMATED_GENOME_SIZE+1));
-TCOVERAGE=`perl -e 'print int(int("'$COVERAGE'")/log(2))'`
-echo "Coverage threshold for splitting unitigs is $TCOVERAGE $BATOPTIONS"
+COVERAGE=$((MR_SIZE/ESTIMATED_GENOME_SIZE));
 if [ $COVERAGE -le 5 ];then
 echo "Coverage of the mega-reads less than 5 -- using the super reads as well";
 SR_FRG=$COORDS.sr.frg
@@ -216,40 +257,15 @@ fasta2frg.pl sr 200 < $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > $S
 fi
 fi
 fi
-
 rm -f .rerun
 
 echo "Running assembly"
-runCA \
-batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE" \
-cnsConcurrency=$NUM_THREADS \
-cnsMinFrags=1000 \
-unitigger=bogart \
-merylMemory=32768 \
-ovlStoreMemory=32768 \
-utgGraphErrorLimit=1000  \
-utgMergeErrorLimit=1000 \
-utgGraphErrorRate=0.04 \
-utgMergeErrorRate=0.04 \
-ovlCorrBatchSize=100000 \
-ovlCorrConcurrency=4 \
-frgCorrThreads=$NUM_THREADS \
-mbtThreads=$NUM_THREADS \
-ovlThreads=2 \
-ovlHashBlockLength=100000000 \
-ovlRefBlockSize=1000000 \
-ovlConcurrency=$NUM_THREADS \
-doFragmentCorrection=1 \
-doOverlapBasedTrimming=1 \
-doUnitigSplitting=0 \
-doChimeraDetection=normal \
--p genome -d $CA  \
-merylThreads=$NUM_THREADS \
-cnsReuseUnitigs=1 \
-cgwMergeMissingThreshold=-1 \
-cgwMergeFilterLevel=1 \
-cgwDemoteRBP=0 \
-cgwErrorRate=0.25 \
-$COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1> $CA.log 2>&1 && \
-echo "Assembly complete. Results are in $CA/9-terminator"
 
+runCA cnsConcurrency=8 unitigger=bogart merylMemory=32768 ovlStoreMemory=32768 utgGraphErrorLimit=1000  utgMergeErrorLimit=1000 utgGraphErrorRate=0.04 utgMergeErrorRate=0.04 ovlCorrBatchSize=100000 ovlCorrConcurrency=4 frgCorrThreads=$NUM_THREADS mbtThreads=$NUM_THREADS ovlThreads=2 ovlHashBlockLength=100000000 ovlRefBlockSize=1000000 ovlConcurrency=$NUM_THREADS doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal stopAfter=unitigger -p genome -d $CA  merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1> $CA.log 2>&1
+
+echo "Unitig stats:"
+tigStore -g $CA/genome.gkpStore -t $CA/genome.tigStore 2 -U -d sizes 
+
+runCA cnsReuseUnitigs=1 cgwMergeMissingThreshold=-1 cgwMergeFilterLevel=1 cgwDemoteRBP=0 cgwErrorRate=0.25  doFragmentCorrection=1 doOverlapBasedTrimming=1 doUnitigSplitting=0 doChimeraDetection=normal cnsMinFrags=1000 cnsConcurrency=$NUM_THREADS -p genome -d $CA unitigger=bogart merylThreads=$NUM_THREADS utgErrorLimit=1000 $COORDS.1.frg $OTHER_FRG 1>> $CA.log 2>&1
+
+echo "Assembly complete. Results are in $CA/9-terminator"
