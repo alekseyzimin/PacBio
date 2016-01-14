@@ -3,6 +3,10 @@ set -e
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 ESTIMATED_GENOME_SIZE=0
+MER=15
+B=17
+d=0.029
+
 #parsing arguments
 while [[ $# > 0 ]]
 do
@@ -11,6 +15,18 @@ key="$1"
 case $key in
     -m|--masurca_run_path)
     MASURCA_ASSEMBLY_WORK1_PATH="$2"
+    shift
+    ;;
+    -M|--alignment_mer)
+    MER="$2"
+    shift
+    ;;
+    -B|--alignment_threshold)
+    B="$2"
+    shift
+    ;;
+    -D|--density)
+    d="$2"
     shift
     ;;
     -p|--pacbio)
@@ -98,9 +114,6 @@ fi
 fi
 
 ################setting parameters#########################
-MER=15
-B=17
-d=0.029
 KMER=`perl -ane 'BEGIN{$min=10000}{if($F[1]<$min){$min=$F[1]}}END{print $min}' $KUNITIGLENGTHS`
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 JF_SIZE=`ls -l $SUPERREADS | perl -ane '{print $F[4]}'`
@@ -152,9 +165,9 @@ fi
 if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 2"
 if numactl --show 1> /dev/null 2>&1;then
-numactl --interleave=all create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m 17 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B 13 --max-count 2000 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
+numactl --interleave=all create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
 else
-create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m 17 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B 13 --max-count 2000 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
+create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.fa  -p $PACBIO -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
 fi
 touch .rerun
 fi
