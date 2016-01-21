@@ -28,19 +28,12 @@ while($line=<STDIN>){
     if($line =~ /^>/){
 	if(not($rn eq "")){
 	    $l=length($seq);
-	    #$rev_seq=reverse_complement($seq);
-	    #$seq=$rev_seq lt $seq ? $rev_seq : $seq;
 	    if($l<$max_len){
-		if($l<1000){#short unitig -- to stderr
-		print STDERR "$rn\n$seq\n";
-		}else{
 		print "$rn\n$seq\n";
-		}
 	    }else{
 		$num_pieces=int($l/$max_len)+1;
 		$max_len_local=int($l/$num_pieces)+1;
 		$offset=int(($max_len_local)/2)+1;
-		#print "DEBUG $l $num_pieces $offset $max_len_local\n";
 	    	for($i=0;$i<$num_pieces*2-1;$i++){
 			print "$rn.",$i*$offset,".",$i*$offset+$max_len_local,"\n",substr($seq,$i*$offset,$max_len_local),"\n";
 		}
@@ -55,16 +48,9 @@ while($line=<STDIN>){
 	$seq.=$line;
     }
 }
-#do not forget the last one!!!
 $l=length($seq);
-#$rev_seq=reverse_complement($seq);
-#$seq=$rev_seq lt $seq ? $rev_seq : $seq;
             if($l<$max_len){
-                if($l<1000){#short unitig -- to stderr
-                print STDERR "$rn\n$seq\n";
-                }else{
                 print "$rn\n$seq\n";
-                }
             }else{
                 $max_len_local=int(($l-10000)/$l*$max_len);
                 $offset=int(($max_len_local-1)/2);
