@@ -52,7 +52,8 @@ noinst_HEADERS += src_jf_aligner/superread_parser.hpp			\
                   src_psa/compact_iterator.hpp				\
                   src_psa/parallel_iterator_traits.hpp			\
                   src_psa/const_iterator_traits.hpp			\
-                  src_psa/prefetch_iterator_traits.hpp
+                  src_psa/prefetch_iterator_traits.hpp			\
+                  src_psa/48bit_index.hpp src_psa/48bit_iterator.hpp
 
 noinst_HEADERS += include/charb.hpp include/exp_buffer.hpp		\
                   include/multiplexer.hpp include/reallocators.hpp	\
