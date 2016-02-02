@@ -162,7 +162,7 @@ TCOVERAGE=20
 if [ $ESTIMATED_GENOME_SIZE -gt 1 ];then
 MR_SIZE=$(stat -c%s "$COORDS.1.fa");
 COVERAGE=$((MR_SIZE/ESTIMATED_GENOME_SIZE+4));
-TCOVERAGE=`perl -e 'print int(int("'$COVERAGE'")/log(2))'`
+TCOVERAGE=`perl -e 'print int(int("'$COVERAGE'")/log(2)+1)'`
 echo "Coverage threshold for splitting unitigs is $TCOVERAGE $BATOPTIONS"
 SR_FRG=$COORDS.sr.frg
 if [ ! -s $SR_FRG ];then
@@ -189,6 +189,8 @@ ovlCorrConcurrency=4 \
 frgCorrThreads=$NUM_THREADS \
 mbtThreads=$NUM_THREADS \
 ovlThreads=2 \
+ovlMerThreshold=300 \
+obtMerThreshold=400 \
 ovlHashBlockLength=100000000 \
 ovlRefBlockSize=1000000 \
 ovlConcurrency=$NUM_THREADS \
