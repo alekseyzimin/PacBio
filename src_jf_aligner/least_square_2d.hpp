@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __LEAST_SQUARE_2D_H__
 #define __LEAST_SQUARE_2D_H__
 

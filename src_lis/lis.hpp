@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __LIS_HPP__
 #define __LIS_HPP__
 

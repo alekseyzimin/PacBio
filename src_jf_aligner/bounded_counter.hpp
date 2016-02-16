@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __BOUNDED_COUNTER_H__
 #define __BOUNDED_COUNTER_H__
 

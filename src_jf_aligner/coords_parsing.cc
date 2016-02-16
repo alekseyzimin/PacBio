@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #include <src_jf_aligner/coords_parsing.hpp>
 #include <src_jf_aligner/frag_info.hpp>
 

@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __GLOBAL_TIMER_H__
 #define __GLOBAL_TIMER_H__
 

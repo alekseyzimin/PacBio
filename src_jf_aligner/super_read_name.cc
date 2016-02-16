@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #include <src_jf_aligner/super_read_name.hpp>
 #include <stdexcept>
 #include<algorithm>

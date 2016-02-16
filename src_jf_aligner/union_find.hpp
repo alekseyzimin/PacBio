@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __UNION_FIND_H__
 #define __UNION_FIND_H__
 

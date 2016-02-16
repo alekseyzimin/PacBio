@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef _OUTPUT_FILE_H_
 #define _OUTPUT_FILE_H_
 

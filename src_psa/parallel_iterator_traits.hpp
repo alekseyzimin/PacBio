@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __PARALLEL_POINTER_TRAITS_H__
 #define __PARALLEL_POINTER_TRAITS_H__
 

@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef _SLICE_H_
 #define _SLICE_H_
 

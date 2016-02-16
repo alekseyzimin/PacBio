@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __MER_SA_H__
 #define __MER_SA_H__
 

@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __PREFETCH_TRAITS_H__
 #define __PREFETCH_TRAITS_H__
 

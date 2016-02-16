@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #include <src_jf_aligner/coarse_aligner.hpp>
 #include <cmath>
 

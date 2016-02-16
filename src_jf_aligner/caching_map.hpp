@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __CACHING_MAP_H__
 #define __CACHING_MAP_H__
 

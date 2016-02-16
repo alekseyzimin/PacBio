@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __COMPACT_DNA_H__
 #define __COMPACT_DNA_H__
 

@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #include <thread>
 
 #include <src_jf_aligner/superread_parser.hpp>

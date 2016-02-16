@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __SUPER_READ_NAME_H__
 #define __SUPER_READ_NAME_H__
 

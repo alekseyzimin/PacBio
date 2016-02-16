@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef _OVERLAP_GRAPH_H_
 #define _OVERLAP_GRAPH_H_
 

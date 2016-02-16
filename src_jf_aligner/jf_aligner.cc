@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #include <memory>
 #include <ios>
 #include <thread>

@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #include <src_jf_aligner/union_find.hpp>
 
 void union_find::union_sets(union_find::set* s1, union_find::set* s2) {

@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 // This program finds where we shouldn't join sub-mega reads for given
 // pacbio reads
 #include <cstdio>

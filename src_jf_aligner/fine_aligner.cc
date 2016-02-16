@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #include <src_jf_aligner/fine_aligner.hpp>
 
 namespace align_pb {

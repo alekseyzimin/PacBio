@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __COORDS_PARSING_H__
 #define __COORDS_PARSING_H__
 

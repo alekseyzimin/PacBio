@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __48BIT_INDEX_H__
 #define __48BIT_INDEX_H__
 

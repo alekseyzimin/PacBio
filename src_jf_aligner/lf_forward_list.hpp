@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef _LF_FORWARD_LIST_HPP_
 #define _LF_FORWARD_LIST_HPP_
 

@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __FRAG_INFO_H__
 #define __FRAG_INFO_H__
 

@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __COARSE_ALIGNER_H__
 #define __COARSE_ALIGNER_H__
 

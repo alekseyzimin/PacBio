@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __SAID_TRAITS_H__
 #define __SAID_TRAITS_H__
 

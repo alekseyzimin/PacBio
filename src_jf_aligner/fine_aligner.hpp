@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __FINE_ALIGNER_H__
 #define __FINE_ALIGNER_H__
 

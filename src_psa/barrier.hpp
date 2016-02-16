@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __BARRIER_H__
 #define __BARRIER_H__
 

@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef __CONST_ITERATOR_TRAITS_H__
 #define __CONST_ITERATOR_TRAITS_H__
 

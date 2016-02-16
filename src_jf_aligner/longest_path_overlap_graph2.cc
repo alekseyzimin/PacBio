@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #include <cerrno>
 #include <climits>
 #include <ios>

@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef _PB_ALIGNER_HPP_
 #define _PB_ALIGNER_HPP_
 

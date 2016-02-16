@@ -1,3 +1,6 @@
+/******************************************
+Copyright University of Maryland 2015
+******************************************/
 #ifndef _SUPERREAD_PARSER_HPP_
 #define _SUPERREAD_PARSER_HPP_
 
