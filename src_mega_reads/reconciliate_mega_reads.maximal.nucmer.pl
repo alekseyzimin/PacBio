@@ -40,20 +40,13 @@ while($l=<STDIN>){
     next if($ff[10] eq "");
     next if(($ff[7]-$ff[6])<$min_len);
     #next if($ff[3]==1);
-    $original_mega_read=$ff[1];
-    $mega_read=$original_mega_read;
+    $mega_read=$ff[1];
     die("mega-read $mega_read from $ff[1] has no sequence!") if(not(defined($seq{$mega_read})));
     @fff=split(/\//,$ff[0]);
     $pb_read=join("/",@fff[0..($#fff-1)]);
     $pb_len{$pb_read}=$ff[11];
     $sequence=$seq{$mega_read};
-    if($ff[3]==1){
-        @kunis=split(/_/,$mega_read);
-        $mega_read=join("_",reverse(@kunis));
-        $mega_read=~tr/FR/RF/;
-        $sequence=reverse($sequence);
-        $sequence=~tr/ACGTNacgtn/TGCANtgcan/;
-    }
+    die("all matches are expected forward: $l") if($ff[3]==1);
     if(not($pb_read eq $last_pb_read)){
 	if(not($last_pb_read eq "")){
 	    print ">$last_pb_read\n";

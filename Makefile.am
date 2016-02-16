@@ -95,21 +95,12 @@ bin_merge_coords_SOURCES = src_jf_aligner/merge_coords.cc
 
 bin_findGapsInCoverageOfPacbios_SOURCES = src_mega_reads/findGapsInCoverageOfPacbios.cc
 
-dist_bin_SCRIPTS += src_mega_reads/build_mega_read_graph.sh			\
-                    src_mega_reads/mega_reads_assemble.sh			\
+dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble.sh			\
                     src_mega_reads/mega_reads_assemble_nomatch.sh		\
-                    src_mega_reads/run_big_nucmer_job_parallel.sh		\
-                    src_mega_reads/run_big_nucmer_job_parallel_blasr_out.sh     \
-                    src_mega_reads/build_mega_reads.pl				\
                     src_mega_reads/make_mr_frg.pl				\
-                    src_mega_reads/extract_best_match_coords.pl			\
-                    src_mega_reads/merge_matches_coords_file.pl			\
-                    src_mega_reads/filter_matches.pl				\
                     src_mega_reads/reconciliate_mega_reads.maximal.nucmer.pl	\
                     src_mega_reads/join_mega_reads_trim.onepass.nomatch.pl	\
-                    src_mega_reads/split_contig_file.pl				\
                     src_mega_reads/join_mega_reads_trim.onepass.pl		\
-                    src_mega_reads/split_long_unitigs.pl			\
                     src_mega_reads/make_mate_frg.pl				\
                     src_mega_reads/determineUnjoinablePacbioSubmegas.perl src_mega_reads/join_mega_reads_trim.onepass.ref.pl \
 		    src_mega_reads/refine.sh src_mega_reads/refine_alignments.pl  src_mega_reads/split_matches_file.pl src_mega_reads/mega_reads_assemble_ref.sh
