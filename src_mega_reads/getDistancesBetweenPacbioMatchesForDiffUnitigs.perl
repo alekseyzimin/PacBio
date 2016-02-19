@@ -1,4 +1,8 @@
 #!/usr/bin/perl
+#######################################
+#Copyright University of Maryland 2015#
+#######################################
+#!/usr/bin/perl
 for ($i=0; $i<=$#ARGV; ++$i) {
     if ($ARGV[$i] eq "-l") {
 	++$i;

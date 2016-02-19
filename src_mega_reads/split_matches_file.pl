@@ -1,4 +1,8 @@
 #!/usr/bin/env perl
+#######################################
+#Copyright University of Maryland 2015#
+#######################################
+#!/usr/bin/env perl
 #This file splits the pacbio matches file into chunks for parallel processing
 my $chunksize=$ARGV[0];
 my $prefix=$ARGV[1];

@@ -1,4 +1,8 @@
 #!/bin/bash
+#######################################
+#Copyright University of Maryland 2015#
+#######################################
+#!/bin/bash
 set -e
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
@@ -245,8 +249,8 @@ merylMemory=32768 \
 ovlStoreMemory=32768 \
 utgGraphErrorLimit=1000  \
 utgMergeErrorLimit=1000 \
-utgGraphErrorRate=0.04 \
-utgMergeErrorRate=0.04 \
+utgGraphErrorRate=0.025 \
+utgMergeErrorRate=0.025 \
 ovlCorrBatchSize=100000 \
 ovlCorrConcurrency=4 \
 frgCorrThreads=$NUM_THREADS \

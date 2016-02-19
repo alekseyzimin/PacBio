@@ -1,4 +1,8 @@
 #!/usr/bin/env perl
+#######################################
+#Copyright University of Maryland 2015#
+#######################################
+#!/usr/bin/env perl
 #
 #this code produces joined mega-reads
 #

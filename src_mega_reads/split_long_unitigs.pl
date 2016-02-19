@@ -1,4 +1,8 @@
 #!/usr/bin/env perl
+#######################################
+#Copyright University of Maryland 2015#
+#######################################
+#!/usr/bin/env perl
 $rn="";
 $max_len=65500;
 $shooting_index=0;

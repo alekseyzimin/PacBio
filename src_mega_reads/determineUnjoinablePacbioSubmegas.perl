@@ -1,4 +1,8 @@
 #!/usr/bin/env perl
+#######################################
+#Copyright University of Maryland 2015#
+#######################################
+#!/usr/bin/env perl
 # $file = "/genome3/raid/alekseyz/PB_ScerW303/mega-reads-new/mrN6_max_2p_1.70.13.25.0.1.allowed";
 $errorRateAllowed = .1;
 $errorMin = 10;

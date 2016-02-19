@@ -1,4 +1,8 @@
 #!/usr/bin/perl
+#######################################
+#Copyright University of Maryland 2015#
+#######################################
+#!/usr/bin/perl
 $fn = "/genome3/raid/alekseyz/PB_ScerW303/mega-reads/coords_m300_k15_10x_70_B15_U1_mm";
 $minOvlForMatchingRgns = 100;
 $minOvl = 0;

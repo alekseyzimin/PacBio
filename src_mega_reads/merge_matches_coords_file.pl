@@ -1,4 +1,8 @@
 #!/usr/bin/env perl
+#######################################
+#Copyright University of Maryland 2015#
+#######################################
+#!/usr/bin/env perl
 $prev_match = "";
 $match_ref_beg = 0;
 $match_ref_end = 0;

@@ -1,4 +1,8 @@
 #!/usr/bin/perl
+#######################################
+#Copyright University of Maryland 2015#
+#######################################
+#!/usr/bin/perl
 # Pass the name of a fasta file as an arg and this gives the number of
 # bases in each read of the fasta file
 open (FILE, "$ARGV[1]");

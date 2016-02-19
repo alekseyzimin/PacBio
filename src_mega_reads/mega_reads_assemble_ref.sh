@@ -1,4 +1,8 @@
 #!/bin/bash
+#######################################
+#Copyright University of Maryland 2015#
+#######################################
+#!/bin/bash
 set -e
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"

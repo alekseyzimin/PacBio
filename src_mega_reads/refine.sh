@@ -1,4 +1,8 @@
 #!/bin/bash
+#######################################
+#Copyright University of Maryland 2015#
+#######################################
+#!/bin/bash
 PACBIO=$1
 COORDS=$2
 INPUT=$3

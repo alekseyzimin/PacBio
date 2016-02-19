@@ -1,4 +1,8 @@
 #!/usr/bin/env perl
+#######################################
+#Copyright University of Maryland 2015#
+#######################################
+#!/usr/bin/env perl
 #
 #this code refines the alignments of mega reads to pacbio reads using nucmer
 use mummer;
