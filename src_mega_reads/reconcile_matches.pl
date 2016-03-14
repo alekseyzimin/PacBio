@@ -86,5 +86,5 @@ $gap_b-=($len-$s);
 $end=$s;
 }
 }
-print "$scf $ctg $start $end $dir $gap_b $gap_a $len\n";
+print "$scf $ctg $start $end $dir ",int($gap_b)," ",int($gap_a)," $len\n";
 }
