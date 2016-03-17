@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 
-my $tol_factor=1.2;#tolerance factor around gap size
+my $tol_factor=10;#tolerance factor around gap size
 my $tol_min=100;#minimum tolerance for small gap
 #gap is an actual gap; all coordinates in the output are 1-based
 my $scf="";
@@ -62,14 +62,12 @@ sub output_coords{
     if($s-1<=$gap_b){
       $start=1;
       $gap_b-=($s-1);
-      $gap_b=10 if($gap_b<1);
     }else{
       $start=$s;
     }
     if(($len-$e)<=$gap_a){
       $end=$len;
       $gap_a-=($len-$e);
-      $gap_a=10 if($gap_a<1);
     }else{
       $end=$e;
     }
@@ -78,30 +76,31 @@ sub output_coords{
     if($e-1<=$gap_a){
       $start=1;
       $gap_a-=($e-1);
-      $gap_a=10 if($gap_a<1);
     }else{
       $start=$e;
     }
     if(($len-$s)<=$gap_b){
       $end=$len;
       $gap_b-=($len-$s);
-      $gap_b=10 if($gap_b<1);
     }else{
       $end=$s;
     }
   }
+  $gap_a=$gap_a/$tol_factor;
+  $gap_b=$gap_b/$tol_factor;
+
   print "$scf $ctg $start $end $dir ",int($gap_b)," ",int($gap_a)," $len\n";
 }
 
 sub compute_gap{
   my($gbeg,$gend)=@_;#gbeg<gend normally
-    if($gend-$gbeg<1){
-      return(1000);
-    }elsif($gend-$gbeg==1){
+    if($gend-$gbeg==1){
       return(0);
+    }elsif($gend-$gbeg<=101){
+      return(100*$tol_factor);
     }else{
       my $ttt=($gend-$gbeg)*$tol_factor;
-      return($ttt<$tol_min ? $tol_min : $ttt);
+      return($ttt<$tol_min ? $tol_min*$tol_factor : $ttt);
     }
 }
 

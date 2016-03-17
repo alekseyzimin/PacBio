@@ -21,7 +21,7 @@ while($line=<STDIN>){
       foreach $ctg( keys %ctg_lines ){
       merge_matches(split("\n",$ctg_lines{$ctg}));
       }
-      #print sort by_first_field @output_matches;
+      print sort by_first_field @output_matches;
       @output_matches = ();
     }
     %ctg_lines=();
@@ -54,14 +54,13 @@ foreach my $line (@_) {
     $currentMidpoint = ($currentFlds[3]+$currentFlds[4]) / 2;
     if($keepMatchLine == 1){#we check the next match
       $local_direction = &reportDirectionBasedOnOrderedCoords (@currentFlds[3..4]);
+      $keepMatchLine = 0;
       if ($local_direction == $match_direction){
         if (($prevFlds[3] < $prevFlds[4]) && ($prevMidpoint < $currentMidpoint)) { 
           $keepMatchLine = 1 if(abs(($currentFlds[0]-$prevFlds[1])-($currentFlds[3]-$prevFlds[4])) <= $max_gap_diff);
         }elsif (($prevFlds[3] >= $prevFlds[4]) && ($prevMidpoint >= $currentMidpoint)) { 
           $keepMatchLine = 1 if(abs(($currentFlds[0]-$prevFlds[1])-($prevFlds[4]-$currentFlds[3])) <= $max_gap_diff);
-        }   
-      }else{
-        $keepMatchLine = 0;
+        }
       }
     }
     
