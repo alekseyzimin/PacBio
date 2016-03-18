@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 
-my $tol_factor=30;#tolerance factor around gap size
+my $tol_factor=50;#tolerance factor around gap size
 my $tol_min=500;#minimum tolerance for small gap
 #gap is an actual gap; all coordinates in the output are 1-based
 
@@ -13,6 +13,15 @@ chomp($line);
 my @f=split(/\s+/,$line);
 push(@{$gaps{$f[0]}},[$f[1],$f[2]]);
 }
+
+my $split_contigs=$ARGV[1]; #these are contigs that become duplicted if too much tolerance is allowed -- they are likely misassembled
+open(FILE,$split_contigs);
+
+while(my $line=<FILE>){
+chomp($line);
+$split_contig{$line}=1;
+}
+
 
 my $scf="";
 my $line=<STDIN>,@l=();
@@ -68,14 +77,18 @@ sub output_coords{
   my $start,$end,$dir;
   my ($gap_b,$gap_a,$s,$e,$len,$scf,$ctg)=@_;
   my $sg_a=0,$sg_b=0;
-
+   
   if($gap_b<0){
     $gap_b=-$gap_b;
     $sg_b=1;
-    }
+  }
   if($gap_a<0){
     $gap_a=-$gap_a;
     $sg_a=1;
+  }
+  if($split_contig{$ctg}){
+    $gap_a=500;
+    $gap_b=500;
   }
 
   if($s<$e){#forward match
