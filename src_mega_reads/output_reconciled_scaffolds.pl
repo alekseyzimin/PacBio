@@ -14,6 +14,7 @@ while($line=<FILE>){
     $seq.=$line;
   }
 }
+$sequence{$name}=$seq;
 
 $name="";
 $seq="";
