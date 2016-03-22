@@ -1,8 +1,8 @@
 #!/usr/bin/env perl
 
 
-my $tol_factor=50;#tolerance factor around gap size
-my $tol_min=500;#minimum tolerance for small gap
+my $tol_factor=100000;#tolerance factor around gap size
+my $tol_min=100;#minimum tolerance for small gap
 #gap is an actual gap; all coordinates in the output are 1-based
 
 my $gap_coordinates=$ARGV[0];
@@ -19,7 +19,9 @@ open(FILE,$split_contigs);
 
 while(my $line=<FILE>){
 chomp($line);
-$split_contig{$line}=1;
+@f=split(/\s+/,$line);
+$restrict_reverse_ext{"$f[0] $f[1] $f[4]"}=$f[2];
+$restrict_forward_ext{"$f[0] $f[1] $f[4]"}=$f[3];
 }
 
 
@@ -86,40 +88,50 @@ sub output_coords{
     $gap_a=-$gap_a;
     $sg_a=1;
   }
-  if($split_contig{$ctg}){
-    $gap_a=500;
-    $gap_b=500;
-  }
 
   if($s<$e){#forward match
     $dir="f";
-    if($s-1<=$gap_b){
-      $start=1;
-      $gap_b-=($s-1);
+    $min_coord=1;
+    $min_coord=int($s-$restrict_reverse_ext{"$s $e $ctg"}) if(defined($restrict_reverse_ext{"$s $e $ctg"}));
+    $min_coord=1 if($min_coord<1);
+    if($s-$min_coord<=$gap_b){
+      $start=$min_coord;
+      $gap_b-=($s-$min_coord);
     }else{
       $start=$s;
     }
-    if(($len-$e)<=$gap_a){
-      $end=$len;
-      $gap_a-=($len-$e);
+    $max_coord=$len;
+    $max_coord=int($e+$restrict_forward_ext{"$s $e $ctg"}) if(defined($restrict_forward_ext{"$s $e $ctg"}));
+    $max_coord=$len if($max_coord>$len);
+    if(($max_coord-$e)<=$gap_a){
+      $end=$max_coord;
+      $gap_a-=($max_coord-$e);
     }else{
       $end=$e;
     }
   }else{
     $dir="r";
-    if($e-1<=$gap_a){
-      $start=1;
-      $gap_a-=($e-1);
+    $min_coord=1;
+    $min_coord=int($e-$restrict_reverse_ext{"$e $s $ctg"}) if(defined($restrict_reverse_ext{"$e $s $ctg"}));
+    $min_coord=1 if($min_coord<1);
+    if($e-$min_coord<=$gap_a){
+      $start=$min_coord;
+      $gap_a-=($e-$min_coord);
     }else{
       $start=$e;
     }
-    if(($len-$s)<=$gap_b){
-      $end=$len;
-      $gap_b-=($len-$s);
+    $max_coord=$len;
+    $max_coord=int($s+$restrict_forward_ext{"$e $s $ctg"}) if(defined($restrict_forward_ext{"$e $s $ctg"}));
+    $max_coord=$len if($max_coord>$len);
+
+    if(($max_coord-$s)<=$gap_b){
+      $end=$max_coord;
+      $gap_b-=($max_coord-$s);
     }else{
       $end=$s;
     }
   }
+
   $gap_a=$gap_a/$tol_factor if($sg_a);
   $gap_b=$gap_b/$tol_factor if($sg_b);
 
@@ -145,11 +157,11 @@ sub compute_gap{
     return(-$ttt); #negative gap is a flag for sequence gap
   }elsif($gend-$gbeg==1){
     return(0);
-  }elsif($gend-$gbeg<=101){
-    return(100);
+  }elsif($gend-$gbeg<=0){
+    return(-100*$tol_factor);
   }else{
     my $ttt=($gend-$gbeg);
-    return($ttt<$tol_min ? $tol_min : $ttt);
+    return($ttt<$tol_min ? -$tol_min*$tol_factor : -$ttt*$tol_factor);
   }
 }
 
