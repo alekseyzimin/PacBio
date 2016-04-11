@@ -241,7 +241,7 @@ rm -f .rerun
 
 echo "Running assembly"
 runCA \
-batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE" \
+batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
 cnsConcurrency=$NUM_THREADS \
 cnsMinFrags=1000 \
 unitigger=bogart \
