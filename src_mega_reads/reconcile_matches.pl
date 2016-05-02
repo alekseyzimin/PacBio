@@ -27,6 +27,7 @@ $restrict_forward_ext{"$f[0] $f[1] $f[4]"}=$f[3];
 
 my $scf="";
 my $line=<STDIN>,@l=();
+$line=~s/^\s+//;
 my @f=split(/\s+/,$line);
 my $scf=$f[-2];
 push(@l,$line);
@@ -46,11 +47,11 @@ process_lines(@l);
 sub process_lines{
   my @lines=@_;
   my $gap_before=500000;
-  my $gap_after=10000;
-  if($#lines==0){
+  my $gap_after=500000;
+  if(@lines==1){
      @l2=split(/\s+/,$lines[0]);
     output_coords($gap_before,$gap_after,$l2[3],$l2[4],$l2[12],$l2[-2],$l2[-1],1);
-  }else{
+  }elsif(@lines>1){
     my @l1,@l2,@l3;
     @l2=split(/\s+/,$lines[0]);
     @l3=split(/\s+/,$lines[1]);
