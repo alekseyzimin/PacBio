@@ -17,13 +17,13 @@ Copyright University of Maryland 2015
 template<typename CHARPTR, typename SAIDX = uint64_t>
 class PSA {
 //use this for faster 48-bit index
-typedef mer_sa_imp::SA<CHARPTR, typename fortyeight_index<SAIDX>::iterator> SA;
-typedef typename fortyeight_index<SAIDX>::iterator                          SAIDPTR;
-typedef typename fortyeight_index<SAIDX>::const_iterator                    CSAIDPTR;
+//typedef mer_sa_imp::SA<CHARPTR, typename fortyeight_index<SAIDX>::iterator> SA;
+//typedef typename fortyeight_index<SAIDX>::iterator                          SAIDPTR;
+//typedef typename fortyeight_index<SAIDX>::const_iterator                    CSAIDPTR;
 //use this for more memory efficient index
-//typedef mer_sa_imp::SA<CHARPTR, typename compact_index<SAIDX>::iterator> SA;
-//typedef typename compact_index<SAIDX>::iterator                          SAIDPTR;
-//typedef typename compact_index<SAIDX>::const_iterator                    CSAIDPTR;
+typedef mer_sa_imp::SA<CHARPTR, typename compact_index<SAIDX>::iterator> SA;
+typedef typename compact_index<SAIDX>::iterator                          SAIDPTR;
+typedef typename compact_index<SAIDX>::const_iterator                    CSAIDPTR;
 
   typedef typename compactsufsort_imp::prefetch_iterator_traits<uint64_t*>    counts_prefetch;
   typedef typename compactsufsort_imp::prefetch_iterator_traits<CSAIDPTR>     CSAID_prefetch;
@@ -171,9 +171,9 @@ private:
   const size_t               m_nb_counts;
   const std::unique_ptr<uint64_t[]>      m_mer_counts;
   //use this for faster 48-bit index
-  fortyeight_index<SAIDX>    m_psa;
+  //fortyeight_index<SAIDX>    m_psa;
   //use this for more memory efficient index
-  //compact_index<SAIDX>       m_psa;
+  compact_index<SAIDX>       m_psa;
 };
 
 // Implementation of search_element methods
