@@ -7,8 +7,11 @@ CA_TERM_DIR=$2
 
 set -xe
 
+if [ ! -s  genome.scfdeg.fasta ] ||  [ ! -s  genome.posmap.frgscfdeg ];then
 cat $CA_TERM_DIR/genome.{scf,deg}.fasta > genome.scfdeg.fasta
 cat $CA_TERM_DIR/genome.posmap.frgscf.sorted $CA_TERM_DIR/genome.posmap.frgdeg  > genome.posmap.frgscfdeg
+touch .rerun
+fi
 
 HYB_CTG="genome.scfdeg.fasta"
 HYB_POS="genome.posmap.frgscfdeg"
@@ -79,7 +82,7 @@ touch .rerun
 fi
 if [ ! -s $REF_CHR.$HYB_CTG.broken.1.delta ] || [ -e .rerun ];then
 delta-filter -1 -o 20 -i 98 $REF_CHR.$HYB_CTG.broken.delta > $REF_CHR.$HYB_CTG.broken.1.delta
-touch.rerun
+touch .rerun
 fi
 
 rm -rf .rerun

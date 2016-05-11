@@ -44,7 +44,7 @@ $gap=$f[6];
 print ">$name.R\n$seq\n";
 
 foreach $k(keys %output){
-print ">$k\n$sequence{$k}\n" unless($output{$k});
+print ">$k\n$sequence{$k}\n" if(not($output{$k}) && length($sequence{$k})>1000);
 }
 sub reverse_complement{
   my $str=$_[0];

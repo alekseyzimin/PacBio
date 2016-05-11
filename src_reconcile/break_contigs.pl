@@ -7,7 +7,7 @@ while($line=<FILE>){
   chomp($line);
   @f=split(/\s+/,$line);
   my $break_coord=$f[2];
-  push(@{$break_coords{"ctg".$f[1]}},$break_coord);
+  push(@{$break_coords{$f[1]}},$break_coord);
 }
 
 while($line=<STDIN>){
@@ -28,7 +28,7 @@ while($line=<STDIN>){
         print ">$ctg\n$seq\n";
         }
     }
-    $ctg=substr($f[0],1);
+    $ctg=substr($f[0],4);
     $seq="";
   }else{
     $seq.=$line;
