@@ -156,9 +156,9 @@ sub compute_gap{
     my $ttt=($gend-$gbeg)*$tol_factor;
     $ttt=$tol_min*$tol_factor if($ttt<$tol_min);
     return(-$ttt); #negative gap is a flag for sequence gap
-  }elsif($gend-$gbeg==1){
+  }elsif($gend-$gbeg==1 || $gend-$gbeg==0){
     return(0);
-  }elsif($gend-$gbeg<=0){
+  }elsif($gend-$gbeg<0){
     return(-100*$tol_factor);
   }else{
     my $ttt=($gend-$gbeg);

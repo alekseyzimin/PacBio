@@ -103,7 +103,7 @@ dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble.sh			\
                     src_mega_reads/join_mega_reads_trim.onepass.pl		\
                     src_mega_reads/make_mate_frg.pl				\
                     src_mega_reads/determineUnjoinablePacbioSubmegas.perl src_mega_reads/join_mega_reads_trim.onepass.ref.pl \
-		    src_mega_reads/refine.sh src_mega_reads/refine_alignments.pl  src_mega_reads/split_matches_file.pl src_mega_reads/mega_reads_assemble_ref.sh src_mega_reads/reconcile_matches.pl src_mega_reads/output_reconciled_scaffolds.pl src_mega_reads/merge_matches_and_tile_coords_file.pl src_mega_reads/reconcile_alignments.sh src_mega_reads/split_long_unitigs.pl src_mega_reads/compute_coverage.pl  src_mega_reads/evaluate_splits.pl  src_mega_reads/extract_single_best_match_coords_file.pl src_mega_reads/reconcile_hybrid_contigs_chromosomes.sh
+		    src_mega_reads/refine.sh src_mega_reads/refine_alignments.pl  src_mega_reads/split_matches_file.pl src_mega_reads/mega_reads_assemble_ref.sh src_mega_reads/reconcile_matches.pl src_mega_reads/output_reconciled_scaffolds.pl src_mega_reads/merge_matches_and_tile_coords_file.pl src_mega_reads/reconcile_alignments.sh src_mega_reads/split_long_unitigs.pl src_mega_reads/compute_coverage.pl  src_mega_reads/evaluate_splits.pl  src_mega_reads/extract_single_best_match_coords_file.pl src_mega_reads/reconcile_hybrid_contigs_chromosomes.sh src_mega_reads/break_contigs.pl
 
 
 YAGGO_SOURCES += src_jf_aligner/jf_aligner_cmdline.hpp			\
