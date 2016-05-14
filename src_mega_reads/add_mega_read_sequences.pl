@@ -25,21 +25,21 @@ $kuext[$i]=substr($kunitigs[$i],$kusize);
 #now we read in the mega reads file and add in the sequences
 while($line=<STDIN>){
   chomp($line);
-  if($line=~/^\>/){ 
+  if(substr($line,0,1) eq ">"){ 
     print $line,"\n";
   }else{
-    my @f=split(/\s+/,$line);
-    my @mrname=split(/_/,$f[8]);
+    my @f=split(' ',$line);
+    my @mrname=split("_",$f[8]);
     my $ku,$seq="";
     $ku=substr($mrname[0],0,-1)*2;
-    if($mrname[0] =~ /F$/){
+    if(substr($mrname[0],-1) eq "F"){
       $seq=$kunitigs[$ku];
     }else{
       $seq=$kunitigs[$ku+1];
     }
     for(my $i=1;$i<=$#mrname; $i++){
     $ku=substr($mrname[$i],0,-1)*2;
-    if($mrname[$i]=~/F$/){
+    if(substr($mrname[$i],-1) eq "F"){
         $seq.=$kuext[$ku];
       }else{
         $seq.=$kuext[$ku+1];
