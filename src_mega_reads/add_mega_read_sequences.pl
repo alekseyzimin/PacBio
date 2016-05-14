@@ -17,13 +17,18 @@ while($line=<FILE>){
   }
 }
 $kusize--;#need to know k-1
+my @kuext;
+$#kuext=$#kunitigs;
+for(my $i=0;$i<=$#kunitigs;$i++){
+$kuext[$i]=substr($kunitigs[$i],$kusize);
+}
 #now we read in the mega reads file and add in the sequences
 while($line=<STDIN>){
   chomp($line);
   if($line=~/^\>/){ 
     print $line,"\n";
   }else{
-    @f=split(/\s+/,$line);
+    my @f=split(/\s+/,$line);
     my @mrname=split(/_/,$f[8]);
     my $ku,$seq="";
     $ku=substr($mrname[0],0,-1)*2;
@@ -33,14 +38,14 @@ while($line=<STDIN>){
       $seq=$kunitigs[$ku+1];
     }
     for(my $i=1;$i<=$#mrname; $i++){
-      $ku=substr($mrname[$i],0,-1)*2;
-      if($mrname[$i]=~/F$/){
-        $seq.=substr($kunitigs[$ku],$kusize);
+    $ku=substr($mrname[$i],0,-1)*2;
+    if($mrname[$i]=~/F$/){
+        $seq.=$kuext[$ku];
       }else{
-        $seq.=substr($kunitigs[$ku+1],$kusize);
+        $seq.=$kuext[$ku+1];
       }
     }
-    print $line," ",$seq,"\n";
+    print "$line $seq\n";
   }
 }
 
