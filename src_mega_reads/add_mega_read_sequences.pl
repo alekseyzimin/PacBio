@@ -5,7 +5,7 @@ my @f,$kuname, $line,$kusize=10000000,@kunitigs;
 open(FILE,$kufile);
 while($line=<FILE>){
   chomp($line);
-  if($line=~/^\>/){
+  if(substr($line,0,1) eq ">"){
     @f=split(/\s+/,$line);
     $kuname=substr($f[0],1)*2;
   }else{
@@ -29,7 +29,7 @@ while($line=<STDIN>){
     print $line,"\n";
   }else{
     my @f=split(' ',$line);
-    my @mrname=split("_",$f[8]);
+    @mrname=split("_",$f[8]);
     my $ku,$seq="";
     $ku=substr($mrname[0],0,-1)*2;
     if(substr($mrname[0],-1) eq "F"){
