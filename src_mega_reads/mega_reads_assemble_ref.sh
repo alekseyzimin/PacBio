@@ -210,6 +210,42 @@ cgwMergeMissingThreshold=-1 \
 cgwMergeFilterLevel=1 \
 cgwDemoteRBP=0 \
 cgwErrorRate=0.25 \
+stopAfter=consensusAfterUnitigger \
+$COORDS.1.frg $SR_FRG $OTHER_FRG 1> $CA.log 2>&1 && \
+recompute_astat_superreads.sh genome $CA $PE_AVG_READ_LENGTH work1/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt  && \
+runCA \
+batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE" \
+cnsConcurrency=$NUM_THREADS \
+cnsMinFrags=1000 \
+unitigger=bogart \
+merylMemory=32768 \
+ovlStoreMemory=32768 \
+utgGraphErrorLimit=1000  \
+utgMergeErrorLimit=1000 \
+utgGraphErrorRate=0.025 \
+utgMergeErrorRate=0.025 \
+ovlCorrBatchSize=100000 \
+ovlCorrConcurrency=4 \
+frgCorrThreads=$NUM_THREADS \
+mbtThreads=$NUM_THREADS \
+ovlThreads=2 \
+ovlMerThreshold=300 \
+obtMerThreshold=400 \
+ovlHashBlockLength=100000000 \
+ovlRefBlockSize=1000000 \
+ovlConcurrency=$NUM_THREADS \
+doExtendClearRanges=0 \
+doFragmentCorrection=0 \
+doOverlapBasedTrimming=1 \
+doUnitigSplitting=0 \
+doChimeraDetection=normal \
+-p genome -d $CA  \
+merylThreads=$NUM_THREADS \
+cnsReuseUnitigs=1 \
+cgwMergeMissingThreshold=-1 \
+cgwMergeFilterLevel=1 \
+cgwDemoteRBP=0 \
+cgwErrorRate=0.25 \
 $COORDS.1.frg $SR_FRG $OTHER_FRG 1> $CA.log 2>&1 && \
 echo "Assembly complete. Results are in $CA/9-terminator"
 
