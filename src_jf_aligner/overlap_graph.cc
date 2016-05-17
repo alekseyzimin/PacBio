@@ -240,7 +240,9 @@ int overlap_graph::tile_maximal(const std::vector<int>& sort_array,
   for(auto it = res.rbegin(); it != res.rend(); ++it) {
     assert(ptr >= 0);
     *it = info[ptr].node;
+#ifndef NDEBUG
     int optr = ptr;
+#endif
     ptr = info[ptr].previous;
     assert(ptr < optr);
   }
