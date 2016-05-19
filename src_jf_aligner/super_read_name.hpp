@@ -6,6 +6,9 @@ Copyright University of Maryland 2015
 
 #include <limits>
 #include <algorithm>
+#include <cstdint>
+#include <string>
+#include <vector>
 #include <debug.hpp>
 
 class super_read_name {
