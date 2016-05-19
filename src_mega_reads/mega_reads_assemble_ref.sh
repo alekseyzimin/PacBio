@@ -7,9 +7,7 @@ set -e
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 ESTIMATED_GENOME_SIZE=0
-MER=17
-B=25
-d=0.05
+NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 
 #parsing arguments
 while [[ $# > 0 ]]
@@ -19,6 +17,10 @@ key="$1"
 case $key in
     -m|--masurca_run_path)
     MASURCA_ASSEMBLY_WORK1_PATH="$2"
+    shift
+    ;;
+    -t|--threads)
+    NUM_THREADS="$2"
     shift
     ;;
     -M|--alignment_mer)
@@ -118,8 +120,11 @@ fi
 fi
 
 ################setting parameters#########################
+MER=17
+B=25
+d=0.05
+
 KMER=`perl -ane 'BEGIN{$min=10000}{if($F[1]<$min){$min=$F[1]}}END{print $min}' $KUNITIGLENGTHS`
-NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 JF_SIZE=`ls -l $SUPERREADS | perl -ane '{print $F[4]}'`
 COORDS=mr.$KMER.$MER.$B.$d
 CA=CA.${COORDS}
