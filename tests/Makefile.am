@@ -12,7 +12,8 @@ TEST_LDADD = -L%D% -lgtest_main
 %C%_libgtest_a_SOURCES = %D%/gtest/src/gtest-all.cc %D%/misc.cc %D%/gtest/gtest.h %D%/misc.hpp
 %C%_libgtest_main_a_SOURCES = %D%/gtest/src/gtest-all.cc %D%/gtest/src/gtest_main.cc %D%/misc.cc
 
-%C%_speed_super_read_name_SOURCES = %D%/speed_super_read_name.cc src_jf_aligner/super_read_name.cc
+# %C%_speed_super_read_name_SOURCES = %D%/speed_super_read_name.cc src_jf_aligner/super_re
+# ad_name.cc
 
 %C%_test_super_read_name_SOURCES = %D%/test_super_read_name.cc src_jf_aligner/super_read_name.cc
 %C%_test_super_read_name_LDADD = $(TEST_LDADD)
