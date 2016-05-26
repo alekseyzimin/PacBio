@@ -170,13 +170,17 @@ fi
 TCOVERAGE=20
 if [ $ESTIMATED_GENOME_SIZE -gt 1 ];then
 MR_SIZE=$(stat -c%s "$COORDS.1.fa");
-COVERAGE=$((MR_SIZE/ESTIMATED_GENOME_SIZE+4));
-TCOVERAGE=`perl -e 'print int(int("'$COVERAGE'")/log(2)+1)'`
-echo "Coverage threshold for splitting unitigs is $TCOVERAGE $BATOPTIONS"
+COVERAGE=$((MR_SIZE/ESTIMATED_GENOME_SIZE+1));
+if [ $COVERAGE -le 5 ];then
+echo "Coverage of the mega-reads less than 5 -- using the super reads as well";
 SR_FRG=$COORDS.sr.frg
 if [ ! -s $SR_FRG ];then
-fasta2frg.pl sr 100 < $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > $SR_FRG.tmp && mv  $SR_FRG.tmp  $SR_FRG;
+fasta2frg.pl sr 200 < $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > $SR_FRG.tmp && mv  $SR_FRG.tmp  $SR_FRG;
 fi
+fi
+COVERAGE=`ls $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{print int(n/int('$ESTIMATED_GENOME_SIZE')/1.7+1)}'`;
+TCOVERAGE=$COVERAGE;
+echo "Coverage threshold for splitting unitigs is $TCOVERAGE"
 fi
 
 rm -f .rerun
@@ -217,7 +221,7 @@ cgwDemoteRBP=0 \
 cgwErrorRate=0.25 \
 stopAfter=consensusAfterUnitigger \
 $COORDS.1.frg $SR_FRG $OTHER_FRG 1> $CA.log 2>&1 && \
-recompute_astat_superreads.sh genome $CA $PE_AVG_READ_LENGTH work1/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt  && \
+recompute_astat_superreads_CA8.sh genome $CA $PE_AVG_READ_LENGTH $MASURCA_ASSEMBLY_WORK1_PATH/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt  $SR_FRG && \
 runCA \
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE" \
 cnsConcurrency=$NUM_THREADS \
