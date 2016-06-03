@@ -136,8 +136,8 @@ sub process_sorted_lines{
             $str="$pb $k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
 
             $join_allowed=0;
-	    $join_allowed=$allowed{$str} if(defined($allowed{$str})); #allow joins that are in multiple pacbios or rejoining broken megareads  
-            $join_allowed=1 if($last_mr eq $name && $bgn-$last_coord<5); #allow rejoining broken megareads when overlapping ends/gap small
+	    $join_allowed=$allowed{$str} if(defined($allowed{$str}) && $bgn>$last_coord); #allow joins that are in multiple pacbios with a gap.  without gap we need to see at least 11 bp overlap/alignment 
+            $join_allowed=1 if($last_mr eq $name && $bgn-$last_coord<20); #allow rejoining broken megareads when overlapping ends/gap small
 
             if($bgn>$last_coord){#if gap -- check if the closure is allowed
 		$max_gap_local=$max_gap_local_fwd[$gap_index]<$max_gap_local_rev[$gap_index]?$max_gap_local_fwd[$gap_index]:$max_gap_local_rev[$gap_index];
@@ -148,7 +148,7 @@ sub process_sorted_lines{
                 }
             }else{#overlapping
 		# we now allowing this globally $join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads
-	 	my $min_match=25;
+	 	my $min_match=11;
 		my $ind=-1;
 		my %ind=();
                 my $offset=-1;
@@ -172,9 +172,8 @@ sub process_sorted_lines{
                     }else{
                         $join_allowed=1;
                     }
-		}elsif($last_coord-$bgn>=5 || $join_allowed==1){#overlap short, but >= 5bp -- we allow the join or join was previously allowed for rejoining the broken read
+		}elsif($join_allowed==1){#we allow the join or join was previously allowed for rejoining the broken read
                     $offset=$last_coord-$bgn+1;
-		    $join_allowed=1;
 		}
 
 		if($join_allowed){#here if allowed means that either the overlap was too short or match was found
