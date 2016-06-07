@@ -89,6 +89,7 @@ sub process_sorted_lines{
     my $seq_len=0;
     my $sum_chunk_size=0;
     my $num_chunks=0;
+    my $min_match=35;
 
     for(my $i=0;$i<=$#args;$i++){
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
@@ -121,6 +122,24 @@ sub process_sorted_lines{
     my $gap_index=-1;
     foreach $l(@args){
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$l};
+        if($bgn<=$last_coord && $last_coord-$bgn<=$min_match){#if small overlap, we extend the matches to find a better overlap
+	    my $tlen=length($last_tail);
+	    if($tlen<$min_match){
+		$outseq.=$last_tail;
+		$last_coord+=$tlen;
+	    }else{
+		$outseq.=substr($last_tail,0,$min_match);
+		$last_coord+=$min_match;
+	    }
+	    if($mbgn<$min_match){
+		$mbgn=1;
+		$bgn-=$mbgn;
+		if($bgn<1){
+		    $mbgn-=($bgn-1);
+		    $bgn=1;
+		}
+	    }
+        }
 	$seq=substr($mseq,$mbgn-1,$mend-$mbgn+1);
         die("inconsistent sequence length") if(not(length($mseq)==$mlen));
         die("pacbio read $pb does not exist in the sequence file!!!") if(not(defined($pbseq{$pb})));
@@ -136,7 +155,7 @@ sub process_sorted_lines{
             $str="$pb $k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
 
             $join_allowed=0;
-	    $join_allowed=$allowed{$str} if(defined($allowed{$str}) && $bgn>$last_coord); #allow joins that are in multiple pacbios with a gap.  without gap we need to see at least 11 bp overlap/alignment 
+	    $join_allowed=$allowed{$str} if(defined($allowed{$str})); #allow joins that are in multiple pacbios with a gap.  without gap we need to see at least 11 bp overlap/alignment 
             $join_allowed=1 if($last_mr eq $name && $bgn-$last_coord<20); #allow rejoining broken megareads when overlapping ends/gap small
 
             if($bgn>$last_coord){#if gap -- check if the closure is allowed
@@ -148,12 +167,11 @@ sub process_sorted_lines{
                 }
             }else{#overlapping
 		# we now allowing this globally $join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads
-	 	my $min_match=11;
 		my $ind=-1;
 		my %ind=();
                 my $offset=-1;
 
-		if($last_coord-$bgn > $min_match){ #it is possible to check for overlap
+		if($last_coord-$bgn >= $min_match){ #it is possible to check for overlap
 		    for(my $j=0;$j<10;$j++){
                     	my $ttt=index($outread,substr($seq,$j,$min_match),length($outread)-($last_coord-$bgn)*$fudge_factor);
 		        $ind{$ttt-$j}++ if($ttt>-1);
@@ -189,20 +207,21 @@ sub process_sorted_lines{
 		    $outread.="N".$seq;
 		}
 	    }
-            }
-	    $last_coord=$end;
-	    $last_mr=$name;
-	    $last_seq=$seq;
-	    $last_mend=$mend;
-	    last if($last_coord>=length($pbseq{$pb}));	
 	}
-	return($outread);
+	$last_coord=$end;
+	$last_mr=$name;
+	$last_seq=$seq;
+	$last_mend=$mend;
+	$last_tail=(length($mseq)>$mend) ? "" : substr($mseq,$mend+1);
+	last if($last_coord>=length($pbseq{$pb}));	
     }
+    return($outread);
+}
 
-    sub reverse_complement{
-	my $str=$_[0];
-	$str =~ tr/acgtACGTNn/tgcaTGCANn/;
-	$str = reverse ($str);
-	return ($str);
-    }
+sub reverse_complement{
+    my $str=$_[0];
+    $str =~ tr/acgtACGTNn/tgcaTGCANn/;
+    $str = reverse ($str);
+    return ($str);
+}
 
