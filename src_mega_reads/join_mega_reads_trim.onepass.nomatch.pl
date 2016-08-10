@@ -155,7 +155,11 @@ sub process_sorted_lines{
             $str="$pb $k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
 
             $join_allowed=0;
+            if(scalar(keys %allowed)>0){
 	    $join_allowed=$allowed{$str} if(defined($allowed{$str})); #allow joins that are in multiple pacbios with a gap.  without gap we need to see at least 11 bp overlap/alignment 
+            }else{
+            $join_allowed=1;
+            }
             $join_allowed=1 if($last_mr eq $name && $bgn-$last_coord<20); #allow rejoining broken megareads when overlapping ends/gap small
 
             if($bgn>$last_coord){#if gap -- check if the closure is allowed

@@ -147,6 +147,10 @@ fi
 touch .rerun
 fi
 
+PB_SIZE=`ls -l $PACBIO | perl -ane '{print $F[4]}'`
+
+if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -lt 25 ];then
+
 if [ ! -s $COORDS.all_mr.maximal.fa ] || [ -e .rerun ];then
 perl -ane '{
 if($F[0] =~ /^\>/){
@@ -185,6 +189,11 @@ fi
 touch .rerun
 fi
 
+else
+echo "High coverage Pacbio reads >25x, skipping the secondary align."
+ln -s $COORDS.txt $COORDS.mr.txt
+fi
+
 if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
 echo "Refining alignments"
 NUM_PACBIO_READS_PER_BATCH=`grep --text '^>'  $PACBIO | wc -l | awk '{bs=int($1/1024);if(bs<1000){bs=1000};if(bs>100000){bs=100000};}END{print bs}'` 
@@ -195,6 +204,7 @@ fi
 
 if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 echo "Joining"
+if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -lt 25 ];then
 awk 'BEGIN{flag=0}{
         if($0 ~ /^>/){
                 flag=0;
@@ -218,6 +228,10 @@ awk 'BEGIN{flag=0}{
         last_coord=$2+$5-$4;
 }' ${COORDS}.all.txt |sort -nk3 -k4n -S 20%|uniq -D -f 2 | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed
 join_mega_reads_trim.onepass.nomatch.pl $PACBIO ${COORDS}.1.allowed $KMER  < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.inserts.txt && mv $COORDS.1.fa.tmp $COORDS.1.fa
+else
+echo "" > ${COORDS}.1.allowed
+join_mega_reads_trim.onepass.nomatch.hc.pl $PACBIO ${COORDS}.1.allowed $KMER  < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.inserts.txt && mv $COORDS.1.fa.tmp $COORDS.1.fa
+fi
 touch .rerun
 fi
 
