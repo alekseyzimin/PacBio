@@ -67,7 +67,6 @@ sub process_lines{
     $o->maxgap(200);
     $o->breaklen(120);
     $o->forward();
-    $o->threads(1);
     my $seq="";
     my $sum_chunk_size=0;
     my $num_chunks=0;
