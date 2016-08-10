@@ -239,7 +239,7 @@ if [ ! -s $SR_FRG ];then
 fasta2frg.pl sr 200 < $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > $SR_FRG.tmp && mv  $SR_FRG.tmp  $SR_FRG;
 fi
 fi
-COVERAGE=`ls $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{print int(n/int('$ESTIMATED_GENOME_SIZE')/1.25+1)}'`;
+COVERAGE=`ls $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{print int(n/int('$ESTIMATED_GENOME_SIZE'))}'`;
 TCOVERAGE=$COVERAGE;
 echo "Coverage threshold for splitting unitigs is $TCOVERAGE"
 fi
