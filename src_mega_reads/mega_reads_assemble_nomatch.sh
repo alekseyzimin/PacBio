@@ -136,6 +136,20 @@ echo "Using $NUM_THREADS threads"
 echo "Output prefix $COORDS"
 
 rm -f .rerun
+###############removing redundant subreads or reducing the coverage by picking the longest reads##############################
+PB_SIZE=`ls -l $PACBIO | perl -ane '{print $F[4]}'`
+if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -gt 30 ];then
+echo "Pacbio coverage >30x, using 30x of the longest reads";
+if [ ! -s "pacbio_30xlongest.fa" ] ;then
+ufasta extract -f <(ufasta sizes -H $PACBIO | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*30;$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') $PACBIO > pacbio_30xlongest.fa.tmp && mv pacbio_30xlongest.fa.tmp pacbio_30xlongest.fa && PACBIO="pacbio_30xlongest.fa";
+fi
+else
+echo "Pacbio coverage <30x, using the longest subreads";
+if [ ! -s "pacbio_nonredundant.fa" ] ;then
+ufasta extract -f <(grep --text '^>' $PACBIO | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') $PACBIO > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa && PACBIO="pacbio_nonredundant.fa";
+fi
+fi
+
 
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 1"
@@ -146,10 +160,6 @@ create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER
 fi
 touch .rerun
 fi
-
-PB_SIZE=`ls -l $PACBIO | perl -ane '{print $F[4]}'`
-
-if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -lt 25 ];then
 
 if [ ! -s $COORDS.all_mr.maximal.fa ] || [ -e .rerun ];then
 perl -ane '{
@@ -189,11 +199,6 @@ fi
 touch .rerun
 fi
 
-else
-echo "High coverage Pacbio reads >25x, skipping the secondary align."
-ln -s $COORDS.txt $COORDS.mr.txt
-fi
-
 if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
 echo "Refining alignments"
 NUM_PACBIO_READS_PER_BATCH=`grep --text '^>'  $PACBIO | wc -l | awk '{bs=int($1/1024);if(bs<1000){bs=1000};if(bs>100000){bs=100000};}END{print bs}'` 
@@ -204,7 +209,6 @@ fi
 
 if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 echo "Joining"
-if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -lt 25 ];then
 awk 'BEGIN{flag=0}{
         if($0 ~ /^>/){
                 flag=0;
@@ -228,10 +232,6 @@ awk 'BEGIN{flag=0}{
         last_coord=$2+$5-$4;
 }' ${COORDS}.all.txt |sort -nk3 -k4n -S 20%|uniq -D -f 2 | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed
 join_mega_reads_trim.onepass.nomatch.pl $PACBIO ${COORDS}.1.allowed $KMER  < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.inserts.txt && mv $COORDS.1.fa.tmp $COORDS.1.fa
-else
-echo "" > ${COORDS}.1.allowed
-join_mega_reads_trim.onepass.nomatch.pl $PACBIO ${COORDS}.1.allowed $KMER  < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.inserts.txt && mv $COORDS.1.fa.tmp $COORDS.1.fa
-fi
 touch .rerun
 fi
 
