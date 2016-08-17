@@ -188,7 +188,7 @@ rm -f .rerun
 echo "Running assembly"
 if [ ! -s "${CA}/7-0-CGW/cgw.out" ]; then
 runCA \
-batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE" \
+batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
 cnsConcurrency=$NUM_THREADS \
 cnsMinFrags=1000 \
 unitigger=bogart \
@@ -203,8 +203,6 @@ ovlCorrConcurrency=4 \
 frgCorrThreads=$NUM_THREADS \
 mbtThreads=$NUM_THREADS \
 ovlThreads=2 \
-ovlMerThreshold=300 \
-obtMerThreshold=400 \
 ovlHashBlockLength=100000000 \
 ovlRefBlockSize=1000000 \
 ovlConcurrency=$NUM_THREADS \

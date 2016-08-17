@@ -245,8 +245,8 @@ fi
 TCOVERAGE=20
 if [ $ESTIMATED_GENOME_SIZE -gt 1 ];then
 MR_SIZE=$(stat -c%s "$COORDS.1.fa");
-COVERAGE=$((MR_SIZE/ESTIMATED_GENOME_SIZE+1));
-if [ $COVERAGE -le 5 ];then
+MCOVERAGE=$((MR_SIZE/ESTIMATED_GENOME_SIZE+1));
+if [ $MCOVERAGE -le 5 ];then
 echo "Coverage of the mega-reads less than 5 -- using the super reads as well";
 SR_FRG=$COORDS.sr.frg
 if [ ! -s $SR_FRG ];then
@@ -261,13 +261,48 @@ fi
 rm -f .rerun
 
 echo "Running assembly"
+if [ $MCOVERAGE -le 5 ] && [ ! -s "${CA}/7-0-CGW/cgw.out" ]; then
 runCA \
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
 cnsConcurrency=$NUM_THREADS \
 cnsMinFrags=1000 \
 unitigger=bogart \
-merylMemory=32768 \
-ovlStoreMemory=32768 \
+merylMemory=65536 \  
+ovlStoreMemory=65536 \   
+utgGraphErrorLimit=1000  \
+utgMergeErrorLimit=1000 \
+utgGraphErrorRate=0.035 \
+utgMergeErrorRate=0.035 \
+ovlCorrBatchSize=100000 \
+ovlCorrConcurrency=4 \
+frgCorrThreads=$NUM_THREADS \
+mbtThreads=$NUM_THREADS \
+ovlThreads=2 \
+ovlHashBlockLength=100000000 \
+ovlRefBlockSize=1000000 \   
+ovlConcurrency=$NUM_THREADS \
+doFragmentCorrection=1 \ 
+doOverlapBasedTrimming=1 \
+doUnitigSplitting=0 \
+doChimeraDetection=normal \
+-p genome -d $CA  \
+merylThreads=$NUM_THREADS \
+cnsReuseUnitigs=1 \
+cgwMergeMissingThreshold=-1 \
+cgwMergeFilterLevel=1 \
+cgwDemoteRBP=0 \  
+cgwErrorRate=0.25 \
+stopAfter=consensusAfterUnitigger \
+$COORDS.1.frg $SR_FRG $OTHER_FRG 1> $CA.log 2>&1 && \
+recompute_astat_superreads_CA8.sh genome $CA $PE_AVG_READ_LENGTH $MASURCA_ASSEMBLY_WORK1_PATH/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt  $SR_FRG
+fi
+runCA \
+batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
+cnsConcurrency=$NUM_THREADS \
+cnsMinFrags=1000 \
+unitigger=bogart \
+merylMemory=65536 \
+ovlStoreMemory=65536 \
 utgGraphErrorLimit=1000  \
 utgMergeErrorLimit=1000 \
 utgGraphErrorRate=0.035 \
