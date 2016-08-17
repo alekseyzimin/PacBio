@@ -123,7 +123,7 @@ fi
 fi
 
 ################setting parameters#########################
-KMER=`perl -ane 'BEGIN{$min=10000}{if($F[1]<$min){$min=$F[1]}}END{print $min}' $KUNITIGLENGTHS`
+KMER=`awk 'BEGIN{min=10000}{if($2<min) min=$2}END{print min}' $KUNITIGLENGTHS`
 JF_SIZE=`ls -l $SUPERREADS | perl -ane '{print $F[4]}'`
 COORDS=mr.$KMER.$MER.$B.$d
 CA=CA.${COORDS}
