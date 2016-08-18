@@ -124,7 +124,7 @@ fi
 
 ################setting parameters#########################
 KMER=`awk 'BEGIN{min=10000}{if($2<min) min=$2}END{print min}' $KUNITIGLENGTHS`
-JF_SIZE=`ls -l $SUPERREADS | perl -ane '{print $F[4]}'`
+JF_SIZE=$(stat -c%s $SUPERREADS);
 COORDS=mr.$KMER.$MER.$B.$d
 CA=CA.${COORDS}
 
@@ -137,7 +137,7 @@ echo "Output prefix $COORDS"
 
 rm -f .rerun
 ###############removing redundant subreads or reducing the coverage by picking the longest reads##############################
-PB_SIZE=`ls -l $PACBIO | perl -ane '{print $F[4]}'`
+PB_SIZE=$(stat -c%s $PACBIO);
 if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -gt 30 ];then
 echo "Pacbio coverage >30x, using 30x of the longest reads";
 if [ ! -s "pacbio_30xlongest.fa" ] ;then

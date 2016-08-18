@@ -123,9 +123,8 @@ fi
 MER=17
 B=25
 d=0.05
-
-KMER=`perl -ane 'BEGIN{$min=10000}{if($F[1]<$min){$min=$F[1]}}END{print $min}' $KUNITIGLENGTHS`
-JF_SIZE=`ls -l $SUPERREADS | perl -ane '{print $F[4]}'`
+KMER=`awk 'BEGIN{min=10000}{if($2<min) min=$2}END{print min}' $KUNITIGLENGTHS`
+JF_SIZE=$(stat -c%s $SUPERREADS);
 COORDS=mr.$KMER.$MER.$B.$d
 CA=CA.${COORDS}
 
