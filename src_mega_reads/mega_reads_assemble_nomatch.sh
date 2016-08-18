@@ -141,13 +141,15 @@ PB_SIZE=$(stat -c%s $PACBIO);
 if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -gt 30 ];then
 echo "Pacbio coverage >30x, using 30x of the longest reads";
 if [ ! -s "pacbio_30xlongest.fa" ] ;then
-ufasta extract -f <(ufasta sizes -H $PACBIO | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*30;$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') $PACBIO > pacbio_30xlongest.fa.tmp && mv pacbio_30xlongest.fa.tmp pacbio_30xlongest.fa && PACBIO="pacbio_30xlongest.fa";
+ufasta extract -f <(ufasta sizes -H $PACBIO | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*30;$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') $PACBIO > pacbio_30xlongest.fa.tmp && mv pacbio_30xlongest.fa.tmp pacbio_30xlongest.fa;
 fi
+PACBIO="pacbio_30xlongest.fa";
 else
 echo "Pacbio coverage <30x, using the longest subreads";
 if [ ! -s "pacbio_nonredundant.fa" ] ;then
-ufasta extract -f <(grep --text '^>' $PACBIO | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') $PACBIO > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa && PACBIO="pacbio_nonredundant.fa";
+ufasta extract -f <(grep --text '^>' $PACBIO | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') $PACBIO > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa;
 fi
+PACBIO="pacbio_nonredundant.fa";
 fi
 
 
