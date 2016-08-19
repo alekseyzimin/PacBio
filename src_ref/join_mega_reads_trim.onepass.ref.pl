@@ -7,10 +7,8 @@
 #this code produces joined mega-reads
 #
 #first we read in PB sequences
-my $kmer=40;
 my $fudge_factor=1.2;
 my $min_len_output=400;
-$kmer*=$fudge_factor;
 
 my @lines=();
 my $outread="";
@@ -54,61 +52,67 @@ if(@lines){
 
 
 sub process_sorted_lines{
-    my $outread="";
-    my $last_seq="";
-    $last_coord =-1000000000;
-    my @max_gap_local_fwd=();
-    my @max_gap_local_rev=();
-    my @args=@_;
-    my $max_gap=750;
-    my $gap_coeff=1;
-    my $outread_len=0;
-    my $seq_len=0;
-    my $sum_chunk_size=0;
-    my $num_chunks=0;
-    my $join_allowed=0;
+  my $outread="";
+  my $last_seq="";
+  $last_coord =-1000000000;
+  my @max_gap_local_fwd=();
+  my @max_gap_local_rev=();
+  my @args=@_;
+  my $max_gap=750;
+  my $gap_coeff=1;
+  my $outread_len=0;
+  my $seq_len=0;
+  my $sum_chunk_size=0;
+  my $num_chunks=0;
+  my $join_allowed=0;
+  my $min_match=27;
 
-    for(my $i=0;$i<=$#args;$i++){
-      ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
-      $sum_chunk_size+=($mend-$mbgn);
-      $num_chunks++;
-    }
-
-    return($outread) if($sum_chunk_size/$num_chunks<400);#average chunk size must be >400bp
-
-    my $gap_index=-1;
-    foreach $l(@args){
-      ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$l};
-      $seq=substr($mseq,$mbgn-1,$mend-$mbgn+1);
-      die("inconsistent sequence length") if(not(length($mseq)==$mlen));
-      $gap_index++;
-      if($outread eq ""){
-        $outread=$seq; # the first chunk
+  foreach $l(@args){
+    ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$l};
+    if($bgn<=$last_coord && $last_coord-$bgn<=$min_match){#if small overlap, we extend the matches to find a better overlap
+      my $tlen=length($last_tail);
+      if($tlen<$min_match){
+        $outseq.=$last_tail;
+        $last_coord+=$tlen;
       }else{
-        next if($end<=$last_coord);
-        $join_allowed=1 if($last_mr eq $name && $bgn-$last_coord<5); #allow rejoining broken megareads when overlapping ends/gap small
+        $outseq.=substr($last_tail,0,$min_match);
+        $last_coord+=$min_match;
+      }
+      if($mbgn<$min_match){
+        $mbgn=1;
+        $bgn-=$mbgn;
+        if($bgn<1){
+          $mbgn-=($bgn-1);
+          $bgn=1;
+        }
+      }
+    }
+    $seq=substr($mseq,$mbgn-1,$mend-$mbgn+1);
+    die("inconsistent sequence length") if(not(length($mseq)==$mlen));
+    $gap_index++;
+    if($outread eq ""){
+      $outread=$seq; # the first chunk
+    }else{
+      next if($end<=$last_coord);
 
-
-# we now allowing this globally $join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads
-        my $min_match=25;
+      if($last_coord-$bgn >= $min_match){ #it is possible to check for overlap
         my $ind=-1;
         my %ind=();
         my $offset=-1;
 
-        if($last_coord-$bgn > $min_match){ #it is possible to check for overlap
-          for(my $j=0;$j<10;$j++){
-            my $ttt=index($outread,substr($seq,$j,$min_match),length($outread)-($last_coord-$bgn)*$fudge_factor);
-            $ind{$ttt-$j}++ if($ttt>-1);
-          }
-          my $max_ind=-1;
-          foreach my $ttt (keys %ind){
-            if($ind{$ttt}>$max_ind){$max_ind=$ind{$ttt};$ind=$ttt;}
-          }
-          if($ind==-1 || ($ind>-1 && abs(($last_coord-$bgn)-(length($outread)-$ind))>(0.2*($last_coord-$bgn)+10))){ #if no overlap or overlap inconsistent with implied
-            $join_allowed=0;
-          }else{
-            $join_allowed=1;
-          }
+        for(my $j=0;$j<10;$j++){
+          my $ttt=index($outread,substr($seq,$j,$min_match),length($outread)-($last_coord-$bgn)*$fudge_factor);
+          $ind{$ttt-$j}++ if($ttt>-1);
+        }
+        my $max_ind=-1;
+        foreach my $ttt (keys %ind){
+          if($ind{$ttt}>$max_ind){$max_ind=$ind{$ttt};$ind=$ttt;}
+        }
+        if($ind==-1 || ($ind>-1 && abs(($last_coord-$bgn)-(length($outread)-$ind))>(0.2*($last_coord-$bgn)+10))){ #if no overlap or overlap inconsistent with implied
+          $join_allowed=0;
+        }else{
+          $join_allowed=1;
+        }
 
         if($join_allowed){#here if allowed means that either the overlap was too short or match was found
           if($ind>-1){
@@ -123,19 +127,20 @@ sub process_sorted_lines{
       }else{#gap
         $outread.="N".$seq;
       }
-      }
-      $last_coord=$end;
-      $last_mr=$name;
-      $last_seq=$seq;
-      $last_mend=$mend;
     }
-    return($outread);
+    $last_coord=$end;
+    $last_mr=$name;
+    $last_seq=$seq;
+    $last_mend=$mend;
+    $last_tail=(length($mseq)>$mend) ? "" : substr($mseq,$mend+1);
+  }
+  return($outread);
 }
 
 sub reverse_complement{
-  my $str=$_[0];
-  $str =~ tr/acgtACGTNn/tgcaTGCANn/;
-  $str = reverse ($str);
-  return ($str);
+    my $str=$_[0];
+    $str =~ tr/acgtACGTNn/tgcaTGCANn/;
+    $str = reverse ($str);
+    return ($str);
 }
 
