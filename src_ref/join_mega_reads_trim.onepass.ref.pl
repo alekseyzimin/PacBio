@@ -65,7 +65,7 @@ sub process_sorted_lines{
   my $sum_chunk_size=0;
   my $num_chunks=0;
   my $join_allowed=0;
-  my $min_match=27;
+  my $min_match=25;
 
   foreach $l(@args){
     ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$l};
