@@ -138,6 +138,9 @@ echo "Output prefix $COORDS"
 rm -f .rerun
 ###############removing redundant subreads or reducing the coverage by picking the longest reads##############################
 PB_SIZE=$(stat -c%s $PACBIO);
+if [ $MER -lt 15 ];then
+PACBIO1=$PACBIO;
+else
 if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -gt 30 ];then
 echo "Pacbio coverage >30x, using 30x of the longest reads";
 if [ ! -s "pacbio_30xlongest.fa" ] ;then
@@ -151,7 +154,7 @@ ufasta extract -f <(grep --text '^>' $PACBIO | awk -F '/' '{split($3,a,"_");prin
 fi
 PACBIO1="pacbio_nonredundant.fa";
 fi
-
+fi
 
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 1"
