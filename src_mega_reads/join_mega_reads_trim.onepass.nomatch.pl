@@ -194,8 +194,9 @@ sub process_sorted_lines{
                     }else{
                         $join_allowed=1;
                     }
-		}elsif($join_allowed==1){#we allow the join or join was previously allowed for rejoining the broken read
+		}elsif($last_coord-$bgn>=5 || $join_allowed==1){#we allow the join or join was previously allowed for rejoining the broken read
                     $offset=$last_coord-$bgn+1;
+                    $join_allowed=1;
 		}
 
 		if($join_allowed){#here if allowed means that either the overlap was too short or match was found
