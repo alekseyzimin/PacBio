@@ -9,8 +9,8 @@
 #first we read in PB sequences
 my $pbseqfile=$ARGV[0];
 my $allowed_gaps=$ARGV[1];
-my $bad_pb=$ARGV[3];
 my $min_len_output=400;
+my $fudge_factor=1.2;
 
 my $rn="";
 my %pbseq;
@@ -163,12 +163,12 @@ sub process_sorted_lines{
 		    foreach my $ttt (keys %ind){
 			if($ind{$ttt}>$max_ind){$max_ind=$ind{$ttt};$ind=$ttt;}
 		    }
-                    if($ind==-1){#no overlap
+                    if($ind>-1){
+                      $join_allowed=1;
+                    }else{
                       $join_allowed=0;
-                    }else{#all good
-                        $join_allowed=1;
                     }
-		}elsif($last_coord-$bgn>=10 ||$join_allowed==1){#we allow the join or join was previously allowed for rejoining the broken read
+		}elsif($last_coord-$bgn>=5 ||$join_allowed==1){#we allow the join or join was previously allowed for rejoining the broken read
                     $offset=$last_coord-$bgn+1;
                     $join_allowed=1;
 		}
