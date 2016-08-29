@@ -141,14 +141,14 @@ PB_SIZE=$(stat -c%s $PACBIO);
 if [ $MER -lt 15 ];then
 PACBIO1=$PACBIO;
 else
-if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -gt 30 ];then
-echo "Pacbio coverage >30x, using 30x of the longest reads";
-if [ ! -s "pacbio_30xlongest.fa" ] ;then
-ufasta extract -f <(ufasta sizes -H $PACBIO | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*30;$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') $PACBIO > pacbio_30xlongest.fa.tmp && mv pacbio_30xlongest.fa.tmp pacbio_30xlongest.fa;
+if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -gt 35 ];then
+echo "Pacbio coverage >35x, using 35x of the longest reads";
+if [ ! -s "pacbio_35xlongest.fa" ] ;then
+ufasta extract -f <(ufasta sizes -H $PACBIO | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*35;$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') $PACBIO > pacbio_35xlongest.fa.tmp && mv pacbio_35xlongest.fa.tmp pacbio_35xlongest.fa;
 fi
-PACBIO1="pacbio_30xlongest.fa";
+PACBIO1="pacbio_35xlongest.fa";
 else
-echo "Pacbio coverage <30x, using the longest subreads";
+echo "Pacbio coverage <35x, using the longest subreads";
 if [ ! -s "pacbio_nonredundant.fa" ] ;then
 ufasta extract -f <(grep --text '^>' $PACBIO | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') $PACBIO > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa;
 fi
@@ -159,9 +159,9 @@ fi
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 1"
 if numactl --show 1> /dev/null 2>&1;then
-numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
+numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $PACBIO1 -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
 else
-create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
+create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $PACBIO1 -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
 fi
 touch .rerun
 fi
@@ -214,7 +214,7 @@ fi
 
 if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 echo "Joining"
-if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -gt 30 ];then
+if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -gt 35 ];then
 echo "" > ${COORDS}.1.allowed
 else
 awk 'BEGIN{flag=0}{

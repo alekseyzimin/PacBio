@@ -29,7 +29,7 @@ open(FILE,$allowed_gaps);
 while($line=<FILE>){
     chomp($line);
     @f=split(/\s+/,$line);
-    $allowed{"$f[0] $f[2] $f[3]"}=$f[-1];
+    $allowed{"$f[0] $f[2] $f[3]"}=$f[-1] if(defined($f[3]));
 }
 
 my @lines=();
