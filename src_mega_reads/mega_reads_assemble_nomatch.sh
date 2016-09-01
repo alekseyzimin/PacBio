@@ -11,6 +11,7 @@ MER=15
 B=17
 d=0.029
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
+PB_HC=40;
 
 #parsing arguments
 while [[ $# > 0 ]]
@@ -139,16 +140,17 @@ rm -f .rerun
 ###############removing redundant subreads or reducing the coverage by picking the longest reads##############################
 PB_SIZE=$(stat -c%s $PACBIO);
 if [ $MER -lt 15 ];then
+echo "Detected nanopore data";
 PACBIO1=$PACBIO;
 else
-if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -gt 35 ];then
-echo "Pacbio coverage >35x, using 35x of the longest reads";
-if [ ! -s "pacbio_35xlongest.fa" ] ;then
-ufasta extract -f <(ufasta sizes -H $PACBIO | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*35;$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') $PACBIO > pacbio_35xlongest.fa.tmp && mv pacbio_35xlongest.fa.tmp pacbio_35xlongest.fa;
+if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -gt ${PB_HC} ];then
+echo "Pacbio coverage >${PB_HC}x, using ${PB_HC}x of the longest reads";
+if [ ! -s "pacbio_${PB_HC}xlongest.fa" ] ;then
+ufasta extract -f <(ufasta sizes -H $PACBIO | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') $PACBIO > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa;
 fi
-PACBIO1="pacbio_35xlongest.fa";
+PACBIO1="pacbio_${PB_HC}xlongest.fa";
 else
-echo "Pacbio coverage <35x, using the longest subreads";
+echo "Pacbio coverage <${PB_HC}x, using the longest subreads";
 if [ ! -s "pacbio_nonredundant.fa" ] ;then
 ufasta extract -f <(grep --text '^>' $PACBIO | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') $PACBIO > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa;
 fi
@@ -214,7 +216,7 @@ fi
 
 if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 echo "Joining"
-if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -gt 35 ];then
+if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -gt ${PB_HC} ];then
 echo "" > ${COORDS}.1.allowed
 else
 awk 'BEGIN{flag=0}{
