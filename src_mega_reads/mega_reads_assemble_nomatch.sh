@@ -139,7 +139,7 @@ echo "Output prefix $COORDS"
 rm -f .rerun
 ###############removing redundant subreads or reducing the coverage by picking the longest reads##############################
 PB_SIZE=$(stat -c%s $PACBIO);
-if [ $MER -lt 15 ];then
+if [ $B -lt 15 ];then
 echo "Detected nanopore data";
 PACBIO1=$PACBIO;
 else
@@ -216,6 +216,8 @@ fi
 
 if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 echo "Joining"
+#allow all joins if high coverage nanopore or pacbio
+#if [ $PACBIO1 == $PACBIO  ] || [ $PACBIO1 == "pacbio_${PB_HC}xlongest.fa" ];then
 if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -gt ${PB_HC} ];then
 echo "" > ${COORDS}.1.allowed
 else
