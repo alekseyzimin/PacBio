@@ -7,10 +7,7 @@
 #this code refines the alignments of mega reads to pacbio reads using nucmer
 use mummer;
 
-#first we read in PB sequences
-my $pbseqfile=$ARGV[0];
-my $PREFIX=$ARGV[1];
-my %needed_pb;
+my $PREFIX=$ARGV[0];
 my $rn="";
 my %pbseq;
 my $readnumber=0;
@@ -20,20 +17,9 @@ while($line=<STDIN>){
     push(@file,$line);
     chomp($line);
     if($line =~ /^>/){
-	($rn,$junk)=split(/\s+/,substr($line,1));
-        $needed_pb{$rn}=1;
+	($rn,$seq)=split(/\s+/,substr($line,1));
+        $pbseq{$rn}=$seq;
 	}
-}
-
-open(FILE,$pbseqfile);
-while($line=<FILE>){
-    chomp($line);
-    if($line =~ /^>/){
-	@f=split(/\s+/,$line);
-	$rn=substr($f[0],1);
-    }else{
-	$pbseq{$rn}.=$line if($needed_pb{$rn});
-    }
 }
 
 print "pacbio mega-reads\nNUCMER\n";
