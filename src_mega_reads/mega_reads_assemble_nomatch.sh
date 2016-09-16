@@ -7,6 +7,7 @@ set -e
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 ESTIMATED_GENOME_SIZE=0
+MAX_GAP=750
 MER=15
 B=17
 d=0.029
@@ -145,6 +146,7 @@ PACBIO1=$PACBIO;
 else
 if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -gt ${PB_HC} ];then
 echo "Pacbio coverage >${PB_HC}x, using ${PB_HC}x of the longest reads";
+MAX_GAP=2000
 if [ ! -s "pacbio_${PB_HC}xlongest.fa" ] ;then
 ufasta extract -f <(ufasta sizes -H $PACBIO | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') $PACBIO > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa;
 fi
@@ -244,7 +246,7 @@ awk 'BEGIN{flag=0}{
         last_coord=$2+$5-$4;
 }' ${COORDS}.all.txt |sort -nk3 -k4n -S 20%|uniq -D -f 2 | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed
 fi
-join_mega_reads_trim.onepass.nomatch.pl $PACBIO1 ${COORDS}.1.allowed  < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.inserts.txt && mv $COORDS.1.fa.tmp $COORDS.1.fa
+join_mega_reads_trim.onepass.nomatch.pl $PACBIO1 ${COORDS}.1.allowed  $MAX_GAP < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.inserts.txt && mv $COORDS.1.fa.tmp $COORDS.1.fa
 touch .rerun
 fi
 

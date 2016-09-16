@@ -9,6 +9,7 @@
 #first we read in PB sequences
 my $pbseqfile=$ARGV[0];
 my $allowed_gaps=$ARGV[1];
+my $max_gap=$ARGV[2];
 my $min_len_output=400;
 my $fudge_factor=1.2;
 
@@ -79,7 +80,6 @@ sub process_sorted_lines{
     my @max_gap_local_fwd=();
     my @max_gap_local_rev=();
     my @args=@_;
-    my $max_gap=750;
     my $gap_coeff=1;
     my $outread_len=0;
     my $seq_len=0;
