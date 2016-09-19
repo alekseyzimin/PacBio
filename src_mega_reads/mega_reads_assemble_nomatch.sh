@@ -7,7 +7,7 @@ set -e
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 ESTIMATED_GENOME_SIZE=0
-MAX_GAP=750
+MAX_GAP=2000
 MER=15
 B=17
 d=0.029

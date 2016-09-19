@@ -10,7 +10,7 @@
 my $pbseqfile=$ARGV[0];
 my $allowed_gaps=$ARGV[1];
 my $max_gap=$ARGV[2];
-my $min_len_output=400;
+my $min_len_output=500;
 my $fudge_factor=1.2;
 
 my $rn="";
