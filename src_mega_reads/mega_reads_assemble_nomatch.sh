@@ -285,8 +285,9 @@ if [ $MCOVERAGE -le 5 ] && [ ! -s "${CA}/7-0-CGW/cgw.out" ]; then
 runCA \
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
 cnsConcurrency=$NUM_THREADS \
-cnsMinFrags=1000 \
+cnsMinFrags=10000 \
 unitigger=bogart \
+consensus=pbutgcns \
 merylMemory=65536 \
 ovlStoreMemory=65536 \
 utgGraphErrorLimit=1000  \
@@ -319,7 +320,7 @@ else
 runCA \
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
 cnsConcurrency=$NUM_THREADS \
-cnsMinFrags=1000 \
+cnsMinFrags=10000 \
 consensus=pbutgcns \
 unitigger=bogart \
 merylMemory=65536 \
