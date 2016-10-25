@@ -210,7 +210,7 @@ fi
 
 if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
 echo "Refining alignments"
-if parallel -h 1> /dev/null 2>&1;then
+if which parallel 1> /dev/null 2>&1;then
 NUM_PACBIO_READS_PER_BATCH=`grep --text '^>'  $PACBIO1 | wc -l | awk '{bs=int($1/1024);if(bs<1000){bs=1000};if(bs>100000){bs=100000};}END{print bs}'` 
 awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt | add_pb_seq.pl $PACBIO1 | split_matches_file.pl $NUM_PACBIO_READS_PER_BATCH .matches && parallel "refine.sh $COORDS {1} $KMER" ::: .matches.* && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp
 else
@@ -313,8 +313,43 @@ cgwMergeFilterLevel=1 \
 cgwDemoteRBP=0 \
 cgwErrorRate=0.25 \
 stopAfter=consensusAfterUnitigger \
-$COORDS.1.frg $SR_FRG $OTHER_FRG 1> $CA.log 2>&1 && \
+$COORDS.1.frg $SR_FRG $OTHER_FRG 1> $CA.log 2>&1 &&
 recompute_astat_superreads_CA8.sh genome $CA $PE_AVG_READ_LENGTH $MASURCA_ASSEMBLY_WORK1_PATH/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt  $SR_FRG
+else
+runCA \
+batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
+cnsConcurrency=$NUM_THREADS \
+cnsMinFrags=1000 \
+consensus=pbutgcns \
+unitigger=bogart \
+merylMemory=65536 \
+ovlStoreMemory=65536 \
+utgGraphErrorLimit=1000  \
+utgMergeErrorLimit=1000 \
+utgGraphErrorRate=0.035 \
+utgMergeErrorRate=0.035 \
+ovlCorrBatchSize=100000 \
+ovlCorrConcurrency=4 \
+frgCorrThreads=$NUM_THREADS \
+mbtThreads=$NUM_THREADS \
+ovlThreads=2 \
+ovlHashBlockLength=100000000 \
+ovlRefBlockSize=1000000 \
+ovlConcurrency=$NUM_THREADS \
+doFragmentCorrection=1 \
+doOverlapBasedTrimming=1 \
+doUnitigSplitting=0 \
+doChimeraDetection=normal \
+-p genome -d $CA  \
+merylThreads=$NUM_THREADS \
+cnsReuseUnitigs=1 \
+cgwMergeMissingThreshold=-1 \
+cgwMergeFilterLevel=1 \
+cgwDemoteRBP=0 \
+cgwErrorRate=0.25 \
+stopAfter=consensusAfterUnitigger \
+$COORDS.1.frg $SR_FRG $OTHER_FRG 1> $CA.log 2>&1
+rm -rf $CA/5-consensus*
 fi
 runCA \
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
@@ -346,6 +381,6 @@ cgwMergeMissingThreshold=-1 \
 cgwMergeFilterLevel=1 \
 cgwDemoteRBP=0 \
 cgwErrorRate=0.25 \
-$COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1> $CA.log 2>&1 && \
+$COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1 && \
 echo "Assembly complete. Results are in $CA/9-terminator"
 
