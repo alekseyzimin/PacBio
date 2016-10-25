@@ -284,7 +284,7 @@ echo "Running assembly"
 if [ $MCOVERAGE -le 5 ] && [ ! -s "${CA}/7-0-CGW/cgw.out" ]; then
 runCA \
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
-cnsConcurrency=$NUM_THREADS \
+cnsConcurrency=$(($NUM_THREADS/2+1)) \
 cnsMinFrags=10000 \
 unitigger=bogart \
 consensus=pbutgcns \
@@ -319,7 +319,7 @@ recompute_astat_superreads_CA8.sh genome $CA $PE_AVG_READ_LENGTH $MASURCA_ASSEMB
 else
 runCA \
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
-cnsConcurrency=$NUM_THREADS \
+cnsConcurrency=$(($NUM_THREADS/2+1)) \
 cnsMinFrags=10000 \
 consensus=pbutgcns \
 unitigger=bogart \
@@ -354,7 +354,7 @@ rm -rf $CA/5-consensus*
 fi
 runCA \
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
-cnsConcurrency=$NUM_THREADS \
+cnsConcurrency=$(($NUM_THREADS/2+1)) \
 cnsMinFrags=1000 \
 unitigger=bogart \
 merylMemory=65536 \
