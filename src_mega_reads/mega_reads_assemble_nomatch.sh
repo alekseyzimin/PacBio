@@ -279,6 +279,7 @@ echo "Coverage threshold for splitting unitigs is $TCOVERAGE"
 fi
 
 rm -f .rerun
+rm -f $CA.log
 
 echo "Running assembly"
 if [ ! -s "${CA}/7-0-CGW/cgw.out" ]; then 
@@ -315,7 +316,8 @@ cgwMergeFilterLevel=1 \
 cgwDemoteRBP=0 \
 cgwErrorRate=0.25 \
 stopAfter=consensusAfterUnitigger \
-$COORDS.1.frg $SR_FRG $OTHER_FRG 1> $CA.log 2>&1 && rm -rf $CA/5-consensus* && \
+$COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 
+rm -rf $CA/5-consensus*
 runCA \
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
 cnsConcurrency=$(($NUM_THREADS/3+2)) \
@@ -347,7 +349,7 @@ cgwMergeFilterLevel=1 \
 cgwDemoteRBP=0 \
 cgwErrorRate=0.25 \
 stopAfter=consensusAfterUnitigger \
-$COORDS.1.frg $SR_FRG $OTHER_FRG 1> $CA.log 2>&1
+$COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 if [ $MCOVERAGE -le 5 ]; then 
 recompute_astat_superreads_CA8.sh genome $CA $PE_AVG_READ_LENGTH $MASURCA_ASSEMBLY_WORK1_PATH/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt  $SR_FRG
 fi
