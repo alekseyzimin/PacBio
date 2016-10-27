@@ -281,13 +281,14 @@ fi
 rm -f .rerun
 
 echo "Running assembly"
-if [ $MCOVERAGE -le 5 ] && [ ! -s "${CA}/7-0-CGW/cgw.out" ]; then
+if [ ! -s "${CA}/7-0-CGW/cgw.out" ]; then 
+#need to start from the beginning
 runCA \
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
-cnsConcurrency=$(($NUM_THREADS/2+1)) \
+cnsConcurrency=$(($NUM_THREADS/3+2)) \
 cnsMinFrags=10000 \
-unitigger=bogart \
 consensus=pbutgcns \
+unitigger=bogart \
 merylMemory=65536 \
 ovlStoreMemory=65536 \
 utgGraphErrorLimit=1000  \
@@ -314,14 +315,11 @@ cgwMergeFilterLevel=1 \
 cgwDemoteRBP=0 \
 cgwErrorRate=0.25 \
 stopAfter=consensusAfterUnitigger \
-$COORDS.1.frg $SR_FRG $OTHER_FRG 1> $CA.log 2>&1 &&
-recompute_astat_superreads_CA8.sh genome $CA $PE_AVG_READ_LENGTH $MASURCA_ASSEMBLY_WORK1_PATH/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt  $SR_FRG
-else
+$COORDS.1.frg $SR_FRG $OTHER_FRG 1> $CA.log 2>&1 && rm -rf $CA/5-consensus* && \
 runCA \
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
-cnsConcurrency=$(($NUM_THREADS/2+1)) \
+cnsConcurrency=$($NUM_THREADS/3+2)) \
 cnsMinFrags=10000 \
-consensus=pbutgcns \
 unitigger=bogart \
 merylMemory=65536 \
 ovlStoreMemory=65536 \
@@ -350,11 +348,14 @@ cgwDemoteRBP=0 \
 cgwErrorRate=0.25 \
 stopAfter=consensusAfterUnitigger \
 $COORDS.1.frg $SR_FRG $OTHER_FRG 1> $CA.log 2>&1
-rm -rf $CA/5-consensus*
+if [ $MCOVERAGE -le 5 ]; then 
+recompute_astat_superreads_CA8.sh genome $CA $PE_AVG_READ_LENGTH $MASURCA_ASSEMBLY_WORK1_PATH/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt  $SR_FRG
 fi
+fi
+#we start from here if the scaffolder has been run or continue here  
 runCA \
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
-cnsConcurrency=$(($NUM_THREADS/2+1)) \
+cnsConcurrency=$(($NUM_THREADS/3+2)) \
 cnsMinFrags=1000 \
 unitigger=bogart \
 merylMemory=65536 \
@@ -371,6 +372,7 @@ ovlThreads=2 \
 ovlHashBlockLength=100000000 \
 ovlRefBlockSize=1000000 \
 ovlConcurrency=$NUM_THREADS \
+doExtendClearRanges=1 \
 doFragmentCorrection=1 \
 doOverlapBasedTrimming=1 \
 doUnitigSplitting=0 \
