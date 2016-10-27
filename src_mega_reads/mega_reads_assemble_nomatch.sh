@@ -318,7 +318,7 @@ stopAfter=consensusAfterUnitigger \
 $COORDS.1.frg $SR_FRG $OTHER_FRG 1> $CA.log 2>&1 && rm -rf $CA/5-consensus* && \
 runCA \
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
-cnsConcurrency=$($NUM_THREADS/3+2)) \
+cnsConcurrency=$(($NUM_THREADS/3+2)) \
 cnsMinFrags=10000 \
 unitigger=bogart \
 merylMemory=65536 \
