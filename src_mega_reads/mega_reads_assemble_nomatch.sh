@@ -3,7 +3,7 @@
 #Copyright University of Maryland 2015#
 #######################################
 #!/bin/bash
-set -e
+#set -e
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 ESTIMATED_GENOME_SIZE=0
@@ -275,17 +275,29 @@ fi
 fi
 COVERAGE=`ls $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{print int(0.85*n/int('$ESTIMATED_GENOME_SIZE'))}'`;
 TCOVERAGE=$COVERAGE;
-echo "Coverage threshold for splitting unitigs is $TCOVERAGE"
 fi
 
 rm -f .rerun
 rm -f $CA.log
 
+OVLMIN=`head -n 10000 $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | grep -A 1 ^seq |grep -v ^seq | grep -v '\-\-' | awk 'BEGIN{minlen=100000}{if(length($1)<minlen) minlen=length($1);}END{if(minlen>=250) print "250"; else print minlen-5;}'`
+
+batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el $OVLMIN "
+
+echo "Coverage threshold for splitting unitigs is $TCOVERAGE minimum ovl $OVLMIN"
+
+#if [ $MCOVERAGE -le 5 ]; then
+#batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 99 "
+#else
+#batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200 "
+#fi
+
+set +e
 echo "Running assembly"
 if [ ! -s "${CA}/7-0-CGW/cgw.out" ]; then 
 #need to start from the beginning
 runCA \
-batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
+batOptions="$batOptions" \
 cnsConcurrency=$(($NUM_THREADS/3+2)) \
 cnsMinFrags=10000 \
 consensus=pbutgcns \
@@ -317,9 +329,9 @@ cgwDemoteRBP=0 \
 cgwErrorRate=0.25 \
 stopAfter=consensusAfterUnitigger \
 $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 
-rm -rf $CA/5-consensus*
+rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
 runCA \
-batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
+batOptions="$batOptions" \
 cnsConcurrency=$(($NUM_THREADS/3+2)) \
 cnsMinFrags=10000 \
 unitigger=bogart \
@@ -356,7 +368,41 @@ fi
 fi
 #we start from here if the scaffolder has been run or continue here  
 runCA \
-batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200" \
+batOptions="$batOptions" \
+cnsConcurrency=$(($NUM_THREADS/3+2)) \
+cnsMinFrags=1000 \
+unitigger=bogart \
+consensus=pbutgcns \
+merylMemory=65536 \
+ovlStoreMemory=65536 \
+utgGraphErrorLimit=1000  \
+utgMergeErrorLimit=1000 \
+utgGraphErrorRate=0.035 \
+utgMergeErrorRate=0.035 \
+ovlCorrBatchSize=100000 \
+ovlCorrConcurrency=4 \
+frgCorrThreads=$NUM_THREADS \
+mbtThreads=$NUM_THREADS \
+ovlThreads=2 \
+ovlHashBlockLength=100000000 \
+ovlRefBlockSize=1000000 \
+ovlConcurrency=$NUM_THREADS \
+doExtendClearRanges=1 \
+doFragmentCorrection=1 \
+doOverlapBasedTrimming=1 \
+doUnitigSplitting=0 \
+doChimeraDetection=normal \
+-p genome -d $CA  \
+merylThreads=$NUM_THREADS \
+cgwMergeMissingThreshold=-1 \
+cgwMergeFilterLevel=1 \
+cgwDemoteRBP=0 \
+cgwErrorRate=0.25 \
+stopAfter=consensusAfterScaffolder \
+$COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1
+rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
+runCA \
+batOptions="$batOptions" \
 cnsConcurrency=$(($NUM_THREADS/3+2)) \
 cnsMinFrags=1000 \
 unitigger=bogart \
@@ -381,11 +427,9 @@ doUnitigSplitting=0 \
 doChimeraDetection=normal \
 -p genome -d $CA  \
 merylThreads=$NUM_THREADS \
-cnsReuseUnitigs=1 \
 cgwMergeMissingThreshold=-1 \
 cgwMergeFilterLevel=1 \
 cgwDemoteRBP=0 \
 cgwErrorRate=0.25 \
-$COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1 && \
-echo "Assembly complete. Results are in $CA/9-terminator"
+$COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1 && echo "Assembly complete. Results are in $CA/9-terminator"
 
