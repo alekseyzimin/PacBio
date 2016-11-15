@@ -298,7 +298,7 @@ if [ ! -s "${CA}/7-0-CGW/cgw.out" ]; then
 #need to start from the beginning
 runCA \
 batOptions="$batOptions" \
-cnsConcurrency=$(($NUM_THREADS/3+2)) \
+cnsConcurrency=$NUM_THREADS \
 cnsMinFrags=10000 \
 consensus=pbutgcns \
 unitigger=bogart \
@@ -322,7 +322,6 @@ doUnitigSplitting=0 \
 doChimeraDetection=normal \
 -p genome -d $CA  \
 merylThreads=$NUM_THREADS \
-cnsReuseUnitigs=1 \
 cgwMergeMissingThreshold=-1 \
 cgwMergeFilterLevel=1 \
 cgwDemoteRBP=0 \
@@ -332,7 +331,7 @@ $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
 runCA \
 batOptions="$batOptions" \
-cnsConcurrency=$(($NUM_THREADS/3+2)) \
+cnsConcurrency=$NUM_THREADS \
 cnsMinFrags=10000 \
 unitigger=bogart \
 merylMemory=65536 \
@@ -355,7 +354,6 @@ doUnitigSplitting=0 \
 doChimeraDetection=normal \
 -p genome -d $CA  \
 merylThreads=$NUM_THREADS \
-cnsReuseUnitigs=1 \
 cgwMergeMissingThreshold=-1 \
 cgwMergeFilterLevel=1 \
 cgwDemoteRBP=0 \
@@ -369,7 +367,7 @@ fi
 #we start from here if the scaffolder has been run or continue here  
 runCA \
 batOptions="$batOptions" \
-cnsConcurrency=$(($NUM_THREADS/3+2)) \
+cnsConcurrency=$NUM_THREADS \
 cnsMinFrags=1000 \
 unitigger=bogart \
 consensus=pbutgcns \
@@ -403,7 +401,7 @@ $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
 runCA \
 batOptions="$batOptions" \
-cnsConcurrency=$(($NUM_THREADS/3+2)) \
+cnsConcurrency=$NUM_THREADS \
 cnsMinFrags=1000 \
 unitigger=bogart \
 merylMemory=65536 \
@@ -427,6 +425,7 @@ doUnitigSplitting=0 \
 doChimeraDetection=normal \
 -p genome -d $CA  \
 merylThreads=$NUM_THREADS \
+cnsReuseUnitigs=1 \
 cgwMergeMissingThreshold=-1 \
 cgwMergeFilterLevel=1 \
 cgwDemoteRBP=0 \
