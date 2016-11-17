@@ -153,6 +153,7 @@ fi
 PACBIO1="pacbio_${PB_HC}xlongest.fa";
 else
 echo "Pacbio coverage <${PB_HC}x, using the longest subreads";
+MAX_GAP=1000
 if [ ! -s "pacbio_nonredundant.fa" ] ;then
 ufasta extract -f <(grep --text '^>' $PACBIO | awk '{print $1}' | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') $PACBIO > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa;
 fi
