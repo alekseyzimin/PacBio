@@ -361,6 +361,76 @@ cgwDemoteRBP=0 \
 cgwErrorRate=0.25 \
 stopAfter=consensusAfterUnitigger \
 $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+
+#here we remove overlaps to the reads in duplicate/redundant unitigs and then re-run the unitigger/consensus
+deduplicate_unitigs.sh $CA_PATH $CA genome
+
+runCA \
+batOptions="$batOptions" \
+cnsConcurrency=$NUM_THREADS \
+cnsMinFrags=10000 \
+consensus=pbutgcns \
+unitigger=bogart \
+merylMemory=65536 \
+ovlStoreMemory=65536 \
+utgGraphErrorLimit=1000  \
+utgMergeErrorLimit=1000 \
+utgGraphErrorRate=0.035 \
+utgMergeErrorRate=0.035 \
+ovlCorrBatchSize=100000 \
+ovlCorrConcurrency=4 \
+frgCorrThreads=$NUM_THREADS \
+mbtThreads=$NUM_THREADS \
+ovlThreads=2 \
+ovlHashBlockLength=100000000 \
+ovlRefBlockSize=1000000 \
+ovlConcurrency=$NUM_THREADS \
+doFragmentCorrection=1 \
+doOverlapBasedTrimming=1 \
+doUnitigSplitting=0 \
+doChimeraDetection=normal \
+-p genome -d $CA  \
+merylThreads=$NUM_THREADS \
+cgwMergeMissingThreshold=-1 \
+cgwMergeFilterLevel=1 \
+cgwDemoteRBP=0 \
+cgwErrorRate=0.25 \
+stopAfter=consensusAfterUnitigger \
+$COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
+runCA \
+batOptions="$batOptions" \
+cnsConcurrency=$NUM_THREADS \
+cnsMinFrags=10000 \
+unitigger=bogart \
+merylMemory=65536 \
+ovlStoreMemory=65536 \
+utgGraphErrorLimit=1000  \
+utgMergeErrorLimit=1000 \
+utgGraphErrorRate=0.035 \
+utgMergeErrorRate=0.035 \
+ovlCorrBatchSize=100000 \
+ovlCorrConcurrency=4 \
+frgCorrThreads=$NUM_THREADS \
+mbtThreads=$NUM_THREADS \
+ovlThreads=2 \
+ovlHashBlockLength=100000000 \
+ovlRefBlockSize=1000000 \
+ovlConcurrency=$NUM_THREADS \
+doFragmentCorrection=1 \
+doOverlapBasedTrimming=1 \
+doUnitigSplitting=0 \
+doChimeraDetection=normal \
+-p genome -d $CA  \
+merylThreads=$NUM_THREADS \
+cgwMergeMissingThreshold=-1 \
+cgwMergeFilterLevel=1 \
+cgwDemoteRBP=0 \
+cgwErrorRate=0.25 \
+stopAfter=consensusAfterUnitigger \
+$COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+
+
 if [ $MCOVERAGE -le 5 ]; then 
 recompute_astat_superreads_CA8.sh genome $CA $PE_AVG_READ_LENGTH $MASURCA_ASSEMBLY_WORK1_PATH/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt  $SR_FRG
 fi

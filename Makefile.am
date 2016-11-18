@@ -117,7 +117,7 @@ dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_nomatch.sh			\
 		    src_reconcile/reconcile_hybrid_contigs_chromosomes.sh \
 		    src_reconcile/break_contigs.pl \
 		    src_mega_reads/add_mega_read_sequences.pl  \
-		    src_ref/recompute_astat_superreads_CA8.sh src_mega_reads/add_pb_seq.pl src_mega_reads/deduplicate_contigs.sh 
+		    src_ref/recompute_astat_superreads_CA8.sh src_mega_reads/add_pb_seq.pl src_mega_reads/deduplicate_unitigs.sh src_mega_reads/deduplicate_contigs.sh 
 
 
 YAGGO_SOURCES += src_jf_aligner/jf_aligner_cmdline.hpp			\
