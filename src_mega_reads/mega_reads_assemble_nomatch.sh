@@ -295,7 +295,7 @@ echo "Coverage threshold for splitting unitigs is $TCOVERAGE minimum ovl $OVLMIN
 
 set +e
 echo "Running assembly"
-if [ ! -s "${CA}/7-0-CGW/cgw.out" ]; then 
+if [ ! -e "${CA}/5-consensus/consensus.success" ]; then 
 #need to start from the beginning
 runCA \
 batOptions="$batOptions" \
@@ -361,10 +361,17 @@ cgwDemoteRBP=0 \
 cgwErrorRate=0.25 \
 stopAfter=consensusAfterUnitigger \
 $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+fi
 
+#at athis point we assume that the unitigconsensus is done
+if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
+echo "Unitig consensus failure"
+exit;
+fi
+
+if [ ! -e "${CA}/deduplicate.success" ]; then
 #here we remove overlaps to the reads in duplicate/redundant unitigs and then re-run the unitigger/consensus
 deduplicate_unitigs.sh $CA_PATH $CA genome
-
 runCA \
 batOptions="$batOptions" \
 cnsConcurrency=$NUM_THREADS \
@@ -430,11 +437,21 @@ cgwErrorRate=0.25 \
 stopAfter=consensusAfterUnitigger \
 $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 
+if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
+echo "Unitig consensus failure after deduplicate"
+exit;
+else
+touch ${CA}/deduplicate.success
+fi
+fi
 
-if [ $MCOVERAGE -le 5 ]; then 
+
+if [ $MCOVERAGE -le 5 ]; then
+if [ ! -e ${CA}/recompute_astat.success ];then
 recompute_astat_superreads_CA8.sh genome $CA $PE_AVG_READ_LENGTH $MASURCA_ASSEMBLY_WORK1_PATH/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt  $SR_FRG
 fi
 fi
+
 #we start from here if the scaffolder has been run or continue here  
 runCA \
 batOptions="$batOptions" \
