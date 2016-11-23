@@ -3,7 +3,6 @@
 #Copyright University of Maryland 2015#
 #######################################
 #!/bin/bash
-#set -e
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 ESTIMATED_GENOME_SIZE=0
@@ -293,7 +292,6 @@ echo "Coverage threshold for splitting unitigs is $TCOVERAGE minimum ovl $OVLMIN
 #batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200 "
 #fi
 
-set +e
 echo "Running assembly"
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then 
 #need to start from the beginning
@@ -326,7 +324,6 @@ merylThreads=$NUM_THREADS \
 cgwMergeMissingThreshold=-1 \
 cgwMergeFilterLevel=1 \
 cgwDemoteRBP=0 \
-cgwErrorRate=0.25 \
 stopAfter=consensusAfterUnitigger \
 $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 
 rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
@@ -358,7 +355,6 @@ merylThreads=$NUM_THREADS \
 cgwMergeMissingThreshold=-1 \
 cgwMergeFilterLevel=1 \
 cgwDemoteRBP=0 \
-cgwErrorRate=0.25 \
 stopAfter=consensusAfterUnitigger \
 $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 fi
@@ -401,7 +397,6 @@ merylThreads=$NUM_THREADS \
 cgwMergeMissingThreshold=-1 \
 cgwMergeFilterLevel=1 \
 cgwDemoteRBP=0 \
-cgwErrorRate=0.25 \
 stopAfter=consensusAfterUnitigger \
 $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
@@ -433,7 +428,6 @@ merylThreads=$NUM_THREADS \
 cgwMergeMissingThreshold=-1 \
 cgwMergeFilterLevel=1 \
 cgwDemoteRBP=0 \
-cgwErrorRate=0.25 \
 stopAfter=consensusAfterUnitigger \
 $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 
@@ -483,7 +477,7 @@ merylThreads=$NUM_THREADS \
 cgwMergeMissingThreshold=-1 \
 cgwMergeFilterLevel=1 \
 cgwDemoteRBP=0 \
-cgwErrorRate=0.25 \
+cgwErrorRate=0.15 \
 stopAfter=consensusAfterScaffolder \
 $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
@@ -517,6 +511,6 @@ cnsReuseUnitigs=1 \
 cgwMergeMissingThreshold=-1 \
 cgwMergeFilterLevel=1 \
 cgwDemoteRBP=0 \
-cgwErrorRate=0.25 \
+cgwErrorRate=0.15 \
 $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1 && echo "Assembly complete. Results are in $CA/9-terminator"
 
