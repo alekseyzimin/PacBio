@@ -367,7 +367,7 @@ fi
 
 if [ ! -e "${CA}/deduplicate.success" ]; then
 #here we remove overlaps to the reads in duplicate/redundant unitigs and then re-run the unitigger/consensus
-deduplicate_unitigs.sh $CA_PATH $CA genome
+deduplicate_unitigs.sh $CA_PATH $CA genome $NUM_THREADS
 runCA \
 batOptions="$batOptions" \
 cnsConcurrency=$NUM_THREADS \
