@@ -281,14 +281,16 @@ rm -f .rerun
 rm -f $CA.log
 
 OVLMIN=`head -n 100000 $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | grep -A 1 '^seq:' |grep -v '^seq:' | grep -v '\-\-' | awk 'BEGIN{minlen=100000}{if(length($1)<minlen && length($1)>=64) minlen=length($1);}END{if(minlen>=250) print "250"; else print minlen-5;}'`
-
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el $OVLMIN "
+OVL_MER=22
 
 echo "Coverage threshold for splitting unitigs is $TCOVERAGE minimum ovl $OVLMIN"
 
 echo "batOptions=$batOptions
 cnsConcurrency=$NUM_THREADS
 cnsMinFrags=10000
+obtMerSize=$OVL_MER
+ovlMerSize=$OVL_MER
 unitigger=bogart
 merylMemory=65536
 ovlStoreMemory=65536
@@ -332,7 +334,7 @@ fi
 
 if [ ! -e "${CA}/deduplicate.success" ]; then
 #here we remove overlaps to the reads in duplicate/redundant unitigs and then re-run the unitigger/consensus
-deduplicate_unitigs.sh $CA_PATH $CA genome $NUM_THREADS
+deduplicate_unitigs.sh $CA_PATH $CA genome $NUM_THREADS $OVL_MER
 runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
 runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
@@ -354,5 +356,5 @@ fi
 #we start from here if the scaffolder has been run or continue here  
 runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
-runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1 && echo "Assembly complete. Results are in $CA/9-terminator"
+runCA -s runCA.spec -p genome -d $CA  $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1 && echo "Assembly complete. Results are in $CA/9-terminator"
 
