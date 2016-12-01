@@ -292,74 +292,45 @@ echo "Coverage threshold for splitting unitigs is $TCOVERAGE minimum ovl $OVLMIN
 #batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200 "
 #fi
 
+echo "batOptions=\"$batOptions\"
+cnsConcurrency=$NUM_THREADS
+cnsMinFrags=10000
+unitigger=bogart
+merylMemory=65536
+ovlStoreMemory=65536
+utgGraphErrorLimit=1000
+utgMergeErrorLimit=1000
+utgGraphErrorRate=0.035
+utgMergeErrorRate=0.035
+ovlCorrBatchSize=100000
+ovlCorrConcurrency=4
+frgCorrThreads=$NUM_THREADS
+mbtThreads=$NUM_THREADS
+ovlThreads=2
+ovlHashBlockLength=100000000
+ovlRefBlockSize=1000000
+ovlConcurrency=$NUM_THREADS
+doFragmentCorrection=1
+doOverlapBasedTrimming=1
+doUnitigSplitting=0
+doChimeraDetection=normal
+merylThreads=$NUM_THREADS
+doExtendClearRanges=1
+cgwErrorRate=0.15
+cgwMergeMissingThreshold=-1
+cgwMergeFilterLevel=1
+cgwDemoteRBP=0
+cnsReuseUnitigs=1" > runCA.spec
+
 echo "Running assembly"
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then 
 #need to start from the beginning
-runCA \
-batOptions="$batOptions" \
-cnsConcurrency=$NUM_THREADS \
-cnsMinFrags=10000 \
-consensus=pbutgcns \
-unitigger=bogart \
-merylMemory=65536 \
-ovlStoreMemory=65536 \
-utgGraphErrorLimit=1000  \
-utgMergeErrorLimit=1000 \
-utgGraphErrorRate=0.035 \
-utgMergeErrorRate=0.035 \
-ovlCorrBatchSize=100000 \
-ovlCorrConcurrency=4 \
-frgCorrThreads=$NUM_THREADS \
-mbtThreads=$NUM_THREADS \
-ovlThreads=2 \
-ovlHashBlockLength=100000000 \
-ovlRefBlockSize=1000000 \
-ovlConcurrency=$NUM_THREADS \
-doFragmentCorrection=1 \
-doOverlapBasedTrimming=1 \
-doUnitigSplitting=0 \
-doChimeraDetection=normal \
--p genome -d $CA  \
-merylThreads=$NUM_THREADS \
-cgwMergeMissingThreshold=-1 \
-cgwMergeFilterLevel=1 \
-cgwDemoteRBP=0 \
-stopAfter=consensusAfterUnitigger \
-$COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 
+runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 
 rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
-runCA \
-batOptions="$batOptions" \
-cnsConcurrency=$NUM_THREADS \
-cnsMinFrags=10000 \
-unitigger=bogart \
-merylMemory=65536 \
-ovlStoreMemory=65536 \
-utgGraphErrorLimit=1000  \
-utgMergeErrorLimit=1000 \
-utgGraphErrorRate=0.035 \
-utgMergeErrorRate=0.035 \
-ovlCorrBatchSize=100000 \
-ovlCorrConcurrency=4 \
-frgCorrThreads=$NUM_THREADS \
-mbtThreads=$NUM_THREADS \
-ovlThreads=2 \
-ovlHashBlockLength=100000000 \
-ovlRefBlockSize=1000000 \
-ovlConcurrency=$NUM_THREADS \
-doFragmentCorrection=1 \
-doOverlapBasedTrimming=1 \
-doUnitigSplitting=0 \
-doChimeraDetection=normal \
--p genome -d $CA  \
-merylThreads=$NUM_THREADS \
-cgwMergeMissingThreshold=-1 \
-cgwMergeFilterLevel=1 \
-cgwDemoteRBP=0 \
-stopAfter=consensusAfterUnitigger \
-$COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 fi
 
-#at athis point we assume that the unitigconsensus is done
+#at athis point we assume that the unitig consensus is done
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
 echo "Unitig consensus failure"
 exit;
@@ -368,69 +339,9 @@ fi
 if [ ! -e "${CA}/deduplicate.success" ]; then
 #here we remove overlaps to the reads in duplicate/redundant unitigs and then re-run the unitigger/consensus
 deduplicate_unitigs.sh $CA_PATH $CA genome $NUM_THREADS
-runCA \
-batOptions="$batOptions" \
-cnsConcurrency=$NUM_THREADS \
-cnsMinFrags=10000 \
-consensus=pbutgcns \
-unitigger=bogart \
-merylMemory=65536 \
-ovlStoreMemory=65536 \
-utgGraphErrorLimit=1000  \
-utgMergeErrorLimit=1000 \
-utgGraphErrorRate=0.035 \
-utgMergeErrorRate=0.035 \
-ovlCorrBatchSize=100000 \
-ovlCorrConcurrency=4 \
-frgCorrThreads=$NUM_THREADS \
-mbtThreads=$NUM_THREADS \
-ovlThreads=2 \
-ovlHashBlockLength=100000000 \
-ovlRefBlockSize=1000000 \
-ovlConcurrency=$NUM_THREADS \
-doFragmentCorrection=1 \
-doOverlapBasedTrimming=1 \
-doUnitigSplitting=0 \
-doChimeraDetection=normal \
--p genome -d $CA  \
-merylThreads=$NUM_THREADS \
-cgwMergeMissingThreshold=-1 \
-cgwMergeFilterLevel=1 \
-cgwDemoteRBP=0 \
-stopAfter=consensusAfterUnitigger \
-$COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
-runCA \
-batOptions="$batOptions" \
-cnsConcurrency=$NUM_THREADS \
-cnsMinFrags=10000 \
-unitigger=bogart \
-merylMemory=65536 \
-ovlStoreMemory=65536 \
-utgGraphErrorLimit=1000  \
-utgMergeErrorLimit=1000 \
-utgGraphErrorRate=0.035 \
-utgMergeErrorRate=0.035 \
-ovlCorrBatchSize=100000 \
-ovlCorrConcurrency=4 \
-frgCorrThreads=$NUM_THREADS \
-mbtThreads=$NUM_THREADS \
-ovlThreads=2 \
-ovlHashBlockLength=100000000 \
-ovlRefBlockSize=1000000 \
-ovlConcurrency=$NUM_THREADS \
-doFragmentCorrection=1 \
-doOverlapBasedTrimming=1 \
-doUnitigSplitting=0 \
-doChimeraDetection=normal \
--p genome -d $CA  \
-merylThreads=$NUM_THREADS \
-cgwMergeMissingThreshold=-1 \
-cgwMergeFilterLevel=1 \
-cgwDemoteRBP=0 \
-stopAfter=consensusAfterUnitigger \
-$COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
-
+runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
 echo "Unitig consensus failure after deduplicate"
 exit;
@@ -439,7 +350,7 @@ touch ${CA}/deduplicate.success
 fi
 fi
 
-
+#recompute astat if low pacbio coverage
 if [ $MCOVERAGE -le 5 ]; then
 if [ ! -e ${CA}/recompute_astat.success ];then
 recompute_astat_superreads_CA8.sh genome $CA $PE_AVG_READ_LENGTH $MASURCA_ASSEMBLY_WORK1_PATH/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt  $SR_FRG
@@ -447,70 +358,7 @@ fi
 fi
 
 #we start from here if the scaffolder has been run or continue here  
-runCA \
-batOptions="$batOptions" \
-cnsConcurrency=$NUM_THREADS \
-cnsMinFrags=1000 \
-unitigger=bogart \
-consensus=pbutgcns \
-merylMemory=65536 \
-ovlStoreMemory=65536 \
-utgGraphErrorLimit=1000  \
-utgMergeErrorLimit=1000 \
-utgGraphErrorRate=0.035 \
-utgMergeErrorRate=0.035 \
-ovlCorrBatchSize=100000 \
-ovlCorrConcurrency=4 \
-frgCorrThreads=$NUM_THREADS \
-mbtThreads=$NUM_THREADS \
-ovlThreads=2 \
-ovlHashBlockLength=100000000 \
-ovlRefBlockSize=1000000 \
-ovlConcurrency=$NUM_THREADS \
-doExtendClearRanges=1 \
-doFragmentCorrection=1 \
-doOverlapBasedTrimming=1 \
-doUnitigSplitting=0 \
-doChimeraDetection=normal \
--p genome -d $CA  \
-merylThreads=$NUM_THREADS \
-cgwMergeMissingThreshold=-1 \
-cgwMergeFilterLevel=1 \
-cgwDemoteRBP=0 \
-cgwErrorRate=0.15 \
-stopAfter=consensusAfterScaffolder \
-$COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1
+runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
-runCA \
-batOptions="$batOptions" \
-cnsConcurrency=$NUM_THREADS \
-cnsMinFrags=1000 \
-unitigger=bogart \
-merylMemory=65536 \
-ovlStoreMemory=65536 \
-utgGraphErrorLimit=1000  \
-utgMergeErrorLimit=1000 \
-utgGraphErrorRate=0.035 \
-utgMergeErrorRate=0.035 \
-ovlCorrBatchSize=100000 \
-ovlCorrConcurrency=4 \
-frgCorrThreads=$NUM_THREADS \
-mbtThreads=$NUM_THREADS \
-ovlThreads=2 \
-ovlHashBlockLength=100000000 \
-ovlRefBlockSize=1000000 \
-ovlConcurrency=$NUM_THREADS \
-doExtendClearRanges=1 \
-doFragmentCorrection=1 \
-doOverlapBasedTrimming=1 \
-doUnitigSplitting=0 \
-doChimeraDetection=normal \
--p genome -d $CA  \
-merylThreads=$NUM_THREADS \
-cnsReuseUnitigs=1 \
-cgwMergeMissingThreshold=-1 \
-cgwMergeFilterLevel=1 \
-cgwDemoteRBP=0 \
-cgwErrorRate=0.15 \
-$COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1 && echo "Assembly complete. Results are in $CA/9-terminator"
+runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1 && echo "Assembly complete. Results are in $CA/9-terminator"
 
