@@ -280,17 +280,11 @@ fi
 rm -f .rerun
 rm -f $CA.log
 
-OVLMIN=`head -n 10000 $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | grep -A 1 ^seq |grep -v ^seq | grep -v '\-\-' | awk 'BEGIN{minlen=100000}{if(length($1)<minlen) minlen=length($1);}END{if(minlen>=250) print "250"; else print minlen-5;}'`
+OVLMIN=`head -n 100000 $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | grep -A 1 '^seq:' |grep -v '^seq:' | grep -v '\-\-' | awk 'BEGIN{minlen=100000}{if(length($1)<minlen && length($1)>=64) minlen=length($1);}END{if(minlen>=250) print "250"; else print minlen-5;}'`
 
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el $OVLMIN "
 
 echo "Coverage threshold for splitting unitigs is $TCOVERAGE minimum ovl $OVLMIN"
-
-#if [ $MCOVERAGE -le 5 ]; then
-#batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 99 "
-#else
-#batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el 200 "
-#fi
 
 echo "batOptions=\"$batOptions\"
 cnsConcurrency=$NUM_THREADS
