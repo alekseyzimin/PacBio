@@ -286,7 +286,7 @@ batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el $OVLMIN "
 
 echo "Coverage threshold for splitting unitigs is $TCOVERAGE minimum ovl $OVLMIN"
 
-echo "batOptions=\"$batOptions\"
+echo "batOptions=$batOptions
 cnsConcurrency=$NUM_THREADS
 cnsMinFrags=10000
 unitigger=bogart
