@@ -22,7 +22,7 @@ fi
 if [ ! -e "$ASM_DIR/unitig_mer.success" ];then
 tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d layout |tr -d '-' | \
 awk 'BEGIN{print ">unique unitigs"}{if($1 == "cns"){seq=$2}else if($1 == "data.unitig_coverage_stat" && $2>=5){print seq"N"}}' | \
-jellyfish count -L 9 -C -m 22 -s $ESTIMATED_GENOME_SIZE -t $NUM_THREADS -o $ASM_DIR/unitig_mers /dev/fd/0 && \
+jellyfish count -L 10 -C -m 22 -s $ESTIMATED_GENOME_SIZE -t $NUM_THREADS -o $ASM_DIR/unitig_mers /dev/fd/0 && \
 touch $ASM_DIR/unitig_mer.success
 fi
 
