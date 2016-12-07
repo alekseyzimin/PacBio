@@ -20,21 +20,10 @@ fi
 #here we map the unitigs against themselves to figure out which ones are redundant , and then record the reads in the redundant unitigs to eliminate their overlaps
 if [ ! -e "$ASM_DIR/self_map.success" ];then
 tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d consensus > $ASM_DIR/unitigs.initial.fa && \
-nduplicates=1000000;
-counter=1;
-until [ $nduplicates -lt 10 ] || [ $counter -gt 3 ];do
-echo "Deduplication iteration $counter"
-nucmer -t $NUM_THREADS -l 31 -c 100 -b 400 -p $ASM_DIR/asm_to_asm  $ASM_DIR/unitigs.initial.fa  $ASM_DIR/unitigs.initial.fa && \
-awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $ASM_DIR/asm_to_asm.delta| delta-filter -q -o 20 /dev/stdin|show-coords -lcHr /dev/stdin | awk '{if($12>$13) print $0}' |merge_matches_and_tile_coords_file.pl 10000 | perl -ane '{$cov{$F[-1]}+=$F[15] if($F[15]>=10);}END{foreach $k(keys %cov){print $k,"\n" if($cov{$k}>90);}}' > $ASM_DIR/newduplicates.txt && \
-mv $ASM_DIR/unitigs.initial.fa $ASM_DIR/unitigs.initial.fa.tmp && \
-cat $ASM_DIR/newduplicates.txt >> $ASM_DIR/duplicates.txt && \
-ufasta extract -v -f $ASM_DIR/duplicates.txt $ASM_DIR/unitigs.initial.fa.tmp > $ASM_DIR/unitigs.initial.fa && \
-nduplicates=`wc -l $ASM_DIR/newduplicates.txt | awk '{print $1}'`
-echo "Removed $nduplicates redundant unitigs"
-let counter+=1
-done
+nucmer -t $NUM_THREADS --batch $(($(stat -c%s "$ASM_DIR/unitigs.initial.fa")/100)) -l 31 -c 100 -p $ASM_DIR/asm_to_asm  $ASM_DIR/unitigs.initial.fa  $ASM_DIR/unitigs.initial.fa && \
+awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $ASM_DIR/asm_to_asm.delta| delta-filter -q -o 20 /dev/stdin|show-coords -lcHr /dev/stdin | awk '{if($12>$13) print $0}' |merge_matches_and_tile_coords_file.pl 10000 | perl -ane '{$cov{$F[-1]}+=$F[15] if($F[15]>=10);}END{foreach $k(keys %cov){print $k,"\n" if($cov{$k}>90);}}' >> $ASM_DIR/duplicates.txt && \
 tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d layout | awk '{if($1 ~/^unitig/){unitig=$2;}else if($1~/^FRG/){print $5" utg"unitig}}' | perl -ane 'BEGIN{open(FILE,"'$ASM_DIR/duplicates.txt'");while($l=<FILE>){chomp($l);$d{$l}=1}}{print $F[0],"\n" if(defined($d{$F[1]}));}' > $ASM_DIR/duplicates.iid.txt && \
-rm -f $ASM_DIR/unitigs.initial.fa.tmp $ASM_DIR/unitigs.initial.fa $ASM_DIR/asm_to_asm.delta && \
+rm -f $ASM_DIR/unitigs.initial.fa $ASM_DIR/asm_to_asm.delta && \
 touch $ASM_DIR/self_map.success
 fi
 
