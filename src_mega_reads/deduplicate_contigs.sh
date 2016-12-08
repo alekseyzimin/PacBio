@@ -8,7 +8,7 @@ MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:$PATH;
 
-set -xe
+set -e
 
 #here we map the contigs against themselves to figure out which ones are redundant
 perl -ane 'BEGIN{$seq=""}{if($F[0] =~ /^\>/){if(length($seq)>0){print length($seq)," $rn $seq\n";}$seq="";$rn=$F[0];}else{$seq.=$F[0];}}END{length($seq)," $rn $seq\n";}' $ASM_DIR/9-terminator/$ASM_PREFIX.scf.fasta | sort -S 50% -nrk1 | awk '{print $2"\n"$3}' >  $ASM_DIR/scaffolds.ref.fa && \

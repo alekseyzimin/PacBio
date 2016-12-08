@@ -356,5 +356,7 @@ fi
 #we start from here if the scaffolder has been run or continue here  
 runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
-runCA -s runCA.spec -p genome -d $CA  $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1 && echo "Assembly complete. Results are in $CA/9-terminator"
+runCA -s runCA.spec -p genome -d $CA  $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1 && \
+echo "Assembly complete, now cleaning up the scaffolds." && \
+deduplicate_contigs.sh $CA genome $NUM_THREADS
 
