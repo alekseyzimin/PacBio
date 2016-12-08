@@ -15,11 +15,13 @@ set -e
 if [ ! -e "$ASM_DIR/self_map.success" ];then
 #-CS option in bogart is buggy -- I think it is still worth to place contains into singletons to turn them into regular unitigs for subsequent merging.  and then afterwards we can eliminate overlaps for those reads that end up in a unitig with only one parent
 tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 2 -U -d layout | perl -ane '{if($F[0] eq "unitig"){$utg="utg".$F[1];}elsif($F[0] eq "FRG" && $F[6]==0){$maximal{$utg}++;}}END{foreach $u(keys %maximal){print $u,"\n" if($maximal{$u}==1);}}' > $ASM_DIR/duplicates.txt && \
-tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d consensus > $ASM_DIR/unitigs.initial.fa && \
-nucmer -t $NUM_THREADS --batch $(($(stat -c%s "$ASM_DIR/unitigs.initial.fa")/100)) -l 31 -c 100 -p $ASM_DIR/asm_to_asm  $ASM_DIR/unitigs.initial.fa  $ASM_DIR/unitigs.initial.fa && \
-awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $ASM_DIR/asm_to_asm.delta| delta-filter -q -o 20 /dev/stdin|show-coords -lcHr /dev/stdin | awk '{if($12>$13) print $0}' |merge_matches_and_tile_coords_file.pl 10000 | perl -ane '{$cov{$F[-1]}+=$F[15] if($F[15]>=10);}END{foreach $k(keys %cov){print $k,"\n" if($cov{$k}>90);}}' >> $ASM_DIR/duplicates.txt && \
+tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d consensus |  awk '{if($1 ~/^>/){h=$1}else{if(length($1)>500) print length($1)" "h" "$1}}' | sort -S 50% -nrk1 | awk '{print $2"\n"$3}' >  $ASM_DIR/unitigs.ref.fa && \
+tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d consensus > $ASM_DIR/unitigs.qry.fa && \
+nucmer -t $NUM_THREADS --batch $(($(stat -c%s "$ASM_DIR/unitigs.ref.fa")/25)) -l 31 -b 100 -p $ASM_DIR/asm_to_asm  $ASM_DIR/unitigs.ref.fa  $ASM_DIR/unitigs.qry.fa && \
+awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $ASM_DIR/asm_to_asm.delta| delta-filter -q /dev/stdin|show-coords -lcHr /dev/stdin | awk '{if($12>$13) print $0}' |merge_matches_and_tile_coords_file.pl 10000 | perl -ane '{$cov{$F[-1]}+=$F[15] if($F[15]>=10);}END{foreach $k(keys %cov){print $k,"\n" if($cov{$k}>90);}}' >> $ASM_DIR/duplicates.txt && \
+awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $ASM_DIR/asm_to_asm.delta| show-coords -lcH /dev/stdin | awk '{if($12>$13 && $10>95 && $16>90) print $NF}' >> $ASM_DIR/duplicates.txt && \
 tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d layout | awk '{if($1 ~/^unitig/){unitig=$2;}else if($1~/^FRG/){print $5" utg"unitig}}' | perl -ane 'BEGIN{open(FILE,"'$ASM_DIR/duplicates.txt'");while($l=<FILE>){chomp($l);$d{$l}=1}}{print $F[0],"\n" if(defined($d{$F[1]}));}' > $ASM_DIR/duplicates.iid.txt && \
-rm -f $ASM_DIR/unitigs.initial.fa $ASM_DIR/asm_to_asm.delta && \
+rm -f $ASM_DIR/unitigs.{ref,qry}.fa && \
 touch $ASM_DIR/self_map.success
 fi
 
