@@ -130,7 +130,7 @@ if [ $ESTIMATED_GENOME_SIZE -lt 1];then
 echo "Estimated Genome Size is invalid or missing";
 exit;
 fi
-PLOIDY=$(($JF_SIZE/$ESTIMATED_GENOME_SIZE))
+PLOIDY=$(($JF_SIZE/$ESTIMATED_GENOME_SIZE/2))
 if [ $PLOIDY -lt 1 ];then PLOIDY=1; fi
 if [ $PLOIDY -gt 2 ];then PLOIDY=2; fi
 COORDS=mr.$KMER.$MER.$B.$d
@@ -366,6 +366,9 @@ fi
 runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
 runCA -s runCA.spec -p genome -d $CA  $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1 && \
-echo "Assembly complete, now cleaning up the scaffolds." && \
-deduplicate_contigs.sh $CA genome $NUM_THREADS
-
+echo "Assembly complete, now cleaning up the scaffolds." 
+if [ ! -s $CA/dedup.genome.scf.fasta ];then
+deduplicate_contigs.sh $CA genome $NUM_THREADS && echo "Final scaffold sequences are in $CA/dedup.genome.scf.fasta"
+else
+echo "Final scaffold sequences are in $CA/dedup.genome.scf.fasta"
+fi
