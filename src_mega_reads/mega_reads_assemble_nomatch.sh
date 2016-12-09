@@ -125,13 +125,22 @@ fi
 
 ################setting parameters#########################
 KMER=`awk 'BEGIN{min=10000}{if($2<min) min=$2}END{print min}' $KUNITIGLENGTHS`
-JF_SIZE=$(stat -c%s $SUPERREADS);
+JF_SIZE=$(stat -c%s $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta);
+if [ $ESTIMATED_GENOME_SIZE -lt 1];then 
+echo "Estimated Genome Size is invalid or missing";
+exit;
+fi
+PLOIDY=$(($JF_SIZE/$ESTIMATED_GENOME_SIZE))
+if [ $PLOIDY -lt 1 ];then PLOIDY=1; fi
+if [ $PLOIDY -gt 2 ];then PLOIDY=2; fi
 COORDS=mr.$KMER.$MER.$B.$d
 CA=CA.${COORDS}
 
 echo "Running mega-reads correction/assembly"
 echo "Using mer size $MER for mapping, B=$B, d=$d"
 echo "Using MaSuRCA files from $MASURCA_ASSEMBLY_WORK1_PATH, k-unitig mer $KMER"
+echo "Estimated Genome Size $ESTIMATED_GENOME_SIZE"
+echo "Estimated Ploidy $PLOIDY"
 echo "Using CA installation from $CA_PATH"
 echo "Using $NUM_THREADS threads"
 echo "Output prefix $COORDS"
@@ -143,11 +152,11 @@ if [ $B -lt 15 ];then
 echo "Detected nanopore data";
 PACBIO1=$PACBIO;
 else
-if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -gt ${PB_HC} ];then
+if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE/$PLOIDY)) -gt ${PB_HC} ];then
 echo "Pacbio coverage >${PB_HC}x, using ${PB_HC}x of the longest reads";
 MAX_GAP=2000
 if [ ! -s "pacbio_${PB_HC}xlongest.fa" ] ;then
-ufasta extract -f <(ufasta sizes -H $PACBIO | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') $PACBIO > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa;
+ufasta extract -f <(ufasta sizes -H $PACBIO | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') $PACBIO > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa;
 fi
 PACBIO1="pacbio_${PB_HC}xlongest.fa";
 else
@@ -225,7 +234,7 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 echo "Joining"
 #allow all joins if high coverage nanopore or pacbio
 #if [ $PACBIO1 == $PACBIO  ] || [ $PACBIO1 == "pacbio_${PB_HC}xlongest.fa" ];then
-if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE)) -gt ${PB_HC} ];then
+if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE/$PLOIDY)) -gt ${PB_HC} ];then
 echo "" > ${COORDS}.1.allowed
 else
 awk 'BEGIN{flag=0}{
@@ -265,7 +274,7 @@ fi
 TCOVERAGE=20
 if [ $ESTIMATED_GENOME_SIZE -gt 1 ];then
 MR_SIZE=$(stat -c%s "$COORDS.1.fa");
-MCOVERAGE=$((MR_SIZE/ESTIMATED_GENOME_SIZE+1));
+MCOVERAGE=$((MR_SIZE/ESTIMATED_GENOME_SIZE/$PLOIDY+1));
 if [ $MCOVERAGE -le 5 ];then
 echo "Coverage of the mega-reads less than 5 -- using the super reads as well";
 SR_FRG=$COORDS.sr.frg
@@ -273,7 +282,7 @@ if [ ! -s $SR_FRG ];then
 awk '{if($0 ~ /^>/) print $0":super-read"; else print $0}' $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta | fasta2frg.pl sr 200 > $SR_FRG.tmp && mv  $SR_FRG.tmp  $SR_FRG;
 fi
 fi
-COVERAGE=`ls $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{print int(0.85*n/int('$ESTIMATED_GENOME_SIZE'))}'`;
+COVERAGE=`ls $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{print int(0.85*n/int('$ESTIMATED_GENOME_SIZE/$PLOIDY'))}'`;
 TCOVERAGE=$COVERAGE;
 fi
 
