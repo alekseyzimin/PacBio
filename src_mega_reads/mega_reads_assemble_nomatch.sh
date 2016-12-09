@@ -126,7 +126,7 @@ fi
 ################setting parameters#########################
 KMER=`awk 'BEGIN{min=10000}{if($2<min) min=$2}END{print min}' $KUNITIGLENGTHS`
 JF_SIZE=$(stat -c%s $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta);
-if [ $ESTIMATED_GENOME_SIZE -lt 1];then 
+if [ $ESTIMATED_GENOME_SIZE -lt 1 ];then 
 echo "Estimated Genome Size is invalid or missing";
 exit;
 fi
@@ -282,7 +282,7 @@ if [ ! -s $SR_FRG ];then
 awk '{if($0 ~ /^>/) print $0":super-read"; else print $0}' $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta | fasta2frg.pl sr 200 > $SR_FRG.tmp && mv  $SR_FRG.tmp  $SR_FRG;
 fi
 fi
-COVERAGE=`ls $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{print int(0.85*n/int('$ESTIMATED_GENOME_SIZE/$PLOIDY'))}'`;
+COVERAGE=`ls $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{print int(0.85*n/int('$ESTIMATED_GENOME_SIZE')/int('$PLOIDY'))}'`;
 TCOVERAGE=$COVERAGE;
 fi
 
@@ -315,7 +315,6 @@ ovlThreads=2
 ovlHashBlockLength=100000000
 ovlRefBlockSize=1000000
 ovlConcurrency=$NUM_THREADS
-doFragmentCorrection=1
 doOverlapBasedTrimming=1
 doUnitigSplitting=0
 doChimeraDetection=normal
@@ -326,6 +325,9 @@ cgwMergeMissingThreshold=-1
 cgwMergeFilterLevel=1
 cgwDemoteRBP=0
 cnsReuseUnitigs=1" > runCA.spec
+
+#This does not improve anything
+#if [ $PLOIDY -gt 1 ];then echo "doFragmentCorrection=0" >>runCA.spec; fi
 
 echo "Running assembly"
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then 
