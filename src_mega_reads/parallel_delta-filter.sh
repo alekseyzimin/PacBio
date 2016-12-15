@@ -9,6 +9,11 @@ MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:$PATH;
 
+#running more than 8 processes does not help
+if [ $NUM_THREADS -gt 8 ];then
+NUM_THREADS=8
+fi
+
 set -e
 #run delta-filter commands
 COMMAND="head -n 2 $DELTAFILE.delta > $PID.head && tail -n +3 $DELTAFILE.delta | ufasta split "
