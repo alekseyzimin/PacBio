@@ -9,9 +9,9 @@ MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:$PATH;
 
-#running more than 8 processes does not help
-if [ $NUM_THREADS -gt 8 ];then
-NUM_THREADS=8
+#running more than 9 processes does not help
+if [ $NUM_THREADS -gt 9 ];then
+NUM_THREADS=9
 fi
 
 set -e
