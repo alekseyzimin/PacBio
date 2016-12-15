@@ -31,7 +31,7 @@ fi
 if [ ! -e "$ASM_DIR/unitig_mer.success" ];then
 tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d layout |tr -d '-' | \
 awk 'BEGIN{print ">unique unitigs"}{if($1 == "cns"){seq=$2}else if($1 == "data.unitig_coverage_stat" && $2>=5){print seq"N"}}' | \
-jellyfish count -L 9 -C -m $OVL_MER -s $ESTIMATED_GENOME_SIZE -t $NUM_THREADS -o $ASM_DIR/unitig_mers /dev/fd/0 && \
+jellyfish count -L 9 -C -m $OVL_MER -s `tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d sizes | grep '^tigLenAssembled sum' | awk '{print $3}'` -t $NUM_THREADS -o $ASM_DIR/unitig_mers /dev/fd/0 && \
 touch $ASM_DIR/unitig_mer.success
 fi
 
