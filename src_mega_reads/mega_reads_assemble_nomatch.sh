@@ -13,6 +13,7 @@ d=0.029
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 PB_HC=40;
 
+
 #parsing arguments
 while [[ $# > 0 ]]
 do
@@ -326,8 +327,11 @@ cgwMergeFilterLevel=1
 cgwDemoteRBP=0
 cnsReuseUnitigs=1" > runCA.spec
 
-#This does not improve anything
-#if [ $PLOIDY -gt 1 ];then echo "doFragmentCorrection=0" >>runCA.spec; fi
+if [ $PLOIDY -gt 1 ];then 
+HAP_SIM_RATE=90;
+else
+HAP_SIM_RATE=95;
+fi
 
 echo "Running assembly"
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then 
@@ -370,7 +374,7 @@ rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
 runCA -s runCA.spec -p genome -d $CA  $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1 && \
 echo "Assembly complete, now cleaning up the scaffolds." 
 if [ ! -s $CA/dedup.genome.scf.fasta ];then
-deduplicate_contigs.sh $CA genome $NUM_THREADS && echo "Final scaffold sequences are in $CA/dedup.genome.scf.fasta"
+deduplicate_contigs.sh $CA genome $NUM_THREADS $HAP_SIM_RATE && echo "Final scaffold sequences are in $CA/dedup.genome.scf.fasta"
 else
 echo "Final scaffold sequences are in $CA/dedup.genome.scf.fasta"
 fi
