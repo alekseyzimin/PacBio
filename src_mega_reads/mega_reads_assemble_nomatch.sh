@@ -327,12 +327,6 @@ cgwMergeFilterLevel=1
 cgwDemoteRBP=0
 cnsReuseUnitigs=1" > runCA.spec
 
-if [ $PLOIDY -gt 1 ];then 
-HAP_SIM_RATE=90;
-else
-HAP_SIM_RATE=95;
-fi
-
 echo "Running assembly"
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then 
 #need to start from the beginning
@@ -349,7 +343,7 @@ fi
 
 if [ ! -e "${CA}/deduplicate.success" ]; then
 #here we remove overlaps to the reads in duplicate/redundant unitigs and then re-run the unitigger/consensus
-deduplicate_unitigs.sh $CA_PATH $CA genome $NUM_THREADS $OVL_MER
+deduplicate_unitigs.sh $CA_PATH $CA genome $NUM_THREADS $OVL_MER $PLOIDY
 runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
 runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
@@ -374,7 +368,7 @@ rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
 runCA -s runCA.spec -p genome -d $CA  $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1 && \
 echo "Assembly complete, now cleaning up the scaffolds." 
 if [ ! -s $CA/dedup.genome.scf.fasta ];then
-deduplicate_contigs.sh $CA genome $NUM_THREADS $HAP_SIM_RATE && echo "Final scaffold sequences are in $CA/dedup.genome.scf.fasta"
+deduplicate_contigs.sh $CA genome $NUM_THREADS $PLOIDY && echo "Final scaffold sequences are in $CA/dedup.genome.scf.fasta"
 else
 echo "Final scaffold sequences are in $CA/dedup.genome.scf.fasta"
 fi

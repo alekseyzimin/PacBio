@@ -5,6 +5,14 @@ ASM_DIR=$2;
 ASM_PREFIX=$3;
 NUM_THREADS=$4;
 OVL_MER=$5;
+PLOIDY=$6;
+
+if [ $PLOIDY -gt 1 ];then
+MERGE_LEN=20000;
+else
+MERGE_LEN=10000;
+fi
+
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$CA_PATH:$MYPATH:$PATH;
@@ -23,7 +31,7 @@ fi
 if [ ! -e "$ASM_DIR/filter_map.success" ] && [ -e $ASM_DIR/self_map.success ];then
 awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $ASM_DIR/asm_to_asm.delta > $ASM_DIR/asm_to_asm.noself.delta &&  \
 parallel_delta-filter.sh $ASM_DIR/asm_to_asm.noself -q $NUM_THREADS && \
-show-coords -lcHr $ASM_DIR/asm_to_asm.noself.fdelta | awk '{if($12>$13) print $0}' |merge_matches_and_tile_coords_file.pl 10000 | perl -ane '{$cov{$F[-1]}+=$F[15] if($F[15]>=10);}END{foreach $k(keys %cov){print $k,"\n" if($cov{$k}>90);}}' >> $ASM_DIR/duplicates.txt && \
+show-coords -lcHr $ASM_DIR/asm_to_asm.noself.fdelta | awk '{if($12>$13) print $0}' |merge_matches_and_tile_coords_file.pl $MERGE_LEN | perl -ane '{$cov{$F[-1]}+=$F[15] if($F[15]>=10);}END{foreach $k(keys %cov){print $k,"\n" if($cov{$k}>90);}}' >> $ASM_DIR/duplicates.txt && \
 awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $ASM_DIR/asm_to_asm.delta| show-coords -lcH /dev/stdin | awk '{if($12>$13 && $10>95 && $16>90) print $NF}' > $ASM_DIR/duplicates.txt && \
 tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 2 -U -d layout | perl -ane '{if($F[0] eq "unitig"){$utg="utg".$F[1];}elsif($F[0] eq "FRG" && $F[6]==0){$maximal{$utg}++;}}END{foreach $u(keys %maximal){print $u,"\n" if($maximal{$u}==1);}}' >> $ASM_DIR/duplicates.txt && \
 tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d layout | awk '{if($1 ~/^unitig/){unitig=$2;}else if($1~/^FRG/){print $5" utg"unitig}}' | perl -ane 'BEGIN{open(FILE,"'$ASM_DIR/duplicates.txt'");while($l=<FILE>){chomp($l);$d{$l}=1}}{print $F[0],"\n" if(defined($d{$F[1]}));}' > $ASM_DIR/duplicates.iid.txt && \
