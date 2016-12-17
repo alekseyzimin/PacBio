@@ -6,7 +6,7 @@ NUM_THREADS=$3;
 PLOIDY=$4;
 
 if [ $PLOIDY -gt 1 ];then
-MERGE_LEN=50000;
+MERGE_LEN=40000;
 else
 MERGE_LEN=10000;
 fi
