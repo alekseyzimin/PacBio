@@ -11,7 +11,7 @@ MER=15
 B=17
 d=0.029
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
-PB_HC=40;
+PB_HC=35;
 
 
 #parsing arguments
@@ -315,7 +315,8 @@ doUnitigSplitting=0
 doChimeraDetection=normal
 merylThreads=$NUM_THREADS
 doExtendClearRanges=1
-cgwErrorRate=0.15
+computeInsertSize=0
+cgwErrorRate=0.1
 cgwMergeMissingThreshold=-1
 cgwMergeFilterLevel=1
 cgwDemoteRBP=0
