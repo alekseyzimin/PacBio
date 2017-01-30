@@ -289,6 +289,7 @@ batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el $OVLMIN "
 OVL_MER=22
 
 echo "Coverage threshold for splitting unitigs is $TCOVERAGE minimum ovl $OVLMIN"
+let NUM_THREADSd4=$(($NUM_THREADS/4+1))
 
 echo "batOptions=$batOptions
 cnsConcurrency=$NUM_THREADS
@@ -304,7 +305,8 @@ utgGraphErrorRate=0.035
 utgMergeErrorRate=0.035
 ovlCorrBatchSize=100000
 ovlCorrConcurrency=4
-frgCorrThreads=$NUM_THREADS
+frgCorrThreads=$NUM_THREADSd4
+frgCorrConcurrency=4
 mbtThreads=$NUM_THREADS
 ovlThreads=2
 ovlHashBlockLength=100000000
