@@ -61,7 +61,7 @@ fi
 
 #we filter the overlaps -- if ALL k-mers in the overlap region are repetitive from above -- break overlap
 if [ ! -e "$ASM_DIR/overlap_filter.success" ];then
-overlapStore -d $ASM_DIR/ovlStoreBackup/$ASM_PREFIX.ovlStore | perl -ane 'BEGIN{open(FILE,"'$ASM_DIR/duplicates.iid.txt'");while($l=<FILE>){chomp($l);$diid{$l}=1}}{if($F[0]<$F[1]){if(not(defined($diid{$F[0]})) && not(defined($diid{$F[1]}))){ print join(" ",@F[0..6]),"\n"}}}'  | filter_overlap_file -t $NUM_THREADS <(gatekeeper  -dumpfragments -withsequence $ASM_DIR/$ASM_PREFIX.gkpStore| grep -P '^fragmentIdent|^fragmentSequence' | \
+overlapStore -d $ASM_DIR/ovlStoreBackup/$ASM_PREFIX.ovlStore | perl -ane 'BEGIN{open(FILE,"'$ASM_DIR/duplicates.iid.txt'");while($l=<FILE>){chomp($l);$diid[$l]=1}}{if($F[0]<$F[1]){print join(" ",@F[0..6]),"\n" unless($diid[$F[0]]==1 || $diid[$F[1]]==1);}}'  | filter_overlap_file -t $NUM_THREADS <(gatekeeper  -dumpfragments -withsequence $ASM_DIR/$ASM_PREFIX.gkpStore| grep -P '^fragmentIdent|^fragmentSequence' | \
 perl -ane 'BEGIN{$flag=1}{if($flag){print ">";}print "$F[2]\n";$flag=1-$flag;}') $ASM_DIR/unitig_mers /dev/fd/0 | convertOverlap -ovl | gzip -c > $ASM_DIR/overlaps_dedup.ovb.gz && touch $ASM_DIR/overlap_filter.success
 fi
 
