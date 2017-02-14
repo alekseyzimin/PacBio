@@ -343,7 +343,7 @@ if [ ! -e "${CA}/deduplicate.success" ]; then
 deduplicate_unitigs.sh $CA_PATH $CA genome $NUM_THREADS $OVL_MER $PLOIDY
 runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
-runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
 echo "Unitig consensus failure after deduplicate"
 exit;
@@ -362,7 +362,7 @@ fi
 #we start from here if the scaffolder has been run or continue here  
 runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
-runCA -s runCA.spec -p genome -d $CA  $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1 && \
+runCA -s runCA.spec -p genome -d $CA  cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $SR_FRG $COORDS.1.mates.frg $OTHER_FRG 1>> $CA.log 2>&1 && \
 echo "Assembly complete, now cleaning up the scaffolds." 
 if [ ! -s $CA/dedup.genome.scf.fasta ];then
 deduplicate_contigs.sh $CA genome $NUM_THREADS $PLOIDY && echo "Final scaffold sequences are in $CA/dedup.genome.scf.fasta"
