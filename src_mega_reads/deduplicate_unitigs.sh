@@ -22,7 +22,7 @@ export PATH=$CA_PATH:$MYPATH:$PATH;
 set -e
 
 #-CS option in bogart is buggy -- I think it is still worth to place contains into singletons to turn them into regular unitigs for subsequent merging.  and then afterwards we can eliminate overlaps for those reads that end up in a unitig with only one parent
-tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 2 -U -d layout | perl -ane '{if($F[0] eq "unitig"){$utg="utg".$F[1];}elsif($F[0] eq "FRG" && $F[6]==0){$maximal{$utg}++;}}END{foreach $u(keys %maximal){print $u,"\n" if($maximal{$u}==1);}}' >> $ASM_DIR/duplicates.txt
+tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 2 -U -d layout | perl -ane '{if($F[0] eq "unitig"){$utg="utg".$F[1];}elsif($F[0] eq "FRG" && $F[6]==0){$maximal{$utg}++;}}END{foreach $u(keys %maximal){print $u,"\n" if($maximal{$u}==1);}}' > $ASM_DIR/duplicates.txt
 
 #here we map the unitigs against themselves to figure out which ones are redundant , and then record the reads in the redundant unitigs to eliminate their overlaps
 if [ ! -e "$ASM_DIR/self_map.success" ];then
