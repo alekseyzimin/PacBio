@@ -21,11 +21,14 @@ export PATH=$CA_PATH:$MYPATH:$PATH;
 
 set -e
 
+#-CS option in bogart is buggy -- I think it is still worth to place contains into singletons to turn them into regular unitigs for subsequent merging.  and then afterwards we can eliminate overlaps for those reads that end up in a unitig with only one parent
+tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 2 -U -d layout | perl -ane '{if($F[0] eq "unitig"){$utg="utg".$F[1];}elsif($F[0] eq "FRG" && $F[6]==0){$maximal{$utg}++;}}END{foreach $u(keys %maximal){print $u,"\n" if($maximal{$u}==1);}}' >> $ASM_DIR/duplicates.txt
+
 #here we map the unitigs against themselves to figure out which ones are redundant , and then record the reads in the redundant unitigs to eliminate their overlaps
 if [ ! -e "$ASM_DIR/self_map.success" ];then
 #-CS option in bogart is buggy -- I think it is still worth to place contains into singletons to turn them into regular unitigs for subsequent merging.  and then afterwards we can eliminate overlaps for those reads that end up in a unitig with only one parent
-tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d consensus |  awk '{if($1 ~/^>/){h=$1}else{if(length($1)>500) print length($1)" "h" "$1}}' | sort -S 50% -nrk1 | awk '{print $2"\n"$3}' >  $ASM_DIR/unitigs.ref.fa && \
-tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d consensus > $ASM_DIR/unitigs.qry.fa && \
+tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d consensus |  awk '{if($1 ~/^>/){h=$1}else{if(length($1)>500) print length($1)" "h" "$1}}' | sort -S 50% -nrk1 | awk '{print $2"\n"$3}' | ufasta extract -v -f duplicates.txt /dev/stdin >  $ASM_DIR/unitigs.ref.fa && \
+tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d consensus | ufasta extract -v -f duplicates.txt /dev/stdin > $ASM_DIR/unitigs.qry.fa && \
 nucmer -t $NUM_THREADS --batch $(($(stat -c%s "$ASM_DIR/unitigs.ref.fa")/25)) -l 31 -c 200 -b 100 -p $ASM_DIR/asm_to_asm  $ASM_DIR/unitigs.ref.fa  $ASM_DIR/unitigs.qry.fa && \
 touch $ASM_DIR/self_map.success
 fi
@@ -33,9 +36,8 @@ fi
 if [ ! -e "$ASM_DIR/filter_map.success" ] && [ -e $ASM_DIR/self_map.success ];then
 awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $ASM_DIR/asm_to_asm.delta > $ASM_DIR/asm_to_asm.noself.delta &&  \
 parallel_delta-filter.sh $ASM_DIR/asm_to_asm.noself -q $NUM_THREADS && \
-show-coords -lcHr -I $HAP_SIM_RATE $ASM_DIR/asm_to_asm.noself.fdelta | awk '{if($12>$13) print $0}' |merge_matches_and_tile_coords_file.pl $MERGE_LEN | perl -ane '{$cov{$F[-1]}+=$F[15] if($F[15]>=10);}END{foreach $k(keys %cov){print $k,"\n" if($cov{$k}>90);}}' > $ASM_DIR/duplicates.txt && \
+show-coords -lcHr -I $HAP_SIM_RATE $ASM_DIR/asm_to_asm.noself.fdelta | awk '{if($12>$13) print $0}' |merge_matches_and_tile_coords_file.pl $MERGE_LEN | perl -ane '{$cov{$F[-1]}+=$F[15] if($F[15]>=10);}END{foreach $k(keys %cov){print $k,"\n" if($cov{$k}>90);}}' >> $ASM_DIR/duplicates.txt && \
 awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $ASM_DIR/asm_to_asm.delta| show-coords -lcH /dev/stdin | awk '{if($12>$13 && $10>int("'$HAP_SIM_RATE'") && $16>90) print $NF}' >> $ASM_DIR/duplicates.txt && \
-tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 2 -U -d layout | perl -ane '{if($F[0] eq "unitig"){$utg="utg".$F[1];}elsif($F[0] eq "FRG" && $F[6]==0){$maximal{$utg}++;}}END{foreach $u(keys %maximal){print $u,"\n" if($maximal{$u}==1);}}' >> $ASM_DIR/duplicates.txt && \
 tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d layout | awk '{if($1 ~/^unitig/){unitig=$2;}else if($1~/^FRG/){print $5" utg"unitig}}' | perl -ane 'BEGIN{open(FILE,"'$ASM_DIR/duplicates.txt'");while($l=<FILE>){chomp($l);$d{$l}=1}}{print $F[0],"\n" if(defined($d{$F[1]}));}' > $ASM_DIR/duplicates.iid.txt && \
 rm -f $ASM_DIR/unitigs.{ref,qry}.fa $ASM_DIR/asm_to_asm.noself.{f,}delta && \
 touch $ASM_DIR/filter_map.success
