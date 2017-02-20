@@ -1,0 +1,1 @@
+delta-filter -r -l 5000  hy_to_fa.delta| show-coords -lcHq /dev/stdin | ./extract_merges.pl Falcon_assembly/p_ctg_arabica.fa  > merges.txt && ./merge_contigs.pl < merges.txt| ./create_merged_sequences.pl genome.utg.fasta  merges.txt > test.fa
