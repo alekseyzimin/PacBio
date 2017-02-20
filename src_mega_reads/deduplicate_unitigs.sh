@@ -54,7 +54,7 @@ rm -f $ASM_DIR/overlap_filter.success
 tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d layout |tr -d '-' | \
 awk 'BEGIN{print ">unique unitigs"}{if($1 == "cns"){seq=$2}else if($1 == "data.unitig_coverage_stat" && $2>=5){print seq"N"}}' | \
 jellyfish count -L $REPEAT_COUNT -C -m $OVL_MER -s `tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d sizes | grep '^tigLenAssembled sum' | awk '{print $3}'` -t $NUM_THREADS -o $ASM_DIR/unitig_mers /dev/fd/0 && \
-touch $ASM_DIR/unitig_mer.success &7 exit
+touch $ASM_DIR/unitig_mer.success || exit
 fi
 
 #we backup the assembly
