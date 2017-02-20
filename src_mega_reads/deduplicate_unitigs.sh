@@ -30,8 +30,8 @@ tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 2 -U 
 if [ ! -e "$ASM_DIR/self_map.success" ];then
 rm -f $ASM_DIR/filter_map.success
 rm -f $ASM_DIR/overlap_filter.success
-tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d consensus |  awk '{if($1 ~/^>/){h=$1}else{if(length($1)>500) print length($1)" "h" "$1}}' | sort -S 50% -nrk1 | awk '{print $2"\n"$3}' | ufasta extract -v -f $ASM_DIR/duplicates.txt /dev/stdin >  $ASM_DIR/unitigs.ref.fa && \
-tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d consensus | ufasta extract -v -f $ASM_DIR/duplicates.txt /dev/stdin > $ASM_DIR/unitigs.qry.fa && \
+tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d consensus |  awk '{if($1 ~/^>/){h=$1}else{if(length($1)>500) print length($1)" "h" "$1}}' | sort -S 50% -nrk1 | awk '{print $2"\n"$3}' | ufasta extract -v -f $ASM_DIR/singletons.txt /dev/stdin >  $ASM_DIR/unitigs.ref.fa && \
+tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d consensus | ufasta extract -v -f $ASM_DIR/singletons.txt /dev/stdin > $ASM_DIR/unitigs.qry.fa && \
 nucmer -t $NUM_THREADS --batch $(($(stat -c%s "$ASM_DIR/unitigs.ref.fa")/25)) -l 31 -c 200 -b 100 -p $ASM_DIR/asm_to_asm  $ASM_DIR/unitigs.ref.fa  $ASM_DIR/unitigs.qry.fa && \
 touch $ASM_DIR/self_map.success || exit
 fi
