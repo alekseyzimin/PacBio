@@ -19,26 +19,16 @@ parallel_delta-filter.sh $DELTAFILE '-1 -l 1000' 9 && mv $DELTAFILE.fdelta $DELT
 touch filter.success || exit
 fi
 
-#show-coords
-if [ ! -e show.success ];then
-rm -f merge.success
-rm -f add_not_alingning.success
-show-coords -lcHq -I 97 -L 3000 $DELTAFILE.r.delta > $DELTAFILE.r.coords && \
-show-coords -lcH -I 97 -L 3000 $DELTAFILE.1.delta > $DELTAFILE.1.coords && \
-touch show.success || exit
-fi
-
 if [ ! -e merge.success ];then
-show-coords -lcHq -I 97 -L 3000 $DELTAFILE.r.delta > $DELTAFILE.r.coords && \
-extract_merges.pl $QRY < $DELTAFILE.r.coords > merges.txt && merge_contigs.pl < merges.txt| create_merged_sequences.pl $REF merges.txt > $REFN.$QRYN.merged.fa && touch merge.success || exit
+show-coords -lcHq -I 99 -L 3000 $DELTAFILE.r.delta | extract_merges.pl $QRY > merges.txt && merge_contigs.pl < merges.txt| create_merged_sequences.pl $REF merges.txt > $REFN.$QRYN.merged.fa && touch merge.success || exit
 fi
 
 if [ ! -e add_not_aligning.success ];then
 #add the sequences that did not align
-show-coords -lcH -I 99 -L 1000 $DELTAFILE.1.delta > $DELTAFILE.1.coords && \
-ufasta extract -v -f <(perl -ane '$palign{$F[-1]}+=$F[-4];END{foreach $k(keys %palign){print $k,"\n" if($palign{$k}>25)}}' $DELTAFILE.1.coords) $QRYN > $REFN.$QRYN.extra.fa && \
+ufasta extract -v -f <(show-coords -lcH -I 99 -L 1000 $DELTAFILE.1.delta| perl -ane '{$palign{$F[-1]}+=$F[-4];}END{foreach $k(keys %palign){print $k,"\n" if($palign{$k}>20)}}') $QRY > $REFN.$QRYN.extra.fa && \
+cat $REFN.$QRYN.merged.fa $REFN.$QRYN.extra.fa > $REFN.$QRYN.all.fa && \
 touch add_not_aligning.success || exit
 fi
 
-echo "Output sequences in $REFN.$QRYN.merged.fa"
-ufasta n50 -A -S -N50 <(cat $REFN.$QRYN.merged.fa $REFN.$QRYN.extra.fa)
+echo "Output sequences in $REFN.$QRYN.all.fa"
+ufasta n50 -A -S -N50 $REFN.$QRYN.all.fa
