@@ -10,11 +10,11 @@ PLOIDY=$6;
 if [ $PLOIDY -gt 1 ];then
 MERGE_LEN=20000
 HAP_SIM_RATE=90
-REPEAT_COUNT=9
+REPEAT_COUNT=7
 else
 MERGE_LEN=10000
 HAP_SIM_RATE=95
-REPEAT_COUNT=7
+REPEAT_COUNT=5
 fi
 
 MYPATH="`dirname \"$0\"`"
@@ -29,7 +29,7 @@ tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 2 -U 
 touch $ASM_DIR/dump_singletons.success
 fi
 
-#here we map the unitigs against themselves to figure out which ones are redundant , and then record the reads in the redundant unitigs to eliminate their overlaps
+#here we map the unitigs against themselves to figure out which ones are redundant
 if [ ! -e "$ASM_DIR/self_map.success" ];then
 rm -f $ASM_DIR/filter_map.success
 rm -f $ASM_DIR/overlap_filter.success
@@ -39,7 +39,8 @@ nucmer -t $NUM_THREADS --batch $(($(stat -c%s "$ASM_DIR/unitigs.ref.fa")/25)) -l
 touch $ASM_DIR/self_map.success || exit
 fi
 
-if [ ! -e $ASM_DIR/filter_map.success ] && [ -e $ASM_DIR/self_map.success ];then
+#here we analyze alignments and detect redundant unitigs
+if [ ! -e $ASM_DIR/filter_map.success ];then
 rm -f $ASM_DIR/overlap_filter.success
 awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $ASM_DIR/asm_to_asm.delta > $ASM_DIR/asm_to_asm.noself.delta &&  \
 parallel_delta-filter.sh $ASM_DIR/asm_to_asm.noself -q $NUM_THREADS && \
@@ -51,11 +52,12 @@ rm -f $ASM_DIR/unitigs.{ref,qry}.fa $ASM_DIR/asm_to_asm.noself.{f,}delta && \
 touch $ASM_DIR/filter_map.success || exit
 fi
 
-#here we examine 22-mers in the unique unitigs and build a database of them that have a count of 9 or above
+#here we examine 22-mers in the unique unitigs and build a database of them that have a count of REPEAT_COUNT or above
 if [ ! -e "$ASM_DIR/unitig_mer.success" ];then
 rm -f $ASM_DIR/overlap_filter.success
-tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d layout |tr -d '-' | \
-awk 'BEGIN{print ">unique unitigs"}{if($1 == "cns"){seq=$2}else if($1 == "data.unitig_coverage_stat" && $2>=5){print seq"N"}}' | \
+tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d consensus | \
+ufasta extract -v -f $ASM_DIR/duplicates.txt /dev/stdin | \
+awk -F "=" 'BEGIN{print ">unique unitigs";flag=0}{if($1 ~ /^>/){if($6>=5){flag=1}}else{if(flag){print $1"N"}flag=0}}' | \
 jellyfish count -L $REPEAT_COUNT -C -m $OVL_MER -s `tigStore -g $ASM_DIR/$ASM_PREFIX.gkpStore -t $ASM_DIR/$ASM_PREFIX.tigStore 5 -U -d sizes | grep '^tigLenAssembled sum' | awk '{print $3}'` -t $NUM_THREADS -o $ASM_DIR/unitig_mers /dev/fd/0 && \
 touch $ASM_DIR/unitig_mer.success || exit
 fi
