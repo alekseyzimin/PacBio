@@ -12,7 +12,7 @@ B=17
 d=0.029
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 PB_HC=30;
-
+KMER=41
 
 #parsing arguments
 while [[ $# > 0 ]]
@@ -84,48 +84,7 @@ echo "PacBio reads file $PACBIO not found!";
 exit 1 ;
 fi
 
-KUNITIGS=$MASURCA_ASSEMBLY_WORK1_PATH/../guillaumeKUnitigsAtLeast32bases_all.fasta
-if [ ! -e $KUNITIGS ];then
-echo "K-unitigs file $KUNITIGS not found!";
-exit 1;
-fi
-
-KUNITIGLENGTHS=$MASURCA_ASSEMBLY_WORK1_PATH/kUnitigLengths.txt
-if [ ! -e $KUNITIGLENGTHS ];then
-echo "K-unitig lengths file $KUNITIGLENGTHS not found!";
-exit 1;
-fi
-
-SUPERREADS=$MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta
-if [ ! -e $SUPERREADS ];then
-echo "Super reads file $SUPERREADS not found!";
-exit 1;
-else
-if [ ! -e superReadSequences.named.fasta ];then
-perl -ane 'push(@names,$F[0]);
-	END{
-	open(FILE,"'$SUPERREADS'");
-	while($line=<FILE>){
-		if($line=~/^>/){
-			chomp($line);
-			print ">",$names[substr($line,1)],"\n";
-		}else{
-			print $line;
-	}
-	}
-}' < $MASURCA_ASSEMBLY_WORK1_PATH/superReadNames.txt > superReadSequences.named.fasta.tmp && mv superReadSequences.named.fasta.tmp superReadSequences.named.fasta
-fi
-if [ -s superReadSequences.named.fasta ];then
-SUPERREADS=superReadSequences.named.fasta;
-else
-echo "Error creating named super-reads file from $MASURCA_ASSEMBLY_WORK1_PATH/superReadNames.txt and $SUPERREADS!";
-rm superReadSequences.named.fasta
-exit 1;
-fi
-fi
-
 ################setting parameters#########################
-KMER=`awk 'BEGIN{min=10000}{if($2<min) min=$2}END{print min}' $KUNITIGLENGTHS`
 JF_SIZE=$(stat -c%s $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta);
 if [ $ESTIMATED_GENOME_SIZE -lt 1 ];then 
 echo "Estimated Genome Size is invalid or missing";
@@ -168,6 +127,46 @@ ufasta extract -f <(grep --text '^>' $PACBIO | awk '{print $1}' | awk -F '/' '{s
 fi
 PACBIO1="pacbio_nonredundant.fa";
 fi
+fi
+
+
+#first we re-create k-unitigs and super reads with smaller K
+if [ ! -e superReadSequences.named.fasta ];then
+echo "Reducing super-read k-mer size"
+awk 'BEGIN{n=0}{if($1~/^>/){}else{print ">sr"n"\n"$0;n+=2;}}' $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > superReadSequences.fasta.in
+create_k_unitigs_large_k -q 1 -c $(($KMER-1)) -t $NUM_THREADS -m $KMER -n $(($ESTIMATED_GENOME_SIZE*2)) -l $KMER -f `perl -e 'print 1/'$KMER'/1e5'` $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta.all  | grep --text -v '^>' | perl -ane '{$seq=$F[0]; $F[0]=~tr/ACTGactg/TGACtgac/;$revseq=reverse($F[0]); $h{($seq ge $revseq)?$seq:$revseq}=1;}END{$n=0;foreach $k(keys %h){print ">",$n++," length:",length($k),"\n$k\n"}}' > guillaumeKUnitigsAtLeast32bases_all.fasta.tmp && mv guillaumeKUnitigsAtLeast32bases_all.fasta.tmp guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta
+rm -rf work1_mr
+createSuperReadsForDirectory.perl -minreadsinsuperread 1 -l $KMER -mean-and-stdev-by-prefix-file meanAndStdevByPrefix.pe.txt -kunitigsfile guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta -t $NUM_THREADS -mikedebug work1_mr superReadSequences.fasta.in 1> super1.err 2>&1
+perl -ane 'push(@names,$F[0]);
+END{
+  open(FILE,"'work1_mr/superReadSequences.fasta'");
+  while($line=<FILE>){
+    if($line=~/^>/){
+      chomp($line);
+      print ">",$names[substr($line,1)],"\n";
+    }else{
+      print $line;
+    }
+  }
+}' < work1_mr/superReadNames.txt > superReadSequences.named.fasta.tmp && mv superReadSequences.named.fasta.tmp superReadSequences.named.fasta
+fi
+
+SUPERREADS=superReadSequences.named.fasta
+if [ ! -e superReadSequences.named.fasta ];then
+echo "Error creating named super-reads file ";
+exit 1;
+fi
+
+KUNITIGS=guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta
+if [ ! -e $KUNITIGS ];then
+echo "K-unitigs file $KUNITIGS not found!";
+exit 1;
+fi
+
+KUNITIGLENGTHS=work1_mr/kUnitigLengths.txt
+if [ ! -e $KUNITIGLENGTHS ];then
+echo "K-unitig lengths file $KUNITIGLENGTHS not found!";
+exit 1;
 fi
 
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
