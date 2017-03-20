@@ -7,12 +7,12 @@ MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 ESTIMATED_GENOME_SIZE=0
 MAX_GAP=2000
-MER=15
+MER=17
 B=17
 d=0.029
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 PB_HC=30;
-KMER=31
+KMER=41
 
 #parsing arguments
 while [[ $# > 0 ]]

@@ -2,12 +2,11 @@
 #######################################
 #Copyright University of Maryland 2015#
 #######################################
-#!/usr/bin/env perl
-#
 #this code refines the alignments of mega reads to pacbio reads using nucmer
-use mummer;
 use FindBin qw($Bin);
 use lib "$Bin/../lib/perl";
+use mummer;
+
 
 my $PREFIX=$ARGV[0];
 my $rn="";

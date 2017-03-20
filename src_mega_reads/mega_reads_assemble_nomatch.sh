@@ -12,7 +12,7 @@ B=17
 d=0.029
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 PB_HC=30;
-KMER=31
+KMER=41
 
 #parsing arguments
 while [[ $# > 0 ]]
@@ -152,19 +152,19 @@ END{
 fi
 
 SUPERREADS=superReadSequences.named.fasta
-if [ ! -e superReadSequences.named.fasta ];then
+if [ ! -s superReadSequences.named.fasta ];then
 echo "Error creating named super-reads file ";
 exit 1;
 fi
 
 KUNITIGS=guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta
-if [ ! -e $KUNITIGS ];then
+if [ ! -s $KUNITIGS ];then
 echo "K-unitigs file $KUNITIGS not found!";
 exit 1;
 fi
 
 KUNITIGLENGTHS=work1_mr/kUnitigLengths.txt
-if [ ! -e $KUNITIGLENGTHS ];then
+if [ ! -s $KUNITIGLENGTHS ];then
 echo "K-unitig lengths file $KUNITIGLENGTHS not found!";
 exit 1;
 fi
