@@ -207,12 +207,18 @@ rm $COORDS.mr_sizes.tmp $COORDS.reduce.tmp
 touch .rerun
 fi
 
+if [ ! -s $COORDS.single.txt ] || [ -e .rerun ];then
+awk 'BEGIN{counter=0}{if($1~ /^>/){if(counter==1){print rn}rn=substr($1,2);counter=0}else{counter++}}END{if(counter==1){print rn}}' $COORDS.txt > $COORDS.single.txt.tmp && mv  $COORDS.single.txt.tmp  $COORDS.single.txt
+fi
+
 if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 2"
 if numactl --show 1> /dev/null 2>&1;then
-numactl --interleave=all create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.maximal.fa  -p $PACBIO1 -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
+numactl --interleave=all create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.maximal.fa  -p <(ufasta extract -v -f $COORDS.single.txt $PACBIO1) -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt && \
+ufasta extract -f $COORDS.single.txt $COORDS.txt >> $COORDS.mr.txt
 else
-create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.maximal.fa  -p $PACBIO1 -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
+create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.maximal.fa  -p <(ufasta extract -v -f $COORDS.single.txt $PACBIO1) -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt && \
+ufasta extract -f $COORDS.single.txt $COORDS.txt >> $COORDS.mr.txt
 fi
 touch .rerun
 fi
