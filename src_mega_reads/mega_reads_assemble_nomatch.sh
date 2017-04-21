@@ -139,7 +139,7 @@ rm -rf work1_mr
 createSuperReadsForDirectory.perl -minreadsinsuperread 1 -l $KMER -mean-and-stdev-by-prefix-file meanAndStdevByPrefix.pe.txt -kunitigsfile guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta -t $NUM_THREADS -mikedebug work1_mr superReadSequences.fasta.in 1> super1.err 2>&1
 perl -ane 'push(@names,$F[0]);
 END{
-  open(FILE,"'work1_mr/superReadSequences.fasta'");
+  open(FILE,"'work1_mr/superReadSequences.fasta.all'");
   while($line=<FILE>){
     if($line=~/^>/){
       chomp($line);

@@ -4,10 +4,17 @@ MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:$PATH;
 REF=$1
 QRY=$2
-DELTAFILE=$3
+NUM_THREADS=$3
 
 REFN=`basename $REF`
 QRYN=`basename $QRY`
+DELTAFILE=$REFN.$QRYN
+
+
+#nucmer
+if [ ! -e align.success ];then
+nucmer -t $NUM_THREADS -p  $DELTAFILE -l 51 -c 200 $REF $QRY && touch align.success || exit
+fi
 
 #delta-filter
 if [ ! -e filter.success ];then
