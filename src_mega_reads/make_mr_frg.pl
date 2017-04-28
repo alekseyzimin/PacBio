@@ -48,7 +48,7 @@ while($line1=<STDIN>)
       $clr2=$outlen;
       print STDOUT "{FRG\n";
       print STDOUT "act:A\n";
-      print STDOUT "acc:$readname1\n";
+      print STDOUT "acc:$readname1.$i\n";
       print STDOUT "rnd:1\n";
       print STDOUT "sta:G\n";
       print STDOUT "lib:$libId\n";
