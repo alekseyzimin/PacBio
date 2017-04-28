@@ -150,6 +150,7 @@ END{
     }
   }
 }' < work1_mr/superReadNames.txt > superReadSequences.named.fasta.tmp && mv superReadSequences.named.fasta.tmp superReadSequences.named.fasta
+rm superReadSequences.fasta.in
 fi
 
 SUPERREADS=superReadSequences.named.fasta
@@ -275,7 +276,7 @@ createSuperReadsForDirectory.perl -minreadsinsuperread 1 -l 31 -mean-and-stdev-b
 find_contained_reads.pl work1_mr1/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt $COORDS.1.fa > containees.txt
 ufasta extract -v -f containees.txt $COORDS.1.fa |make_mr_frg.pl mr 600  > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg
 make_mate_frg.pl < $COORDS.1.fa > $COORDS.1.mates.frg.tmp && mv $COORDS.1.mates.frg.tmp $COORDS.1.mates.frg
-rm -rf $CA work1_mr1 guillaumeKUnitigsAtLeast32bases_all.31.fasta
+rm -rf $CA work1_mr1 guillaumeKUnitigsAtLeast32bases_all.31.fasta mr.fa.in
 fi
 
 TCOVERAGE=20
