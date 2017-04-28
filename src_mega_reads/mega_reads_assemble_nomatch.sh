@@ -150,7 +150,6 @@ END{
     }
   }
 }' < work1_mr/superReadNames.txt > superReadSequences.named.fasta.tmp && mv superReadSequences.named.fasta.tmp superReadSequences.named.fasta
-rm -rf work1_mr guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta
 fi
 
 SUPERREADS=superReadSequences.named.fasta
