@@ -62,6 +62,7 @@ while($line1=<STDIN>)
       print STDOUT "clv:$clr1,$clr2\n";
       print STDOUT "clr:$clr1,$clr2\n";
       print STDOUT "}\n";
+      $i++;
     }
   }
 }
