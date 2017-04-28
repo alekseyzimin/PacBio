@@ -111,7 +111,7 @@ PB_SIZE=$(stat -c%s $PACBIO);
 if [ $B -lt 15 ];then
 echo "Detected nanopore data, we have to rename the reads";
 if [ ! -s "nanoporeRenamed.fa" ] ;then
-awk 'BEGIN{n=0}{if($1 ~ /^>/){print $1".n";n++}else{print $0}}' $PACBIO > nanoporeRenamed.fa;
+awk 'BEGIN{n=0}{if($1 ~ /^>/){print $1"."n;n++}else{print $0}}' $PACBIO > nanoporeRenamed.fa;
 fi
 PACBIO1="nanoporeRenamed.fa";
 MAX_GAP=250
