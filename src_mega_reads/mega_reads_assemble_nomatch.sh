@@ -111,6 +111,7 @@ PB_SIZE=$(stat -c%s $PACBIO);
 if [ $B -lt 15 ];then
 echo "Detected nanopore data";
 PACBIO1=$PACBIO;
+MAX_GAP=250
 else
 if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE/$PLOIDY)) -gt ${PB_HC} ];then
 echo "Pacbio coverage >${PB_HC}x, using ${PB_HC}x of the longest reads";
@@ -208,7 +209,7 @@ touch .rerun
 fi
 
 if [ ! -s $COORDS.single.txt ] || [ -e .rerun ];then
-awk 'BEGIN{counter=0}{if($1~ /^>/){if(counter==1){print rn}rn=substr($1,2);counter=0}else{counter++}}END{if(counter==1){print rn}}' $COORDS.txt > $COORDS.single.txt.tmp && mv  $COORDS.single.txt.tmp  $COORDS.single.txt
+awk 'BEGIN{counter=0}{if($1~ /^>/){if(counter==1){print rn}rn=substr($1,2);counter=0}else{if($8>'$d'*4){counter++}else{counter+=2}}}END{if(counter==1){print rn}}' $COORDS.txt > $COORDS.single.txt.tmp && mv  $COORDS.single.txt.tmp  $COORDS.single.txt
 fi
 
 if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
@@ -266,7 +267,12 @@ fi
 
 if [ ! -s $COORDS.1.frg ] || [ -e .rerun ];then
 echo "Generating assembly input files"
-make_mr_frg.pl mr 600 < $COORDS.1.fa > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg
+awk 'BEGIN{n=0}{if($1~/^>/){}else{print ">sr"n"\n"$0;n+=2;}}'  $COORDS.1.fa  > mr.fa.in
+#here we reduce the coverage by eliminating exact containees
+create_k_unitigs_large_k2 -q 1 -c 30 -t $NUM_THREADS -m 31 -n 240000000 -l 31 mr.fa.in   | grep --text -v '^>' | perl -ane '{$seq=$F[0]; $F[0]=~tr/ACTGactg/TGACtgac/;$revseq=reverse($F[0]); $h{($seq ge $revseq)?$seq:$revseq}=1;}END{$n=0;foreach $k(keys %h){print ">",$n++," length:",length($k),"\n$k\n"}}' > guillaumeKUnitigsAtLeast32bases_all.fasta.tmp && mv guillaumeKUnitigsAtLeast32bases_all.fasta.tmp guillaumeKUnitigsAtLeast32bases_all.31.fasta
+createSuperReadsForDirectory.perl -minreadsinsuperread 1 -l 31 -mean-and-stdev-by-prefix-file meanAndStdevByPrefix.pe.txt -kunitigsfile guillaumeKUnitigsAtLeast32bases_all.31.fasta -t $NUM_THREADS -mikedebug work1_mr1 mr.fa.in  1> super1.err 2>&1
+find_contained_reads.pl work1_mr1/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt $COORDS.1.fa > containees.txt
+ufasta extract -v -f containees.txt $COORDS.1.fa |make_mr_frg.pl mr 600  > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg
 make_mate_frg.pl < $COORDS.1.fa > $COORDS.1.mates.frg.tmp && mv $COORDS.1.mates.frg.tmp $COORDS.1.mates.frg
 rm -rf $CA
 fi
@@ -282,7 +288,7 @@ if [ ! -s $SR_FRG ];then
 awk '{if($0 ~ /^>/) print $0":super-read"; else print $0}' $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta | fasta2frg.pl sr 200 > $SR_FRG.tmp && mv  $SR_FRG.tmp  $SR_FRG;
 fi
 fi
-COVERAGE=`ls $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{print int(0.85*n/int('$ESTIMATED_GENOME_SIZE')/int('$PLOIDY'))}'`;
+COVERAGE=`ls $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{print int(n/int('$ESTIMATED_GENOME_SIZE')/int('$PLOIDY'))}'`;
 TCOVERAGE=$COVERAGE;
 fi
 
@@ -306,8 +312,8 @@ merylMemory=65536
 ovlStoreMemory=65536
 utgGraphErrorLimit=1000
 utgMergeErrorLimit=1000
-utgGraphErrorRate=0.035
-utgMergeErrorRate=0.035
+utgGraphErrorRate=0.03
+utgMergeErrorRate=0.03
 ovlCorrBatchSize=100000
 ovlCorrConcurrency=6
 frgCorrThreads=$NUM_THREADS

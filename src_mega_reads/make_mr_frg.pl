@@ -7,6 +7,7 @@
 my $libId=$ARGV[0];
 my $min_len_output=64;
 $min_len_output=$ARGV[1] if($#ARGV>0);
+$max_len_output=65535;
 
 print STDOUT "{VER\n";
 print STDOUT "ver:2\n";
@@ -29,35 +30,38 @@ print STDOUT "}\n";
 
 while($line1=<STDIN>)
 {
-chomp($line1);
-if($line1 =~ /^>/)
-{
-$header=substr($line1,1);
-@f=split(/\s+/,$header);
-$readname1=$f[0];
-$line1=<STDIN>;
-chomp($line1);
-$sequence1=$line1;
-$clr1=0;
-$clr2=length($sequence1);
-next if(length($sequence1)<$min_len_output);
-
-        print STDOUT "{FRG\n";
-        print STDOUT "act:A\n";
-        print STDOUT "acc:$readname1\n";
-        print STDOUT "rnd:1\n";
-        print STDOUT "sta:G\n";
-        print STDOUT "lib:$libId\n";
-        print STDOUT "pla:0\n";
-        print STDOUT "loc:0\n";
-        print STDOUT "src:\n.\n";
-        print STDOUT "seq:\n$sequence1\n.\n";
-$sequence1 =~ tr/ACGTNacgtn/XXXXXDDDDD/;# create fake quality scores
+  chomp($line1);
+  if($line1 =~ /^>/)
+  {
+    $header=substr($line1,1);
+    @f=split(/\s+/,$header);
+    $readname1=$f[0];
+    $line1=<STDIN>;
+    chomp($line1);
+    $len=length($line1);
+    my $i=0;
+    while($i*$max_len_output<$len-$min_len_output){
+      my $outlen = $len - $i*$max_len_output;
+      $outlen=$max_len_output if($outlen>$max_len_output);
+      $sequence1=substr($line1,$i*$max_len_output,$outlen);
+      $clr1=0;
+      $clr2=$outlen;
+      print STDOUT "{FRG\n";
+      print STDOUT "act:A\n";
+      print STDOUT "acc:$readname1\n";
+      print STDOUT "rnd:1\n";
+      print STDOUT "sta:G\n";
+      print STDOUT "lib:$libId\n";
+      print STDOUT "pla:0\n";
+      print STDOUT "loc:0\n";
+      print STDOUT "src:\n.\n";
+      print STDOUT "seq:\n$sequence1\n.\n";
+      $sequence1 =~ tr/ACGTNacgtn/XXXXXDDDDD/;# create fake quality scores
         print STDOUT "qlt:\n$sequence1\n.\n";
-        print STDOUT "hps:\n.\n";
-        print STDOUT "clv:$clr1,$clr2\n";
-        print STDOUT "clr:$clr1,$clr2\n";
-        print STDOUT "}\n";
-
-}
+      print STDOUT "hps:\n.\n";
+      print STDOUT "clv:$clr1,$clr2\n";
+      print STDOUT "clr:$clr1,$clr2\n";
+      print STDOUT "}\n";
+    }
+  }
 }
