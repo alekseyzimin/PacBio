@@ -352,7 +352,7 @@ fi
 
 #at athis point we assume that the unitig consensus is done
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
-echo "Unitig consensus failure"
+echo "CA failure" && tail -n 40 $CA.log 
 exit;
 fi
 
@@ -363,7 +363,7 @@ runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfte
 rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
 runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
-echo "Unitig consensus failure after deduplicate"
+echo "Unitig consensus failure after deduplicate" && tail -n 40 $CA.log
 exit;
 else
 touch ${CA}/deduplicate.success
