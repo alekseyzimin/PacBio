@@ -230,13 +230,14 @@ fi
 
 if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
 echo "Refining alignments"
-if which parallel 1> /dev/null 2>&1;then
+#if which parallel 1> /dev/null 2>&1;then
 NUM_PACBIO_READS_PER_BATCH=`grep --text '^>'  $PACBIO1 | wc -l | awk '{bs=int($1/1024);if(bs<1000){bs=1000};if(bs>100000){bs=100000};}END{print bs}'` 
-awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt | add_pb_seq.pl $PACBIO1 | split_matches_file.pl $NUM_PACBIO_READS_PER_BATCH .matches && parallel "refine.sh $COORDS {1} $KMER" ::: .matches.* && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp
-else
-echo "WARNING! GNU parallel not found, proceeding with sequential execution for the refine step"
-awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt | add_pb_seq.pl $PACBIO1 > .matches.0 && refine.sh $COORDS .matches.0 $KMER && mv $COORDS.matches.0.all.txt.tmp $COORDS.all.txt && rm .matches.0
-fi
+#awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt | add_pb_seq.pl $PACBIO1 | split_matches_file.pl $NUM_PACBIO_READS_PER_BATCH .matches && parallel "refine.sh $COORDS {1} $KMER" ::: .matches.* && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp
+awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt | add_pb_seq.pl $PACBIO1 | split_matches_file.pl $NUM_PACBIO_READS_PER_BATCH .matches && ls .matches.* | xargs -P $NUM_THREADS -I % refine.sh $COORDS % $KMER && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp
+#else
+#echo "WARNING! GNU parallel not found, proceeding with sequential execution for the refine step"
+#awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt | add_pb_seq.pl $PACBIO1 > .matches.0 && refine.sh $COORDS .matches.0 $KMER && mv $COORDS.matches.0.all.txt.tmp $COORDS.all.txt && rm .matches.0
+#fi
 #awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt > $COORDS.all.txt.tmp && mv $COORDS.all.txt.tmp $COORDS.all.txt
 touch .rerun
 fi
