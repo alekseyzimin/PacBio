@@ -84,6 +84,7 @@ if [ ! -e "$ASM_DIR/overlapStore_rebuild.success" ];then
 overlapStoreBuild -o $ASM_DIR/$ASM_PREFIX.ovlStore -M 65536 -g $ASM_DIR/$ASM_PREFIX.gkpStore $ASM_DIR/overlaps_dedup.ovb.gz 1>$ASM_DIR/overlapStore.rebuild.err 2>&1 && rm $ASM_DIR/overlaps_dedup.ovb.gz && touch $ASM_DIR/overlapStore_rebuild.success
 fi
 
+touch $ASM_DIR/deduplicate.success
 #overlapStore -d $ASM_DIR/ovlStoreBackup/$ASM_PREFIX.ovlStore | perl -ane 'BEGIN{open(FILE,"'$ASM_DIR/duplicates.iid.txt'");while($l=<FILE>){chomp($l);$diid{$l}=1}}{if($F[0]<$F[1]){if(not(defined($diid{$F[0]})) && not(defined($diid{$F[1]}))){ print join(" ",@F[0..6]),"\n"}}}' | convertOverlap -ovl | gzip -c > $ASM_DIR/overlaps_dedup.ovb.gz && \
 #overlapStoreBuild -o $ASM_DIR/$ASM_PREFIX.ovlStore -M 65536 -g $ASM_DIR/$ASM_PREFIX.gkpStore $ASM_DIR/overlaps_dedup.ovb.gz 1>$ASM_DIR/overlapStore.rebuild.err 2>&1
 
