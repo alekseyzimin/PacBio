@@ -230,7 +230,7 @@ fi
 
 #at athis point we assume that the unitig consensus is done
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
-echo "Unitig consensus failure"
+echo "CA failure, see $CA.log"
 exit;
 fi
 
