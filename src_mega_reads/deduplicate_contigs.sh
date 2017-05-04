@@ -29,7 +29,7 @@ fi
 
 if [ ! -e $ASM_DIR/filter_map.contigs.success ];then
 awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $ASM_DIR/sasm_to_sasm.delta > $ASM_DIR/sasm_to_sasm.noself.delta && \
-delta-filter -i $HAP_SIM_RATE -q $ASM_DIR/sasm_to_sasm.noself.delta > $ASM_DIR/sasm_to_sasm.noself.fdelta && \
+delta-filter -i $HAP_SIM_RATE -q -o 20 $ASM_DIR/sasm_to_sasm.noself.delta > $ASM_DIR/sasm_to_sasm.noself.fdelta && \
 show-coords -lcHr $ASM_DIR/sasm_to_sasm.noself.fdelta | awk '{if($12>$13) print $0}' |merge_matches_and_tile_coords_file.pl $MERGE_LEN | perl -ane '{$cov{$F[-1]}+=$F[15] if($F[15]>=10);}END{foreach $k(keys %cov){print $k,"\n" if($cov{$k}>90);}}' > $ASM_DIR/sduplicates.txt && \
 awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $ASM_DIR/sasm_to_sasm.delta| show-coords -lcH /dev/stdin | awk '{if($12>$13 && $10>int("'$HAP_SIM_RATE'") && $16>90) print $NF}' >> $ASM_DIR/sduplicates.txt && \
 ufasta extract -v -f $ASM_DIR/sduplicates.txt $ASM_DIR/9-terminator/$ASM_PREFIX.scf.fasta > $ASM_DIR/dedup.$ASM_PREFIX.scf.fasta && \
