@@ -114,7 +114,7 @@ cho "Detected nanopore data, we have to rename the reads";
 awk 'BEGIN{n=0}{if($1 ~ /^>/){print $1"."n;n++}else{print $0}}' $PACBIO > nanoporeRenamed.fa;
 fi
 PACBIO1="nanoporeRenamed.fa";
-MAX_GAP=250
+MAX_GAP=1000
 else
 if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE/$PLOIDY)) -gt ${PB_HC} ];then
 echo "Pacbio coverage >${PB_HC}x, using ${PB_HC}x of the longest reads";
@@ -320,8 +320,6 @@ utgGraphErrorLimit=1000
 utgMergeErrorLimit=1000
 utgGraphErrorRate=0.03
 utgMergeErrorRate=0.03
-ovlMerThreshold=300
-obtMerThreshold=300
 ovlCorrBatchSize=100000
 ovlCorrConcurrency=6
 frgCorrThreads=$NUM_THREADS
