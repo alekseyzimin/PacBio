@@ -45,7 +45,7 @@ fi
 #here we map the contigs against themselves to figure out which ones are redundant
 if [ ! -e self_map.contigs.success ];then
 rm -f filter_map.contigs.success
-perl -ane 'BEGIN{$seq=""}{if($F[0] =~ /^\>/){if(length($seq)>0){print length($seq)," $rn $seq\n";}$seq="";$rn=$F[0];}else{$seq.=$F[0];}}END{length($seq)," $rn $seq\n";}' $REFN.$QRYN.all.polished.fa | sort -S 50% -nrk1 | awk '{print $2"\n"$3}' >  scaffolds.ref.fa && \
+perl -ane 'BEGIN{$seq=""}{if($F[0] =~ /^\>/){if(length($seq)>500){print length($seq)," $rn $seq\n";}$seq="";$rn=$F[0];}else{$seq.=$F[0];}}END{print length($seq)," $rn $seq\n";}' $REFN.$QRYN.all.polished.fa | sort -S 50% -nrk1 | awk '{print $2"\n"$3}' >  scaffolds.ref.fa && \
 nucmer -t $NUM_THREADS --batch $(($(stat -c%s "scaffolds.ref.fa")/25)) -l 51 -c 100 -b 100 -p sasm_to_sasm  scaffolds.ref.fa  $REFN.$QRYN.all.polished.fa && \
 touch self_map.contigs.success || exit
 fi

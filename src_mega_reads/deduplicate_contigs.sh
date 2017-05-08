@@ -22,7 +22,7 @@ set -e
 #here we map the contigs against themselves to figure out which ones are redundant
 if [ ! -e $ASM_DIR/self_map.contigs.success ];then
 rm -f $ASM_DIR/filter_map.contigs.success
-perl -ane 'BEGIN{$seq=""}{if($F[0] =~ /^\>/){if(length($seq)>0){print length($seq)," $rn $seq\n";}$seq="";$rn=$F[0];}else{$seq.=$F[0];}}END{length($seq)," $rn $seq\n";}' $ASM_DIR/9-terminator/$ASM_PREFIX.scf.fasta | sort -S 50% -nrk1 | awk '{print $2"\n"$3}' >  $ASM_DIR/scaffolds.ref.fa && \
+perl -ane 'BEGIN{$seq=""}{if($F[0] =~ /^\>/){if(length($seq)>500){print length($seq)," $rn $seq\n";}$seq="";$rn=$F[0];}else{$seq.=$F[0];}}END{print length($seq)," $rn $seq\n";}' $ASM_DIR/9-terminator/$ASM_PREFIX.scf.fasta | sort -S 50% -nrk1 | awk '{print $2"\n"$3}' >  $ASM_DIR/scaffolds.ref.fa && \
 nucmer -t $NUM_THREADS --batch $(($(stat -c%s "$ASM_DIR/scaffolds.ref.fa")/25)) -l 31 -c 200 -b 100 -p $ASM_DIR/sasm_to_sasm  $ASM_DIR/scaffolds.ref.fa  $ASM_DIR/9-terminator/$ASM_PREFIX.scf.fasta && \
 touch $ASM_DIR/self_map.contigs.success || exit
 fi
