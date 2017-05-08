@@ -22,7 +22,7 @@ rm -f show.success
 rm -f add_not_alingning.success
 rm -f merge.success
 parallel_delta-filter.sh $DELTAFILE '-r -l 1000' 9 && mv $DELTAFILE.fdelta $DELTAFILE.r.delta && \
-parallel_delta-filter.sh $DELTAFILE '-1 -l 1000' 9 && mv $DELTAFILE.fdelta $DELTAFILE.1.delta && \
+parallel_delta-filter.sh $DELTAFILE '-1 -l 100' 9 && mv $DELTAFILE.fdelta $DELTAFILE.1.delta && \
 touch filter.success || exit
 fi
 
@@ -32,7 +32,7 @@ fi
 
 if [ ! -e add_not_aligning.success ];then
 #add the sequences that did not align
-ufasta extract -v -f <(show-coords -lcH -I 99 -L 1000 $DELTAFILE.1.delta| perl -ane '{$palign{$F[-1]}+=$F[-4];}END{foreach $k(keys %palign){print $k,"\n" if($palign{$k}>20)}}') $QRY > $REFN.$QRYN.extra.fa && \
+ufasta extract -v -f <(show-coords -lcH -I 99 $DELTAFILE.1.delta| perl -ane '{$palign{$F[-1]}+=$F[-4];}END{foreach $k(keys %palign){print $k,"\n" if($palign{$k}>20)}}') $QRY > $REFN.$QRYN.extra.fa && \
 cat $REFN.$QRYN.merged.fa $REFN.$QRYN.extra.fa > $REFN.$QRYN.all.fa && \
 touch add_not_aligning.success || exit
 fi
