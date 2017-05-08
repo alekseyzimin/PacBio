@@ -31,29 +31,31 @@ show-coords -lcHq -I 99 -L 3000 $DELTAFILE.r.delta | extract_merges.pl $QRY > me
 fi
 
 if [ ! -e add_not_aligning.success ];then
-#add the sequences that did not align
-ufasta extract -v -f <(show-coords -lcH -I 99 $DELTAFILE.1.delta| perl -ane '{$palign{$F[-1]}+=$F[-4];}END{foreach $k(keys %palign){print $k,"\n" if($palign{$k}>20)}}') $QRY > $REFN.$QRYN.extra.fa && \
+#add the sequences that did not align and longer than 1000 bp
+show-coords -lcH -I 98 $DELTAFILE.1.delta| perl -ane '{$palign{$F[-1]}+=$F[-4];}END{foreach $k(keys %palign){print $k,"\n" if($palign{$k}>20)}}' > aligned_sequences.txt
+ufasta sizes -H $QRY | awk '{if($2<1000) print $1}' > short_sequences.txt
+ufasta extract -v -f <(cat aligned_sequences.txt short_sequences.txt) $QRY > $REFN.$QRYN.extra.fa && \
 cat $REFN.$QRYN.merged.fa $REFN.$QRYN.extra.fa > $REFN.$QRYN.all.fa && \
 touch add_not_aligning.success || exit
 fi
 
 if [ ! -e replace_consensus.success ];then
-show-coords -lcHr $DELTAFILE.1.delta | reconcile_consensus.pl $REFN.$QRYN.all.fa $QRY > $REFN.$QRYN.all.polished.fa && \
+show-coords -lcHr -I 98 -L 100 $DELTAFILE.1.delta | reconcile_consensus.pl $REFN.$QRYN.all.fa $QRY > $REFN.$QRYN.all.polished.fa && \
 touch replace_consensus.success ||exit
 fi
 
 #here we map the contigs against themselves to figure out which ones are redundant
 if [ ! -e self_map.contigs.success ];then
 rm -f filter_map.contigs.success
-perl -ane 'BEGIN{$seq=""}{if($F[0] =~ /^\>/){if(length($seq)>500){print length($seq)," $rn $seq\n";}$seq="";$rn=$F[0];}else{$seq.=$F[0];}}END{print length($seq)," $rn $seq\n";}' $REFN.$QRYN.all.polished.fa | sort -S 50% -nrk1 | awk '{print $2"\n"$3}' >  scaffolds.ref.fa && \
-nucmer -t $NUM_THREADS --batch $(($(stat -c%s "scaffolds.ref.fa")/25)) -l 51 -c 100 -b 100 -p sasm_to_sasm  scaffolds.ref.fa  $REFN.$QRYN.all.polished.fa && \
+perl -ane 'BEGIN{$seq=""}{if($F[0] =~ /^\>/){if(length($seq)>=1000){print length($seq)," $rn $seq\n";}$seq="";$rn=$F[0];}else{$seq.=$F[0];}}END{print length($seq)," $rn $seq\n";}' $REFN.$QRYN.all.polished.fa | sort -S 50% -nrk1 | awk '{print $2"\n"$3}' >  scaffolds.ref.fa && \
+nucmer -t $NUM_THREADS --batch $(($(stat -c%s "scaffolds.ref.fa")/5)) -l 51 -c 100 -b 100 -p sasm_to_sasm  scaffolds.ref.fa  $REFN.$QRYN.all.polished.fa && \
 touch self_map.contigs.success || exit
 fi
 
 if [ ! -e filter_map.contigs.success ];then
 awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' sasm_to_sasm.delta > sasm_to_sasm.noself.delta && \
-delta-filter -i 98 -q -o 10 sasm_to_sasm.noself.delta > sasm_to_sasm.noself.fdelta && \
-show-coords -lcHr sasm_to_sasm.noself.fdelta | awk '{if($12>$13) print $0}' |merge_matches_and_tile_coords_file.pl 500 | perl -ane '{$cov{$F[-1]}+=$F[15] if($F[15]>=10);}END{foreach $k(keys %cov){print $k,"\n" if($cov{$k}>90);}}' > sduplicates.txt && \
+delta-filter -i 98 -q -o 20 sasm_to_sasm.noself.delta > sasm_to_sasm.noself.fdelta && \
+show-coords -lcHr sasm_to_sasm.noself.fdelta | awk '{if($12>$13) print $0}' |merge_matches_and_tile_coords_file.pl 1000 | perl -ane '{$cov{$F[-1]}+=$F[15] if($F[15]>=10);}END{foreach $k(keys %cov){print $k,"\n" if($cov{$k}>90);}}' > sduplicates.txt && \
 awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' sasm_to_sasm.delta| show-coords -lcH /dev/stdin | awk '{if($12>$13 && $10>98 && $16>90) print $NF}' >> sduplicates.txt && \
 ufasta extract -v -f sduplicates.txt $REFN.$QRYN.all.polished.fa > $REFN.$QRYN.all.polished.deduplicated.fa && \
 touch filter_map.contigs.success || exit
