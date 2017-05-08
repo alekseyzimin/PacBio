@@ -52,9 +52,9 @@ fi
 
 if [ ! -e filter_map.contigs.success ];then
 awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' sasm_to_sasm.delta > sasm_to_sasm.noself.delta && \
-delta-filter -i 99 -q -o 10 sasm_to_sasm.noself.delta > sasm_to_sasm.noself.fdelta && \
+delta-filter -i 98 -q -o 10 sasm_to_sasm.noself.delta > sasm_to_sasm.noself.fdelta && \
 show-coords -lcHr sasm_to_sasm.noself.fdelta | awk '{if($12>$13) print $0}' |merge_matches_and_tile_coords_file.pl 500 | perl -ane '{$cov{$F[-1]}+=$F[15] if($F[15]>=10);}END{foreach $k(keys %cov){print $k,"\n" if($cov{$k}>90);}}' > sduplicates.txt && \
-awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' sasm_to_sasm.delta| show-coords -lcH /dev/stdin | awk '{if($12>$13 && $10>99 && $16>90) print $NF}' >> sduplicates.txt && \
+awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' sasm_to_sasm.delta| show-coords -lcH /dev/stdin | awk '{if($12>$13 && $10>98 && $16>90) print $NF}' >> sduplicates.txt && \
 ufasta extract -v -f sduplicates.txt $REFN.$QRYN.all.polished.fa > $REFN.$QRYN.all.polished.deduplicated.fa && \
 touch filter_map.contigs.success || exit
 fi
