@@ -37,5 +37,11 @@ cat $REFN.$QRYN.merged.fa $REFN.$QRYN.extra.fa > $REFN.$QRYN.all.fa && \
 touch add_not_aligning.success || exit
 fi
 
-echo "Output sequences in $REFN.$QRYN.all.fa"
-ufasta n50 -A -S -N50 $REFN.$QRYN.all.fa
+if [ ! -e replace_consensus.success ];then
+show-coords -lcHr $DELTAFILE.1.delta | reconcile_consensus.pl $REFN.$QRYN.all.fa $QRY > $REFN.$QRYN.all.polished.fa && \
+touch replace_consensus.success ||exit
+fi
+
+
+echo "Output sequences in $REFN.$QRYN.all.polished.fa"
+ufasta n50 -A -S -N50 $REFN.$QRYN.all.polished.fa

@@ -120,7 +120,7 @@ dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_nomatch.sh src_mega_reads
 		    src_ref/recompute_astat_superreads_CA8.sh src_mega_reads/add_pb_seq.pl \
 		    src_mega_reads/deduplicate_unitigs.sh src_mega_reads/deduplicate_contigs.sh src_mega_reads/parallel_delta-filter.sh \
 		    src_reconcile/newmerge.sh src_reconcile/extract_merges.pl src_reconcile/merge_contigs.pl src_reconcile/create_merged_sequences.pl \
-		    src_mega_reads/find_contained_reads.pl
+		    src_mega_reads/find_contained_reads.pl src_reconcile/reconcile_consensus.pl
 
 
 YAGGO_SOURCES += src_jf_aligner/jf_aligner_cmdline.hpp			\

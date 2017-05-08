@@ -111,7 +111,7 @@ PB_SIZE=$(stat -c%s $PACBIO);
 if [ $B -lt 15 ];then
 if [ ! -s "nanoporeRenamed.fa" ] ;then
 cho "Detected nanopore data, we have to rename the reads";
-awk 'BEGIN{n=0}{if($1 ~ /^>/){print $1"."n;n++}else{print $0}}' $PACBIO > nanoporeRenamed.fa;
+awk 'BEGIN{n=0}{if($1 ~ /^>/){print $1"/"n;n++}else{print $0}}' $PACBIO > nanoporeRenamed.fa;
 fi
 PACBIO1="nanoporeRenamed.fa";
 MAX_GAP=1000
@@ -345,7 +345,7 @@ cnsReuseUnitigs=1" > runCA.spec
 echo "Running assembly"
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then 
   #need to start from the beginning
-  runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1> $CA.log 2>&1 
+  runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 
   rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
   runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 fi
