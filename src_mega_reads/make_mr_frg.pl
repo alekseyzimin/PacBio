@@ -39,11 +39,11 @@ while($line1=<STDIN>)
     $line1=<STDIN>;
     chomp($line1);
     $len=length($line1);
-    my $i=0;
-    while($i*$max_len_output<$len-$min_len_output){
-      my $outlen = $len - $i*$max_len_output;
+    my $offset=0;
+    while($offset<$len-$min_len_output){
+      my $outlen = $len - $offset;
       $outlen=$max_len_output if($outlen>$max_len_output);
-      $sequence1=substr($line1,$i*$max_len_output,$outlen);
+      $sequence1=substr($line1,$offset,$outlen);
       $clr1=0;
       $clr2=$outlen;
       print STDOUT "{FRG\n";
@@ -62,7 +62,7 @@ while($line1=<STDIN>)
       print STDOUT "clv:$clr1,$clr2\n";
       print STDOUT "clr:$clr1,$clr2\n";
       print STDOUT "}\n";
-      $i++;
+      $offset+=($max_len_output-10000);
     }
   }
 }
