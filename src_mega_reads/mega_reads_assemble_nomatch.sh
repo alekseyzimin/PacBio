@@ -336,6 +336,7 @@ merylThreads=$NUM_THREADS
 stoneLevel=0
 doExtendClearRanges=0
 computeInsertSize=0
+maxRepeatLength=12000
 cgwErrorRate=0.1
 cgwMergeMissingThreshold=-1
 cgwMergeFilterLevel=1
