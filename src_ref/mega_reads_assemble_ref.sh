@@ -168,7 +168,7 @@ fi
 TCOVERAGE=20
 if [ $ESTIMATED_GENOME_SIZE -gt 1 ];then
 MR_SIZE=$(stat -c%s "$COORDS.1.fa");
-MCOVERAGE=$((MR_SIZE/ESTIMATED_GENOME_SIZE+1));
+MCOVERAGE=$(($MR_SIZE/$ESTIMATED_GENOME_SIZE+1));
 if [ $MCOVERAGE -le 5 ];then
 echo "Coverage of the mega-reads less than 5 -- using the super reads as well";
 SR_FRG=$COORDS.sr.frg
@@ -235,6 +235,7 @@ fi
 #recompute astat if low pacbio coverage
 if [ $MCOVERAGE -le 5 ]; then
 if [ ! -e ${CA}/recompute_astat.success ];then
+echo "Recomputing A-stat"
 recompute_astat_superreads_CA8.sh genome $CA $PE_AVG_READ_LENGTH $MASURCA_ASSEMBLY_WORK1_PATH/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt  $SR_FRG
 touch ${CA}/recompute_astat.success
 fi
