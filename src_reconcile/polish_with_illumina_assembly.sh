@@ -40,7 +40,7 @@ touch add_not_aligning.success || exit
 fi
 
 if [ ! -e replace_consensus.success ];then
-show-coords -lcHr -I 98 -L 100 $DELTAFILE.1.delta | reconcile_consensus.pl $REFN.$QRYN.all.fa $QRY > $REFN.$QRYN.all.polished.fa && \
+show-coords -lcHr -I 95 -L 100 $DELTAFILE.1.delta | reconcile_consensus.pl $REFN.$QRYN.all.fa $QRY > $REFN.$QRYN.all.polished.fa && \
 touch replace_consensus.success ||exit
 fi
 
