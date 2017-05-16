@@ -234,7 +234,7 @@ exit;
 fi
 
 #recompute astat if low pacbio coverage
-if [ $MCOVERAGE -le 5 ]; then
+if [ $COVERAGE -le 5 ]; then
 if [ ! -e ${CA}/recompute_astat.success ];then
 recompute_astat_superreads_CA8.sh genome $CA $PE_AVG_READ_LENGTH $MASURCA_ASSEMBLY_WORK1_PATH/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt  $SR_FRG
 touch ${CA}/recompute_astat.success
