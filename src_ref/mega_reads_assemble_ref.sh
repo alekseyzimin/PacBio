@@ -78,53 +78,12 @@ if [ ! -e $PACBIO ];then
 echo "PacBio reads file $PACBIO not found!";
 exit 1 ;
 fi
-
-KUNITIGS=$MASURCA_ASSEMBLY_WORK1_PATH/../guillaumeKUnitigsAtLeast32bases_all.fasta
-if [ ! -e $KUNITIGS ];then
-echo "K-unitigs file $KUNITIGS not found!";
-exit 1;
-fi
-
-KUNITIGLENGTHS=$MASURCA_ASSEMBLY_WORK1_PATH/kUnitigLengths.txt
-if [ ! -e $KUNITIGLENGTHS ];then
-echo "K-unitig lengths file $KUNITIGLENGTHS not found!";
-exit 1;
-fi
-
-SUPERREADS=$MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta
-if [ ! -e $SUPERREADS ];then
-echo "Super reads file $SUPERREADS not found!";
-exit 1;
-else
-if [ ! -e superReadSequences.named.fasta ];then
-perl -ane 'push(@names,$F[0]);
-	END{
-	open(FILE,"'$SUPERREADS'");
-	while($line=<FILE>){
-		if($line=~/^>/){
-			chomp($line);
-			print ">",$names[substr($line,1)],"\n";
-		}else{
-			print $line;
-	}
-	}
-}' < $MASURCA_ASSEMBLY_WORK1_PATH/superReadNames.txt > superReadSequences.named.fasta.tmp && mv superReadSequences.named.fasta.tmp superReadSequences.named.fasta
-fi
-if [ -s superReadSequences.named.fasta ];then
-SUPERREADS=superReadSequences.named.fasta;
-else
-echo "Error creating named super-reads file from $MASURCA_ASSEMBLY_WORK1_PATH/superReadNames.txt and $SUPERREADS!";
-rm superReadSequences.named.fasta
-exit 1;
-fi
-fi
-
 ################setting parameters#########################
 MER=17
 B=25
 d=0.05
-KMER=`awk 'BEGIN{min=10000}{if($2<min) min=$2}END{print min}' $KUNITIGLENGTHS`
-JF_SIZE=$(stat -c%s $SUPERREADS);
+KMER=41
+JF_SIZE=$(stat -c%s $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta);
 COORDS=mr.$KMER.$MER.$B.$d
 CA=CA.${COORDS}
 
@@ -136,6 +95,47 @@ echo "Using $NUM_THREADS threads"
 echo "Output prefix $COORDS"
 
 rm -f .rerun
+
+#first we re-create k-unitigs and super reads with smaller K
+if [ ! -e superReadSequences.named.fasta ];then
+echo "Reducing super-read k-mer size"
+awk 'BEGIN{n=0}{if($1~/^>/){}else{print ">sr"n"\n"$0;n+=2;}}' $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > superReadSequences.fasta.in
+create_k_unitigs_large_k -q 1 -c $(($KMER-1)) -t $NUM_THREADS -m $KMER -n $(($ESTIMATED_GENOME_SIZE*2)) -l $KMER -f `perl -e 'print 1/'$KMER'/1e5'` $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta.all  | grep --text -v '^>' | perl -ane '{$seq=$F[0]; $F[0]=~tr/ACTGactg/TGACtgac/;$revseq=reverse($F[0]); $h{($seq ge $revseq)?$seq:$revseq}=1;}END{$n=0;foreach $k(keys %h){print ">",$n++," length:",length($k),"\n$k\n"}}' > guillaumeKUnitigsAtLeast32bases_all.fasta.tmp && mv guillaumeKUnitigsAtLeast32bases_all.fasta.tmp guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta
+rm -rf work1_mr
+createSuperReadsForDirectory.perl -minreadsinsuperread 1 -l $KMER -mean-and-stdev-by-prefix-file meanAndStdevByPrefix.pe.txt -kunitigsfile guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta -t $NUM_THREADS -mikedebug work1_mr superReadSequences.fasta.in 1> super1.err 2>&1
+perl -ane 'push(@names,$F[0]);
+END{
+  open(FILE,"'work1_mr/superReadSequences.fasta.all'");
+  while($line=<FILE>){
+    if($line=~/^>/){
+      chomp($line);
+      print ">",$names[substr($line,1)],"\n";
+    }else{
+      print $line;
+    }
+  }
+}' < work1_mr/superReadNames.txt > superReadSequences.named.fasta.tmp && mv superReadSequences.named.fasta.tmp superReadSequences.named.fasta
+rm superReadSequences.fasta.in
+fi
+
+SUPERREADS=superReadSequences.named.fasta
+if [ ! -s superReadSequences.named.fasta ];then
+echo "Error creating named super-reads file ";
+exit 1;
+fi
+
+KUNITIGS=guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta
+if [ ! -s $KUNITIGS ];then
+echo "K-unitigs file $KUNITIGS not found!";
+exit 1;
+fi
+
+KUNITIGLENGTHS=work1_mr/kUnitigLengths.txt
+if [ ! -s $KUNITIGLENGTHS ];then
+echo "K-unitig lengths file $KUNITIGLENGTHS not found!";
+exit 1;
+fi
+
 
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 1"
@@ -149,8 +149,7 @@ fi
 
 if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
 echo "Refining alignments"
-awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.txt | split_matches_file.pl 1000 .matches && parallel "refine.sh $PACBIO $COORDS {1} $KMER" ::: .matches.* && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp
-#awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt > $COORDS.all.txt.tmp && mv $COORDS.all.txt.tmp $COORDS.all.txt
+awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.txt | add_pb_seq.pl $PACBIO > .matches.0 && refine.sh $COORDS .matches.0 $KMER && mv $COORDS.matches.0.all.txt.tmp $COORDS.all.txt && rm .matches.0
 touch .rerun
 fi
 
@@ -162,7 +161,7 @@ fi
 
 if [ ! -s $COORDS.1.frg ] || [ -e .rerun ];then
 echo "Generating assembly input files"
-split_long_unitigs.pl refread < $COORDS.1.fa | make_mr_frg.pl mr 400 > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg
+cat $COORDS.1.fa | make_mr_frg.pl ref 400 > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg
 rm -rf $CA
 fi
 
