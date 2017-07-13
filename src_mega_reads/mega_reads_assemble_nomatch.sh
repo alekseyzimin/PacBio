@@ -293,7 +293,7 @@ if [ ! -s $SR_FRG ];then
 awk '{if($0 ~ /^>/) print $0":super-read"; else print $0}' $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta | fasta2frg.pl sr 200 > $SR_FRG.tmp && mv  $SR_FRG.tmp  $SR_FRG;
 fi
 fi
-COVERAGE=`ls $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{print int(n/int('$ESTIMATED_GENOME_SIZE')/int('$PLOIDY'))}'`;
+COVERAGE=`ls $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{print int(n/int('$ESTIMATED_GENOME_SIZE')/int('$PLOIDY')/0.69)}'`;
 TCOVERAGE=$COVERAGE;
 fi
 
@@ -342,6 +342,9 @@ cgwMergeFilterLevel=1
 cgwDemoteRBP=0
 cnsReuseUnitigs=1" > runCA.spec
 
+echo $CA > CA_dir.txt
+echo $PLOIDY > PLOIDY.txt
+
 echo "Running assembly"
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then 
   #need to start from the beginning
@@ -386,16 +389,5 @@ fi
 runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
 runCA -s runCA.spec -p genome -d $CA  cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 && \
-echo "Assembly complete, now cleaning up the scaffolds." || echo "Assembly stopped or failed, see $CA.log"
-
-if [ -s $CA/9-terminator/genome.scf.fasta ];then
-  if [ ! -e $CA/filter_map.contigs.success ];then
-    deduplicate_contigs.sh $CA genome $NUM_THREADS $PLOIDY && echo "Assembly complete, final scaffold sequences are in $CA/dedup.genome.scf.fasta"
-  else
-    echo "Assembly complete, final scaffold sequences are in $CA/dedup.genome.scf.fasta"
-  fi
-else
-  echo "Assembly stopped or failed, see $CA.log"
-fi
-
+echo "Assembly complete." || echo "Assembly stopped or failed, see $CA.log"
 

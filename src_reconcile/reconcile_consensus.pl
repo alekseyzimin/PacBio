@@ -51,7 +51,8 @@ while($line=<STDIN>){
   chomp($line);
   $line=~s/^\s+//;
   my @f=split(/\s+/,$line);
-  $rseq{$f[-2]}="N"x$f[11] if(not(defined($rseq{$f[-2]})));
+  #$rseq{$f[-2]}="N"x$f[11] if(not(defined($rseq{$f[-2]})));
+  next if(not(defined($rseq{$f[-2]})));
   die("query sequence $f[-1] not found") unless(defined($qseq{$f[-1]}));
   $subseq="";
   if($f[3]<$f[4]){
