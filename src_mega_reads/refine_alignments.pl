@@ -92,12 +92,14 @@ sub process_lines{
        $lmr=$mlen-$mr_offset-1 if($lmr+$mr_offset>$mlen);
        #print STDERR "Refine $bgn,$end,$mbgn,$mend,$mlen,$pb\n";
        my $a = mummer::align_sequences(substr($pbseq{$pb},$pb_offset,$lpb), substr($mseq,$mr_offset,$lmr), $o);
-       for($j=0;$j<@$a;$j++){
-
+        if(scalar(@$a)>0){
+        print ">$pb $readnumber ",length($pbseq{$pb})," $mlen\n";
+        for($j=0;$j<@$a;$j++){
         #print STDERR ">$pb $readnumber ",length($pbseq{$pb})," $mlen\n",$$a[$j]{sA}+$pb_offset," ",$$a[$j]{eA}+$pb_offset," ",$$a[$j]{sB}+$mr_offset," ",$$a[$j]{eB}+$mr_offset," $$a[$j]{Errors} $$a[$j]{SimErrors} $$a[$j]{NonAlphas}\n";
-	print ">$pb $readnumber ",length($pbseq{$pb})," $mlen\n",$$a[$j]{sA}+$pb_offset," ",$$a[$j]{eA}+$pb_offset," ",$$a[$j]{sB}+$mr_offset," ",$$a[$j]{eB}+$mr_offset," $$a[$j]{Errors} $$a[$j]{SimErrors} $$a[$j]{NonAlphas}\n";
+	print $$a[$j]{sA}+$pb_offset," ",$$a[$j]{eA}+$pb_offset," ",$$a[$j]{sB}+$mr_offset," ",$$a[$j]{eB}+$mr_offset," $$a[$j]{Errors} $$a[$j]{SimErrors} $$a[$j]{NonAlphas}\n";
 	print "0\n";
 	}
+        }
 	$readnumber++;
 	}
     return();
