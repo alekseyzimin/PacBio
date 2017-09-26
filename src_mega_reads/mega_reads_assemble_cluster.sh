@@ -174,15 +174,14 @@ echo "K-unitig lengths file $KUNITIGLENGTHS not found!";
 exit 1;
 fi
 
+set -x
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 1"
-if numactl --show 1> /dev/null 2>&1;then
-numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $PACBIO1 -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
-else
-create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $PACBIO1 -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
-fi
+#use jf_aligner
+jf_aligner -H -s $JF_SIZE -m $MER  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000   -r $SUPERREADS  -p $PACBIO1 --coords=/dev/stdout | longest_path -t $NUM_THREADS -o $COORDS.txt.tmp -u $KUNITIGS -k $KMER -d $d /dev/stdin && mv $COORDS.txt.tmp $COORDS.txt
 touch .rerun
 fi
+exit
 
 if [ ! -s $COORDS.all_mr.maximal.fa ] || [ -e .rerun ];then
 perl -ane '{
@@ -220,18 +219,25 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 2"
 if numactl --show 1> /dev/null 2>&1;then
 numactl --interleave=all create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.maximal.fa  -p <(ufasta extract -v -f $COORDS.single.txt $PACBIO1) -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt && \
+ufasta extract -f $COORDS.single.txt $COORDS.txt >> $COORDS.mr.txt
 else
 create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.maximal.fa  -p <(ufasta extract -v -f $COORDS.single.txt $PACBIO1) -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt && \
+ufasta extract -f $COORDS.single.txt $COORDS.txt >> $COORDS.mr.txt
 fi
 touch .rerun
 fi
 
 if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
 echo "Refining alignments"
-
 #if which parallel 1> /dev/null 2>&1;then
 NUM_PACBIO_READS_PER_BATCH=`grep --text '^>'  $PACBIO1 | wc -l | awk '{bs=int($1/1024);if(bs<1000){bs=1000};if(bs>100000){bs=100000};}END{print bs}'` 
-cat <(ufasta extract -f $COORDS.single.txt $COORDS.txt) $COORDS.mr.txt| awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' | add_pb_seq.pl $PACBIO1 | split_matches_file.pl $NUM_PACBIO_READS_PER_BATCH .matches && ls .matches.* | xargs -P $NUM_THREADS -I % refine.sh $COORDS % $KMER && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp
+#awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt | add_pb_seq.pl $PACBIO1 | split_matches_file.pl $NUM_PACBIO_READS_PER_BATCH .matches && parallel "refine.sh $COORDS {1} $KMER" ::: .matches.* && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp
+awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt | add_pb_seq.pl $PACBIO1 | split_matches_file.pl $NUM_PACBIO_READS_PER_BATCH .matches && ls .matches.* | xargs -P $NUM_THREADS -I % refine.sh $COORDS % $KMER && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp
+#else
+#echo "WARNING! GNU parallel not found, proceeding with sequential execution for the refine step"
+#awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt | add_pb_seq.pl $PACBIO1 > .matches.0 && refine.sh $COORDS .matches.0 $KMER && mv $COORDS.matches.0.all.txt.tmp $COORDS.all.txt && rm .matches.0
+#fi
+#awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.mr.txt > $COORDS.all.txt.tmp && mv $COORDS.all.txt.tmp $COORDS.all.txt
 touch .rerun
 fi
 

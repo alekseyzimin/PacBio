@@ -95,7 +95,7 @@ bin_merge_coords_SOURCES = src_jf_aligner/merge_coords.cc
 
 bin_findGapsInCoverageOfPacbios_SOURCES = src_mega_reads/findGapsInCoverageOfPacbios.cc
 
-dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_nomatch.sh src_mega_reads/mega_reads_assemble.sh		\
+dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_nomatch.sh src_mega_reads/mega_reads_assemble_cluster.sh		\
                     src_mega_reads/make_mr_frg.pl				\
                     src_mega_reads/reconciliate_mega_reads.maximal.nucmer.pl	\
                     src_mega_reads/join_mega_reads_trim.onepass.nomatch.pl	\
