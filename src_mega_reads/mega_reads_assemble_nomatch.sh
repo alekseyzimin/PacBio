@@ -111,7 +111,7 @@ PB_SIZE=$(stat -c%s $PACBIO);
 if [ $B -lt 15 ];then
 if [ ! -s "nanoporeRenamed.fa" ] ;then
 echo "Detected nanopore data, we have to rename the reads";
-awk 'BEGIN{n=0}{if($1 ~ /^>/){print $1"/"n;n++}else{print $0}}' $PACBIO > nanoporeRenamed.fa;
+zcat -f $PACBIO|awk 'BEGIN{n=0}{if($1 ~ /^>/){print $1"/"n;n++}else{print $0}}' > nanoporeRenamed.fa;
 fi
 PACBIO1="nanoporeRenamed.fa";
 MAX_GAP=1000
@@ -120,14 +120,14 @@ if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE/$PLOIDY)) -gt ${PB_HC} ];then
 echo "Pacbio coverage >${PB_HC}x, using ${PB_HC}x of the longest reads";
 MAX_GAP=2000
 if [ ! -s "pacbio_${PB_HC}xlongest.fa" ] ;then
-ufasta extract -f <(grep --text '^>' $PACBIO | awk '{split($1,a,"/");split(a[3],b,"_");len=b[2]-b[1];if($2 ~ /^RQ/){split($2,c,"=");len=int(len*c[2]/0.85);}print substr($1,2)" "len;}'  | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') $PACBIO > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa;
+zcat -f $PACBIO |ufasta extract -f <(zcat -f $PACBIO | grep --text '^>' | awk '{split($1,a,"/");split(a[3],b,"_");len=b[2]-b[1];if($2 ~ /^RQ/){split($2,c,"=");len=int(len*c[2]/0.85);}print substr($1,2)" "len;}'  | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa;
 fi
 PACBIO1="pacbio_${PB_HC}xlongest.fa";
 else
 echo "Pacbio coverage <${PB_HC}x, using the longest subreads";
 MAX_GAP=1000
 if [ ! -s "pacbio_nonredundant.fa" ] ;then
-ufasta extract -f <(grep --text '^>' $PACBIO | awk '{print $1}' | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') $PACBIO > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa;
+zcat -f $PACBIO |ufasta extract -f <(zcat -f $PACBIO |grep --text '^>' | awk '{print $1}' | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') /dev/stdin > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa;
 fi
 PACBIO1="pacbio_nonredundant.fa";
 fi
