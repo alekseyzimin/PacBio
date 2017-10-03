@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
   if(args.fine_mer_given)
     short_mer_type::k(args.fine_mer_arg);
   auto psa = superread_parse(args.superreads_arg.cbegin(), args.superreads_arg.cend(),
-                             std::min(short_mer_type::k(), (unsigned)11), mer_dna::k());
+                             std::min(short_mer_type::k(), args.psa_min_arg), mer_dna::k());
 
   // Prepare I/O
   stream_manager streams(args.pacbio_arg.cbegin(), args.pacbio_arg.cend());

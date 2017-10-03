@@ -23,7 +23,7 @@ cmdline_args args;
 void fill_coords(int thid, std::vector<std::string>& lines, align_pb::coords_info_type& coords, frag_lists& frags) {
   coords.resize(lines.size());
   frags.clear(thid);
-
+   
   for(size_t i = 0; i < lines.size(); ++i) {
     std::istringstream is(lines[i]);
     parse_coords(thid, is, coords[i], frags);
@@ -47,7 +47,6 @@ void create_mega_reads(int thid, coords_parser* parser, frag_lists* frags,
 
   for(coords_parser::stream coords_stream(*parser); coords_stream; ++coords_stream) {
     fill_coords(thid, coords_stream->lines, coords, *frags);
-
     graph.reset(coords, coords_stream->header);
     graph.traverse();
     graph.term_node_per_comp(coords[0].rl, args.density_arg, args.min_length_arg);
@@ -56,7 +55,7 @@ void create_mega_reads(int thid, coords_parser* parser, frag_lists* frags,
     case cmdline_args::tiling::greedy: graph.tile_greedy(); break;
     }
 
-    graph.print_mega_reads(output, coords_stream->header);
+    graph.print_mega_reads(output, coords_stream->header,unitigs_sequences);
     output.end_record();
     if(dot)
       dot->end_record();

@@ -9,9 +9,6 @@ option("t", "threads") {
 option("o", "output") {
   description "Output file"
   c_string; typestr "path" }
-# option"c", "compact") {
-#   description "Compact output"
-#   off }
 option("dot") {
   description "Write an overlap graph (dot file)"
   c_string; typestr "path" }
@@ -35,7 +32,7 @@ option("k", "k-mer") {
   uint32; required }
 option("d", "density") {
   description "Minimum density of k-mers"
-  double; default 0.05 }
+  double; default 0.029 }
 option("L", "min-length") {
   description "Minimum length of a mega-read"
   double; default 100.0 }
