@@ -48,14 +48,16 @@ void print_coords(Multiplexer::ostream& out, const std::string& pb_name, const s
     out << ">" << nb_lines << " " << pb_name << "\n";
   for(size_t i = 0; i < nb_lines; ++i) {
     const auto& it = coords[order[i]];
+    if(!compact)
+      out << pb_name << " ";
     out << it.rs << " " << it.re << " " << it.qs << " " << it.qe << " "
         << it.nb_mers << " "
         << it.pb_cons << " " << it.sr_cons << " "
         << it.pb_cover << " " << it.sr_cover << " "
         << pb_size << " " << it.ql
         << " " << it.stretch << " " << it.offset << " " << it.avg_err;
-    if(!compact)
-      out << " " << pb_name;
+//    if(!compact)
+//      out << " " << pb_name;
     assert(it.name_u == &it.qfrag->fwd || it.name_u == &it.qfrag->bwd);
     out << " " << it.name_u->name;
     auto mit = it.kmers_info.cbegin();
