@@ -243,7 +243,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 #here we run on a cluster;first split and then merge alignments
 	for i in $(seq 1 $BATCHES);do arr[$i]="sr.batch$i";done;
 	for i in $(seq 1 $BATCHES);do arrOut[$i]="<(zcat coords.batch$i.gz)";done;
-	for i in $(seq 1 $BATCHES);do arrSortOut[$i]=">(gzip -c >coords.sorted.batch$i.gz)";done;
+	for i in $(seq 1 $BATCHES);do arrSortOut[$i]=">(gzip -c -1 >coords.sorted.batch$i.gz)";done;
 	for i in $(seq 1 $BATCHES);do mrOut[$i]="mr.batch$i.txt";done;
 
 #working inside mr_pass1
@@ -258,12 +258,12 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 #jf_aligner qsub version
 	    echo "#!/bin/sh" > jf_aligner.sh && \
 		echo "if [ ! -e coords.batch\$SGE_TASK_ID.success ];then" >> jf_aligner.sh && \
-		echo "$MYPATH/jf_aligner --compact -s 1 -m $MER -t $NUM_THREADS -f -B $B --stretch-cap 10000 --max-count $((8000/$BATCHES)) --psa-min 12 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p ../$PACBIO1 | sort -S 50% -nk1| gzip -c  > coords.batch\$SGE_TASK_ID.gz.tmp && mv coords.batch\$SGE_TASK_ID.gz.tmp coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
+		echo "$MYPATH/jf_aligner --compact -s 1 -m $MER -t $NUM_THREADS -f -B $B --stretch-cap 10000 --max-count $((8000/$BATCHES)) --psa-min 12 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p ../$PACBIO1 | sort -S 50% -nk1| gzip -c -1 > coords.batch\$SGE_TASK_ID.gz.tmp && mv coords.batch\$SGE_TASK_ID.gz.tmp coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
 		echo "else" >> jf_aligner.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
 		echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
 #sorted merge
-	    echo "$MYPATH/sorted_merge -k 1  ${arrOut[@]} | perl -e 'BEGIN{\$rn=\"\";@ma=();}{while(\$line=<STDIN>){(\$pbn,\$coords)=split(\" \",\$line,2);if(not(\$pbn eq \$rn)){if(scalar(@ma)>0){my @nums; for (@ma){push @nums, ( /^(\d+)/ ? \$1 : undef );} @mas=@ma[sort {\$nums[\$a] <=>\$nums[\$b]} 0..\$#ma];print \">\",scalar(@ma),\" \$rn\\n\",join(\"\",@mas);@ma=();}\$rn=\$pbn;}push(@ma,\$coords);}}END{if(scalar(@ma)>0){my @nums; for (@ma){push @nums, ( /^(\d+)/ ? \$1 : undef );} @mas=@ma[sort {\$nums[\$a] <=>\$nums[\$b]} 0..\$#ma];print \">\",scalar(@ma),\" \$rn\\n\",join(\"\",@ma);}}' |$MYPATH/ufasta split ${arrSortOut[@]}" > merge.sh && chmod 0755 merge.sh
+	    echo "$MYPATH/sorted_merge -nk 1  ${arrOut[@]} | perl -e 'BEGIN{\$rn=\"\";@ma=();}{while(\$line=<STDIN>){(\$pbn,\$coords)=split(\" \",\$line,2);if(not(\$pbn eq \$rn)){if(scalar(@ma)>0){my @nums; for (@ma){push @nums, ( /^(\d+)/ ? \$1 : undef );} @mas=@ma[sort {\$nums[\$a] <=>\$nums[\$b]} 0..\$#ma];print \">\",scalar(@ma),\" \$rn\\n\",join(\"\",@mas);@ma=();}\$rn=\$pbn;}push(@ma,\$coords);}}END{if(scalar(@ma)>0){my @nums; for (@ma){push @nums, ( /^(\d+)/ ? \$1 : undef );} @mas=@ma[sort {\$nums[\$a] <=>\$nums[\$b]} 0..\$#ma];print \">\",scalar(@ma),\" \$rn\\n\",join(\"\",@ma);}}' |$MYPATH/ufasta split ${arrSortOut[@]}" > merge.sh && chmod 0755 merge.sh
 #longest path qsub version
 	    echo "#!/bin/sh" > longest_path.sh && \
 		echo "if [ ! -e mr.batch\$SGE_TASK_ID.success ];then" >> longest_path.sh && \
@@ -347,7 +347,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 #here we run on a cluster;first split and then merge alignments
 	for i in $(seq 1 $BATCHES);do arr[$i]="sr.batch$i";done;
 	for i in $(seq 1 $BATCHES);do arrOut[$i]="<(zcat coords.batch$i.gz)";done;
-	for i in $(seq 1 $BATCHES);do arrSortOut[$i]=">(gzip -c >coords.sorted.batch$i.gz)";done;
+	for i in $(seq 1 $BATCHES);do arrSortOut[$i]=">(gzip -c -1 >coords.sorted.batch$i.gz)";done;
 	for i in $(seq 1 $BATCHES);do mrOut[$i]="mr.batch$i.txt";done;
 
 #working inside mr_pass2
@@ -362,12 +362,12 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 #jf_aligner qsub version
 	    echo "#!/bin/sh" > jf_aligner.sh && \
 		echo "if [ ! -e coords.batch\$SGE_TASK_ID.success ];then" >> jf_aligner.sh && \
-		echo "$MYPATH/ufasta extract -v -f $COORDS.single.txt $PACBIO1 | $MYPATH/jf_aligner --compact -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 10000 --max-count $((4000/$BATCHES)) --psa-min 12 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin | sort -S 50% -nk1| gzip -c  > coords.batch\$SGE_TASK_ID.gz.tmp && mv coords.batch\$SGE_TASK_ID.gz.tmp coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
+		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$PACBIO1 | $MYPATH/jf_aligner --compact -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 10000 --max-count $((4000/$BATCHES)) --psa-min 12 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin | sort -S 50% -nk1| gzip -c -1 > coords.batch\$SGE_TASK_ID.gz.tmp && mv coords.batch\$SGE_TASK_ID.gz.tmp coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
 		echo "else" >> jf_aligner.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
 		echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
 #sorted merge
-	    echo "$MYPATH/sorted_merge -k 1  ${arrOut[@]} | perl -e 'BEGIN{\$rn=\"\";@ma=();}{while(\$line=<STDIN>){(\$pbn,\$coords)=split(\" \",\$line,2);if(not(\$pbn eq \$rn)){if(scalar(@ma)>0){my @nums; for (@ma){push @nums, ( /^(\d+)/ ? \$1 : undef );} @mas=@ma[sort {\$nums[\$a] <=>\$nums[\$b]} 0..\$#ma];print \">\",scalar(@ma),\" \$rn\\n\",join(\"\",@mas);@ma=();}\$rn=\$pbn;}push(@ma,\$coords);}}END{if(scalar(@ma)>0){my @nums; for (@ma){push @nums, ( /^(\d+)/ ? \$1 : undef );} @mas=@ma[sort {\$nums[\$a] <=>\$nums[\$b]} 0..\$#ma];print \">\",scalar(@ma),\" \$rn\\n\",join(\"\",@ma);}}' |$MYPATH/ufasta split ${arrSortOut[@]}" > merge.sh && chmod 0755 merge.sh
+	    echo "$MYPATH/sorted_merge -nk 1  ${arrOut[@]} | perl -e 'BEGIN{\$rn=\"\";@ma=();}{while(\$line=<STDIN>){(\$pbn,\$coords)=split(\" \",\$line,2);if(not(\$pbn eq \$rn)){if(scalar(@ma)>0){my @nums; for (@ma){push @nums, ( /^(\d+)/ ? \$1 : undef );} @mas=@ma[sort {\$nums[\$a] <=>\$nums[\$b]} 0..\$#ma];print \">\",scalar(@ma),\" \$rn\\n\",join(\"\",@mas);@ma=();}\$rn=\$pbn;}push(@ma,\$coords);}}END{if(scalar(@ma)>0){my @nums; for (@ma){push @nums, ( /^(\d+)/ ? \$1 : undef );} @mas=@ma[sort {\$nums[\$a] <=>\$nums[\$b]} 0..\$#ma];print \">\",scalar(@ma),\" \$rn\\n\",join(\"\",@ma);}}' |$MYPATH/ufasta split ${arrSortOut[@]}" > merge.sh && chmod 0755 merge.sh
 #longest path qsub version
 	    echo "#!/bin/sh" > longest_path.sh && \
 		echo "if [ ! -e mr.batch\$SGE_TASK_ID.success ];then" >> longest_path.sh && \
