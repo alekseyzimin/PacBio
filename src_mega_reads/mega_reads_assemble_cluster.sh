@@ -258,7 +258,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 #jf_aligner qsub version
 	    echo "#!/bin/sh" > jf_aligner.sh && \
 		echo "if [ ! -e coords.batch\$SGE_TASK_ID.success ];then" >> jf_aligner.sh && \
-		echo "$MYPATH/jf_aligner --compact -s 1 -m $MER -t $NUM_THREADS -f -B $B --stretch-cap 10000 --max-count $((8000/$BATCHES)) --psa-min 12 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p ../$PACBIO1 | sort -S 50% -nk1| gzip -c -1 > coords.batch\$SGE_TASK_ID.gz.tmp && mv coords.batch\$SGE_TASK_ID.gz.tmp coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
+		echo "$MYPATH/jf_aligner --compact -s 1 -m $MER -t $NUM_THREADS -f -B $B --stretch-cap 10000 --max-count $((5000/$BATCHES)) --psa-min 12 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p ../$PACBIO1 | sort -S 50% -nk1| gzip -c -1 > coords.batch\$SGE_TASK_ID.gz.tmp && mv coords.batch\$SGE_TASK_ID.gz.tmp coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
 		echo "else" >> jf_aligner.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
 		echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
@@ -275,7 +275,17 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 #do qsub several times to ensure all jobs finish
 	    qsub -q test.q -cwd -j y -sync y -N "jf_aligner"  -t 1-$BATCHES jf_aligner.sh 1> jqsub1.out 2>&1
 	    qsub -q test.q -cwd -j y -sync y -N "jf_aligner"  -t 1-$BATCHES jf_aligner.sh 1> jqsub2.out 2>&1 || error_exit "jf_aligner failed on the grid"
-
+#check if the jobs finished correctly
+            unset failArr;
+            failArr=();
+            for i in $(seq 1 $BATCHES);do 
+              if [ not -e coords.batch$i.success ];then
+                failArr+=('coords.batch$i')
+              fi
+            done
+            if [ ${#failArr[@]} -ge 1 ];then
+              error_exit "${#failArr[@]} aligner jobs failed in mr_pass1: ${failArr[@]}"
+            fi
 #sort/merge
 	    if [ ! -e merge.success ];then
 		./merge.sh && touch merge.success || error_exit "sorted merge failed on the grid"
@@ -283,7 +293,17 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 
 	    qsub -q test.q -cwd -j y -sync y -N "longest_path"  -t 1-$BATCHES longest_path.sh 1> lqsub1.out 2>&1
 	    qsub -q test.q -cwd -j y -sync y -N "longest_path"  -t 1-$BATCHES longest_path.sh 1> lqsub2.out 2>&1 || error_exit "longest path failed on the grid"
-
+#check if the jobs finished correctly
+            unset failArr;
+            failArr=();
+            for i in $(seq 1 $BATCHES);do
+              if [ not -e mr.batch$i.success ];then
+                failArr+=('mr.batch$i')
+              fi
+            done
+            if [ ${#failArr[@]} -ge 1 ];then
+              error_exit "${#failArr[@]} longest_path jobs failed in mr_pass1: ${failArr[@]}"
+            fi
 #cat the results
 	    cat ${mrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.txt || error_exit "concatenation of mega-read grid output files failed" ) || error_exit "failed to run mega-reads pass 1 on the grid"
     else #single computer
@@ -362,7 +382,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 #jf_aligner qsub version
 	    echo "#!/bin/sh" > jf_aligner.sh && \
 		echo "if [ ! -e coords.batch\$SGE_TASK_ID.success ];then" >> jf_aligner.sh && \
-		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$PACBIO1 | $MYPATH/jf_aligner --compact -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 10000 --max-count $((4000/$BATCHES)) --psa-min 12 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin | sort -S 50% -nk1| gzip -c -1 > coords.batch\$SGE_TASK_ID.gz.tmp && mv coords.batch\$SGE_TASK_ID.gz.tmp coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
+		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$PACBIO1 | $MYPATH/jf_aligner --compact -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 6000 --max-count $((2000/$BATCHES)) --psa-min 12 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin | sort -S 50% -nk1| gzip -c -1 > coords.batch\$SGE_TASK_ID.gz.tmp && mv coords.batch\$SGE_TASK_ID.gz.tmp coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
 		echo "else" >> jf_aligner.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
 		echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
@@ -379,15 +399,35 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 #do qsub several times to ensure all jobs finish
 	    qsub -q test.q -cwd -j y -sync y -N "jf_aligner"  -t 1-$BATCHES jf_aligner.sh 1> jqsub1.out 2>&1
 	    qsub -q test.q -cwd -j y -sync y -N "jf_aligner"  -t 1-$BATCHES jf_aligner.sh 1> jqsub2.out 2>&1 || error_exit "jf_aligner failed on the grid"
-
+#check if the jobs finished properly
+            unset failArr;
+            failArr=();
+            for i in $(seq 1 $BATCHES);do
+              if [ not -e coords.batch$i.success ];then
+                failArr+=('coords.batch$i')
+              fi
+            done
+            if [ ${#failArr[@]} -ge 1 ];then
+              error_exit "${#failArr[@]} aligner jobs failed in mr_pass2: ${failArr[@]}"
+            fi   
 #sort/merge
 	    if [ ! -e merge.success ];then
 		./merge.sh && touch merge.success || error_exit "sorted merge failed on the grid"
 	    fi 
 
 	    qsub -q test.q -cwd -j y -sync y -N "longest_path"  -t 1-$BATCHES longest_path.sh 1> lqsub1.out 2>&1
-	    qsub -q test.q -cwd -j y -sync y -N "longest_path"  -t 1-$BATCHES longest_path.sh 1> lqsub2.out 2>&1 || error_exit "longest path failed ont he grid"
-
+	    qsub -q test.q -cwd -j y -sync y -N "longest_path"  -t 1-$BATCHES longest_path.sh 1> lqsub2.out 2>&1 || error_exit "longest path failed on the grid"
+#check if the jobs finished properly
+            unset failArr;
+            failArr=();
+            for i in $(seq 1 $BATCHES);do
+              if [ not -e mr.batch$i.success ];then
+                failArr+=('mr.batch$i')
+              fi
+            done
+            if [ ${#failArr[@]} -ge 1 ];then
+              error_exit "${#failArr[@]} longest_path jobs failed in mr_pass2: ${failArr[@]}"
+            fi
 #cat the results
 	    cat ${mrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.mr.txt || error_exit "concatenation of mega-read grid output files failed" ) || error_exit "failed to run mega-reads pass 2 on the grid"
     else #single computer
