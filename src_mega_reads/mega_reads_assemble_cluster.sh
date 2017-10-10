@@ -258,12 +258,12 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 #jf_aligner qsub version
 	    echo "#!/bin/sh" > jf_aligner.sh && \
 		echo "if [ ! -e coords.batch\$SGE_TASK_ID.success ];then" >> jf_aligner.sh && \
-		echo "$MYPATH/jf_aligner --compact -s 1 -m $MER -t $NUM_THREADS -f -B $B --stretch-cap 10000 --max-count $((5000/$BATCHES)) --psa-min 12 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p ../$PACBIO1 | sort -S 50% -nk1| gzip -c -1 > coords.batch\$SGE_TASK_ID.gz.tmp && mv coords.batch\$SGE_TASK_ID.gz.tmp coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
+		echo "$MYPATH/jf_aligner --zero-match -s 1 -m $MER -t $NUM_THREADS -f -B $B --stretch-cap 10000 --max-count $((5000/$BATCHES)) --psa-min 12 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p ../$PACBIO1 | ufasta sort -k 2| gzip -c -1 > coords.batch\$SGE_TASK_ID.gz.tmp && mv coords.batch\$SGE_TASK_ID.gz.tmp coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
 		echo "else" >> jf_aligner.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
 		echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
 #sorted merge
-	    echo "$MYPATH/sorted_merge -nk 1  ${arrOut[@]} | perl -e 'BEGIN{\$rn=\"\";@ma=();}{while(\$line=<STDIN>){(\$pbn,\$coords)=split(\" \",\$line,2);if(not(\$pbn eq \$rn)){if(scalar(@ma)>0){my @nums; for (@ma){push @nums, ( /^(\d+)/ ? \$1 : undef );} @mas=@ma[sort {\$nums[\$a] <=>\$nums[\$b]} 0..\$#ma];print \">\",scalar(@ma),\" \$rn\\n\",join(\"\",@mas);@ma=();}\$rn=\$pbn;}push(@ma,\$coords);}}END{if(scalar(@ma)>0){my @nums; for (@ma){push @nums, ( /^(\d+)/ ? \$1 : undef );} @mas=@ma[sort {\$nums[\$a] <=>\$nums[\$b]} 0..\$#ma];print \">\",scalar(@ma),\" \$rn\\n\",join(\"\",@ma);}}' |$MYPATH/ufasta split ${arrSortOut[@]}" > merge.sh && chmod 0755 merge.sh
+	    echo "$MYPATH/merge_coords ${arrOut[@]} |$MYPATH/ufasta extract -v -n \"0\" |$MYPATH/ufasta split ${arrSortOut[@]}" > merge.sh && chmod 0755 merge.sh
 #longest path qsub version
 	    echo "#!/bin/sh" > longest_path.sh && \
 		echo "if [ ! -e mr.batch\$SGE_TASK_ID.success ];then" >> longest_path.sh && \
@@ -273,13 +273,12 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 		echo "fi"  >> longest_path.sh && chmod 0755 longest_path.sh
 
 #do qsub several times to ensure all jobs finish
-	    qsub -q test.q -cwd -j y -sync y -N "jf_aligner"  -t 1-$BATCHES jf_aligner.sh 1> jqsub1.out 2>&1
 	    qsub -q test.q -cwd -j y -sync y -N "jf_aligner"  -t 1-$BATCHES jf_aligner.sh 1> jqsub2.out 2>&1 || error_exit "jf_aligner failed on the grid"
 #check if the jobs finished correctly
             unset failArr;
             failArr=();
             for i in $(seq 1 $BATCHES);do 
-              if [ not -e coords.batch$i.success ];then
+              if [ ! -e coords.batch$i.success ];then
                 failArr+=('coords.batch$i')
               fi
             done
@@ -291,13 +290,12 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 		./merge.sh && touch merge.success || error_exit "sorted merge failed on the grid"
 	    fi 
 
-	    qsub -q test.q -cwd -j y -sync y -N "longest_path"  -t 1-$BATCHES longest_path.sh 1> lqsub1.out 2>&1
 	    qsub -q test.q -cwd -j y -sync y -N "longest_path"  -t 1-$BATCHES longest_path.sh 1> lqsub2.out 2>&1 || error_exit "longest path failed on the grid"
 #check if the jobs finished correctly
             unset failArr;
             failArr=();
             for i in $(seq 1 $BATCHES);do
-              if [ not -e mr.batch$i.success ];then
+              if [ ! -e mr.batch$i.success ];then
                 failArr+=('mr.batch$i')
               fi
             done
@@ -382,12 +380,12 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 #jf_aligner qsub version
 	    echo "#!/bin/sh" > jf_aligner.sh && \
 		echo "if [ ! -e coords.batch\$SGE_TASK_ID.success ];then" >> jf_aligner.sh && \
-		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$PACBIO1 | $MYPATH/jf_aligner --compact -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 6000 --max-count $((2000/$BATCHES)) --psa-min 12 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin | sort -S 50% -nk1| gzip -c -1 > coords.batch\$SGE_TASK_ID.gz.tmp && mv coords.batch\$SGE_TASK_ID.gz.tmp coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
+		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$PACBIO1 | $MYPATH/jf_aligner --zero-match -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 6000 --max-count $((2000/$BATCHES)) --psa-min 12 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin | ufasta sort -k 2| gzip -c -1 > coords.batch\$SGE_TASK_ID.gz.tmp && mv coords.batch\$SGE_TASK_ID.gz.tmp coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
 		echo "else" >> jf_aligner.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
 		echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
 #sorted merge
-	    echo "$MYPATH/sorted_merge -nk 1  ${arrOut[@]} | perl -e 'BEGIN{\$rn=\"\";@ma=();}{while(\$line=<STDIN>){(\$pbn,\$coords)=split(\" \",\$line,2);if(not(\$pbn eq \$rn)){if(scalar(@ma)>0){my @nums; for (@ma){push @nums, ( /^(\d+)/ ? \$1 : undef );} @mas=@ma[sort {\$nums[\$a] <=>\$nums[\$b]} 0..\$#ma];print \">\",scalar(@ma),\" \$rn\\n\",join(\"\",@mas);@ma=();}\$rn=\$pbn;}push(@ma,\$coords);}}END{if(scalar(@ma)>0){my @nums; for (@ma){push @nums, ( /^(\d+)/ ? \$1 : undef );} @mas=@ma[sort {\$nums[\$a] <=>\$nums[\$b]} 0..\$#ma];print \">\",scalar(@ma),\" \$rn\\n\",join(\"\",@ma);}}' |$MYPATH/ufasta split ${arrSortOut[@]}" > merge.sh && chmod 0755 merge.sh
+	    echo "$MYPATH/merge_coords  ${arrOut[@]} |$MYPATH/ufasta extract -v -n \"0\" |$MYPATH/ufasta split ${arrSortOut[@]}" > merge.sh && chmod 0755 merge.sh
 #longest path qsub version
 	    echo "#!/bin/sh" > longest_path.sh && \
 		echo "if [ ! -e mr.batch\$SGE_TASK_ID.success ];then" >> longest_path.sh && \
@@ -397,13 +395,12 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 		echo "fi"  >> longest_path.sh && chmod 0755 longest_path.sh
 
 #do qsub several times to ensure all jobs finish
-	    qsub -q test.q -cwd -j y -sync y -N "jf_aligner"  -t 1-$BATCHES jf_aligner.sh 1> jqsub1.out 2>&1
 	    qsub -q test.q -cwd -j y -sync y -N "jf_aligner"  -t 1-$BATCHES jf_aligner.sh 1> jqsub2.out 2>&1 || error_exit "jf_aligner failed on the grid"
 #check if the jobs finished properly
             unset failArr;
             failArr=();
             for i in $(seq 1 $BATCHES);do
-              if [ not -e coords.batch$i.success ];then
+              if [ ! -e coords.batch$i.success ];then
                 failArr+=('coords.batch$i')
               fi
             done
@@ -415,13 +412,12 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 		./merge.sh && touch merge.success || error_exit "sorted merge failed on the grid"
 	    fi 
 
-	    qsub -q test.q -cwd -j y -sync y -N "longest_path"  -t 1-$BATCHES longest_path.sh 1> lqsub1.out 2>&1
 	    qsub -q test.q -cwd -j y -sync y -N "longest_path"  -t 1-$BATCHES longest_path.sh 1> lqsub2.out 2>&1 || error_exit "longest path failed on the grid"
 #check if the jobs finished properly
             unset failArr;
             failArr=();
             for i in $(seq 1 $BATCHES);do
-              if [ not -e mr.batch$i.success ];then
+              if [ ! -e mr.batch$i.success ];then
                 failArr+=('mr.batch$i')
               fi
             done
