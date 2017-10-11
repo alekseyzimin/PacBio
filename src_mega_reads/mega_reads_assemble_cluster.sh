@@ -11,15 +11,15 @@ MER=15
 B=17
 d=0.029
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
-PB_HC=30;
+PB_HC=30
 KMER=41
-BATCH_SIZE=100000000
+BATCH_SIZE=25000000
 QUEUE=""
 USE_SGE=0
 
 function error_exit {
-    echo "$1" >&2   ## Send message to stderr. Exclude >&2 if you don't want it that way.
-    exit "${2:-1}"  ## Return a code specified by $2 or 1 by default.
+    echo "$1" >&2   
+    exit "${2:-1}" 
 }
 
 
@@ -139,7 +139,7 @@ if [ $B -lt 15 ];then
 	    zcat -f $PACBIO|awk 'BEGIN{n=1}{if($0 ~ /^>/){print ">"n;n++}else{print $0}}' > nanoporeRenamed.fa.tmp && mv  nanoporeRenamed.fa.tmp  nanoporeRenamed.fa || error_exit "failed to rename nanopore reads";
 	else
 	    if [ "$FIRSTCHAR" = "@" ];then
-		zcat -f $PACBIO | fastqToFasta.pl |awk 'BEGIN{n=1}{if($0 ~ /^>/){print ">"n;n++}else{print $0}}' > nanoporeRenamed.fa.tmp && mv  nanoporeRenamed.fa.tmp  nanoporeRenamed.fa || error_exit "failed to rename nanopore reads";
+		zcat -f $PACBIO | fastqToFasta.pl |awk 'BEGIN{n=1}{if($0 ~ /^>/){print $1"/"n;n++}else{print $0}}' > nanoporeRenamed.fa.tmp && mv  nanoporeRenamed.fa.tmp  nanoporeRenamed.fa || error_exit "failed to rename nanopore reads";
 	    else
 		error_exit "Unknown file format $PACBIO, exiting";
 	    fi
@@ -153,10 +153,10 @@ else
 	MAX_GAP=2000
 	if [ ! -s "pacbio_${PB_HC}xlongest.fa" ] ;then
 	    if [ "$FIRSTCHAR" = ">" ];then
-		zcat -f $PACBIO |ufasta extract -f <(zcat -f $PACBIO | grep --text '^>' | awk '{split($1,a,"/");split(a[3],b,"_");len=b[2]-b[1];if($2 ~ /^RQ/){split($2,c,"=");len=int(len*c[2]/0.85);}print substr($1,2)" "len;}'  | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin | awk 'BEGIN{n=1}{if($0~/^>/){print ">"n;n++}else{print $0}}' > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
+		zcat -f $PACBIO |ufasta extract -f <(zcat -f $PACBIO | grep --text '^>' | awk '{split($1,a,"/");split(a[3],b,"_");len=b[2]-b[1];if($2 ~ /^RQ/){split($2,c,"=");len=int(len*c[2]/0.85);}print substr($1,2)" "len;}'  | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
 	    else
 		if [ "$FIRSTCHAR" = "@" ];then
-		    zcat -f $PACBIO | fastqToFasta.pl |ufasta extract -f <(zcat -f $PACBIO | fastqToFasta.pl | grep --text '^>' | awk '{split($1,a,"/");split(a[3],b,"_");len=b[2]-b[1];if($2 ~ /^RQ/){split($2,c,"=");len=int(len*c[2]/0.85);}print substr($1,2)" "len;}'  | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin  | awk 'BEGIN{n=1}{if($0~/^>/){print ">"n;n++}else{print $0}}' > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
+		    zcat -f $PACBIO | fastqToFasta.pl |ufasta extract -f <(zcat -f $PACBIO | fastqToFasta.pl | grep --text '^>' | awk '{split($1,a,"/");split(a[3],b,"_");len=b[2]-b[1];if($2 ~ /^RQ/){split($2,c,"=");len=int(len*c[2]/0.85);}print substr($1,2)" "len;}'  | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin  > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
 		else
 		    error_exit "Unknown file format $PACBIO, exiting";
 		fi
@@ -225,14 +225,20 @@ if [ ! -s $KUNITIGLENGTHS ];then
     exit 1;
 fi
 
+BATCHES=$(($(stat -c%s superReadSequences.named.fasta)/$BATCH_SIZE));
+#if there is one batch then we do not use SGE
+if [ $BATCHES -ge 1001 ];then
+    BATCHES=1000
+fi
+for i in $(seq 1 $BATCHES);do arr[$i]="sr.batch$i";done;
+for i in $(seq 1 $BATCHES);do arrOut[$i]="<(zcat coords.batch$i.gz)";done;
+for i in $(seq 1 $BATCHES);do arrSortOut[$i]=">(gzip -c -1 >coords.sorted.batch$i.gz)";done;
+for i in $(seq 1 $BATCHES);do mrOut[$i]="mr.batch$i.txt";done;
+
+
+
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
     echo "Mega-reads pass 1"
-
-    BATCHES=$(($(stat -c%s superReadSequences.named.fasta)/$BATCH_SIZE));
-#if there is one batch then we do not use SGE
-    if [ $BATCHES -ge 1001 ];then
-	BATCHES=1000
-    fi
 
     if [ $BATCHES -ge 2 ] && [ $USE_SGE -eq 1 ];then
 	echo "Running on the grid in $BATCHES batches";
@@ -241,10 +247,6 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 	fi
 
 #here we run on a cluster;first split and then merge alignments
-	for i in $(seq 1 $BATCHES);do arr[$i]="sr.batch$i";done;
-	for i in $(seq 1 $BATCHES);do arrOut[$i]="<(zcat coords.batch$i.gz)";done;
-	for i in $(seq 1 $BATCHES);do arrSortOut[$i]=">(gzip -c -1 >coords.sorted.batch$i.gz)";done;
-	for i in $(seq 1 $BATCHES);do mrOut[$i]="mr.batch$i.txt";done;
 
 #working inside mr_pass1
 	mkdir -p mr_pass1
@@ -262,8 +264,10 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 		echo "else" >> jf_aligner.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
 		echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
-#sorted merge
-	    echo "$MYPATH/merge_coords ${arrOut[@]} |$MYPATH/ufasta extract -v -n \"0\" |$MYPATH/ufasta split ${arrSortOut[@]}" > merge.sh && chmod 0755 merge.sh
+#merge/split
+                echo "#!/bin/bash" > merge.sh && \
+                echo "$MYPATH/merge_coords ${arrOut[@]} |$MYPATH/ufasta extract -v -n \"0\" | $MYPATH/ufasta split ${arrSortOut[@]}" >> merge.sh && \
+                chmod 0755 merge.sh
 #longest path qsub version
 	    echo "#!/bin/sh" > longest_path.sh && \
 		echo "if [ ! -e mr.batch\$SGE_TASK_ID.success ];then" >> longest_path.sh && \
@@ -287,7 +291,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
             fi
 #sort/merge
 	    if [ ! -e merge.success ];then
-		./merge.sh && touch merge.success || error_exit "sorted merge failed on the grid"
+		./merge.sh && touch merge.success || error_exit "sorted merge failed"
 	    fi 
 
 	    qsub -q test.q -cwd -j y -sync y -N "longest_path"  -t 1-$BATCHES longest_path.sh 1> lqsub2.out 2>&1 || error_exit "longest path failed on the grid"
@@ -350,23 +354,13 @@ fi
 if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
     echo "Mega-reads pass 2"
 
-    BATCHES=$(($(stat -c%s $COORDS.all_mr.maximal.fa)/$BATCH_SIZE));
-#if there is one batch then we do not use SGE
-    if [ $BATCHES -ge 1001 ];then
-	BATCHES=1000
-    fi
-
     if [ $BATCHES -ge 2 ] && [ $USE_SGE -eq 1 ];then
-	echo "Running on the grid in $BATCHES batches";
-	if [ "$QUEUE" = "" ];then
-	    error_exit "Queue for SGE is undefined, must specify which queue to submit jobs to"
-	fi
+      echo "Running on the grid in $BATCHES batches";
+      if [ "$QUEUE" = "" ];then
+          error_exit "Queue for SGE is undefined, must specify which queue to submit jobs to"
+      fi
 
 #here we run on a cluster;first split and then merge alignments
-	for i in $(seq 1 $BATCHES);do arr[$i]="sr.batch$i";done;
-	for i in $(seq 1 $BATCHES);do arrOut[$i]="<(zcat coords.batch$i.gz)";done;
-	for i in $(seq 1 $BATCHES);do arrSortOut[$i]=">(gzip -c -1 >coords.sorted.batch$i.gz)";done;
-	for i in $(seq 1 $BATCHES);do mrOut[$i]="mr.batch$i.txt";done;
 
 #working inside mr_pass2
 	mkdir -p mr_pass2
@@ -384,8 +378,10 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 		echo "else" >> jf_aligner.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
 		echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
-#sorted merge
-	    echo "$MYPATH/merge_coords  ${arrOut[@]} |$MYPATH/ufasta extract -v -n \"0\" |$MYPATH/ufasta split ${arrSortOut[@]}" > merge.sh && chmod 0755 merge.sh
+#merge/split
+                echo "#!/bin/bash" > merge.sh && \
+                echo "$MYPATH/merge_coords ${arrOut[@]} |$MYPATH/ufasta extract -v -n \"0\" | $MYPATH/ufasta split ${arrSortOut[@]}" >> merge.sh && \
+                chmod 0755 merge.sh
 #longest path qsub version
 	    echo "#!/bin/sh" > longest_path.sh && \
 		echo "if [ ! -e mr.batch\$SGE_TASK_ID.success ];then" >> longest_path.sh && \
@@ -409,7 +405,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
             fi   
 #sort/merge
 	    if [ ! -e merge.success ];then
-		./merge.sh && touch merge.success || error_exit "sorted merge failed on the grid"
+		  ./merge.sh && touch merge.success || error_exit "sorted merge failed"
 	    fi 
 
 	    qsub -q test.q -cwd -j y -sync y -N "longest_path"  -t 1-$BATCHES longest_path.sh 1> lqsub2.out 2>&1 || error_exit "longest path failed on the grid"
