@@ -13,7 +13,9 @@ d=0.029
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 PB_HC=30
 KMER=41
-BATCH_SIZE=25000000
+#this is the batch size for grid execution
+#25000000 uses about 42Gb of RAM per node
+BATCH_SIZE=30000000
 QUEUE=""
 USE_SGE=0
 
@@ -53,6 +55,10 @@ do
 	    PACBIO="$2"
 	    shift
 	    ;;
+        -C|--coverage)
+            PB_HC="$2"
+            shift
+            ;;
 	-a|--assembler_path)
 	    CA_PATH="$2"
 	    shift
@@ -62,7 +68,8 @@ do
 	    shift
 	    ;;
 	-G|--use-Grid)
-	    USE_SGE=1
+	    USE_SGE="$2"
+            shift
 	    ;;
 	-b|--batch-size)
 	    BATCH_SIZE="$2"
@@ -133,19 +140,19 @@ rm -f .rerun
 PB_SIZE=$(stat -c%s $PACBIO);
 FIRSTCHAR=`head -c 1 $PACBIO`;
 if [ $B -lt 15 ];then
-    if [ ! -s "nanoporeRenamed.fa" ] ;then
-	echo "Detected nanopore data, we have to rename the reads";
+    if [ ! -s "ont_${PB_HC}xlongest.fa" ] ;then
+	echo "Using ${PB_HC}x of the longest ONT reads" 
 	if [ "$FIRSTCHAR" = ">" ];then
-	    zcat -f $PACBIO|awk 'BEGIN{n=1}{if($0 ~ /^>/){print ">"n;n++}else{print $0}}' > nanoporeRenamed.fa.tmp && mv  nanoporeRenamed.fa.tmp  nanoporeRenamed.fa || error_exit "failed to rename nanopore reads";
-	else
+          zcat -f $PACBIO |ufasta extract -f <(zcat -f $PACBIO | ufasta sizes -H | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin > ont_${PB_HC}xlongest.fa.tmp && mv ont_${PB_HC}xlongest.fa.tmp ont_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
+        else
 	    if [ "$FIRSTCHAR" = "@" ];then
-		zcat -f $PACBIO | fastqToFasta.pl |awk 'BEGIN{n=1}{if($0 ~ /^>/){print $1"/"n;n++}else{print $0}}' > nanoporeRenamed.fa.tmp && mv  nanoporeRenamed.fa.tmp  nanoporeRenamed.fa || error_exit "failed to rename nanopore reads";
+		zcat -f $PACBIO |fastqToFasta.pl |ufasta extract -f <(zcat -f $PACBIO | fastqToFasta.pl | ufasta sizes -H | sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin > ont_${PB_HC}xlongest.fa.tmp && mv ont_${PB_HC}xlongest.fa.tmp ont_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
 	    else
 		error_exit "Unknown file format $PACBIO, exiting";
 	    fi
 	fi
     fi
-    PACBIO1="nanoporeRenamed.fa";
+    PACBIO1="ont_${PB_HC}xlongest.fa";
     MAX_GAP=1000
 else
     if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE/$PLOIDY)) -gt ${PB_HC} ];then
@@ -230,6 +237,10 @@ BATCHES=$(($(stat -c%s superReadSequences.named.fasta)/$BATCH_SIZE));
 if [ $BATCHES -ge 1001 ];then
     BATCHES=1000
 fi
+if [ $BATCHES -le 1 ];then
+    BATCHES=1
+fi
+
 for i in $(seq 1 $BATCHES);do arr[$i]="sr.batch$i";done;
 for i in $(seq 1 $BATCHES);do arrOut[$i]="<(zcat coords.batch$i.gz)";done;
 for i in $(seq 1 $BATCHES);do arrSortOut[$i]=">(gzip -c -1 >coords.sorted.batch$i.gz)";done;
