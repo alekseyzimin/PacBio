@@ -8,7 +8,7 @@ Copyright University of Maryland 2015
 bool is_ssr(const jellyfish::mer_dna& m, uint l = jellyfish::mer_dna::k() / 2) {
   jellyfish::mer_dna nm(m);
   for(uint32_t i = 0; i < l; ++i) {
-    nm.shift_right(m.base(0));
+    nm.shift_right(nm.base(0));
     if(nm == m) return true;
   }
   return false;
@@ -89,7 +89,11 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
   while(parser.next()) { // Process each k-mer
     if(parser.mer<0>().m.is_homopolymer()) continue;
     if(parser.mer<0>().m == parser.mer<0>().m.get_reverse_complement()) continue;
-    if(is_ssr(parser.mer<0>().m)) continue;
+    if(is_ssr(parser.mer<0>().m)) 
+      {
+      //std::cout<<parser.mer<0>().m<<std::endl;
+      continue;
+      }
     const bool is_canonical = parser.mer<0>().is_canonical();
     auto list = is_canonical
       ? psa.find_pos_size(parser.mer<0>().m, parser.mer<0>().rm)
