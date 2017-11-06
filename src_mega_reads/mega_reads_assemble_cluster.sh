@@ -16,7 +16,8 @@ KMER=41
 #this is the batch size for grid execution
 #25000000 uses about 42Gb of RAM per node
 SBATCH_SIZE=30000000
-PBATCH_SIZE=30000000000
+#use about 10G or 10000000000
+PBATCH_SIZE=10000000000
 QUEUE=""
 USE_SGE=0
 
@@ -233,8 +234,8 @@ if [ ! -s $KUNITIGLENGTHS ];then
     exit 1;
 fi
 
-SBATCHES=$(($(stat -c%s superReadSequences.named.fasta)/$SBATCH_SIZE));
-PBATCHES=$(($(stat -c%s $PACBIO1)/$PBATCH_SIZE));
+SBATCHES=$(($(stat -c%s -L superReadSequences.named.fasta)/$SBATCH_SIZE));
+PBATCHES=$(($(stat -c%s -L $PACBIO1)/$PBATCH_SIZE));
 #if there is one batch then we do not use SGE
 if [ $SBATCHES -ge 1001 ];then
     SBATCHES=1000
@@ -260,8 +261,8 @@ for i in $(seq 1 $PBATCHES);do lmrOut[$i]="mr.batch$i.txt";done;
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
     echo "Mega-reads pass 1"
 
-    if [ $BATCHES -ge 2 ] && [ $USE_SGE -eq 1 ];then
-	echo "Running on the grid in $BATCHES batches";
+    if [ $PBATCHES -ge 2 ] && [ $USE_SGE -eq 1 ];then
+	echo "Running on the grid in $PBATCHES batches";
 	if [ "$QUEUE" = "" ];then
 	    error_exit "Queue for SGE is undefined, must specify which queue to submit jobs to"
 	fi
@@ -273,14 +274,14 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 #running in sub-shell
 	( cd mr_pass1;
 #split the super-reads
-	    if [ ! -s lr.batch$PBATCHES ];then
-		ufasta split -i ../$PACBIO1 ${larr[@]}
+	    if [ ! -e split.success ];then
+		ufasta split -i ../$PACBIO1 ${larr[@]} && touch split.success
 	    fi
 #creating run scripts
 #jf_aligner qsub version
 	    echo "#!/bin/sh" > create_mega_reads.sh && \
 		echo "if [ ! -e mr.batch\$SGE_TASK_ID.success ];then" >> create_mega_reads.sh && \
-		echo "$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p lr.batch\$SGE_TASK_ID -o mr.batch\$SGE_TASK_ID.tmp && mv mr.batch\$SGE_TASK_ID.tmp mr.batch\$SGE_TASK_ID.txt && touch mr.batch\$SGE_TASK_ID.success" >> create_mega_reads.sh && \
+		echo "$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SGE_TASK_ID -o mr.batch\$SGE_TASK_ID.tmp && mv mr.batch\$SGE_TASK_ID.tmp mr.batch\$SGE_TASK_ID.txt && touch mr.batch\$SGE_TASK_ID.success" >> create_mega_reads.sh && \
 		echo "else" >> create_mega_reads.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> create_mega_reads.sh && \
 		echo "fi"  >> create_mega_reads.sh && chmod 0755 create_mega_reads.sh
@@ -360,8 +361,8 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 #running in sub-shell
 	( cd mr_pass2;
 #split the super-reads
-	    if [ ! -s sr.batch$SBATCHES ];then
-		ufasta split -i ../$COORDS.all_mr.maximal.fa ${arr[@]}
+	    if [ ! -e split.success ];then
+		ufasta split -i ../$COORDS.all_mr.maximal.fa ${arr[@]} && touch split.success
 	    fi
 #creating run scripts
 #jf_aligner qsub version
@@ -474,7 +475,7 @@ fi
 
 TCOVERAGE=20
 if [ $ESTIMATED_GENOME_SIZE -gt 1 ];then
-    MR_SIZE=$(stat -c%s "$COORDS.1.fa");
+    MR_SIZE=$(stat -c%s -L "$COORDS.1.fa");
     MCOVERAGE=$(($MR_SIZE/$ESTIMATED_GENOME_SIZE/$PLOIDY+1));
     if [ $MCOVERAGE -le 5 ];then
 	echo "Coverage of the mega-reads less than 5 -- using the super reads as well";
