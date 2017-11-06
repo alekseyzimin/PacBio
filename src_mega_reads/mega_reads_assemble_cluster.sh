@@ -114,7 +114,7 @@ if [ ! -e $PACBIO ];then
 fi
 
 ################setting parameters#########################
-JF_SIZE=$(stat -c%s $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta);
+JF_SIZE=$(stat -L -c%s $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta);
 if [ $ESTIMATED_GENOME_SIZE -lt 1 ];then 
     echo "Estimated Genome Size is invalid or missing";
     exit;
@@ -139,7 +139,7 @@ echo "Output prefix $COORDS"
 rm -f .rerun
 ###############removing redundant subreads or reducing the coverage by picking the longest reads##############################
 
-PB_SIZE=$(stat -c%s $PACBIO);
+PB_SIZE=$(stat -L -c%s $PACBIO);
 FIRSTCHAR=`head -c 1 $PACBIO`;
 if [ $B -lt 17 ];then
     if [ ! -s "ont_${PB_HC}xlongest.fa" ] ;then
