@@ -89,7 +89,7 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
   while(parser.next()) { // Process each k-mer
     if(parser.mer<0>().m.is_homopolymer()) continue;
     //if(parser.mer<0>().m == parser.mer<0>().m.get_reverse_complement()) continue;
-    if(is_ssr(parser.mer<0>().m)) continue;
+    if(is_ssr(parser.mer<0>().m,3)) continue;
     
     const bool is_canonical = parser.mer<0>().is_canonical();
     auto list = is_canonical

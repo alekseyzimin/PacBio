@@ -14,8 +14,7 @@ NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 PB_HC=30
 KMER=41
 #this is the batch size for grid execution
-#25000000 uses about 42Gb of RAM per node
-SBATCH_SIZE=30000000
+SBATCH_SIZE=300000000
 #use about 10G or 10000000000
 PBATCH_SIZE=10000000000
 QUEUE=""
@@ -129,10 +128,8 @@ echo $PLOIDY > PLOIDY.txt
 
 echo "Running mega-reads correction/assembly"
 echo "Using mer size $MER for mapping, B=$B, d=$d"
-echo "Using MaSuRCA files from $MASURCA_ASSEMBLY_WORK1_PATH, k-unitig mer $KMER"
 echo "Estimated Genome Size $ESTIMATED_GENOME_SIZE"
 echo "Estimated Ploidy $PLOIDY"
-echo "Using CA installation from $CA_PATH"
 echo "Using $NUM_THREADS threads"
 echo "Output prefix $COORDS"
 
@@ -311,6 +308,9 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 	fi
     fi
     touch .rerun
+    if  [ ! -s $COORDS.txt ];then
+      error_exit "mega-reads pass 1 failed"
+    fi
 fi
 
 if [ ! -s $COORDS.all_mr.maximal.fa ] || [ -e .rerun ];then
@@ -339,6 +339,9 @@ $out{$mega_read}=1;
 	ufasta extract -f $COORDS.maximal_mr.txt $COORDS.all_mr.fa > $COORDS.all_mr.maximal.fa && \
 	rm $COORDS.mr_sizes.tmp $COORDS.reduce.tmp ||  error_exit "failed to create maximal pass 1 mega-reads ";
     touch .rerun
+    if  [ ! -s $COORDS.all_mr.maximal.fa ];then
+      error_exit "failed to create maximal mega-reads from pass 1"
+    fi
 fi
 
 if [ ! -s $COORDS.single.txt ] || [ -e .rerun ];then
@@ -424,6 +427,9 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 	fi
     fi
     touch .rerun
+    if  [ ! -s $COORDS.mr.txt ];then
+      error_exit "mega-reads pass 2 failed"
+    fi
 fi
 
 if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
@@ -459,6 +465,9 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 }' ${COORDS}.all.txt | sort -nk3 -k4n -S 20% | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed
     join_mega_reads_trim.onepass.nomatch.pl $PACBIO1 ${COORDS}.1.allowed  $MAX_GAP < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.inserts.txt && mv $COORDS.1.fa.tmp $COORDS.1.fa || error_exit "mega-reads joining failed";
     touch .rerun
+    if  [ ! -s $COORDS.1.fa ];then
+      error_exit "refine/join alignments failed"
+    fi
 fi
 
 if [ ! -s $COORDS.1.frg ] || [ -e .rerun ];then
@@ -470,7 +479,10 @@ if [ ! -s $COORDS.1.frg ] || [ -e .rerun ];then
 	find_contained_reads.pl work1_mr1/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt $COORDS.1.fa > containees.txt && \
 	ufasta extract -v -f containees.txt $COORDS.1.fa |make_mr_frg.pl mr 600  > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg && \
 	make_mate_frg.pl < $COORDS.1.fa > $COORDS.1.mates.frg.tmp && mv $COORDS.1.mates.frg.tmp $COORDS.1.mates.frg && \
-	rm -rf $CA work1_mr1 guillaumeKUnitigsAtLeast32bases_all.31.fasta mr.fa.in || error_exit "failed to create mega-reads frg file";
+        rm -rf $CA work1_mr1 guillaumeKUnitigsAtLeast32bases_all.31.fasta mr.fa.in || error_exit "failed to create mega-reads frg file";
+  if  [ ! -s $COORDS.1.frg ];then
+    error_exit "failed to create mega-reads frg file"
+  fi
 fi
 
 TCOVERAGE=20
