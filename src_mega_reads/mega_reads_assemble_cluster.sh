@@ -16,7 +16,7 @@ KMER=41
 #this is the batch size for grid execution
 SBATCH_SIZE=300000000
 #use about 10G or 10000000000
-PBATCH_SIZE=10000000000
+PBATCH_SIZE=3000000000
 QUEUE=""
 USE_SGE=0
 
@@ -278,7 +278,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 #jf_aligner qsub version
 	    echo "#!/bin/sh" > create_mega_reads.sh && \
 		echo "if [ ! -e mr.batch\$SGE_TASK_ID.success ];then" >> create_mega_reads.sh && \
-		echo "$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SGE_TASK_ID -o mr.batch\$SGE_TASK_ID.tmp && mv mr.batch\$SGE_TASK_ID.tmp mr.batch\$SGE_TASK_ID.txt && touch mr.batch\$SGE_TASK_ID.success" >> create_mega_reads.sh && \
+		echo "$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 11  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SGE_TASK_ID -o mr.batch\$SGE_TASK_ID.tmp && mv mr.batch\$SGE_TASK_ID.tmp mr.batch\$SGE_TASK_ID.txt && touch mr.batch\$SGE_TASK_ID.success" >> create_mega_reads.sh && \
 		echo "else" >> create_mega_reads.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> create_mega_reads.sh && \
 		echo "fi"  >> create_mega_reads.sh && chmod 0755 create_mega_reads.sh
