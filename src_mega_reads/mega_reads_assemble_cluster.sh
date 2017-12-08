@@ -72,10 +72,14 @@ do
 	    USE_SGE="$2"
             shift
 	    ;;
-	-b|--batch-size)
+	-Sb|--sbatch-size)
 	    SBATCH_SIZE="$2"
 	    shift
 	    ;;
+        -Pb|--pbatch-size)
+            PBATCH_SIZE="$2"
+            shift
+            ;;
 	-q|--queue)
 	    QUEUE="$2"
 	    shift
