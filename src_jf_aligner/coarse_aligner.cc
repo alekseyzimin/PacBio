@@ -4,16 +4,6 @@ Copyright University of Maryland 2015
 #include <src_jf_aligner/coarse_aligner.hpp>
 #include <cmath>
 
-
-bool is_ssr(const jellyfish::mer_dna& m, uint l = jellyfish::mer_dna::k() / 3) {
-  jellyfish::mer_dna nm(m);
-  for(uint32_t i = 0; i < l; ++i) {
-    nm.shift_right(nm.base(0));
-    if(nm == m) return true;
-  }
-  return false;
-}
-
 namespace align_pb {
 void coarse_aligner::compute_coords(const frags_pos_type& frags_pos, const size_t pb_size,
                               coords_info_type& coords) const {
@@ -88,9 +78,6 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
   memset(counts, '\0', sizeof(counts));
   while(parser.next()) { // Process each k-mer
     if(parser.mer<0>().m.is_homopolymer()) continue;
-    //if(parser.mer<0>().m == parser.mer<0>().m.get_reverse_complement()) continue;
-    if(is_ssr(parser.mer<0>().m,3)) continue;
-    
     const bool is_canonical = parser.mer<0>().is_canonical();
     auto list = is_canonical
       ? psa.find_pos_size(parser.mer<0>().m, parser.mer<0>().rm)
