@@ -522,6 +522,7 @@ fi
 echo "batOptions=$batOptions
 useGrid=$USE_SGE
 cnsOnGrid=0
+gridSubmitCommand=qsub -q $QUEUE
 cnsConcurrency=$NUM_THREADS
 cnsMinFrags=10000
 obtMerSize=$OVL_MER
@@ -560,6 +561,8 @@ cnsReuseUnitigs=1" > runCA.spec
 echo "Running assembly"
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then 
   #need to start from the beginning
+  #this is helpful for re-starts
+  rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh
     runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 
     rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
     runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
