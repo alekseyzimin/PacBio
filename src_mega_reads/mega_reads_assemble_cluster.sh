@@ -15,7 +15,6 @@ PB_HC=30
 KMER=41
 #this is the batch size for grid execution
 SBATCH_SIZE=300000000
-#use about 10G or 10000000000
 PBATCH_SIZE=3000000000
 QUEUE=""
 USE_SGE=0
@@ -235,15 +234,8 @@ if [ ! -s $KUNITIGLENGTHS ];then
     exit 1;
 fi
 
-SBATCHES=$(($(stat -c%s -L superReadSequences.named.fasta)/$SBATCH_SIZE));
 PBATCHES=$(($(stat -c%s -L $PACBIO1)/$PBATCH_SIZE));
 #if there is one batch then we do not use SGE
-if [ $SBATCHES -ge 1001 ];then
-    SBATCHES=1000
-fi
-if [ $SBATCHES -le 1 ];then
-    SBATCHES=1
-fi
 if [ $PBATCHES -ge 1001 ];then
     PBATCHES=1000
 fi
@@ -251,11 +243,6 @@ if [ $PBATCHES -le 1 ];then
     PBATCHES=1
 fi
 
-
-for i in $(seq 1 $SBATCHES);do arr[$i]="sr.batch$i";done;
-for i in $(seq 1 $SBATCHES);do arrOut[$i]="<(zcat coords.batch$i.gz)";done;
-for i in $(seq 1 $SBATCHES);do arrSortOut[$i]=">(gzip -c -1 >coords.sorted.batch$i.gz)";done;
-for i in $(seq 1 $SBATCHES);do mrOut[$i]="mr.batch$i.txt";done;
 for i in $(seq 1 $PBATCHES);do larr[$i]="lr.batch$i";done;
 for i in $(seq 1 $PBATCHES);do lmrOut[$i]="mr.batch$i.txt";done;
 
@@ -302,7 +289,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
               error_exit "${#failArr[@]} create_mega_reads jobs failed in mr_pass1: ${failArr[@]}"
             fi
 #cat the results
-	    cat ${lmrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.txt || error_exit "concatenation of mega-read grid output files failed" ) || error_exit "failed to run mega-reads pass 1 on the grid"
+	    cat ${lmrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.txt || error_exit "concatenation of mega-read grid output files failed" ) && rm -rf mr_pass1 || error_exit "failed to run mega-reads pass 1 on the grid"
     else #single computer
 	echo "Running locally in 1 batch";
 	if numactl --show 1> /dev/null 2>&1;then
@@ -351,6 +338,19 @@ fi
 if [ ! -s $COORDS.single.txt ] || [ -e .rerun ];then
     awk 'BEGIN{counter=0}{if($1~ /^>/){if(counter==1){print rn}rn=substr($1,2);counter=0}else{if($8>'$d'*4){counter++}else{counter+=2}}}END{if(counter==1){print rn}}' $COORDS.txt > $COORDS.single.txt.tmp && mv  $COORDS.single.txt.tmp  $COORDS.single.txt || error_exit "failed to extract names of single-chink mega-reads pass 1";
 fi
+
+SBATCHES=$(($(stat -c%s -L $COORDS.all_mr.maximal.fa)/$SBATCH_SIZE));
+#if there is one batch then we do not use SGE
+if [ $SBATCHES -ge 1001 ];then
+SBATCHES=1000
+fi
+if [ $SBATCHES -le 1 ];then
+SBATCHES=1
+fi
+for i in $(seq 1 $SBATCHES);do arr[$i]="sr.batch$i";done;
+for i in $(seq 1 $SBATCHES);do arrOut[$i]="<(zcat coords.batch$i.gz)";done;
+for i in $(seq 1 $SBATCHES);do arrSortOut[$i]=">(gzip -c -1 >coords.sorted.batch$i.gz)";done;
+for i in $(seq 1 $SBATCHES);do mrOut[$i]="mr.batch$i.txt";done;
 
 if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
     echo "Mega-reads pass 2"
@@ -422,7 +422,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
               error_exit "${#failArr[@]} longest_path jobs failed in mr_pass2: ${failArr[@]}"
             fi
 #cat the results
-	    cat ${mrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.mr.txt || error_exit "concatenation of mega-read grid output files failed" ) || error_exit "failed to run mega-reads pass 2 on the grid"
+	    cat ${mrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.mr.txt || error_exit "concatenation of mega-read grid output files failed" ) && rm -rf mr_pass2 || error_exit "failed to run mega-reads pass 2 on the grid"
     else #single computer
 	if numactl --show 1> /dev/null 2>&1;then
 	    numactl --interleave=all create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.maximal.fa  -p <(ufasta extract -v -f $COORDS.single.txt $PACBIO1) -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt || error_exit "mega-reads pass 2 failed";
@@ -500,7 +500,7 @@ if [ $ESTIMATED_GENOME_SIZE -gt 1 ];then
 	    awk '{if($0 ~ /^>/) print $0":super-read"; else print $0}' $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta | fasta2frg.pl sr 200 > $SR_FRG.tmp && mv  $SR_FRG.tmp  $SR_FRG || error_exit "failed to create super-reads frg file";
 	fi
     fi
-    COVERAGE=`ls $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{print int(n/int('$ESTIMATED_GENOME_SIZE')/int('$PLOIDY')/1.1)}'`;
+    COVERAGE=`ls $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{cov=int(n/int('$ESTIMATED_GENOME_SIZE')/int('$PLOIDY')); if(cov<15) cov=15; print cov;}'`;
     TCOVERAGE=$COVERAGE;
 fi
 
