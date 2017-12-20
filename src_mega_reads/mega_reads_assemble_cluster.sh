@@ -513,8 +513,15 @@ OVL_MER=22
 
 echo "Coverage threshold for splitting unitigs is $TCOVERAGE minimum ovl $OVLMIN"
 let NUM_THREADSd4=$(($NUM_THREADS/4+1))
+if [ $USE_SGE -ge 1 ];then
+OVL_THREADS=$NUM_THREADS
+else
+OVL_THREADS=2
+fi
 
 echo "batOptions=$batOptions
+useGrid=$USE_SGE
+cnsOnGrid=0
 cnsConcurrency=$NUM_THREADS
 cnsMinFrags=10000
 obtMerSize=$OVL_MER
@@ -531,7 +538,7 @@ ovlCorrConcurrency=6
 frgCorrThreads=$NUM_THREADS
 frgCorrConcurrency=6
 mbtThreads=$NUM_THREADS
-ovlThreads=2
+ovlThreads=$OVL_THREADS
 ovlHashBlockLength=10000000
 ovlRefBlockSize=1000000
 ovlConcurrency=$NUM_THREADS
