@@ -514,7 +514,7 @@ OVL_MER=22
 echo "Coverage threshold for splitting unitigs is $TCOVERAGE minimum ovl $OVLMIN"
 let NUM_THREADSd4=$(($NUM_THREADS/4+1))
 if [ $USE_SGE -ge 1 ];then
-OVL_THREADS=6
+OVL_THREADS=4
 else
 OVL_THREADS=2
 fi
@@ -563,7 +563,7 @@ if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
   #need to start from the beginning
   #this is helpful for re-starts
   rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh
-    runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 
+    runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
     rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
     runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 fi
