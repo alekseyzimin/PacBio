@@ -5,7 +5,7 @@ Copyright University of Maryland 2015
 #include <cmath>
 
 
-bool is_ssr(const jellyfish::mer_dna& m, 3) {
+bool is_ssr(const jellyfish::mer_dna& m,uint32_t l=2) {
   jellyfish::mer_dna nm(m);
   for(uint32_t i = 0; i < l; ++i) {
     nm.shift_right(nm.base(0));
@@ -87,7 +87,7 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
 
   memset(counts, '\0', sizeof(counts));
   while(parser.next()) { // Process each k-mer
-    #if(parser.mer<0>().m.is_homopolymer()) continue;
+    //if(parser.mer<0>().m.is_homopolymer()) continue;
     if(is_ssr(parser.mer<0>().m,2)) continue;
     const bool is_canonical = parser.mer<0>().is_canonical();
     auto list = is_canonical

@@ -16,6 +16,7 @@ KMER=41
 #this is the batch size for grid execution
 SBATCH_SIZE=300000000
 PBATCH_SIZE=3000000000
+GRID_ENGINE="SGE"
 QUEUE=""
 USE_SGE=0
 
@@ -274,10 +275,26 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> create_mega_reads.sh && \
 		echo "fi"  >> create_mega_reads.sh && chmod 0755 create_mega_reads.sh
 
+#here we use two ways to submit jobs for now. It is straighforward with SGE -- we use the sync option.  For SLURM, we submit the jobs and exit, instructing the used to restart assemble.sh when all jobs finish
 
-#do qsub several times to ensure all jobs finish
-	    qsub -q $QUEUE -cwd -j y -sync y -N "create_mega_reads"  -t 1-$PBATCHES create_mega_reads.sh 1> mqsub2.out 2>&1 || error_exit "create_mega_reads failed on the grid"
-#check if the jobs finished correctly
+#maybe the jobs finished successfully already?
+            unset failArr;
+            failArr=();
+            for i in $(seq 1 $PBATCHES);do
+              if [ ! -e mr.batch$i.success ];then
+                failArr+=('mr.batch$i')
+              fi
+            done
+            if [ ${#failArr[@]} -ge 1 ];then
+              if [ $GRID_ENGINE = "SGE" ];then
+              echo "submitting SGE jobs to the grid"
+              qsub -q $QUEUE -cwd -j y -sync y -N "create_mega_reads"  -t 1-$PBATCHES create_mega_reads.sh 1> mqsub2.out 2>&1 || error_exit "create_mega_reads failed on the grid"
+              else
+              error_exit "submitting SLURM jobs to the grid.  The script will exit now.  Please re-run assemble.sh when all jobs finish."
+              fi
+            fi
+
+#check if the jobs finished successfully -- needed if we used SGE, redundant for SLURM
             unset failArr;
             failArr=();
             for i in $(seq 1 $PBATCHES);do 
@@ -289,7 +306,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
               error_exit "${#failArr[@]} create_mega_reads jobs failed in mr_pass1: ${failArr[@]}"
             fi
 #cat the results
-	    cat ${lmrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.txt || error_exit "concatenation of mega-read grid output files failed" ) && rm -rf mr_pass1 || error_exit "failed to run mega-reads pass 1 on the grid"
+	    cat ${lmrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.txt || error_exit "concatenation of mega-read grid output files failed" ) && rm -rf mr_pass1 || error_exit "mega-reads pass 1 on the grid failed or stopped, please re-run assemble.sh"
     else #single computer
 	echo "Running locally in 1 batch";
 	if numactl --show 1> /dev/null 2>&1;then
@@ -391,9 +408,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> longest_path.sh && \
 		echo "fi"  >> longest_path.sh && chmod 0755 longest_path.sh
 
-#do qsub several times to ensure all jobs finish
-	    qsub -q $QUEUE -cwd -j y -sync y -N "jf_aligner"  -t 1-$SBATCHES jf_aligner.sh 1> jqsub2.out 2>&1 || error_exit "jf_aligner failed on the grid"
-#check if the jobs finished properly
+#maybe the jobs finished successfully already?
             unset failArr;
             failArr=();
             for i in $(seq 1 $SBATCHES);do
@@ -402,27 +417,62 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
               fi
             done
             if [ ${#failArr[@]} -ge 1 ];then
-              error_exit "${#failArr[@]} aligner jobs failed in mr_pass2: ${failArr[@]}"
-            fi   
+              if [ $GRID_ENGINE = "SGE" ];then
+              echo "submitting SGE jobs to the grid"
+              qsub -q $QUEUE -cwd -j y -sync y -N "jf_aligner"  -t 1-$SBATCHES jf_aligner.sh 1> jqsub2.out 2>&1 || error_exit "jf_aligner failed on the grid"
+              else
+              error_exit "submitting SLURM jobs to the grid.  The script will exit now.  Please re-run assemble.sh when all jobs finish."
+              fi
+            fi
+ 
+#check if the jobs finished successfully -- needed if we used SGE, redundant for SLURM
+            unset failArr;
+            failArr=();
+            for i in $(seq 1 $SBATCHES);do 
+              if [ ! -e coords.batch$i.success ];then
+                failArr+=('coords.batch$i')
+              fi
+            done
+            if [ ${#failArr[@]} -ge 1 ];then
+              error_exit "${#failArr[@]} jf_aligner jobs failed in mr_pass2: ${failArr[@]}"
+            fi
+
 #sort/merge
 	    if [ ! -e merge.success ];then
-		  ./merge.sh && touch merge.success || error_exit "sorted merge failed"
+		  ./merge.sh && touch merge.success || error_exit "sorted merge failed in mr_pass2"
 	    fi 
 
-	    qsub -q $QUEUE -cwd -j y -sync y -N "longest_path"  -t 1-$SBATCHES longest_path.sh 1> lqsub2.out 2>&1 || error_exit "longest path failed on the grid"
-#check if the jobs finished properly
+#maybe the jobs finished successfully already?
             unset failArr;
             failArr=();
             for i in $(seq 1 $SBATCHES);do
               if [ ! -e mr.batch$i.success ];then
                 failArr+=('mr.batch$i')
               fi
+            done  
+            if [ ${#failArr[@]} -ge 1 ];then
+              if [ $GRID_ENGINE = "SGE" ];then
+              echo "submitting SGE jobs to the grid"
+              qsub -q $QUEUE -cwd -j y -sync y -N "longest_path"  -t 1-$SBATCHES longest_path.sh 1> lqsub2.out 2>&1 || error_exit "longest path failed on the grid"
+              else
+              error_exit "submitting SLURM jobs to the grid.  The script will exit now.  Please re-run assemble.sh when all jobs finish."
+              fi
+            fi
+ 
+#check if the jobs finished successfully -- needed if we used SGE, redundant for SLURM
+            unset failArr;
+            failArr=();
+            for i in $(seq 1 $SBATCHES);do 
+              if [ ! -e mr.batch$i.success ];then
+                failArr+=('mr.batch$i')
+              fi
             done
             if [ ${#failArr[@]} -ge 1 ];then
-              error_exit "${#failArr[@]} longest_path jobs failed in mr_pass2: ${failArr[@]}"
+              error_exit "${#failArr[@]} longest path jobs failed in mr_pass2: ${failArr[@]}"
             fi
+
 #cat the results
-	    cat ${mrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.mr.txt || error_exit "concatenation of mega-read grid output files failed" ) && rm -rf mr_pass2 || error_exit "failed to run mega-reads pass 2 on the grid"
+	    cat ${mrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.mr.txt || error_exit "concatenation of mega-read grid output files failed" ) && rm -rf mr_pass2 || error_exit "mega-reads pass 2 on the grid failed or stopped, please re-run assemble.sh"
     else #single computer
 	if numactl --show 1> /dev/null 2>&1;then
 	    numactl --interleave=all create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.maximal.fa  -p <(ufasta extract -v -f $COORDS.single.txt $PACBIO1) -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt || error_exit "mega-reads pass 2 failed";
