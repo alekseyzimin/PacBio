@@ -14,7 +14,7 @@ NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 PB_HC=30
 KMER=41
 #this is the batch size for grid execution
-SBATCH_SIZE=300000000
+SBATCH_SIZE=3000000000
 PBATCH_SIZE=3000000000
 GRID_ENGINE="SGE"
 QUEUE=""
@@ -287,7 +287,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
             done
             if [ ${#failArr[@]} -ge 1 ];then
               if [ $GRID_ENGINE = "SGE" ];then
-              echo "submitting SGE jobs to the grid"
+              echo "submitting SGE create_mega_reads jobs to the grid"
               qsub -q $QUEUE -cwd -j y -sync y -N "create_mega_reads"  -t 1-$PBATCHES create_mega_reads.sh 1> mqsub2.out 2>&1 || error_exit "create_mega_reads failed on the grid"
               else
               error_exit "submitting SLURM jobs to the grid.  The script will exit now.  Please re-run assemble.sh when all jobs finish."
@@ -418,7 +418,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
             done
             if [ ${#failArr[@]} -ge 1 ];then
               if [ $GRID_ENGINE = "SGE" ];then
-              echo "submitting SGE jobs to the grid"
+              echo "submitting SGE jf_aligner jobs to the grid"
               qsub -q $QUEUE -cwd -j y -sync y -N "jf_aligner"  -t 1-$SBATCHES jf_aligner.sh 1> jqsub2.out 2>&1 || error_exit "jf_aligner failed on the grid"
               else
               error_exit "submitting SLURM jobs to the grid.  The script will exit now.  Please re-run assemble.sh when all jobs finish."
@@ -452,7 +452,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
             done  
             if [ ${#failArr[@]} -ge 1 ];then
               if [ $GRID_ENGINE = "SGE" ];then
-              echo "submitting SGE jobs to the grid"
+              echo "submitting SGE longest_path jobs to the grid"
               qsub -q $QUEUE -cwd -j y -sync y -N "longest_path"  -t 1-$SBATCHES longest_path.sh 1> lqsub2.out 2>&1 || error_exit "longest path failed on the grid"
               else
               error_exit "submitting SLURM jobs to the grid.  The script will exit now.  Please re-run assemble.sh when all jobs finish."
