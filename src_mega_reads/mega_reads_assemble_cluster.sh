@@ -351,7 +351,7 @@ if [ ! -s $COORDS.single.txt ] || [ -e .rerun ];then
     awk 'BEGIN{counter=0}{if($1~ /^>/){if(counter==1){print rn}rn=substr($1,2);counter=0}else{if($8>'$d'*4){counter++}else{counter+=2}}}END{if(counter==1){print rn}}' $COORDS.txt > $COORDS.single.txt.tmp && mv  $COORDS.single.txt.tmp  $COORDS.single.txt || error_exit "failed to extract names of single-chink mega-reads pass 1";
 fi
 
-SBATCHES=$(($(($(($(stat -c%s -L $COORDS.all_mr.maximal.fa)/200000))*$(($(stat -c%s -L $PACBIO1)/200000))))/$PBATCH_SIZE));
+SBATCHES=$(($(($(($(stat -c%s -L $COORDS.all_mr.maximal.fa)/100000))*$(($(stat -c%s -L $PACBIO1)/200000))))/$PBATCH_SIZE));
 #if there is one batch then we do not use SGE
 if [ $SBATCHES -ge 1001 ];then
 SBATCHES=1000
@@ -650,5 +650,5 @@ fi
 runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
 runCA -s runCA.spec -p genome -d $CA  cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 && \
-    echo "Assembly complete." || echo "Assembly stopped or failed, see $CA.log"
+    echo "Mega-reads initial assembly complete." || echo "Assembly stopped or failed, see $CA.log"
 
