@@ -14,7 +14,6 @@ NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 PB_HC=30
 KMER=41
 #this is the batch size for grid execution
-SBATCH_SIZE=300000000
 PBATCH_SIZE=3000000000
 GRID_ENGINE="SGE"
 QUEUE=""
@@ -71,10 +70,6 @@ do
 	-G|--use-Grid)
 	    USE_SGE="$2"
             shift
-	    ;;
-	-Sb|--sbatch-size)
-	    SBATCH_SIZE="$2"
-	    shift
 	    ;;
         -Pb|--pbatch-size)
             PBATCH_SIZE="$2"
@@ -356,7 +351,7 @@ if [ ! -s $COORDS.single.txt ] || [ -e .rerun ];then
     awk 'BEGIN{counter=0}{if($1~ /^>/){if(counter==1){print rn}rn=substr($1,2);counter=0}else{if($8>'$d'*4){counter++}else{counter+=2}}}END{if(counter==1){print rn}}' $COORDS.txt > $COORDS.single.txt.tmp && mv  $COORDS.single.txt.tmp  $COORDS.single.txt || error_exit "failed to extract names of single-chink mega-reads pass 1";
 fi
 
-SBATCHES=$(($(stat -c%s -L $COORDS.all_mr.maximal.fa)/$SBATCH_SIZE));
+SBATCHES=$(($(($(($(stat -c%s -L $COORDS.all_mr.maximal.fa)/200000))*$(($(stat -c%s -L $PACBIO1)/200000))))/$PBATCH_SIZE));
 #if there is one batch then we do not use SGE
 if [ $SBATCHES -ge 1001 ];then
 SBATCHES=1000
@@ -365,8 +360,8 @@ if [ $SBATCHES -le 1 ];then
 SBATCHES=1
 fi
 for i in $(seq 1 $SBATCHES);do arr[$i]="sr.batch$i";done;
-for i in $(seq 1 $SBATCHES);do arrOut[$i]="<(zcat coords.batch$i.gz)";done;
-for i in $(seq 1 $SBATCHES);do arrSortOut[$i]=">(gzip -c -1 >coords.sorted.batch$i.gz)";done;
+for i in $(seq 1 $SBATCHES);do arrOut[$i]="coords.batch$i";done;
+for i in $(seq 1 $SBATCHES);do arrSortOut[$i]="coords.sorted.batch$i";done;
 for i in $(seq 1 $SBATCHES);do mrOut[$i]="mr.batch$i.txt";done;
 
 if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
@@ -392,7 +387,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 #jf_aligner qsub version
 	    echo "#!/bin/sh" > jf_aligner.sh && \
 		echo "if [ ! -e coords.batch\$SGE_TASK_ID.success ];then" >> jf_aligner.sh && \
-		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$PACBIO1 | $MYPATH/jf_aligner --zero-match -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 6000 --max-count $((2000/$SBATCHES)) --psa-min 12 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin | ufasta sort -k 2| gzip -c -1 > coords.batch\$SGE_TASK_ID.gz.tmp && mv coords.batch\$SGE_TASK_ID.gz.tmp coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
+		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$PACBIO1 | $MYPATH/jf_aligner --zero-match -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 6000 --max-count $((2000/$SBATCHES)) --psa-min 13 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin > coords.batch\$SGE_TASK_ID.tmp && ufasta sort -k 2 coords.batch\$SGE_TASK_ID.tmp > coords.batch\$SGE_TASK_ID && rm coords.batch\$SGE_TASK_ID.tmp && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
 		echo "else" >> jf_aligner.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
 		echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
@@ -403,7 +398,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 #longest path qsub version
 	    echo "#!/bin/sh" > longest_path.sh && \
 		echo "if [ ! -e mr.batch\$SGE_TASK_ID.success ];then" >> longest_path.sh && \
-		echo "zcat coords.sorted.batch\$SGE_TASK_ID.gz | $MYPATH/longest_path -t $NUM_THREADS  -u ../$KUNITIGS  -k $KMER -d $d -o mr.batch\$SGE_TASK_ID.txt.tmp /dev/stdin && mv mr.batch\$SGE_TASK_ID.txt.tmp mr.batch\$SGE_TASK_ID.txt && touch  mr.batch\$SGE_TASK_ID.success" >> longest_path.sh && \
+		echo "$MYPATH/longest_path -t $NUM_THREADS  -u ../$KUNITIGS  -k $KMER -d $d -o mr.batch\$SGE_TASK_ID.txt.tmp coords.sorted.batch\$SGE_TASK_ID && mv mr.batch\$SGE_TASK_ID.txt.tmp mr.batch\$SGE_TASK_ID.txt && touch  mr.batch\$SGE_TASK_ID.success" >> longest_path.sh && \
 		echo "else" >> longest_path.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> longest_path.sh && \
 		echo "fi"  >> longest_path.sh && chmod 0755 longest_path.sh
@@ -474,6 +469,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 #cat the results
 	    cat ${mrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.mr.txt || error_exit "concatenation of mega-read grid output files failed" ) && rm -rf mr_pass2 || error_exit "mega-reads pass 2 on the grid failed or stopped, please re-run assemble.sh"
     else #single computer
+        echo "Running locally in 1 batch";
 	if numactl --show 1> /dev/null 2>&1;then
 	    numactl --interleave=all create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.maximal.fa  -p <(ufasta extract -v -f $COORDS.single.txt $PACBIO1) -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt || error_exit "mega-reads pass 2 failed";
 	else
