@@ -360,8 +360,8 @@ if [ $SBATCHES -le 1 ];then
 SBATCHES=1
 fi
 for i in $(seq 1 $SBATCHES);do arr[$i]="sr.batch$i";done;
-for i in $(seq 1 $SBATCHES);do arrOut[$i]="coords.batch$i";done;
-for i in $(seq 1 $SBATCHES);do arrSortOut[$i]="coords.sorted.batch$i";done;
+for i in $(seq 1 $SBATCHES);do arrOut[$i]="<(zcat -f coords.batch$i.gz)";done;
+for i in $(seq 1 $SBATCHES);do arrSortOut[$i]=">(gzip -c -1 >coords.sorted.batch$i.gz)";done;
 for i in $(seq 1 $SBATCHES);do mrOut[$i]="mr.batch$i.txt";done;
 
 if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
@@ -387,18 +387,18 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 #jf_aligner qsub version
 	    echo "#!/bin/sh" > jf_aligner.sh && \
 		echo "if [ ! -e coords.batch\$SGE_TASK_ID.success ];then" >> jf_aligner.sh && \
-		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$PACBIO1 | $MYPATH/jf_aligner --zero-match -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 6000 --max-count $((2000/$SBATCHES)) --psa-min 13 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin > coords.batch\$SGE_TASK_ID.tmp && ufasta sort -k 2 coords.batch\$SGE_TASK_ID.tmp > coords.batch\$SGE_TASK_ID && rm coords.batch\$SGE_TASK_ID.tmp && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
+		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$PACBIO1 | $MYPATH/jf_aligner --zero-match -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 6000 --max-count $((2000/$SBATCHES)) --psa-min 13 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin > coords.batch\$SGE_TASK_ID.tmp && ufasta sort -k 2 coords.batch\$SGE_TASK_ID.tmp | gzip -c -1 > coords.batch\$SGE_TASK_ID.gz && rm coords.batch\$SGE_TASK_ID.tmp && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
 		echo "else" >> jf_aligner.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
 		echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
 #merge/split
                 echo "#!/bin/bash" > merge.sh && \
-                echo "$MYPATH/merge_coords ${arrOut[@]} |$MYPATH/ufasta extract -v -n \"0\" | $MYPATH/ufasta split ${arrSortOut[@]}" >> merge.sh && \
+                echo "$MYPATH/merge_coords ${arrOut[@]} |$MYPATH/ufasta extract -v -n \"0\" | $MYPATH/ufasta split ${arrSortOut[@]} && rm coords.batch*.gz" >> merge.sh && \
                 chmod 0755 merge.sh
 #longest path qsub version
 	    echo "#!/bin/sh" > longest_path.sh && \
 		echo "if [ ! -e mr.batch\$SGE_TASK_ID.success ];then" >> longest_path.sh && \
-		echo "$MYPATH/longest_path -t $NUM_THREADS  -u ../$KUNITIGS  -k $KMER -d $d -o mr.batch\$SGE_TASK_ID.txt.tmp coords.sorted.batch\$SGE_TASK_ID && mv mr.batch\$SGE_TASK_ID.txt.tmp mr.batch\$SGE_TASK_ID.txt && touch  mr.batch\$SGE_TASK_ID.success" >> longest_path.sh && \
+		echo "zcat -f coords.sorted.batch\$SGE_TASK_ID.gz | $MYPATH/longest_path -t $NUM_THREADS  -u ../$KUNITIGS  -k $KMER -d $d -o mr.batch\$SGE_TASK_ID.txt.tmp /dev/stdin && mv mr.batch\$SGE_TASK_ID.txt.tmp mr.batch\$SGE_TASK_ID.txt && touch  mr.batch\$SGE_TASK_ID.success" >> longest_path.sh && \
 		echo "else" >> longest_path.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> longest_path.sh && \
 		echo "fi"  >> longest_path.sh && chmod 0755 longest_path.sh
