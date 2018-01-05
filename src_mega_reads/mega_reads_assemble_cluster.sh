@@ -351,11 +351,19 @@ $out{$mega_read}=1;
     fi
 fi
 
+#figure out which long reads corrected into one chunk on the first pass
 if [ ! -s $COORDS.single.txt ] || [ -e .rerun ];then
     awk 'BEGIN{counter=0}{if($1~ /^>/){if(counter==1){print rn}rn=substr($1,2);counter=0}else{if($8>'$d'*4){counter++}else{counter+=2}}}END{if(counter==1){print rn}}' $COORDS.txt > $COORDS.single.txt.tmp && mv  $COORDS.single.txt.tmp  $COORDS.single.txt || error_exit "failed to extract names of single-chink mega-reads pass 1";
 fi
 
+#here we compute the number of batches to run for secondary create_mega_reads
 SBATCHES=$(($(($(($(stat -c%s -L $COORDS.all_mr.maximal.fa)/100000))*$(($(stat -c%s -L $PACBIO1)/200000))))/$PBATCH_SIZE));
+
+#if fits into 128Gb of RAM, prefer to run on one computer
+if [ $(stat -c%s -L $COORDS.all_mr.maximal.fa) -lt 5000000000 ];then
+SBATCHES=1
+fi
+
 #if there is one batch then we do not use SGE
 if [ $SBATCHES -ge 1001 ];then
 SBATCHES=1000
