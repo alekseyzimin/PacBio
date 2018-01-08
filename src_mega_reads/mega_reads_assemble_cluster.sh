@@ -140,7 +140,7 @@ rm -f .rerun
 ###############removing redundant subreads or reducing the coverage by picking the longest reads##############################
 
 PB_SIZE=$(stat -L -c%s $PACBIO);
-FIRSTCHAR=`head -c 1 $PACBIO`;
+FIRSTCHAR=`zcat -f $PACBIO | head -c 1`;
 if [ $B -lt 17 ];then
     if [ ! -s "ont_${PB_HC}xlongest.fa" ] ;then
 	echo "Using ${PB_HC}x of the longest ONT reads" 
