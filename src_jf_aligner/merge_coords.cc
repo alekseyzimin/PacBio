@@ -6,7 +6,7 @@ Copyright University of Maryland 2015
 
 #include <src_jf_aligner/coords_parsing.hpp>
 #include <src_jf_aligner/merge_coords_cmdline.hpp>
-
+#include "zstr.hpp"
 
 
 int main(int argc, char *argv[]) {
@@ -35,10 +35,10 @@ int main(int argc, char *argv[]) {
 
   // General case: merge inputs
   frag_lists                  frags(1);
-  std::vector<std::ifstream*> inputs;
+  std::vector<zstr::ifstream*> inputs;
 
   for(auto path : args.coords_arg) {
-    auto is = new std::ifstream(path);
+    auto is = new zstr::ifstream(path);
     if(!is->good())
       merge_coords_cmdline::error() << "Error opening coords file '" << path << '\'';
     inputs.push_back(is);

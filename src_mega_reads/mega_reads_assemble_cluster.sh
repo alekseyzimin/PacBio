@@ -372,8 +372,7 @@ if [ $SBATCHES -le 1 ];then
 SBATCHES=1
 fi
 for i in $(seq 1 $SBATCHES);do arr[$i]="sr.batch$i";done;
-for i in $(seq 1 $SBATCHES);do arrOut[$i]="<(zcat -f coords.batch$i.gz)";done;
-for i in $(seq 1 $SBATCHES);do arrSortOut[$i]=">(gzip -c -1 >coords.sorted.batch$i.gz)";done;
+for i in $(seq 1 $SBATCHES);do arrOut[$i]="coords.batch$i.gz";done;
 for i in $(seq 1 $SBATCHES);do mrOut[$i]="mr.batch$i.txt";done;
 
 if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
@@ -403,17 +402,6 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 		echo "else" >> jf_aligner.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
 		echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
-#merge/split
-                echo "#!/bin/bash" > merge.sh && \
-                echo "$MYPATH/merge_coords ${arrOut[@]} |$MYPATH/ufasta extract -v -n \"0\" | $MYPATH/ufasta split ${arrSortOut[@]} && rm coords.batch*.gz" >> merge.sh && \
-                chmod 0755 merge.sh
-#longest path qsub version
-	    echo "#!/bin/sh" > longest_path.sh && \
-		echo "if [ ! -e mr.batch\$SGE_TASK_ID.success ];then" >> longest_path.sh && \
-		echo "zcat -f coords.sorted.batch\$SGE_TASK_ID.gz | $MYPATH/longest_path -t $NUM_THREADS  -u ../$KUNITIGS  -k $KMER -d $d -o mr.batch\$SGE_TASK_ID.txt.tmp /dev/stdin && mv mr.batch\$SGE_TASK_ID.txt.tmp mr.batch\$SGE_TASK_ID.txt && touch  mr.batch\$SGE_TASK_ID.success" >> longest_path.sh && \
-		echo "else" >> longest_path.sh && \
-		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> longest_path.sh && \
-		echo "fi"  >> longest_path.sh && chmod 0755 longest_path.sh
 
 #maybe the jobs finished successfully already?
             unset failArr;
@@ -444,42 +432,11 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
               error_exit "${#failArr[@]} jf_aligner jobs failed in mr_pass2: ${failArr[@]}"
             fi
 
-#sort/merge
-	    if [ ! -e merge.success ];then
-		  ./merge.sh && touch merge.success || error_exit "sorted merge failed in mr_pass2"
-	    fi 
-
-#maybe the jobs finished successfully already?
-            unset failArr;
-            failArr=();
-            for i in $(seq 1 $SBATCHES);do
-              if [ ! -e mr.batch$i.success ];then
-                failArr+=('mr.batch$i')
-              fi
-            done  
-            if [ ${#failArr[@]} -ge 1 ];then
-              if [ $GRID_ENGINE = "SGE" ];then
-              echo "submitting SGE longest_path jobs to the grid"
-              qsub -q $QUEUE -cwd -j y -sync y -N "longest_path"  -t 1-$SBATCHES longest_path.sh 1> lqsub2.out 2>&1 || error_exit "longest path failed on the grid"
-              else
-              error_exit "submitting SLURM jobs to the grid.  The script will exit now.  Please re-run assemble.sh when all jobs finish."
-              fi
-            fi
- 
-#check if the jobs finished successfully -- needed if we used SGE, redundant for SLURM
-            unset failArr;
-            failArr=();
-            for i in $(seq 1 $SBATCHES);do 
-              if [ ! -e mr.batch$i.success ];then
-                failArr+=('mr.batch$i')
-              fi
-            done
-            if [ ${#failArr[@]} -ge 1 ];then
-              error_exit "${#failArr[@]} longest path jobs failed in mr_pass2: ${failArr[@]}"
-            fi
-
-#cat the results
-	    cat ${mrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.mr.txt || error_exit "concatenation of mega-read grid output files failed" ) && rm -rf mr_pass2 || error_exit "mega-reads pass 2 on the grid failed or stopped, please re-run assemble.sh"
+#longest path one machine
+            echo "#!/bin/bash" > longest_path.sh
+            echo "$MYPATH/merge_coords ${arrOut[@]} |$MYPATH/ufasta extract -v -n \"0\" | $MYPATH/longest_path -t $NUM_THREADS  -u ../$KUNITIGS  -k $KMER -d $d -o mr.txt.tmp /dev/stdin && mv mr.txt.tmp ../$COORDS.mr.txt" >> longest_path.sh
+            chmod 0755 ./longest_path.sh && ./longest_path.sh 
+            ) && rm -rf mr_pass2 || error_exit "mega-reads pass 2 on the grid failed or stopped, please re-run assemble.sh"
     else #single computer
         echo "Running locally in 1 batch";
 	if numactl --show 1> /dev/null 2>&1;then

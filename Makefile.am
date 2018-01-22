@@ -28,7 +28,8 @@ YAGGO_SOURCES = # Append all file to be built by yaggo
 bin_PROGRAMS += bin/jf_aligner bin/create_mega_reads bin/longest_path	\
                 bin/merge_coords bin/findGapsInCoverageOfPacbios
 
-noinst_HEADERS += src_jf_aligner/superread_parser.hpp			\
+noinst_HEADERS += src_jf_aligner/zstr.hpp src_jf_aligner/strict_fstream.hpp \
+		  src_jf_aligner/superread_parser.hpp			\
                   src_jf_aligner/super_read_name.hpp			\
                   src_jf_aligner/fine_aligner.hpp			\
                   src_jf_aligner/coarse_aligner.hpp			\
