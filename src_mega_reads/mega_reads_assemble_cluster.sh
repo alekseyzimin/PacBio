@@ -1,8 +1,9 @@
-#!/bin/bash -o pipefail
+#!/bin/bash
 #######################################
 #Copyright University of Maryland 2015#
 #######################################
 #!/bin/bash
+set -o pipefail
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 ESTIMATED_GENOME_SIZE=0
@@ -396,9 +397,10 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 	    fi
 #creating run scripts
 #jf_aligner qsub version
-	    echo "#!/bin/sh" > jf_aligner.sh && \
+	        echo "#!/bin/bash" > jf_aligner.sh && \
+                echo "set -o pipefail" >> jf_aligner.sh && \
 		echo "if [ ! -e coords.batch\$SGE_TASK_ID.success ];then" >> jf_aligner.sh && \
-		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$PACBIO1 | $MYPATH/jf_aligner --zero-match -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 6000 --max-count $((2000/$SBATCHES)) --psa-min 13 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin > coords.batch\$SGE_TASK_ID.tmp && ufasta sort -k 2 coords.batch\$SGE_TASK_ID.tmp | gzip -c -1 > coords.batch\$SGE_TASK_ID.gz && rm coords.batch\$SGE_TASK_ID.tmp && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
+		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$PACBIO1 | $MYPATH/jf_aligner --zero-match -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 6000 --max-count $((2000/$SBATCHES)) --psa-min 13 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin | ufasta sort -k 2 /dev/stdin | gzip -c -1 > coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
 		echo "else" >> jf_aligner.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
 		echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
@@ -434,6 +436,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 
 #longest path one machine
             echo "#!/bin/bash" > longest_path.sh
+            echo "set -o pipefail" >> longest_path.sh
             echo "$MYPATH/merge_coords ${arrOut[@]} |$MYPATH/ufasta extract -v -n \"0\" | $MYPATH/longest_path -t $NUM_THREADS  -u ../$KUNITIGS  -k $KMER -d $d -o mr.txt.tmp /dev/stdin && mv mr.txt.tmp ../$COORDS.mr.txt" >> longest_path.sh
             chmod 0755 ./longest_path.sh && ./longest_path.sh 
             ) && rm -rf mr_pass2 || error_exit "mega-reads pass 2 on the grid failed or stopped, please re-run assemble.sh"
