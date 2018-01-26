@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -o pipefail
 #######################################
 #Copyright University of Maryland 2015#
 #######################################
