@@ -437,7 +437,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 #longest path one machine
             echo "#!/bin/bash" > longest_path.sh
             echo "set -o pipefail" >> longest_path.sh
-            echo "$MYPATH/merge_coords ${arrOut[@]} |$MYPATH/ufasta extract -v -n \"0\" | ufasta split <($MYPATH/longest_path -t 20  -u ../$KUNITIGS  -k $KMER -d $d -o mr.txt.1.tmp /dev/stdin) <($MYPATH/longest_path -t 20  -u ../$KUNITIGS  -k $KMER -d $d -o mr.txt.2.tmp /dev/stdin) <($MYPATH/longest_path -t 20  -u ../$KUNITIGS  -k $KMER -d $d -o mr.txt.3.tmp /dev/stdin) && cat mr.txt.{1,2,3}.tmp > ../$COORDS.mr.txt" >> longest_path.sh
+            echo "$MYPATH/merge_coords ${arrOut[@]} |$MYPATH/ufasta extract -v -n \"0\" | ufasta split -i /dev/stdin >($MYPATH/longest_path -t 20  -u ../$KUNITIGS  -k $KMER -d $d -o mr.txt.1.tmp /dev/stdin) >($MYPATH/longest_path -t 20  -u ../$KUNITIGS  -k $KMER -d $d -o mr.txt.2.tmp /dev/stdin) >($MYPATH/longest_path -t 20  -u ../$KUNITIGS  -k $KMER -d $d -o mr.txt.3.tmp /dev/stdin) && cat mr.txt.{1,2,3}.tmp > ../$COORDS.mr.txt" >> longest_path.sh
             chmod 0755 ./longest_path.sh && ./longest_path.sh 
             ) && rm -rf mr_pass2 || error_exit "mega-reads pass 2 on the grid failed or stopped, please re-run assemble.sh"
     else #single computer
