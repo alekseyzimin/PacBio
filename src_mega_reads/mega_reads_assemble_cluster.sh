@@ -100,6 +100,7 @@ do
 done
 
 ###############checking arguments#########################
+echo "Using CABOG from is $CA_PATH"
 if [ ! -e $CA_PATH/runCA ];then
     echo "runCA not found at $CA_PATH!";
     exit 1;
@@ -581,9 +582,9 @@ if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
   #need to start from the beginning
   #this is helpful for re-starts
   rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh
-    runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
     rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
-    runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    $CA_PATH/runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 fi
 
 #at athis point we check if the unitig consensus is done
@@ -599,9 +600,9 @@ fi
 
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
   #after deduplicate we need to rebuild the unitigs, we rerun CA on deduplicated overlapStore
-    runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
     rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
-    runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    $CA_PATH/runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 fi
 
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
@@ -619,8 +620,8 @@ if [ $MCOVERAGE -le 5 ]; then
 fi
 
 #we start from here if the scaffolder has been run or continue here  
-runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+$CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
-runCA -s runCA.spec -p genome -d $CA  cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 && \
+$CA_PATH/runCA -s runCA.spec -p genome -d $CA  cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 && \
     echo "Mega-reads initial assembly complete." || echo "Assembly stopped or failed, see $CA.log"
 
