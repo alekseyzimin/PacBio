@@ -19,6 +19,8 @@ PBATCH_SIZE=2000000000
 GRID_ENGINE="SGE"
 QUEUE=""
 USE_SGE=0
+PACBIO=""
+NANOPORE=""
 
 function error_exit {
     echo "$1" >&2   
@@ -56,6 +58,10 @@ do
 	    PACBIO="$2"
 	    shift
 	    ;;
+        -n|--nanopore)
+            NANOPORE="$2"
+            shift
+            ;;
         -C|--coverage)
             PB_HC="$2"
             shift
@@ -108,8 +114,8 @@ fi
 
 export PATH=$MYPATH:$CA_PATH:$PATH
 
-if [ ! -e $PACBIO ];then
-    echo "PacBio reads file $PACBIO not found!";
+if [ ! -e $LONGREADS ];then
+    echo "PacBio reads file $LONGREADS not found!";
     exit 1 ;
 fi
 
@@ -141,22 +147,32 @@ echo "Output prefix $COORDS"
 rm -f .rerun
 ###############removing redundant subreads or reducing the coverage by picking the longest reads##############################
 
-PB_SIZE=$(stat -L -c%s $PACBIO);
-FIRSTCHAR=`zcat -f $PACBIO | head -c 1`;
-if [ $B -lt 17 ];then
+if [ $PACBIO = "" ];then
+  if [ $NANOPORE = "" ];then
+    error_exit "must specify either PacBio or Nanopore input reads file with -p or -n"
+  else
+    LONGREADS=$NANOPORE
+  fi
+else
+  LONGREADS=$PACBIO
+fi
+
+PB_SIZE=$(stat -L -c%s $LONGREADS);
+FIRSTCHAR=`zcat -f $LONGREADS | head -c 1`;
+if [ "$LONGREADS" = "$NANOPORE" ];then
     if [ ! -s "ont_${PB_HC}xlongest.fa" ] ;then
 	echo "Using ${PB_HC}x of the longest ONT reads" 
 	if [ "$FIRSTCHAR" = ">" ];then
-          zcat -f $PACBIO |ufasta extract -f <(zcat -f $PACBIO | ufasta sizes -H | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin > ont_${PB_HC}xlongest.fa.tmp && mv ont_${PB_HC}xlongest.fa.tmp ont_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
+          zcat -f $LONGREADS |ufasta extract -f <(zcat -f $LONGREADS | ufasta sizes -H | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin > ont_${PB_HC}xlongest.fa.tmp && mv ont_${PB_HC}xlongest.fa.tmp ont_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
         else
 	    if [ "$FIRSTCHAR" = "@" ];then
-		zcat -f $PACBIO |fastqToFasta.pl |ufasta extract -f <(zcat -f $PACBIO | fastqToFasta.pl | ufasta sizes -H | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin > ont_${PB_HC}xlongest.fa.tmp && mv ont_${PB_HC}xlongest.fa.tmp ont_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
+		zcat -f $LONGREADS |fastqToFasta.pl |ufasta extract -f <(zcat -f $LONGREADS | fastqToFasta.pl | ufasta sizes -H | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin > ont_${PB_HC}xlongest.fa.tmp && mv ont_${PB_HC}xlongest.fa.tmp ont_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
 	    else
-		error_exit "Unknown file format $PACBIO, exiting";
+		error_exit "Unknown file format $LONGREADS, exiting";
 	    fi
 	fi
     fi
-    PACBIO1="ont_${PB_HC}xlongest.fa";
+    LONGREADS1="ont_${PB_HC}xlongest.fa";
     MAX_GAP=1000
 else
     if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE/$PLOIDY)) -gt ${PB_HC} ];then
@@ -164,31 +180,31 @@ else
 	MAX_GAP=2000
 	if [ ! -s "pacbio_${PB_HC}xlongest.fa" ] ;then
 	    if [ "$FIRSTCHAR" = ">" ];then
-		zcat -f $PACBIO |ufasta extract -f <(zcat -f $PACBIO | grep --text '^>' | awk '{split($1,a,"/");split(a[3],b,"_");len=b[2]-b[1];if($2 ~ /^RQ/){split($2,c,"=");len=int(len*c[2]/0.85);}print substr($1,2)" "len;}'  | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
+		zcat -f $LONGREADS |ufasta extract -f <(zcat -f $LONGREADS | grep --text '^>' | awk '{split($1,a,"/");split(a[3],b,"_");len=b[2]-b[1];if($2 ~ /^RQ/){split($2,c,"=");len=int(len*c[2]/0.85);}print substr($1,2)" "len;}'  | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
 	    else
 		if [ "$FIRSTCHAR" = "@" ];then
-		    zcat -f $PACBIO | fastqToFasta.pl |ufasta extract -f <(zcat -f $PACBIO | fastqToFasta.pl | grep --text '^>' | awk '{split($1,a,"/");split(a[3],b,"_");len=b[2]-b[1];if($2 ~ /^RQ/){split($2,c,"=");len=int(len*c[2]/0.85);}print substr($1,2)" "len;}'  |LC_ALL=C  sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin  > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
+		    zcat -f $LONGREADS | fastqToFasta.pl |ufasta extract -f <(zcat -f $LONGREADS | fastqToFasta.pl | grep --text '^>' | awk '{split($1,a,"/");split(a[3],b,"_");len=b[2]-b[1];if($2 ~ /^RQ/){split($2,c,"=");len=int(len*c[2]/0.85);}print substr($1,2)" "len;}'  |LC_ALL=C  sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin  > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
 		else
-		    error_exit "Unknown file format $PACBIO, exiting";
+		    error_exit "Unknown file format $LONGREADS, exiting";
 		fi
 	    fi
 	fi
-	PACBIO1="pacbio_${PB_HC}xlongest.fa";
+	LONGREADS1="pacbio_${PB_HC}xlongest.fa";
     else
 	echo "Pacbio coverage <${PB_HC}x, using the longest subreads";
 	MAX_GAP=1000
 	if [ ! -s "pacbio_nonredundant.fa" ] ;then
 	    if [ "$FIRSTCHAR" = ">" ];then
-		zcat -f $PACBIO |ufasta extract -f <(zcat -f $PACBIO |grep --text '^>' | awk '{print $1}' | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | LC_ALL=C sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') /dev/stdin > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa || error_exit "failed to extract the longest subreads"; 
+		zcat -f $LONGREADS |ufasta extract -f <(zcat -f $LONGREADS |grep --text '^>' | awk '{print $1}' | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | LC_ALL=C sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') /dev/stdin > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa || error_exit "failed to extract the longest subreads"; 
 	    else
 		if [ "$FIRSTCHAR" = "@" ];then
-		    zcat -f $PACBIO | fastqToFasta.pl |ufasta extract -f <(zcat -f $PACBIO | fastqToFasta.pl |grep --text '^>' | awk '{print $1}' | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | LC_ALL=C sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') /dev/stdin > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa || error_exit "failed to extract the longest subreads";
+		    zcat -f $LONGREADS | fastqToFasta.pl |ufasta extract -f <(zcat -f $LONGREADS | fastqToFasta.pl |grep --text '^>' | awk '{print $1}' | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | LC_ALL=C sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') /dev/stdin > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa || error_exit "failed to extract the longest subreads";
 		else
-		    error_exit "Unknown file format $PACBIO, exiting";
+		    error_exit "Unknown file format $LONGREADS, exiting";
 		fi
 	    fi
 	fi
-	PACBIO1="pacbio_nonredundant.fa";
+	LONGREADS1="pacbio_nonredundant.fa";
     fi
 fi
 
@@ -236,7 +252,7 @@ if [ ! -s $KUNITIGLENGTHS ];then
     exit 1;
 fi
 
-PBATCHES=$(($(stat -c%s -L $PACBIO1)/$PBATCH_SIZE));
+PBATCHES=$(($(stat -c%s -L $LONGREADS1)/$PBATCH_SIZE));
 #if there is one batch then we do not use SGE
 if [ $PBATCHES -ge 1001 ];then
     PBATCHES=1000
@@ -265,7 +281,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 	( cd mr_pass1;
 #split the super-reads
 	    if [ ! -e split.success ];then
-		ufasta split -i ../$PACBIO1 ${larr[@]} && touch split.success
+		ufasta split -i ../$LONGREADS1 ${larr[@]} && touch split.success
 	    fi
 #creating run scripts
 #jf_aligner qsub version
@@ -311,9 +327,9 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
     else #single computer
 	echo "Running locally in 1 batch";
 	if numactl --show 1> /dev/null 2>&1;then
-	    numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $PACBIO1 -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt || error_exit "mega-reads pass 1 failed";
+	    numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $LONGREADS1 -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt || error_exit "mega-reads pass 1 failed";
 	else
-	    create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $PACBIO1 -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt || error_exit "mega-reads pass 1 failed";
+	    create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $LONGREADS1 -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt || error_exit "mega-reads pass 1 failed";
 	fi
     fi
     touch .rerun
@@ -359,7 +375,7 @@ if [ ! -s $COORDS.single.txt ] || [ -e .rerun ];then
 fi
 
 #here we compute the number of batches to run for secondary create_mega_reads
-SBATCHES=$(($(($(($(stat -c%s -L $COORDS.all_mr.maximal.fa)/100000))*$(($(stat -c%s -L $PACBIO1)/200000))))/$PBATCH_SIZE));
+SBATCHES=$(($(($(($(stat -c%s -L $COORDS.all_mr.maximal.fa)/100000))*$(($(stat -c%s -L $LONGREADS1)/200000))))/$PBATCH_SIZE));
 
 #if fits into 128Gb of RAM, prefer to run on one computer
 if [ $(stat -c%s -L $COORDS.all_mr.maximal.fa) -lt 5000000000 ];then
@@ -401,7 +417,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 	        echo "#!/bin/bash" > jf_aligner.sh && \
                 echo "set -o pipefail" >> jf_aligner.sh && \
 		echo "if [ ! -e coords.batch\$SGE_TASK_ID.success ];then" >> jf_aligner.sh && \
-		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$PACBIO1 | $MYPATH/jf_aligner --zero-match -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 6000 --max-count $((2000/$SBATCHES)) --psa-min 13 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin | ufasta sort -k 2 /dev/stdin | gzip -c -1 > coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
+		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$LONGREADS1 | $MYPATH/jf_aligner --zero-match -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 6000 --max-count $((2000/$SBATCHES)) --psa-min 13 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin | ufasta sort -k 2 /dev/stdin | gzip -c -1 > coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
 		echo "else" >> jf_aligner.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
 		echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
@@ -444,9 +460,9 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
     else #single computer
         echo "Running locally in 1 batch";
 	if numactl --show 1> /dev/null 2>&1;then
-	    numactl --interleave=all create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.maximal.fa  -p <(ufasta extract -v -f $COORDS.single.txt $PACBIO1) -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt || error_exit "mega-reads pass 2 failed";
+	    numactl --interleave=all create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.maximal.fa  -p <(ufasta extract -v -f $COORDS.single.txt $LONGREADS1) -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt || error_exit "mega-reads pass 2 failed";
 	else
-	    create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.maximal.fa  -p <(ufasta extract -v -f $COORDS.single.txt $PACBIO1) -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt || error_exit "mega-reads pass 2 failed";
+	    create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.maximal.fa  -p <(ufasta extract -v -f $COORDS.single.txt $LONGREADS1) -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt || error_exit "mega-reads pass 2 failed";
 	fi
     fi
     touch .rerun
@@ -457,8 +473,8 @@ fi
 
 if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
     echo "Refining alignments"
-    NUM_PACBIO_READS_PER_BATCH=`grep --text '^>'  $PACBIO1 | wc -l | awk '{bs=int($1/1024);if(bs<1000){bs=1000};if(bs>100000){bs=100000};}END{print bs}'` 
-    cat <(ufasta extract -f $COORDS.single.txt $COORDS.txt) <(ufasta extract -v -f $COORDS.single.txt $COORDS.mr.txt)| awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' | add_pb_seq.pl $PACBIO1 | split_matches_file.pl $NUM_PACBIO_READS_PER_BATCH .matches && ls .matches.* | xargs -P $NUM_THREADS -I % refine.sh $COORDS % $KMER && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp 
+    NUM_LONGREADS_READS_PER_BATCH=`grep --text '^>'  $LONGREADS1 | wc -l | awk '{bs=int($1/1024);if(bs<1000){bs=1000};if(bs>100000){bs=100000};}END{print bs}'` 
+    cat <(ufasta extract -f $COORDS.single.txt $COORDS.txt) <(ufasta extract -v -f $COORDS.single.txt $COORDS.mr.txt)| awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' | add_pb_seq.pl $LONGREADS1 | split_matches_file.pl $NUM_LONGREADS_READS_PER_BATCH .matches && ls .matches.* | xargs -P $NUM_THREADS -I % refine.sh $COORDS % $KMER && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp 
     touch .rerun
 fi
 
@@ -486,7 +502,7 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
         last_mr=$8;
         last_coord=$2+$5-$4;
 }' ${COORDS}.all.txt | LC_ALL=C sort -nk3 -k4n -S 20% | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed
-    join_mega_reads_trim.onepass.nomatch.pl $PACBIO1 ${COORDS}.1.allowed  $MAX_GAP < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.inserts.txt && mv $COORDS.1.fa.tmp $COORDS.1.fa || error_exit "mega-reads joining failed";
+    join_mega_reads_trim.onepass.nomatch.pl $LONGREADS1 ${COORDS}.1.allowed  $MAX_GAP < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.inserts.txt && mv $COORDS.1.fa.tmp $COORDS.1.fa || error_exit "mega-reads joining failed";
     touch .rerun
     if  [ ! -s $COORDS.1.fa ];then
       error_exit "refine/join alignments failed"
