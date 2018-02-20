@@ -35,8 +35,8 @@ case $key in
     d="$2"
     shift
     ;;
-    -p|--pacbio)
-    PACBIO="$2"
+    -r|--reference)
+    REF="$2"
     shift
     ;;
     -a|--assembler_path)
@@ -55,7 +55,7 @@ case $key in
     set -x
     ;;
     -h|--help|-u|--usage)
-    echo "Usage: mega_reads_assemble.sh -m <path to MaSuRCA run work1 folder contents> -p <pacbio reads fasta> -a <path to the location of runCA in wgs-8.2 instalation>"
+    echo "Usage: mega_reads_assemblei_ref.sh -m <path to MaSuRCA run work1 folder contents> -r <reference assembly fasta> -a <path to the location of runCA in wgs-8.2 instalation>"
     exit 0
     ;;
     *)
@@ -74,16 +74,15 @@ fi
 
 export PATH=$MYPATH:$CA_PATH:$PATH
 
-if [ ! -e $PACBIO ];then
-echo "PacBio reads file $PACBIO not found!";
+if [ ! -e $REF ];then
+echo "Reference reads file $REF not found!";
 exit 1 ;
 fi
 ################setting parameters#########################
-MER=17
-B=25
-d=0.05
+MER=15
+B=23
+d=0.04
 KMER=41
-JF_SIZE=$(stat -c%s $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta);
 COORDS=mr.$KMER.$MER.$B.$d
 CA=CA.${COORDS}
 
@@ -130,26 +129,57 @@ echo "K-unitigs file $KUNITIGS not found!";
 exit 1;
 fi
 
-KUNITIGLENGTHS=work1_mr/kUnitigLengths.txt
-if [ ! -s $KUNITIGLENGTHS ];then
-echo "K-unitig lengths file $KUNITIGLENGTHS not found!";
-exit 1;
+REF_SPLIT="reference.split.fa"
+if [ ! -s $REF_SPLIT ] || [ -e .rerun ];then
+echo "Preparing reference"
+perl -ane '{
+  if($F[0]=~/^>/){
+    if(length($seq)>0){
+      @f=split(/(N{1,})/,uc($seq)); 
+      my $n=1;
+      foreach $c(@f){
+        if(not($c=~/^N/) && length($c)>0){
+          $start=$n;
+          $end=$n+length($c)-1;
+          print ">$rn:$start-$end\n$c\n";
+        }
+        $n+=length($c);
+      }
+    }
+    $rn=substr($F[0],1);
+    $seq="";
+  }else{
+    $seq.=$F[0];
+  }
+}END{
+  @f=split(/(N{1,})/,uc($seq));
+  my $n=1;
+  foreach $c(@f){
+    if(not($c=~/^N/) && length($c)>0){
+      $start=$n;
+      $end=$n+length($c)-1;
+      print ">$rn:$start-$end\n$c\n";
+    }
+    $n+=length($c);
+  }
+}'  $REF | create_sr_frg.pl 100000 ref > $REF_SPLIT.tmp && mv $REF_SPLIT.tmp $REF_SPLIT
 fi
 
+JF_SIZE=$(stat -c%s $KUNITIGS);
 
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 1"
 if numactl --show 1> /dev/null 2>&1;then
-numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
+numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
 else
-create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $PACBIO -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
+create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
 fi
 touch .rerun
 fi
 
 if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
 echo "Refining alignments"
-awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.txt | add_pb_seq.pl $PACBIO > .matches.0 && refine.sh $COORDS .matches.0 $KMER && mv $COORDS.matches.0.all.txt.tmp $COORDS.all.txt && rm .matches.0
+awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.txt | add_pb_seq.pl $REF_SPLIT > .matches.0 && refine.sh $COORDS .matches.0 $KMER && mv $COORDS.matches.0.all.txt.tmp $COORDS.all.txt && rm .matches.0
 touch .rerun
 fi
 

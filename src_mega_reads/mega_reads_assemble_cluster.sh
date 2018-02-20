@@ -114,11 +114,6 @@ fi
 
 export PATH=$MYPATH:$CA_PATH:$PATH
 
-if [ ! -e $LONGREADS ];then
-    echo "PacBio reads file $LONGREADS not found!";
-    exit 1 ;
-fi
-
 ################setting parameters#########################
 JF_SIZE=$(stat -L -c%s $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta);
 if [ $ESTIMATED_GENOME_SIZE -lt 1 ];then 
@@ -147,14 +142,18 @@ echo "Output prefix $COORDS"
 rm -f .rerun
 ###############removing redundant subreads or reducing the coverage by picking the longest reads##############################
 
-if [ $PACBIO = "" ];then
-  if [ $NANOPORE = "" ];then
+if [ "$PACBIO" = "" ];then
+  if [ "$NANOPORE" = "" ];then
     error_exit "must specify either PacBio or Nanopore input reads file with -p or -n"
   else
     LONGREADS=$NANOPORE
   fi
 else
   LONGREADS=$PACBIO
+fi
+
+if [ ! -e $LONGREADS ];then
+  error_exit "Long reads reads file $LONGREADS not found!";
 fi
 
 PB_SIZE=$(stat -L -c%s $LONGREADS);
