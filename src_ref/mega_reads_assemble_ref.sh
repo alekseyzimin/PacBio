@@ -162,7 +162,7 @@ perl -ane '{
     }
     $n+=length($c);
   }
-}'  $REF | create_sr_frg.pl 100000 ref > $REF_SPLIT.tmp && mv $REF_SPLIT.tmp $REF_SPLIT
+}'  $REF | create_sr_frg.pl 65000 ref > $REF_SPLIT.tmp && mv $REF_SPLIT.tmp $REF_SPLIT
 fi
 
 JF_SIZE=$(stat -c%s $KUNITIGS);
