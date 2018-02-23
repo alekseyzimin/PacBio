@@ -49,10 +49,15 @@ if(not($seq eq "")){
 my $subseq;
 my $last_offset=0;
 my $offset=0;
+my $last_contig="";
 while($line=<STDIN>){
   chomp($line);
   $line=~s/^\s+//;
   my @f=split(/\s+/,$line);
+  if(not($f[-2] eq $last_contig)){
+    $offset=0;
+    $last_offset=0;
+  }
   next if($f[0]<=$last_offset);
   #$rseq{$f[-2]}="N"x$f[11] if(not(defined($rseq{$f[-2]})));
   next if(not(defined($rseq{$f[-2]})));
