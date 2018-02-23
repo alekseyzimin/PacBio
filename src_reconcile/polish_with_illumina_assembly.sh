@@ -13,21 +13,18 @@ DELTAFILE=$REFN.$QRYN
 
 #nucmer
 if [ ! -e align.success ];then
-nucmer -t $NUM_THREADS -p  $DELTAFILE -l 51 -c 200 $REF $QRY && touch align.success || exit
+nucmer -t $NUM_THREADS -p  $DELTAFILE -l 51 -c 200 $REF $QRY && touch align.success && rm -f filter.success || exit
 fi
 
 #delta-filter
 if [ ! -e filter.success ];then
-rm -f show.success
-rm -f add_not_alingning.success
-rm -f merge.success
 parallel_delta-filter.sh $DELTAFILE '-r -l 1000' 9 && mv $DELTAFILE.fdelta $DELTAFILE.r.delta && \
-parallel_delta-filter.sh $DELTAFILE '-1 -l 100 -o 10 ' 9 && mv $DELTAFILE.fdelta $DELTAFILE.1.delta && \
-touch filter.success || exit
+parallel_delta-filter.sh $DELTAFILE '-1 -l 500 -o 0 ' 9 && mv $DELTAFILE.fdelta $DELTAFILE.1.delta && \
+touch filter.success && rm -f merge.success || exit
 fi
 
 if [ ! -e merge.success ];then
-show-coords -lcHq -I 99 -L 3000 $DELTAFILE.r.delta | extract_merges.pl $QRY > merges.txt && merge_contigs.pl < merges.txt| create_merged_sequences.pl $REF merges.txt > $REFN.$QRYN.merged.fa && touch merge.success || exit
+show-coords -lcHq -I 99 -L 3000 $DELTAFILE.r.delta | extract_merges.pl $QRY > merges.txt && merge_contigs.pl < merges.txt| create_merged_sequences.pl $REF merges.txt > $REFN.$QRYN.merged.fa && touch merge.success && rm -f add_not_aligning.success || exit
 fi
 
 if [ ! -e add_not_aligning.success ];then
@@ -36,12 +33,12 @@ show-coords -lcH -I 98 $DELTAFILE.1.delta| perl -ane '{$palign{$F[-1]}+=$F[-4];}
 ufasta sizes -H $QRY | awk '{if($2<1000) print $1}' > short_sequences.txt
 ufasta extract -v -f <(cat aligned_sequences.txt short_sequences.txt) $QRY > $REFN.$QRYN.extra.fa && \
 cat $REFN.$QRYN.merged.fa $REFN.$QRYN.extra.fa > $REFN.$QRYN.all.fa && \
-touch add_not_aligning.success || exit
+touch add_not_aligning.success && rm -f replace_consensus.success || exit
 fi
 
 if [ ! -e replace_consensus.success ];then
-show-coords -lcHr -I 95 -L 100 $DELTAFILE.1.delta | reconcile_consensus.pl $REFN.$QRYN.all.fa $QRY > $REFN.$QRYN.all.polished.fa && \
-touch replace_consensus.success || exit
+show-coords -lcHr -I 98 -L 500 $DELTAFILE.1.delta |  reconcile_consensus.pl $REFN.$QRYN.all.fa $QRY > $REFN.$QRYN.all.polished.fa && \
+touch replace_consensus.success && rm -f self_map.polish.success || exit
 fi
 
 #here we map the contigs against themselves to figure out which ones are redundant
@@ -49,7 +46,7 @@ if [ ! -e self_map.polish.success ];then
 rm -f filter_map.contigs.success
 perl -ane 'BEGIN{$seq=""}{if($F[0] =~ /^\>/){if(length($seq)>=1000){print length($seq)," $rn $seq\n";}$seq="";$rn=$F[0];}else{$seq.=$F[0];}}END{print length($seq)," $rn $seq\n";}' $REFN.$QRYN.all.polished.fa | sort -S 50% -nrk1 | awk '{print $2"\n"$3}' >  scaffolds.ref.fa && \
 nucmer -t $NUM_THREADS --batch $(($(stat -c%s "scaffolds.ref.fa")/5)) -l 51 -c 100 -b 100 -p sasm_to_sasm  scaffolds.ref.fa  $REFN.$QRYN.all.polished.fa && \
-touch self_map.contigs.success || exit
+touch self_map.contigs.success && rm -f filter_map.polish.success || exit
 fi
 
 if [ ! -e filter_map.polish.success ];then
