@@ -21,12 +21,13 @@ while($line=<STDIN>){
 	    $outread = process_sorted_lines(sort {$$a[0] <=> $$b[0]} @lines);
 	    if(not($outread eq "")){
 		$indx=0;
-		@f=split(/(N{1,})/,$outread);
-		for($i=0;$i<=$#f;$i+=2){
-		    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=$min_len_output);
-		    $indx+=length($f[$i]);
-		    $indx+=length($f[$i+1]) if($f[$i]<$#f);
-		}
+                print ">$rn.ref_",length($outread),"\n$outread\n";
+		#@f=split(/(N{1,})/,$outread);
+		#for($i=0;$i<=$#f;$i+=2){
+		#    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=$min_len_output);
+		#    $indx+=length($f[$i]);
+		#    $indx+=length($f[$i+1]) if($f[$i]<$#f);
+		#}
 	    }
 	    @lines=();
 	}
@@ -40,13 +41,14 @@ while($line=<STDIN>){
 if(@lines){
     $outread = process_sorted_lines(sort {$$a[0] <=> $$b[0]} @lines);
     if(not($outread eq "")){
-	$indx=0;
-	@f=split(/(N{1,})/,$outread);
-	for($i=0;$i<=$#f;$i+=2){
-	    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=$min_len_output);
-	    $indx+=length($f[$i]);
-	    $indx+=length($f[$i+1]) if($f[$i]<$#f);
-	}
+        print ">$rn.ref_",length($outread),"\n$outread\n";
+	#$indx=0;
+	#@f=split(/(N{1,})/,$outread);
+	#for($i=0;$i<=$#f;$i+=2){
+	#    print ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=$min_len_output);
+	#    $indx+=length($f[$i]);
+	#    $indx+=length($f[$i+1]) if($f[$i]<$#f);
+	#}
     }
 }
 
@@ -122,10 +124,10 @@ sub process_sorted_lines{
             die("error in joining $offset $ind $pb $name");
           }
         }else{
-          $outread.="N".$seq;
+          $outread.="NN".$seq;
         }
       }else{#gap
-        $outread.="N".$seq;
+        $outread.=("N"x100).$seq;
       }
     }
     $last_coord=$end;

@@ -79,9 +79,9 @@ echo "Reference reads file $REF not found!";
 exit 1 ;
 fi
 ################setting parameters#########################
-MER=15
-B=23
-d=0.04
+MER=17
+B=25
+d=0.05
 KMER=41
 COORDS=mr.$KMER.$MER.$B.$d
 CA=CA.${COORDS}
@@ -114,7 +114,7 @@ END{
     }
   }
 }' < work1_mr/superReadNames.txt > superReadSequences.named.fasta.tmp && mv superReadSequences.named.fasta.tmp superReadSequences.named.fasta
-rm superReadSequences.fasta.in
+rm -f superReadSequences.fasta.in
 fi
 
 SUPERREADS=superReadSequences.named.fasta
@@ -162,7 +162,7 @@ perl -ane '{
     }
     $n+=length($c);
   }
-}'  $REF | create_sr_frg.pl 65000 ref > $REF_SPLIT.tmp && mv $REF_SPLIT.tmp $REF_SPLIT
+}'  $REF | create_sr_frg.pl 10000000 ref > $REF_SPLIT.tmp && mv $REF_SPLIT.tmp $REF_SPLIT
 fi
 
 JF_SIZE=$(stat -c%s $KUNITIGS);
@@ -185,11 +185,22 @@ awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10
 touch .rerun
 fi
 
+#this is different from joining the mega-reads, because we create scaffolds, not contigs; one scaffold per reference contig
 if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 echo "Joining"
 join_mega_reads_trim.onepass.ref.pl < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>/dev/null && mv $COORDS.1.fa.tmp $COORDS.1.fa
 touch .rerun
 fi
+
+#now we attempt to close gaps in reference assisted scaffolds
+if [ ! -s $COORDS.1.gapclose.fa ] || [ -e .rerun ];then
+(mkdir -p ref_gapclose && \
+cd ref_gapclose && \
+closeGapsInScaffFastaFile.perl --split 1 --max-reads-in-memory 1000000000 -s 30000000000 --scaffold-fasta-file ../$COORDS.1.fa  --reads-file ../pe.cor.fa --output-directory gapclose.tmp --min-kmer-len 19 --max-kmer-len 100 --num-threads $NUM_THREADS --contig-length-for-joining 300 --contig-length-for-fishing 450 --reduce-read-set-kmer-size 25 1>gapClose.err 2>&1 && \
+mv gapclose.tmp/genome.scf.fasta ../$COORDS.1.gapclose.fa ) || error_exit "reference gapclose failed"
+fi
+
+exit
 
 if [ ! -s $COORDS.1.frg ] || [ -e .rerun ];then
 echo "Generating assembly input files"

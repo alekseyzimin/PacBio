@@ -47,10 +47,13 @@ if(not($seq eq "")){
 
 #now read in the coords file
 my $subseq;
+my $last_offset=0;
+my $offset=0;
 while($line=<STDIN>){
   chomp($line);
   $line=~s/^\s+//;
   my @f=split(/\s+/,$line);
+  next if($f[0]<=$last_offset);
   #$rseq{$f[-2]}="N"x$f[11] if(not(defined($rseq{$f[-2]})));
   next if(not(defined($rseq{$f[-2]})));
   die("query sequence $f[-1] not found") unless(defined($qseq{$f[-1]}));
@@ -62,7 +65,11 @@ while($line=<STDIN>){
     $subseq=reverse($subseq);
     $subseq=~tr/ACGTNacgtn/TGCAntgcan/;
   }
-  $rseq{$f[-2]}=substr($rseq{$f[-2]},0,$f[0]-1).$subseq.substr($rseq{$f[-2]},$f[1]-1);
+  $f[0]+=$offset;
+  $f[1]+=$offset;
+  $rseq{$f[-2]}=substr($rseq{$f[-2]},0,$f[0]-1).$subseq.substr($rseq{$f[-2]},$f[1]);
+  $offset+=(length($subseq)-($f[1]-$f[0])-1);
+  $last_offset=$f[1];
 }
 
 foreach $c(keys %rseq){
