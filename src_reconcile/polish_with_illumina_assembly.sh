@@ -18,14 +18,14 @@ fi
 
 #delta-filter
 if [ ! -e filter.success ];then
-parallel_delta-filter.sh $DELTAFILE '-r -l 1000' 9 && mv $DELTAFILE.fdelta $DELTAFILE.r.delta && \
+#parallel_delta-filter.sh $DELTAFILE '-r -l 1000' 9 && mv $DELTAFILE.fdelta $DELTAFILE.r.delta && \
 parallel_delta-filter.sh $DELTAFILE '-1 -l 500 -o 0 ' 9 && mv $DELTAFILE.fdelta $DELTAFILE.1.delta && \
-touch filter.success && rm -f merge.success || exit
+touch filter.success && rm -f  add_not_aligning.success || exit
 fi
 
-if [ ! -e merge.success ];then
-show-coords -lcHq -I 99 -L 3000 $DELTAFILE.r.delta | extract_merges.pl $QRY > merges.txt && merge_contigs.pl < merges.txt| create_merged_sequences.pl $REF merges.txt > $REFN.$QRYN.merged.fa && touch merge.success && rm -f add_not_aligning.success || exit
-fi
+#if [ ! -e merge.success ];then
+#show-coords -lcHq -I 99 -L 3000 $DELTAFILE.r.delta | extract_merges.pl $QRY > merges.txt && merge_contigs.pl < merges.txt| create_merged_sequences.pl $REF merges.txt > $REFN.$QRYN.merged.fa && touch merge.success && rm -f add_not_aligning.success || exit
+#fi
 
 if [ ! -e add_not_aligning.success ];then
 #add the sequences that did not align and longer than 1000 bp
