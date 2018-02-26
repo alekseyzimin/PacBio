@@ -75,6 +75,7 @@ while($line=<STDIN>){
   $rseq{$f[-2]}=substr($rseq{$f[-2]},0,$f[0]-1).$subseq.substr($rseq{$f[-2]},$f[1]);
   $offset+=(length($subseq)-($f[1]-$f[0])-1);
   $last_offset=$f[1];
+  $last_contig=$f[-2];
 }
 
 foreach $c(keys %rseq){
