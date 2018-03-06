@@ -196,15 +196,13 @@ fi
 if [ ! -s $COORDS.1.gapclose.fa ] || [ -e .rerun ];then
 (mkdir -p ref_gapclose && \
 cd ref_gapclose && \
-closeGapsInScaffFastaFile.perl --split 1 --max-reads-in-memory 1000000000 -s 30000000000 --scaffold-fasta-file ../$COORDS.1.fa  --reads-file ../pe.cor.fa --output-directory gapclose.tmp --min-kmer-len 19 --max-kmer-len 100 --num-threads $NUM_THREADS --contig-length-for-joining 300 --contig-length-for-fishing 450 --reduce-read-set-kmer-size 25 1>gapClose.err 2>&1 && \
-mv gapclose.tmp/genome.scf.fasta ../$COORDS.1.gapclose.fa ) || error_exit "reference gapclose failed"
+closeGapsInScaffFastaFile.perl --split 1 --max-reads-in-memory 1000000000 -s $(($ESTIMATED_GENOME_SIZE*5)) --scaffold-fasta-file ../$COORDS.1.fa  --reads-file ../pe.cor.fa --output-directory gapclose.tmp --min-kmer-len 19 --max-kmer-len 100 --num-threads $NUM_THREADS --contig-length-for-joining 300 --contig-length-for-fishing 450 --reduce-read-set-kmer-size 25 1>gapClose.err 2>&1 && \
+mv gapclose.tmp/genome.ctg.fasta ../$COORDS.1.gapclose.fa ) || error_exit "reference gapclose failed"
 fi
-
-exit
 
 if [ ! -s $COORDS.1.frg ] || [ -e .rerun ];then
 echo "Generating assembly input files"
-cat $COORDS.1.fa | make_mr_frg.pl ref 400 > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg
+cat $COORDS.1.gapclose.fa | make_mr_frg.pl ref 400 > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg
 rm -rf $CA
 fi
 
