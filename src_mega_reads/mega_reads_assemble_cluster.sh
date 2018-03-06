@@ -416,7 +416,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 	        echo "#!/bin/bash" > jf_aligner.sh && \
                 echo "set -o pipefail" >> jf_aligner.sh && \
 		echo "if [ ! -e coords.batch\$SGE_TASK_ID.success ];then" >> jf_aligner.sh && \
-		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$LONGREADS1 | $MYPATH/jf_aligner --zero-match -s 1 -m $MER -t $NUM_THREADS -f -B $B --stretch-cap 10000 --max-count $((6000/$SBATCHES)) --psa-min 13 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin | ufasta sort -k 2 /dev/stdin | gzip -c -1 > coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
+		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$LONGREADS1 | $MYPATH/jf_aligner --zero-match -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 6000 --max-count $((2000/$SBATCHES)) --psa-min 13 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin | ufasta sort -k 2 /dev/stdin | gzip -c -1 > coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
 		echo "else" >> jf_aligner.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
 		echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
@@ -459,9 +459,9 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
     else #single computer
         echo "Running locally in 1 batch";
 	if numactl --show 1> /dev/null 2>&1;then
-	    numactl --interleave=all create_mega_reads --stretch-cap 10000 -s $JF_SIZE --psa-min 13 -m $MER -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $COORDS.all_mr.maximal.fa  -p <(ufasta extract -v -f $COORDS.single.txt $LONGREADS1) -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt || error_exit "mega-reads pass 2 failed";
+	    numactl --interleave=all create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.maximal.fa  -p <(ufasta extract -v -f $COORDS.single.txt $LONGREADS1) -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt || error_exit "mega-reads pass 2 failed";
 	else
-	    create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $MER -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $COORDS.all_mr.maximal.fa  -p <(ufasta extract -v -f $COORDS.single.txt $LONGREADS1) -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt || error_exit "mega-reads pass 2 failed";
+	    create_mega_reads --stretch-cap 6000 -s $JF_SIZE --psa-min 13 -m $(($MER+2)) -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $(($B-4)) --max-count 2000 -d $d  -r $COORDS.all_mr.maximal.fa  -p <(ufasta extract -v -f $COORDS.single.txt $LONGREADS1) -o $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt || error_exit "mega-reads pass 2 failed";
 	fi
     fi
     touch .rerun
