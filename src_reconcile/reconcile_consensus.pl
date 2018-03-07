@@ -59,6 +59,7 @@ while($line=<STDIN>){
     $last_offset=0;
   }
   next if($f[0]<=$last_offset);
+  $last_offset=$f[1];
   #$rseq{$f[-2]}="N"x$f[11] if(not(defined($rseq{$f[-2]})));
   next if(not(defined($rseq{$f[-2]})));
   die("query sequence $f[-1] not found") unless(defined($qseq{$f[-1]}));
@@ -74,7 +75,6 @@ while($line=<STDIN>){
   $f[1]+=$offset;
   $rseq{$f[-2]}=substr($rseq{$f[-2]},0,$f[0]-1).$subseq.substr($rseq{$f[-2]},$f[1]);
   $offset+=(length($subseq)-($f[1]-$f[0])-1);
-  $last_offset=$f[1];
   $last_contig=$f[-2];
 }
 
