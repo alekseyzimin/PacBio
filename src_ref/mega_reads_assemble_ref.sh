@@ -86,7 +86,7 @@ exit 1 ;
 fi
 ################setting parameters#########################
 MER=17
-B=25
+B=20
 d=0.05
 KMER=41
 COORDS=mr.$KMER.$MER.$B.$d
@@ -168,7 +168,7 @@ perl -ane '{
     }
     $n+=length($c);
   }
-}'  $REF | create_sr_frg.pl 10000000 ref > $REF_SPLIT.tmp && mv $REF_SPLIT.tmp $REF_SPLIT
+}'  $REF > $REF_SPLIT.tmp && mv $REF_SPLIT.tmp $REF_SPLIT
 fi
 
 JF_SIZE=$(stat -c%s $KUNITIGS);
@@ -202,34 +202,24 @@ fi
 if [ ! -s $COORDS.1.gapclose.fa ] || [ -e .rerun ];then
 (mkdir -p ref_gapclose && \
 cd ref_gapclose && \
-closeGapsInScaffFastaFile.perl --split 1 --max-reads-in-memory 1000000000 -s $(($ESTIMATED_GENOME_SIZE*5)) --scaffold-fasta-file ../$COORDS.1.fa  --reads-file ../pe.cor.fa --output-directory gapclose.tmp --min-kmer-len 19 --max-kmer-len 100 --num-threads $NUM_THREADS --contig-length-for-joining 300 --contig-length-for-fishing 450 --reduce-read-set-kmer-size 25 1>gapClose.err 2>&1 && \
+closeGapsInScaffFastaFile.perl --split 1 --max-reads-in-memory 1000000000 -s $(($ESTIMATED_GENOME_SIZE*5)) --scaffold-fasta-file ../$COORDS.1.fa  --reads-file ../pe.cor.fa --output-directory gapclose.tmp --min-kmer-len 19 --max-kmer-len 127 --num-threads $NUM_THREADS --contig-length-for-joining 300 --contig-length-for-fishing 450 --reduce-read-set-kmer-size 25 1>gapClose.err 2>&1 && \
 mv gapclose.tmp/genome.ctg.fasta ../$COORDS.1.gapclose.fa ) || error_exit "reference gapclose failed"
 fi
 
-if [ ! -s $COORDS.1.frg ] || [ -e .rerun ];then
-echo "Generating assembly input files"
-cat $COORDS.1.gapclose.fa | make_mr_frg.pl ref 400 > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg
-rm -rf $CA
-fi
-
+SR_FRG=$COORDS.sr.frg
 TCOVERAGE=20
 if [ $ESTIMATED_GENOME_SIZE -gt 1 ];then
-MR_SIZE=$(stat -c%s "$COORDS.1.fa");
-MCOVERAGE=$(($MR_SIZE/$ESTIMATED_GENOME_SIZE+1));
-if [ $MCOVERAGE -le 5 ];then
-echo "Coverage of the mega-reads less than 5 -- using the super reads as well";
-SR_FRG=$COORDS.sr.frg
+echo "Generating assembly input files"
 if [ ! -s $SR_FRG ];then
-awk '{if($0 ~ /^>/) print $0":super-read"; else print $0}' $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta | fasta2frg.pl sr 200 > $SR_FRG.tmp && mv  $SR_FRG.tmp  $SR_FRG;
+create_sr_frg.pl 65525 < $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta | fasta2frg.pl super > $SR_FRG.tmp && mv  $SR_FRG.tmp  $SR_FRG && rm -rf $CA
 fi
-fi
-TCOVERAGE=`ls $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{print int(n/int('$ESTIMATED_GENOME_SIZE')/1.7+1)}'`;
+TCOVERAGE=`ls $SR_FRG $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{print int(n/int('$ESTIMATED_GENOME_SIZE')/1.7+1)}'`;
 fi
 
 rm -f .rerun
 rm -f $CA.log
 
-OVLMIN=`head -n 100000 $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | grep -A 1 '^seq:' |grep -v '^seq:' | grep -v '\-\-' | awk 'BEGIN{minlen=100000}{if(length($1)<minlen && length($1)>=64) minlen=length($1);}END{if(minlen>=250) print "250"; else print minlen-5;}'`
+OVLMIN=`head -n 100000 $SR_FRG $OTHER_FRG 2>/dev/null | grep -A 1 '^seq:' |grep -v '^seq:' | grep -v '\-\-' | awk 'BEGIN{minlen=100000}{if(length($1)<minlen && length($1)>=64) minlen=length($1);}END{if(minlen>=250) print "250"; else print minlen-5;}'`
 
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el $OVLMIN "
 
@@ -254,7 +244,7 @@ ovlHashBlockLength=100000000
 ovlRefBlockSize=1000000
 ovlConcurrency=$NUM_THREADS
 doFragmentCorrection=1
-doOverlapBasedTrimming=1
+doOverlapBasedTrimming=0
 doUnitigSplitting=0
 doChimeraDetection=normal
 merylThreads=$NUM_THREADS
@@ -268,9 +258,7 @@ cnsReuseUnitigs=1" > runCA.spec
 echo "Running assembly"
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
 #need to start from the beginning
-$CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
-rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
-$CA_PATH/runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+$CA_PATH/runCA -s runCA.spec -p genome -d $CA stopAfter=consensusAfterUnitigger $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 fi
 
 #at athis point we assume that the unitig consensus is done
@@ -279,17 +267,19 @@ echo "CA failure, see $CA.log"
 exit;
 fi
 
-#recompute astat if low pacbio coverage
-if [ $MCOVERAGE -le 5 ]; then
 if [ ! -e ${CA}/recompute_astat.success ];then
 echo "Recomputing A-stat"
 recompute_astat_superreads_CA8.sh genome $CA $PE_AVG_READ_LENGTH $MASURCA_ASSEMBLY_WORK1_PATH/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt  $SR_FRG
 touch ${CA}/recompute_astat.success
 fi
-fi
 
 #we start from here if the scaffolder has been run or continue here  
-$CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
-rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
-$CA_PATH/runCA -s runCA.spec -p genome -d $CA  $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 && echo "Assembly complete. Results are in $CA/9-terminator"
+$CA_PATH/runCA -s runCA.spec -p genome -d $CA $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 
+#now we merge
+if [ ! -e merge.success ];then
+merge_contigs.sh -r $COORDS.1.gapclose.fa -q $CA/9-terminator/genome.ctg.fasta -t $NUM_THREADS && mv  $COORDS.1.gapclose.fa.genome.ctg.fasta.merged.fa contigs.final.fasta && touch merge.success
+fi
+
+echo "Final output contigs are in contigs.final.fasta"
+ufasta n50 -A -S -N50 -C contigs.final.fasta

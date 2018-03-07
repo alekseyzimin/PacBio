@@ -49,7 +49,7 @@ error_exit "reference $REF does not exist or size zero"
 fi
 
 if [ ! -s $QRY ];then
-error_exit "polishing sequence $QRY does not exist or size zero"
+error_exit "merging sequence $QRY does not exist or size zero"
 fi
 
 REFN=`basename $REF`
