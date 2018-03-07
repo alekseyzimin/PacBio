@@ -72,4 +72,3 @@ show-coords -lcHq -I 99 -L 1000 $DELTAFILE.r.delta | extract_merges.pl $QRY > me
 fi
 
 echo "Output sequences in $REFN.$QRYN.merged.fa"
-ufasta n50 -A -S -N50 $REFN.$QRYN.merged.fa
