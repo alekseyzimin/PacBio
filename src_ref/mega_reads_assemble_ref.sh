@@ -278,7 +278,8 @@ $CA_PATH/runCA -s runCA.spec -p genome -d $CA $SR_FRG $OTHER_FRG 1>> $CA.log 2>&
 
 #now we merge
 if [ ! -e merge.success ];then
-merge_contigs.sh -r $COORDS.1.gapclose.fa -q $CA/9-terminator/genome.ctg.fasta -t $NUM_THREADS && mv  $COORDS.1.gapclose.fa.genome.ctg.fasta.merged.fa contigs.final.fasta && touch merge.success
+mkdir final_merge;
+(cd final_merge && merge_contigs.sh -r $COORDS.1.gapclose.fa -q $CA/9-terminator/genome.ctg.fasta -t $NUM_THREADS && mv  $COORDS.1.gapclose.fa.genome.ctg.fasta.merged.fa ../contigs.final.fasta) && touch merge.success
 fi
 
 echo "Final output contigs are in contigs.final.fasta"
