@@ -200,10 +200,11 @@ fi
 
 #now we attempt to close gaps in reference assisted scaffolds
 if [ ! -s $COORDS.1.gapclose.fa ] || [ -e .rerun ];then
+echi "Closing gaps in reference assisted scaffolds"
 (mkdir -p ref_gapclose && \
 cd ref_gapclose && \
 closeGapsInScaffFastaFile.perl --split 1 --max-reads-in-memory 1000000000 -s $(($ESTIMATED_GENOME_SIZE*5)) --scaffold-fasta-file ../$COORDS.1.fa  --reads-file ../pe.cor.fa --output-directory gapclose.tmp --min-kmer-len 19 --max-kmer-len 127 --num-threads $NUM_THREADS --contig-length-for-joining 300 --contig-length-for-fishing 450 --reduce-read-set-kmer-size 25 1>gapClose.err 2>&1 && \
-mv gapclose.tmp/genome.ctg.fasta ../$COORDS.1.gapclose.fa ) || error_exit "reference gapclose failed"
+mv gapclose.tmp/genome.scf.fasta ../$COORDS.1.gapclose.fa ) || error_exit "reference gapclose failed"
 fi
 
 SR_FRG=$COORDS.sr.frg
@@ -276,10 +277,49 @@ fi
 #we start from here if the scaffolder has been run or continue here  
 $CA_PATH/runCA -s runCA.spec -p genome -d $CA $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 
+#reconcile the reference "scaffolds" with the Illumina assembly
+if [ ! -e reconcile.success ];then
+echo "Polishing reference contigs"
+mkdir -p reconcile
+(cd reconcile && polish_with_illumina_assembly.sh -r ../$COORDS.1.gapclose.fa -q ../$CA/9-terminator/genome.ctg.fasta -t $NUM_THREADS 1> /dev/null && perl -ane '{
+  if($F[0]=~/^>/){
+    if(length($seq)>0){
+      @f=split(/(N{1,})/,uc($seq)); 
+      my $n=1;
+      foreach $c(@f){
+        if(not($c=~/^N/) && length($c)>0){
+          $start=$n;
+          $end=$n+length($c)-1;
+          print ">$rn:$start-$end\n$c\n";
+        }
+        $n+=length($c);
+      }
+    }
+    $rn=substr($F[0],1);
+    $seq="";
+  }else{
+    $seq.=$F[0];
+  }
+}END{
+  @f=split(/(N{1,})/,uc($seq));
+  my $n=1;
+  foreach $c(@f){
+    if(not($c=~/^N/) && length($c)>0){
+      $start=$n;
+      $end=$n+length($c)-1;
+      print ">$rn:$start-$end\n$c\n";
+    }
+    $n+=length($c);
+  }
+}'  $COORDS.1.gapclose.fa.genome.ctg.fasta.all.polished.deduplicated.fa > ../$COORDS.1.contigs.fa) && touch reconcile.success || error_exit "reconcile failed"
+rm -f merge.success
+fi
+
 #now we merge
 if [ ! -e merge.success ];then
+echo "Merging reference contigs"
 mkdir -p final_merge && \
-(cd final_merge && merge_contigs.sh -r ../$COORDS.1.gapclose.fa -q ../$CA/9-terminator/genome.ctg.fasta -t $NUM_THREADS 1>/dev/null && mv  $COORDS.1.gapclose.fa.genome.ctg.fasta.merged.fa ../contigs.final.fasta) && touch merge.success
+(cd final_merge && merge_contigs.sh -r ../$COORDS.1.contigs.fa -q ../$CA/9-terminator/genome.ctg.fasta -t $NUM_THREADS 1>/dev/null && mv  $COORDS.1.contigs.fa.genome.ctg.fasta.merged.fa ../contigs.final.fasta) && touch merge.success || error_exit "final merge failed"
 fi
 
 echo "Final output contigs are in contigs.final.fasta"
