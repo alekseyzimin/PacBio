@@ -87,8 +87,8 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
 
   memset(counts, '\0', sizeof(counts));
   while(parser.next()) { // Process each k-mer
-    if(parser.mer<0>().m.is_homopolymer()) continue;
-    //if(is_ssr(parser.mer<0>().m,2)) continue;
+    //if(parser.mer<0>().m.is_homopolymer()) continue;
+    if(is_ssr(parser.mer<0>().m,2)) continue;
     const bool is_canonical = parser.mer<0>().is_canonical();
     auto list = is_canonical
       ? psa.find_pos_size(parser.mer<0>().m, parser.mer<0>().rm)

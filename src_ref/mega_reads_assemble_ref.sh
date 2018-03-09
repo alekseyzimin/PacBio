@@ -168,7 +168,7 @@ perl -ane '{
     }
     $n+=length($c);
   }
-}'  $REF > $REF_SPLIT.tmp && mv $REF_SPLIT.tmp $REF_SPLIT
+}'  $REF | create_sr_frg.pl 10000000 ref  > $REF_SPLIT.tmp && mv $REF_SPLIT.tmp $REF_SPLIT
 fi
 
 JF_SIZE=$(stat -c%s $KUNITIGS);
@@ -176,9 +176,9 @@ JF_SIZE=$(stat -c%s $KUNITIGS);
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 1"
 if numactl --show 1> /dev/null 2>&1;then
-numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
+numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
 else
-create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
+create_mega_reads -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
 fi
 touch .rerun
 fi
@@ -200,7 +200,7 @@ fi
 
 #now we attempt to close gaps in reference assisted scaffolds
 if [ ! -s $COORDS.1.gapclose.fa ] || [ -e .rerun ];then
-echi "Closing gaps in reference assisted scaffolds"
+echo "Closing gaps in reference assisted scaffolds"
 (mkdir -p ref_gapclose && \
 cd ref_gapclose && \
 closeGapsInScaffFastaFile.perl --split 1 --max-reads-in-memory 1000000000 -s $(($ESTIMATED_GENOME_SIZE*5)) --scaffold-fasta-file ../$COORDS.1.fa  --reads-file ../pe.cor.fa --output-directory gapclose.tmp --min-kmer-len 19 --max-kmer-len 127 --num-threads $NUM_THREADS --contig-length-for-joining 300 --contig-length-for-fishing 450 --reduce-read-set-kmer-size 25 1>gapClose.err 2>&1 && \
