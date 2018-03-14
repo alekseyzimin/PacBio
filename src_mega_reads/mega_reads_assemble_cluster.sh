@@ -598,6 +598,11 @@ if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
   #this is helpful for re-starts
   rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh
     $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    #this is a fix for sometimes failing fragment correction
+    if [ ! -e "${CA}/4-unitigger/unitigger.success" ]; then
+      rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh
+      $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG doFragmentCorrecion=0 1>> $CA.log 2>&1
+    fi
     rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
     $CA_PATH/runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 fi
