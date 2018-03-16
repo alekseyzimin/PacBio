@@ -416,7 +416,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 	        echo "#!/bin/bash" > jf_aligner.sh && \
                 echo "set -o pipefail" >> jf_aligner.sh && \
 		echo "if [ ! -e coords.batch\$SGE_TASK_ID.success ];then" >> jf_aligner.sh && \
-		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$LONGREADS1 | $MYPATH/jf_aligner --zero-match -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 6000 --max-count $((2000/$SBATCHES)) --psa-min 13 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin | ufasta sort -k 2 /dev/stdin | gzip -c -1 > coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
+		echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$LONGREADS1 | $MYPATH/jf_aligner --zero-match -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 6000 --max-count $((2000/$SBATCHES)) --psa-min 13 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SGE_TASK_ID -p /dev/stdin | $MYPATH/ufasta sort -k 2 /dev/stdin | gzip -c -1 > coords.batch\$SGE_TASK_ID.gz && touch coords.batch\$SGE_TASK_ID.success" >> jf_aligner.sh && \
 		echo "else" >> jf_aligner.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
 		echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
