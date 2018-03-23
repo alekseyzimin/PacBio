@@ -283,7 +283,7 @@ $CA_PATH/runCA -s runCA.spec -p genome -d $CA $SR_FRG $OTHER_FRG 1>> $CA.log 2>&
 if [ ! -e reconcile.success ];then
 echo "Polishing reference contigs"
 mkdir -p reconcile
-(cd reconcile && polish_with_illumina_assembly.sh -r ../$COORDS.1.gapclose.fa -q ../$CA/9-terminator/genome.ctg.fasta -t $NUM_THREADS 1> /dev/null && perl -ane '{
+(cd reconcile && polish_with_illumina_assembly.sh -r ../$COORDS.1.gapclose.fa -q ../$CA/9-terminator/genome.ctg.fasta -t $NUM_THREADS -m 1000 1> /dev/null && perl -ane '{
   if($F[0]=~/^>/){
     if(length($seq)>0){
       @f=split(/(N{1,})/,uc($seq)); 
