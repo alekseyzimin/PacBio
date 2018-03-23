@@ -244,7 +244,7 @@ ovlThreads=2
 ovlHashBlockLength=100000000
 ovlRefBlockSize=1000000
 ovlConcurrency=$NUM_THREADS
-doFragmentCorrection=1
+doFragmentCorrection=0
 doOverlapBasedTrimming=0
 doUnitigSplitting=0
 doChimeraDetection=normal
@@ -254,11 +254,13 @@ cgwErrorRate=0.15
 cgwMergeMissingThreshold=-1
 cgwMergeFilterLevel=1
 cgwDemoteRBP=0
+cnsMaxCoverage=7
 cnsReuseUnitigs=1" > runCA.spec
 
 echo "Running assembly"
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
 #need to start from the beginning
+rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh $CA/5-consensus/consensus.sh
 $CA_PATH/runCA -s runCA.spec -p genome -d $CA stopAfter=consensusAfterUnitigger $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 fi
 
