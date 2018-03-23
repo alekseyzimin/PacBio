@@ -4,6 +4,7 @@ MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:$PATH;
 set -o pipefail
 NUM_THREADS=1
+MERGE=0
 
 function error_exit {
     echo "$1" >&2
@@ -23,6 +24,10 @@ do
             ;;
         -q|--query)
             QRY="$2"
+            shift
+            ;;
+        -m|--merge-slack)
+            MERGE="$2"
             shift
             ;;
         -r|--reference)
@@ -77,8 +82,13 @@ touch polish_add_not_aligning.success && rm -f polish_replace_consensus.success 
 fi
 
 if [ ! -e polish_replace_consensus.success ];then
+if [ $MERGE -gt 0 ];then
+show-coords -lcHr -I 98 -L 100 $DELTAFILE.1.delta |  merge_matches_and_tile_coords_file.pl $MERGE | reconcile_consensus.pl $REFN.$QRYN.all.fa $QRY > $REFN.$QRYN.all.polished.fa && \
+touch polish_replace_consensus.success && rm -f polish_self_map.success || exit
+else
 show-coords -lcHr -I 98 -L 100 $DELTAFILE.1.delta |  reconcile_consensus.pl $REFN.$QRYN.all.fa $QRY > $REFN.$QRYN.all.polished.fa && \
 touch polish_replace_consensus.success && rm -f polish_self_map.success || exit
+fi
 fi
 
 #here we map the contigs against themselves to figure out which ones are redundant
