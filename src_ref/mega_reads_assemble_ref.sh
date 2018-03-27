@@ -168,7 +168,7 @@ perl -ane '{
     }
     $n+=length($c);
   }
-}'  $REF | create_sr_frg.pl 10000000 ref  > $REF_SPLIT.tmp && mv $REF_SPLIT.tmp $REF_SPLIT
+}'  $REF > $REF_SPLIT.tmp && mv $REF_SPLIT.tmp $REF_SPLIT
 fi
 
 JF_SIZE=$(stat -c%s $KUNITIGS);
@@ -176,9 +176,9 @@ JF_SIZE=$(stat -c%s $KUNITIGS);
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 1"
 if numactl --show 1> /dev/null 2>&1;then
-numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
+numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
 else
-create_mega_reads -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
+create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
 fi
 touch .rerun
 fi
@@ -283,7 +283,7 @@ $CA_PATH/runCA -s runCA.spec -p genome -d $CA $SR_FRG $OTHER_FRG 1>> $CA.log 2>&
 if [ ! -e reconcile.success ];then
 echo "Polishing reference contigs"
 mkdir -p reconcile
-(cd reconcile && polish_with_illumina_assembly.sh -r ../$COORDS.1.gapclose.fa -q ../$CA/9-terminator/genome.ctg.fasta -t $NUM_THREADS -m 1000 1> /dev/null && perl -ane '{
+(cd reconcile && polish_with_illumina_assembly.sh -r ../$COORDS.1.gapclose.fa -q ../$CA/9-terminator/genome.ctg.fasta -t $NUM_THREADS -m 5000 1> /dev/null && perl -ane '{
   if($F[0]=~/^>/){
     if(length($seq)>0){
       @f=split(/(N{1,})/,uc($seq)); 
