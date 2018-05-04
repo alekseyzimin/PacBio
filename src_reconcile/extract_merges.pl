@@ -16,9 +16,9 @@ while($line=<FILE>){
 }
 #first we read in all the matches into an array
 my $prevline="";
-my $slack=10;
-my $maxgap=10000;
-my $mingap=-10000;
+my $slack=100;
+my $maxgap=1000000;
+my $mingap=-100000;
 while($line=<STDIN>){
     chomp($line);
     $line=~s/^\s+//;

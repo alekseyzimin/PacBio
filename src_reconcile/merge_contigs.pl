@@ -3,7 +3,7 @@
 #c1 dir c2 dir gap
 #and then produces strings of merged contigs
 #
-my $max_gap=10000;
+my $max_gap=10000000;
 my %edge_fwd;
 my %edge_rev;
 my %ctg_used;

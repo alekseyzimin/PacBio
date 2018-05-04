@@ -38,6 +38,7 @@ while($line=<FILE>){
 #now read in the merges file
 while($line=<STDIN>){
     chomp($line);
+    #print "DEBUG $line\n";
     my @f=split(/\s+/,$line);
     print ">",join("_",@f),"\n";
     #print STDERR ">",join("_",@f),"\n";
@@ -50,7 +51,7 @@ while($line=<STDIN>){
     $output{$f[0]}=1;
 #now the same for the rest we first output the previous gap (or trim) and then the contig
     for($i=3;$i<$#f;$i+=3){
-    #print STDERR "$i\n";
+    #print "\nDEBUG $i\n";
 	if($f[$i-1]>0){
             die("gap $f[$i-3]$f[$i-2]$f[$i]$f[$i+1] not found") if(not(defined($gseq{"$f[$i-3]$f[$i-2]$f[$i]$f[$i+1]"})));
             die("sequence $f[$i] not found") if(not(defined($seq{$f[$i]})));
@@ -63,9 +64,10 @@ while($line=<STDIN>){
 	    }
 	}else{#negative gap
 	    if($f[$i+1] eq "R"){
-		print substr(reverse_complement($seq{$f[$i]}),-$f[$i+2]);
+		print substr(reverse_complement($seq{$f[$i]}),-$f[$i-1]);
 	    }else{
-		print substr($seq{$f[$i]},-$f[$i+2]);
+              #print "DEBUG negative gap $i $f[$i-1]\n";
+		print substr($seq{$f[$i]},-$f[$i-1]);
 	    }
 	}
 	$output{$f[$i]}=1;
