@@ -561,6 +561,7 @@ cnsConcurrency=$NUM_THREADS
 cnsMinFrags=10000
 obtMerSize=$OVL_MER
 ovlMerSize=$OVL_MER
+ovlMinLen=$OVLMIN
 unitigger=bogart
 merylMemory=65536
 ovlStoreMemory=65536
