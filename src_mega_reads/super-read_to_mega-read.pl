@@ -3,7 +3,6 @@
 #this code, given the output of the super-mega-reads, eliminate contained mega-reads
 my $readPlacementFile=$ARGV[0];
 my $megaReadsFile=$ARGV[1];
-my $superReadNamesFile=$ARGV[2];
 my @mr_sizes;
 my @mr_names;
 my %groups;
@@ -18,16 +17,10 @@ push(@mr_sizes,length($line));
 }
 }
 
-open(FILE,$superReadNamesFile);
-while($line=<FILE>){
-chomp($line);
-push(@sr_names,$line);
-}
-
 open(FILE,$readPlacementFile);
 while($line=<FILE>){
 chomp($line);
 @f=split(/\s+/,$line);
 my $mrn=int(substr($f[0],2)/2);
-print "$mr_names[$mrn] $f[3] $sr_names[$f[1]]\n";
+print "$mr_names[$mrn] $f[3] $f[1]\n";
 }

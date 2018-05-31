@@ -515,9 +515,9 @@ if [ ! -s $COORDS.1.frg ] || [ -e .rerun ];then
 	rm -rf work1_mr1 && \
 	createSuperReadsForDirectory.perl -minreadsinsuperread 1 -l 31 -mean-and-stdev-by-prefix-file meanAndStdevByPrefix.pe.txt -kunitigsfile guillaumeKUnitigsAtLeast32bases_all.31.fasta -t $NUM_THREADS -mikedebug work1_mr1 mr.fa.in  1> super1.err 2>&1 && \
 	find_contained_reads.pl work1_mr1/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt $COORDS.1.fa > containees.txt && \
-        super-read_to_mega-read.pl work1_mr1/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt $COORDS.1.fa work1_mr1/superReadNames.txt | trim_by_kunitigs.pl work1_mr1/superReadNames.txt work1_mr1/kUnitigLengths.txt > $COORDS.1.trims.txt && \
+        super-read_to_mega-read.pl work1_mr1/readPositionsInSuperReads $COORDS.1.fa | trim_by_kunitigs.pl work1_mr1/superReadNames.txt work1_mr1/kUnitigLengths.txt > $COORDS.1.trims.txt && \
         trim_mega_reads.pl $COORDS.1.trims.txt < $COORDS.1.fa |ufasta extract -v -f containees.txt |make_mr_frg.pl mr 600  > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg && \
-	make_mate_frg.pl < $COORDS.1.fa > $COORDS.1.mates.frg.tmp && mv $COORDS.1.mates.frg.tmp $COORDS.1.mates.frg && \
+	trim_mega_reads.pl $COORDS.1.trims.txt < $COORDS.1.fa |make_mate_frg.pl > $COORDS.1.mates.frg.tmp && mv $COORDS.1.mates.frg.tmp $COORDS.1.mates.frg && \
         rm -rf $CA work1_mr1 guillaumeKUnitigsAtLeast32bases_all.31.fasta mr.fa.in || error_exit "failed to create mega-reads frg file";
   if  [ ! -s $COORDS.1.frg ];then
     error_exit "failed to create mega-reads frg file"
@@ -579,7 +579,7 @@ ovlThreads=$OVL_THREADS
 ovlHashBlockLength=10000000
 ovlRefBlockSize=1000000
 ovlConcurrency=$NUM_THREADS
-doOverlapBasedTrimming=0
+doOverlapBasedTrimming=1
 doUnitigSplitting=0
 doChimeraDetection=normal
 merylThreads=$NUM_THREADS
