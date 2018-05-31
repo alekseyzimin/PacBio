@@ -8,6 +8,7 @@ open(FILE,$superReadNamesFile);
 while($line=<FILE>){
 chomp($line);
 @f=split(/_/,$line);
+next if($#f<2);
 $sku{substr($f[0],0,-1)}++;
 for($i=1;$i<$#f;$i++){
   $mku{substr($f[$i],0,-1)}++;
@@ -27,10 +28,10 @@ $kmer=$ff[1] if($kmer>$ff[1]);
 $kmer--;
 
 foreach $k(keys %sku){
-  $trim_ku{$k}=1 if($sku{$k}==1&&not(defined($mku{$k}))&&not(defined($eku{$k})));
+  $trim_ku{$k}=1 if($sku{$k}==1 && not(defined($mku{$k}))&&not(defined($eku{$k})));
 }
 foreach $k(keys %eku){
-  $trim_ku{$k}=1 if($eku{$k}==1&&not(defined($mku{$k}))&&not(defined($sku{$k})));
+  $trim_ku{$k}=1 if($eku{$k}==1 && not(defined($mku{$k}))&&not(defined($sku{$k})));
 }
 
 while($line=<STDIN>){
