@@ -3,140 +3,94 @@
 #Copyright University of Maryland 2015#
 #######################################
 #!/usr/bin/env perl
-# $file = "/genome3/raid/alekseyz/PB_ScerW303/mega-reads-new/mrN6_max_2p_1.70.13.25.0.1.allowed";
-$errorRateAllowed = .1;
+$errorRateAllowed = .05;
 $errorMin = 10;
 $correctnessCodeForSingletons = 0;
 &processArgs;
+my %groups;
 
-#open (FILE, $file);
-&initializeData;
-$line = <STDIN>;
-&loadDataFromLine;
-$indexHold = $index;
-&addDataToRecords;
-while ($line = <STDIN>) {
-    &loadDataFromLine;
-    if ($index ne $indexHold) {
-	&analyzeGroup;
-	&initializeData;
-	$indexHold = $index; }
-    &addDataToRecords;
+#load data
+while($line=<STDIN>){
+  chomp($line);
+  @f=split(/\s+/,$line);
+  push(@{$groups{"$f[2] $f[3]"}},$line);
 }
-&analyzeGroup;
 
-sub findStartingNumber # Calculates $gapMin, $gapMax
-{
-    my ($mostInUnion, $i, $j, $currentInUnion, $absGap, $allowedGapDiff);
-    my ($currentGapMin, $currentGapMax, $gapMax, $gapMin, $bestGapSize);
-    my ($gapSum, $mean);
-
-    $mostInUnion = 0;
-    for ($i=0; $i<=$#gaps; ++$i) {
-	$currentInUnion = 0;
-	$absGap = abs ($gaps[$i]);
-	$allowedGapDiff = $errorMin;
-	if ($errorRateAllowed * $absGap > $errorMin) {
-	    $allowedGapDiff = $errorRateAllowed * $absGap; }
-	$allowedGapDiff*=2;  #because there may be a center that satisfies the condition for two numbers
-	for ($j=$i; $j>=0; --$j) {
-	    last if ($gaps[$j] < $gaps[$i] - $allowedGapDiff);
-	    $currentGapMin = $gaps[$j];
-	    $currentGapMax = $gaps[$j];
-	    ++$currentInUnion; }
-	for ($j=$i+1; $j<=$#gaps; ++$j) {
-	    last if ($gaps[$j] > $gaps[$i] + $allowedGapDiff);
-	    $currentGapMax = $gaps[$j];
-	    ++$currentInUnion; }
-	if ($currentInUnion > $mostInUnion) {
-	    $bestGapSize = $gaps[$i];
-	    $mostInUnion = $currentInUnion;
-	    $gapMin = $currentGapMin;
-	    $gapMax = $currentGapMax; }
+foreach $group(keys %groups){
+  my $groupSize=scalar(@{$groups{$group}});
+  if($groupSize==1){
+    print ${$groups{$group}}[0]," $correctnessCodeForSingletons\n";
+  }elsif($groupSize==2){
+    my $group_center=(${$groups{$group}}[0]+${$groups{$group}}[1])/2;
+    my $groupCode=0;
+    $groupCode=1 if(abs(${$groups{$group}}[0]-$group_center)<=$errorMin || abs(${$groups{$group}}[0]-$group_center)/$group_center<=$errorRateAllowed);
+    foreach $l(@{$groups{$group}}){
+      print $l," $groupCode\n";
+    }
+  }else{#more than three elements:  sort, find the median then look for radius of at least $errorMin or median*$errorRateAllowed around the median
+    @lines_sorted=sort byGap @{$groups{$group}};
+    @line_gaps=();
+    foreach $l(@lines_sorted){
+      my @f=split(/\s+/,$l);
+      push(@line_gaps,$f[1]);
     }
 
-    # Now we calculate the average of the bin and recalculate the bin using
-    # the mean as the center
-    for ($i=0; $i<=$#gaps; ++$i) {
-	next if ($gaps[$i] < $gapMin);
-	last if ($gaps[$i] > $gapMax);
-	$gapSum += $gaps[$i]; }
-    $mean = $gapSum / $mostInUnion;
-#     print "gapMin = $gapMin gapMax = $gapMax mean = $mean\n";
-    $absGap = abs ($mean);
-    $allowedGapDiff = $errorMin;
-    if ($errorRateAllowed * $absGap > $errorMin) {
-	$allowedGapDiff = $errorRateAllowed * $absGap; }
-    $gapMin = -1000000;
-    $mostInUnion = 0;
-    for ($i=0; $i<=$#gaps; ++$i) {
-	next if ($gaps[$i] < $mean - $allowedGapDiff);
-	last if ($gaps[$i] > $mean + $allowedGapDiff);
-	if ($gapMin <= -1000000) {
-	    $gapMin = $gaps[$i]; }
-	$gapMax = $gaps[$i];
-	++$mostInUnion;
+    my $new_median_value=$line_gaps[int(scalar(@lines_sorted)/2)];
+    $new_median_value+=0.000001 if($new_median_value==0);
+    my $median_value=100000;
+    my $exit_code=0;
+    my $radius=0;
+    my $max_iterations=5;
+    my $iteration=0;
+    print "$new_median_value $median_value $iteration\n";
+    while(abs(($median_value-$new_median_value)/$new_median_value)>$errorRateAllowed && abs($median_value-$new_median_value)>$errorMin && $iteration<$max_iterations ){
+      $iteration++;
+      #print "DEBUG $iteration $new_median_value\n";
+      my @line_gaps_new=();
+      $median_value=$new_median_value;
+      $radius=abs($median_value*$errorRateAllowed);
+      $radius=$errorMin if($radius<$errorMin);
+      foreach $l(@line_gaps){
+        if(abs($median_value-$l)<=$radius){
+          push(@line_gaps_new,$l)
+        }
+      }
+
+      $num_lines_new=scalar(@line_gaps_new);
+      if($num_lines_new==1){
+        $exit_code=-1;
+        last;
+      }elsif($num_lines_new==2){
+        $new_median_value=abs($line_gaps_new[0]+$line_gaps_new[1])/2;
+        $new_median_value+=0.000001 if($new_median_value==0);
+      }else{
+        $new_median_value=$line_gaps_new[int(scalar(@line_gaps_new)/2)];
+        $new_median_value+=0.000001 if($new_median_value==0);
+      }
     }
-    # End of section recomputing the average of the bin and recalculating
-
-    $minGood = $gapMin;
-    $maxGood = $gapMax;
-    if ($mostInUnion == 1) {
-	return ("bad"); }
-    return ("good");
-}
-
-sub analyzeGroup
-{
-    my ($line, @flds, $goodCode);
-    @gaps = sort byNum @gaps;
-    if ($#gaps == 0) {
-	@flds = split (" ", $lines[0]);
-	print "@flds[0..3] $correctnessCodeForSingletons\n";
-	return; }
-    $goodCode = &findStartingNumber; # Sets $minGood, $maxGood
-    if ($goodCode eq "bad") {
-	for (@lines) {
-	    $line = $_;
-	    @flds = split (" ", $line);
-	    print "@flds[0..3] 0\n"; }
-	return;
+    #print "DEBUG $exit_code $new_median_value $radius\n";
+    if($exit_code==0){
+      for($i=0;$i<$#lines_sorted;$i++){
+        if($line_gaps[$i]>=$new_median_value-$radius && $line_gaps[$i]<=$new_median_value+$radius){
+          print $lines_sorted[$i]," 1\n";
+        }else{
+          print $lines_sorted[$i]," 0\n";
+        }
+      }
+    }else{
+      foreach $l(@lines_sorted){
+        print $l," 0\n";
+      }
     }
-    for (@lines) {
-	$line = $_;
-	@flds = split (" ", $line);
-	print "@flds[0..3] ";
-	if (($flds[1] >= $minGood) && ($flds[1] <= $maxGood)) {
-	    print "1\n"; }
-	else {
-	    print "0\n"; }
-    }
+  }
 }
 
-sub initializeData
-{
-    @gaps = @lines = ();
-}
 
-sub loadDataFromLine
+sub byGap
 {
-    my (@flds);
-    chomp ($line);
-    @flds = split (" ", $line);
-    $index = "@flds[2..3]";
-    $sep = $flds[1];
-    $accepted = $flds[6];
-}
-
-sub addDataToRecords
-{
-    push (@gaps, $sep);
-    push (@lines, $line);
-}
-
-sub byNum
-{
-    return ($a <=> $b);
+  my @fa=split(/\s+/,$a);
+  my @fb=split(/\s+/,$b);
+  return ($fa[1] <=> $fb[1]);
 }
 
 sub processArgs

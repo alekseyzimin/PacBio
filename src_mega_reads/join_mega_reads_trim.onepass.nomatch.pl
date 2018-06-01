@@ -77,6 +77,7 @@ if(@lines){
 sub process_sorted_lines{
     my $outread="";
     $last_coord =-1000000000;
+    $last_mend=0;
     my @max_gap_local_fwd=();
     my @max_gap_local_rev=();
     my @args=@_;
