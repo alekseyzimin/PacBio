@@ -3,7 +3,7 @@
 #Copyright University of Maryland 2015#
 #######################################
 #!/usr/bin/env perl
-$errorRateAllowed = .05;
+$errorRateAllowed = .1;
 $errorMin = 10;
 $correctnessCodeForSingletons = 0;
 &processArgs;
@@ -42,7 +42,7 @@ foreach $group(keys %groups){
     my $radius=0;
     my $max_iterations=5;
     my $iteration=0;
-    print "$new_median_value $median_value $iteration\n";
+    #print "$new_median_value $median_value $iteration\n";
     while(abs(($median_value-$new_median_value)/$new_median_value)>$errorRateAllowed && abs($median_value-$new_median_value)>$errorMin && $iteration<$max_iterations ){
       $iteration++;
       #print "DEBUG $iteration $new_median_value\n";
