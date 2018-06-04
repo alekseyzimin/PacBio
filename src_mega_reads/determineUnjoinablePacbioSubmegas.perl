@@ -24,7 +24,7 @@ foreach $group(keys %groups){
     my $group_center=(${$groups{$group}}[0]+${$groups{$group}}[1])/2;
     $group_center=0.00001 if($group_center==0);
     my $groupCode=0;
-    $groupCode=1 if(abs(${$groups{$group}}[0]-$group_center)<=$errorMin*2 || abs((${$groups{$group}}[0]-$group_center)/$group_center)<=$errorRateAllowed*2);
+    $groupCode=1 if(abs(${$groups{$group}}[0]-$group_center)<=$errorMin || abs((${$groups{$group}}[0]-$group_center)/$group_center)<=$errorRateAllowed);
     foreach $l(@{$groups{$group}}){
       print $l," $groupCode\n";
     }
