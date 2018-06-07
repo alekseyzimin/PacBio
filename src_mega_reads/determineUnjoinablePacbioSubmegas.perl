@@ -21,22 +21,34 @@ foreach $group(keys %groups){
   if($groupSize==1){
     print ${$groups{$group}}[0]," $correctnessCodeForSingletons\n";
   }elsif($groupSize==2){
-    my $group_center=(${$groups{$group}}[0]+${$groups{$group}}[1])/2;
+    my @g1=split(/\s+/,${$groups{$group}}[0]);
+    my @g2=split(/\s+/,${$groups{$group}}[1]);
+    my $group_center=($g1[1]+$g2[1])/2;
     $group_center=0.00001 if($group_center==0);
     my $groupCode=0;
-    $groupCode=1 if(abs(${$groups{$group}}[0]-$group_center)<=$errorMin || abs((${$groups{$group}}[0]-$group_center)/$group_center)<=$errorRateAllowed);
+    $groupCode=1 if(abs($g1[1]-$group_center)<=$errorMin || abs(($g1[1]-$group_center)/$group_center)<=$errorRateAllowed);
     foreach $l(@{$groups{$group}}){
       print $l," $groupCode\n";
     }
-  }else{#more than three elements:  sort, find the median then look for radius of at least $errorMin or median*$errorRateAllowed around the median
+  }else{
+   #more than three elements:  
+   #first we pick the gap value that has the smallest overhang. $f[4]-$f[1] sort, find the median then look for radius of at least $errorMin or median*$errorRateAllowed around the median
+    @lines_sorted=sort byOverhang @{$groups{$group}};
+    @f=split(/\s+/,$lines_sorted[0]);
+    my $new_median_value=$f[1];
+    my $best_overhang=$f[4]-$f[1];
+    $new_median_value+=0.000001 if($new_median_value==0);
+
     @lines_sorted=sort byGap @{$groups{$group}};
     @line_gaps=();
+    @line_overhangs=();
     foreach $l(@lines_sorted){
       my @f=split(/\s+/,$l);
       push(@line_gaps,$f[1]);
+      push(@line_overhangs,$f[4]-$f[1]);
     }
 
-    my $new_median_value=$line_gaps[int(scalar(@lines_sorted)/2)];
+    #my $new_median_value=$line_gaps[int(scalar(@lines_sorted)/2)];
     $new_median_value+=0.000001 if($new_median_value==0);
     my $median_value=100000;
     my $exit_code=0;
@@ -71,8 +83,10 @@ foreach $group(keys %groups){
     }
     #print "DEBUG $exit_code $new_median_value $radius\n";
     if($exit_code==0){
+      #print "DEBUG $new_median_value $radius $best_overhang\n";
       for($i=0;$i<$#lines_sorted;$i++){
-        if($line_gaps[$i]>=$new_median_value-$radius && $line_gaps[$i]<=$new_median_value+$radius){
+        #print "DEBUG $line_overhangs[$i]\n";
+        if(($line_overhangs[$i]<$best_overhang*2 || $line_overhangs[$i]<100) && $line_gaps[$i]>=$new_median_value-$radius && $line_gaps[$i]<=$new_median_value+$radius){
           print $lines_sorted[$i]," 1\n";
         }else{
           print $lines_sorted[$i]," 0\n";
@@ -93,6 +107,14 @@ sub byGap
   my @fb=split(/\s+/,$b);
   return ($fa[1] <=> $fb[1]);
 }
+
+sub byOverhang
+{
+  my @fa=split(/\s+/,$a);
+  my @fb=split(/\s+/,$b);
+  return ($fa[4]-$fa[1] <=> $fb[4]-$fb[1]);
+}
+
 
 sub processArgs
 {

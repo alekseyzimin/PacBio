@@ -146,6 +146,7 @@ sub process_sorted_lines{
 		$max_gap_local=$max_gap_local_fwd[$gap_index]<$max_gap_local_rev[$gap_index]?$max_gap_local_fwd[$gap_index]:$max_gap_local_rev[$gap_index];
                 if($bgn-$last_coord<$max_gap_local && $join_allowed){#then put N's and later split
 		    $outread.=lc(substr($pbseq{$pb},$last_coord,$bgn-$last_coord-1)).$seq;
+                    print STDERR "$str ",lc(substr($pbseq{$pb},$last_coord,$bgn-$last_coord-1)),"\n";
                 }else{
 		    $outread.="N"x($bgn-$last_coord).$seq;
                 }
