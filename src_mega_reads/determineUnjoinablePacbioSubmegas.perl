@@ -55,7 +55,7 @@ foreach $group(keys %groups){
     my $radius=0;
     my $max_iterations=5;
     my $iteration=0;
-    #print "$new_median_value $median_value $iteration\n";
+    #print "DEBUG1 $new_median_value $median_value $iteration\n";
     while(abs(($median_value-$new_median_value)/$new_median_value)>$errorRateAllowed && abs($median_value-$new_median_value)>$errorMin && $iteration<$max_iterations ){
       $iteration++;
       #print "DEBUG $iteration $new_median_value\n";
@@ -70,23 +70,24 @@ foreach $group(keys %groups){
       }
 
       $num_lines_new=scalar(@line_gaps_new);
+      #print "DEBUGL $num_lines_new\n";
       if($num_lines_new==1){
         $exit_code=-1;
         last;
       }elsif($num_lines_new==2){
-        $new_median_value=abs($line_gaps_new[0]+$line_gaps_new[1])/2;
+        $new_median_value=($line_gaps_new[0]+$line_gaps_new[1])/2;
         $new_median_value+=0.000001 if($new_median_value==0);
       }else{
         $new_median_value=$line_gaps_new[int(scalar(@line_gaps_new)/2)];
         $new_median_value+=0.000001 if($new_median_value==0);
       }
     }
-    #print "DEBUG $exit_code $new_median_value $radius\n";
+    #print "DEBUG2 $exit_code $new_median_value $radius\n";
     if($exit_code==0){
-      #print "DEBUG $new_median_value $radius $best_overhang\n";
-      for($i=0;$i<$#lines_sorted;$i++){
-        #print "DEBUG $line_overhangs[$i]\n";
-        if(($line_overhangs[$i]<$best_overhang*2 || $line_overhangs[$i]<100) && $line_gaps[$i]>=$new_median_value-$radius && $line_gaps[$i]<=$new_median_value+$radius){
+      #print "DEBUG3 $new_median_value $radius $best_overhang\n";
+      for($i=0;$i<=$#lines_sorted;$i++){
+        #print "DEBUG4 $line_overhangs[$i]\n";
+        if(($line_overhangs[$i]<$best_overhang*3 || $line_overhangs[$i]<100) && $line_gaps[$i]>=$new_median_value-$radius && $line_gaps[$i]<=$new_median_value+$radius){
           print $lines_sorted[$i]," 1\n";
         }else{
           print $lines_sorted[$i]," 0\n";
