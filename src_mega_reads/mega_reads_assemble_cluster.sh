@@ -501,7 +501,7 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
         last_mr=$8;
         last_coord=$2+$5-$4;
         last_coord_lr=$2;
-}' ${COORDS}.all.txt | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.17 --min-range-radius 15 > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed
+}' ${COORDS}.all.txt | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed
     join_mega_reads_trim.onepass.nomatch.pl $LONGREADS1 ${COORDS}.1.allowed  $MAX_GAP < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.inserts.txt && mv $COORDS.1.fa.tmp $COORDS.1.fa || error_exit "mega-reads joining failed";
     touch .rerun
     if  [ ! -s $COORDS.1.fa ];then
@@ -588,6 +588,8 @@ stoneLevel=0
 doExtendClearRanges=0
 computeInsertSize=0
 maxRepeatLength=12000
+ovlErrorRate=0.1
+cnsErrorRate=0.1
 cgwErrorRate=0.1
 cgwMergeMissingThreshold=-1
 cgwMergeFilterLevel=1
