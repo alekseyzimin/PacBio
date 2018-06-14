@@ -172,7 +172,7 @@ if [ "$LONGREADS" = "$NANOPORE" ];then
 	fi
     fi
     LONGREADS1="ont_${PB_HC}xlongest.fa";
-    MAX_GAP=1000
+    MAX_GAP=5000
 else
     if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE/$PLOIDY)) -gt ${PB_HC} ];then
 	echo "Pacbio coverage >${PB_HC}x, using ${PB_HC}x of the longest reads";
@@ -189,9 +189,9 @@ else
 	    fi
 	fi
 	LONGREADS1="pacbio_${PB_HC}xlongest.fa";
+        MAX_GAP=2000
     else
 	echo "Pacbio coverage <${PB_HC}x, using the longest subreads";
-	MAX_GAP=1000
 	if [ ! -s "pacbio_nonredundant.fa" ] ;then
 	    if [ "$FIRSTCHAR" = ">" ];then
 		zcat -f $LONGREADS |ufasta extract -f <(zcat -f $LONGREADS |grep --text '^>' | awk '{print $1}' | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | LC_ALL=C sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') /dev/stdin > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa || error_exit "failed to extract the longest subreads"; 
@@ -204,6 +204,7 @@ else
 	    fi
 	fi
 	LONGREADS1="pacbio_nonredundant.fa";
+        MAX_GAP=1000
     fi
 fi
 
