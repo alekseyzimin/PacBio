@@ -7,7 +7,7 @@ set -o pipefail
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 ESTIMATED_GENOME_SIZE=0
-MAX_GAP=2000
+MAX_GAP=1000
 MER=15
 B=17
 d=0.029
@@ -172,11 +172,9 @@ if [ "$LONGREADS" = "$NANOPORE" ];then
 	fi
     fi
     LONGREADS1="ont_${PB_HC}xlongest.fa";
-    MAX_GAP=5000
 else
     if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE/$PLOIDY)) -gt ${PB_HC} ];then
 	echo "Pacbio coverage >${PB_HC}x, using ${PB_HC}x of the longest reads";
-	MAX_GAP=2000
 	if [ ! -s "pacbio_${PB_HC}xlongest.fa" ] ;then
 	    if [ "$FIRSTCHAR" = ">" ];then
 		zcat -f $LONGREADS |ufasta extract -f <(zcat -f $LONGREADS | grep --text '^>' | awk '{split($1,a,"/");split(a[3],b,"_");len=b[2]-b[1];if($2 ~ /^RQ/){split($2,c,"=");len=int(len*c[2]/0.85);}print substr($1,2)" "len;}'  | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
@@ -189,7 +187,6 @@ else
 	    fi
 	fi
 	LONGREADS1="pacbio_${PB_HC}xlongest.fa";
-        MAX_GAP=2000
     else
 	echo "Pacbio coverage <${PB_HC}x, using the longest subreads";
 	if [ ! -s "pacbio_nonredundant.fa" ] ;then
@@ -204,7 +201,6 @@ else
 	    fi
 	fi
 	LONGREADS1="pacbio_nonredundant.fa";
-        MAX_GAP=1000
     fi
 fi
 
