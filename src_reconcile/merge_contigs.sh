@@ -5,6 +5,8 @@ export PATH=$MYPATH:$PATH;
 set -o pipefail
 NUM_THREADS=1
 MIN_MATCH=1000
+IDENTITY=99
+
 
 function error_exit {
     echo "$1" >&2
@@ -20,6 +22,10 @@ do
     case $key in
         -t|--threads)
             NUM_THREADS="$2"
+            shift
+            ;;
+        -i|-identity)
+            IDENTITY="$2"
             shift
             ;;
         -q|--query)
@@ -68,12 +74,12 @@ fi
 
 #delta-filter
 if [ ! -e merge_filter.success ];then
-parallel_delta-filter.sh $DELTAFILE '-i 99 -r -l 200' 9 && mv $DELTAFILE.fdelta $DELTAFILE.r.delta && \
+parallel_delta-filter.sh $DELTAFILE "-r -l 200" 9 && mv $DELTAFILE.fdelta $DELTAFILE.r.delta && \
 touch merge_filter.success && rm -f  merge_merge.success || exit
 fi
 
 if [ ! -e merge_merge.success ];then
-show-coords -lcHq -I 99 -L $MIN_MATCH $DELTAFILE.r.delta | extract_merges.pl $QRY > merges.txt && merge_contigs.pl < merges.txt| create_merged_sequences.pl $REF merges.txt > $REFN.$QRYN.merged.fa && touch merge_merge.success || exit
+show-coords -lcHq -I $IDENTITY -L $MIN_MATCH $DELTAFILE.r.delta | extract_merges.pl $QRY > merges.txt && merge_contigs.pl < merges.txt| create_merged_sequences.pl $REF merges.txt > $REFN.$QRYN.merged.fa && touch merge_merge.success || exit
 fi
 
 echo "Output sequences in $REFN.$QRYN.merged.fa"
