@@ -87,7 +87,8 @@ foreach $group(keys %groups){
       #print "DEBUG3 $new_median_value $radius $best_overhang\n";
       for($i=0;$i<=$#lines_sorted;$i++){
         #print "DEBUG4 $line_overhangs[$i]\n";
-        if(($line_overhangs[$i]<$best_overhang*2 || $line_overhangs[$i]<100) && $line_gaps[$i]>=$new_median_value-$radius && $line_gaps[$i]<=$new_median_value+$radius){
+        #if(($line_overhangs[$i]<$best_overhang*2 || $line_overhangs[$i]<100) && $line_gaps[$i]>=$new_median_value-$radius && $line_gaps[$i]<=$new_median_value+$radius){
+        if($line_gaps[$i]>=$new_median_value-$radius && $line_gaps[$i]<=$new_median_value+$radius){
           print $lines_sorted[$i]," 1\n";
         }else{
           print $lines_sorted[$i]," 0\n";
