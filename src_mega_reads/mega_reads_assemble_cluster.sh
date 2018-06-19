@@ -499,7 +499,7 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
         last_coord=$2+$5-$4;
         last_coord_lr=$2;
 }' ${COORDS}.all.txt | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed && \
-    join_mega_reads_trim.onepass.nomatch.pl $LONGREADS1 ${COORDS}.1.allowed  $MAX_GAP < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.to_join.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa || error_exit "mega-reads joining failed"
+    join_mega_reads_trim.onepass.nomatch.pl $LONGREADS1 ${COORDS}.1.allowed  $MAX_GAP < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.to_join.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.unjoined.fa || error_exit "mega-reads joining failed"
 
     #making consensus for the large gaps
     rm -rf ${COORDS}.join_consensus
@@ -508,20 +508,23 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
     awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'") && $6==1) {if($3==prev3 &&$4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1.allowed |grep '^1 ' |awk '{print $0}' > refs.txt && \
     awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")) {if($3==prev3 &&$4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1.allowed |awk '{print $0}' > qrys.txt && \
     ufasta extract -f <(awk '{print $2}' qrys.txt) ../$LONGREADS1 > qrys.all.fa && \
-    ufasta extract -v -f <(awk '{print $2}' .txt) qrys.all.fa > qrys.fa && \
+    ufasta extract -v -f <(awk '{print $2}' refs.txt) qrys.all.fa > qrys.fa && \
     ufasta extract -f <(awk '{print $2}' refs.txt) qrys.all.fa > refs.fa && \
     perl -ane '{$h{$F[1]}="$F[2]_$F[3]"}END{open(FILE,"refs.fa");while($line=<FILE>){if($line=~/^>/){chomp($line);@f=split(/\s+/,$line);print ">",$h{substr($f[0],1)},"\n";}else{print $line}}}' refs.txt > refs.renamed.fa && \
     blasr qrys.fa   refs.renamed.fa  -nproc $NUM_THREADS -bestn 15 -minMatch 11 -m 5 -out mapped.m5 1>blasr.err 2>&1 && \
-    perl -ane '{{$h{"$F[1] $F[2]_$F[3]"}=1;}END{open(FILE,"mapped.m5");while($line=<FILE>){@f=split(/\s+/,$line);$matches{$f[5]}.=$line if(defined($h{"$f[0] $f[5]"}));}foreach $k(keys %matches){print $matches{$k}}}}' qrys.txt > mapped.m5.sorted && \
-    pbdagcon -j $NUM_THREADS -t 0 -c 1 mapped.m5.sorted  > join_consensus.fasta && \
-    nucmer -p join --batch 100000 -l 17 -c 51 -t $NUM_THREADS ../${COORDS}.to_join.fa.tmp join_consensus.fasta && \
-    show-coords -lcHq join.delta| \
+    perl -ane '{{$h{"$F[1] $F[2]_$F[3]"}=1;}END{open(FILE,"mapped.m5");while($line=<FILE>){@f=split(/\s+/,$line);@ff=split(/\//,$f[0]);$f[0]=join("/",@ff[0..2]) if(scalar(@ff)>0);$matches{$f[5]}.=$line if(defined($h{"$f[0] $f[5]"}));}foreach $k(keys %matches){print $matches{$k}}}}' qrys.txt > mapped.m5.sorted && \
+    pbdagcon -j $NUM_THREADS -t 0 -c 1 mapped.m5.sorted  1>join_consensus.fasta 2>pbdagcon.err && \
+    ufasta split -i ../${COORDS}.1.to_join.fa.tmp >(nucmer -p join1 --batch 100000 -l 17 -c 51 -t $NUM_THREADS /dev/stdin join_consensus.fasta) \
+      >(nucmer -p join2 --batch 100000 -l 17 -c 51 -t $NUM_THREADS /dev/stdin join_consensus.fasta) \
+      >(nucmer -p join3 --batch 100000 -l 17 -c 51 -t $NUM_THREADS /dev/stdin join_consensus.fasta) \
+      >(nucmer -p join4 --batch 100000 -l 17 -c 51 -t $NUM_THREADS /dev/stdin join_consensus.fasta) && \
+    cat <(head -n 2 join1.delta) <(tail -n +3 join{1,2,3,4}.delta |grep -v -P '^$|\=\=') | show-coords -lcHq /dev/stdin| \
     awk '{if($2>$12-50 || $1<50){split($(NF-1),a,":");print $0}}' | \
     perl -ane 'BEGIN{open(FILE,"qrys.txt");while($line=<FILE>){chomp($line);@f=split(/\s+/,$line); $h{"$f[1] $f[2]_$f[3]"}=1;}}{@f1=split(/\./,$F[-2]);@f2=split(/\//,$F[-1]); print if(defined($h{"$f1[0] $f2[0]"}))}'| \
-    extract_merges_mega-reads.pl  consensus.fasta > merges.txt \
-    && merge_mega-reads.pl  < merges.txt | \
-    create_merged_mega-reads.pl ../${COORDS}.1.to_join.fa merges.txt > ${COORDS}.1.joined.fa.tmp && cat ${COORDS}.1.joined.fa.tmp >> ../${COORDS}.1.fa && rm ../${COORDS}.to_join.fa.tmp ) || error_exit "mega-reads joining failed" 
-
+    extract_merges_mega-reads.pl  join_consensus.fasta > merges.txt && \
+    merge_mega-reads.pl  < merges.txt | \
+    create_merged_mega-reads.pl ../${COORDS}.1.to_join.fa.tmp merges.txt > ${COORDS}.1.joined.fa.tmp && mv ${COORDS}.1.joined.fa.tmp  ../${COORDS}.1.joined.fa && rm ../${COORDS}.1.to_join.fa.tmp ) || error_exit "mega-reads joining failed" 
+    cat $COORDS.1.unjoined.fa ${COORDS}.1.joined.fa > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa || error_exit "mega-reads joining failed"
     touch .rerun
     if  [ ! -s $COORDS.1.fa ];then
       error_exit "refine/join alignments failed"
