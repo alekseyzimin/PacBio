@@ -7,7 +7,7 @@ set -o pipefail
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 ESTIMATED_GENOME_SIZE=0
-MAX_GAP=1000
+MAX_GAP=100
 MER=15
 B=17
 d=0.029
