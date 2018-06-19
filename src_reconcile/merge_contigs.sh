@@ -74,7 +74,7 @@ fi
 
 #delta-filter
 if [ ! -e merge_filter.success ];then
-parallel_delta-filter.sh $DELTAFILE "-r -l 200" 9 && mv $DELTAFILE.fdelta $DELTAFILE.r.delta && \
+parallel_delta-filter.sh $DELTAFILE "-q -l 200" 9 && mv $DELTAFILE.fdelta $DELTAFILE.r.delta && \
 touch merge_filter.success && rm -f  merge_merge.success || exit
 fi
 

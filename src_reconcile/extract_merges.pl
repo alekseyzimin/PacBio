@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 #
-#this code extracts possible contig merges from a nucmer alignment: the reference sequences are merged with query sequence intput is a delta file
+#this code extracts possible contig merges from a nucmer alignment: the reference sequences are merged with query sequence intput is a delta file 
+#ASSUMES show-coords -q output, that is sorted by query coord!!!!!!
 
 #open(FILE,"delta-filter -q -i 98 $ARGV[0] | show-coords -lcHq -L 1000 /dev/stdin |"); 
 
@@ -16,7 +17,7 @@ while($line=<FILE>){
 }
 #first we read in all the matches into an array
 my $prevline="";
-my $slack=100;
+my $slack=500;
 my $maxgap=1000000;
 my $mingap=-100000;
 while($line=<STDIN>){
@@ -32,15 +33,14 @@ while($line=<STDIN>){
 for($i=0;$i<=$#lines;$i++){
 @f1=split(/\s+/,$lines[$i]);
 for($j=$i+1;$j<=$#lines;$j++){ 
-#print "DEBUG $i $j\n$lines[$i])\n$lines[$j]\n\n"; 
+#print "DEBUG $i $j\n$lines[$i]\n$lines[$j]\n\n"; 
     @f2=split(/\s+/,$lines[$j]);
     next if($f1[-2] eq $f2[-2]);
-    last if(not($f1[-1] eq $f2[-1]));
+    next if(not($f1[-1] eq $f2[-1]));
 	if($f1[3]<$f1[4]){
 	    if($f2[3]<$f2[4]){
 		$gap=$f2[3]-$f1[4];
 		if($f1[1]>$f1[11]-$slack && $f2[0]<$slack && $gap<$maxgap && $gap>$mingap){
-                    $i=$j-1;
 		    print "$f1[-2] F $f2[-2] F $gap ";
 		    print substr($qseq{$f1[-1]},$f1[4],$gap) if($gap>0);
 		    print "\n";
@@ -49,7 +49,6 @@ for($j=$i+1;$j<=$#lines;$j++){
 	    }else{
 		$gap=$f2[4]-$f1[4];
 		if($f1[1]>$f1[11]-$slack && $f2[1]>$f2[11]-$slack && $gap<$maxgap  && $gap>$mingap){
-                    $i=$j-1;
 		    print "$f1[-2] F $f2[-2] R $gap ";
 		    print substr($qseq{$f1[-1]},$f1[4],$gap) if($gap>0);
 		    print "\n";
@@ -60,7 +59,6 @@ for($j=$i+1;$j<=$#lines;$j++){
 	    if($f2[3]<$f2[4]){
 		$gap=$f2[3]-$f1[3];
 		if($f1[0]<$slack && $f2[0]<$slack && $gap<$maxgap  && $gap>$mingap){
-                    $i=$j-1;
 		    print "$f1[-2] R $f2[-2] F $gap ";
 		    print substr($qseq{$f1[-1]},$f1[3],$gap) if($gap>0);
 		    print "\n";
@@ -69,7 +67,6 @@ for($j=$i+1;$j<=$#lines;$j++){
 	    }else{
 		$gap=$f2[4]-$f1[3];
 		if($f1[0]<$slack && $f2[1]>$f2[11]-$slack && $gap<$maxgap  && $gap>$mingap){
-                    $i=$j-1;
 		    print "$f1[-2] R $f2[-2] R $gap ";
 		    print substr($qseq{$f1[-1]},$f1[3],$gap) if($gap>0);
 		    print "\n";
