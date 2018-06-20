@@ -36,8 +36,9 @@ for($i=0;$i<=$#lines;$i++){
   for($j=$i+1;$j<=$#lines;$j++){ 
 #print "DEBUG $i $j\n$lines[$i]\n$lines[$j]\n\n"; 
     @f2=split(/\s+/,$lines[$j]);
+    last if(not($f2[-1] eq $f1[-1]));
     ($r2,$junk)=split(/\./,$f2[-2]);
-    next if($f1[-2] eq $f2[-2] || not($f1[-1] eq $f2[-1]) || not($r1 eq $r2));
+    next if($f1[-2] eq $f2[-2] || not($r1 eq $r2));
     if($f1[3]<$f1[4]){
       if($f2[3]<$f2[4]){
       #forward join ---->     ------>

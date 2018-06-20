@@ -49,7 +49,7 @@ while($line=<STDIN>){
           print ">$rn.1_",length($outread),"\n$outread\n" if(length($outread)>=$min_len_output);
         }else{
           for($i=0;$i<=$#f;$i+=2){
-            print STDERR ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=400);
+            print STDERR ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=$min_len_output);
             $indx+=length($f[$i]);
             $indx+=length($f[$i+1]) if($f[$i]<$#f);
           }
@@ -73,7 +73,7 @@ if(@lines){
       print ">$rn.1_",length($outread),"\n$outread\n" if(length($outread)>=$min_len_output);
     }else{
       for($i=0;$i<=$#f;$i+=2){
-        print STDERR ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=400);
+        print STDERR ">$rn.${indx}_",length($f[$i]),"\n$f[$i]\n" if(length($f[$i])>=$min_len_output);
         $indx+=length($f[$i]);
         $indx+=length($f[$i+1]) if($f[$i]<$#f);
       }
@@ -153,7 +153,7 @@ sub process_sorted_lines{
             if($bgn>$last_coord){#if gap -- check if the closure is allowed
 		$max_gap_local=$max_gap_local_fwd[$gap_index]<$max_gap_local_rev[$gap_index]?$max_gap_local_fwd[$gap_index]:$max_gap_local_rev[$gap_index];
                 $max_gap_local=$max_gap;
-                if($bgn-$last_coord<$max_gap_local && $join_allowed){#then put N's and later split
+                if($bgn-$last_coord<=$max_gap_local && $join_allowed){#then put N's and later split
 		    $outread.=lc(substr($pbseq{$pb},$last_coord,$bgn-$last_coord-1)).$seq;
                     #print STDERR "$str ",lc(substr($pbseq{$pb},$last_coord,$bgn-$last_coord-1)),"\n";
                 }else{

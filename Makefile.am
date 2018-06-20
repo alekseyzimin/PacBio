@@ -124,7 +124,7 @@ dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_nomatch.sh src_mega_reads
 		    src_mega_reads/deduplicate_unitigs.sh src_mega_reads/deduplicate_contigs.sh src_mega_reads/parallel_delta-filter.sh \
 		    src_reconcile/polish_with_illumina_assembly.sh src_reconcile/extract_merges.pl src_reconcile/merge_contigs.pl src_reconcile/create_merged_sequences.pl \
 		    src_mega_reads/find_contained_reads.pl src_reconcile/reconcile_consensus.pl src_mega_reads/fragScaff.sh src_mega_reads/fragScaff.pl src_mega_reads/blast_self_alignment_filter.pl src_mega_reads/fasta_make_Nbase_bed.pl \
-		    src_mega_reads/create_merged_mega-reads.pl src_mega_reads/extract_merges_mega-reads.pl src_mega_reads/merge_mega-reads.pl
+		    src_mega_reads/create_merged_mega-reads.pl src_mega_reads/extract_merges_mega-reads.pl src_mega_reads/merge_mega-reads.pl src_mega_reads/split_reads_to_join.pl
 
 
 YAGGO_SOURCES += src_jf_aligner/jf_aligner_cmdline.hpp			\

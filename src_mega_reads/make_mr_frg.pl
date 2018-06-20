@@ -35,7 +35,7 @@ while($line1=<STDIN>)
   {
     $header=substr($line1,1);
     @f=split(/\s+/,$header);
-    $readname1=$f[0];
+    $readname1=substr($f[0],0,100);
     $line1=<STDIN>;
     chomp($line1);
     $len=length($line1);

@@ -512,19 +512,28 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
     ufasta extract -f <(awk '{print $2}' refs.txt) qrys.all.fa > refs.fa && \
     perl -ane '{$h{$F[1]}="$F[2]_$F[3]"}END{open(FILE,"refs.fa");while($line=<FILE>){if($line=~/^>/){chomp($line);@f=split(/\s+/,$line);print ">",$h{substr($f[0],1)},"\n";}else{print $line}}}' refs.txt > refs.renamed.fa && \
     blasr qrys.fa   refs.renamed.fa  -nproc $NUM_THREADS -bestn 15 -minMatch 11 -m 5 -out mapped.m5 1>blasr.err 2>&1 && \
-    perl -ane '{{$h{"$F[1] $F[2]_$F[3]"}=1;}END{open(FILE,"mapped.m5");while($line=<FILE>){@f=split(/\s+/,$line);@ff=split(/\//,$f[0]);$f[0]=join("/",@ff[0..2]) if(scalar(@ff)>0);$matches{$f[5]}.=$line if(defined($h{"$f[0] $f[5]"}));}foreach $k(keys %matches){print $matches{$k}}}}' qrys.txt > mapped.m5.sorted && \
+    perl -ane '{{$h{"$F[1] $F[2]_$F[3]"}=1;}END{open(FILE,"mapped.m5");while($line=<FILE>){@f=split(/\s+/,$line);@ff=split(/\//,$f[0]);$f[0]=join("/",@ff[0..2]) if(scalar(@ff)>1);$matches{$f[5]}.=$line if(defined($h{"$f[0] $f[5]"}));}foreach $k(keys %matches){print $matches{$k}}}}' qrys.txt > mapped.m5.sorted && \
     pbdagcon -j $NUM_THREADS -t 0 -c 1 mapped.m5.sorted  1>join_consensus.fasta 2>pbdagcon.err && \
-    ufasta split -i ../${COORDS}.1.to_join.fa.tmp >(nucmer -p join1 --batch 100000 -l 17 -c 51 -t $NUM_THREADS /dev/stdin join_consensus.fasta) \
-      >(nucmer -p join2 --batch 100000 -l 17 -c 51 -t $NUM_THREADS /dev/stdin join_consensus.fasta) \
-      >(nucmer -p join3 --batch 100000 -l 17 -c 51 -t $NUM_THREADS /dev/stdin join_consensus.fasta) \
-      >(nucmer -p join4 --batch 100000 -l 17 -c 51 -t $NUM_THREADS /dev/stdin join_consensus.fasta) && \
-    cat <(head -n 2 join1.delta) <(tail -n +3 join{1,2,3,4}.delta |grep -v -P '^$|\=\=') | show-coords -lcHq /dev/stdin| \
-    awk '{if($2>$12-50 || $1<50){split($(NF-1),a,":");print $0}}' | \
+    TOJOIN_BATCHES=$(($(stat -c%s -L ../${COORDS}.1.to_join.fa.tmp)/100000000))
+    if [ $TOJOIN_BATCHES -le 2 ];then
+      TOJOIN_BATCHES=2
+    fi
+    if [ $TOJOIN_BATCHES -ge 500 ];then
+      TOJOIN_BATCHES=500
+    fi
+    for i in $(seq 1 $TOJOIN_BATCHES);do join_cons_names[$i]="join_consensus.$i.fasta";done;
+    for i in $(seq 1 $TOJOIN_BATCHES);do join_delta_names[$i]="join.$i.delta";done;
+    ufasta split -i join_consensus.fasta ${join_cons_names[@]}
+    split_reads_to_join.pl qrys.txt to_join ${join_cons_names[@]} < ../${COORDS}.1.to_join.fa.tmp
+    seq 1 $TOJOIN_BATCHES |xargs -P 2 -I % nucmer -p join.% --maxmatch -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.% join_consensus.%.fasta && \
+    cat <(head -n 2 join.1.delta) <(tail -n +3 ${join_delta_names[@]} |grep -v -P '^$|\=\=') | show-coords -lcHq /dev/stdin| \
+    awk '{if($2>$12-20 || $1<20){split($(NF-1),a,":");print $0}}' | \
     perl -ane 'BEGIN{open(FILE,"qrys.txt");while($line=<FILE>){chomp($line);@f=split(/\s+/,$line); $h{"$f[1] $f[2]_$f[3]"}=1;}}{@f1=split(/\./,$F[-2]);@f2=split(/\//,$F[-1]); print if(defined($h{"$f1[0] $f2[0]"}))}'| \
     extract_merges_mega-reads.pl  join_consensus.fasta > merges.txt && \
     merge_mega-reads.pl  < merges.txt | \
-    create_merged_mega-reads.pl ../${COORDS}.1.to_join.fa.tmp merges.txt > ${COORDS}.1.joined.fa.tmp && mv ${COORDS}.1.joined.fa.tmp  ../${COORDS}.1.joined.fa && rm ../${COORDS}.1.to_join.fa.tmp ) || error_exit "mega-reads joining failed" 
-    cat $COORDS.1.unjoined.fa ${COORDS}.1.joined.fa > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa || error_exit "mega-reads joining failed"
+    create_merged_mega-reads.pl ../${COORDS}.1.to_join.fa.tmp merges.txt > ${COORDS}.1.joined.fa.tmp && mv ${COORDS}.1.joined.fa.tmp  ../${COORDS}.1.joined.fa ) && \
+    cat $COORDS.1.unjoined.fa  $COORDS.1.joined.fa > $COORDS.1.fa.tmp || cat $COORDS.1.to_join.fa.tmp $COORDS.1.unjoined.fa > $COORDS.1.fa.tmp;
+    mv $COORDS.1.fa.tmp $COORDS.1.fa && rm -rf $COORDS.1.unjoined.fa $COORDS.1.joined.fa $COORDS.1.to_join.fa.tmp
     touch .rerun
     if  [ ! -s $COORDS.1.fa ];then
       error_exit "refine/join alignments failed"
@@ -540,7 +549,6 @@ if [ ! -s $COORDS.1.frg ] || [ -e .rerun ];then
 	find_contained_reads.pl work1_mr1/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt $COORDS.1.fa > containees.txt && \
         super-read_to_mega-read.pl work1_mr1/readPositionsInSuperReads $COORDS.1.fa | trim_by_kunitigs.pl work1_mr1/superReadNames.txt work1_mr1/kUnitigLengths.txt > $COORDS.1.trims.txt && \
         trim_mega_reads.pl $COORDS.1.trims.txt < $COORDS.1.fa |ufasta extract -v -f containees.txt |make_mr_frg.pl mr 600  > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg && \
-	trim_mega_reads.pl $COORDS.1.trims.txt < $COORDS.1.fa |make_mate_frg.pl > $COORDS.1.mates.frg.tmp && mv $COORDS.1.mates.frg.tmp $COORDS.1.mates.frg && \
         rm -rf $CA work1_mr1 guillaumeKUnitigsAtLeast32bases_all.31.fasta mr.fa.in || error_exit "failed to create mega-reads frg file";
   if  [ ! -s $COORDS.1.frg ];then
     error_exit "failed to create mega-reads frg file"
@@ -558,14 +566,14 @@ if [ $ESTIMATED_GENOME_SIZE -gt 1 ];then
 	    awk '{if($0 ~ /^>/) print $0":super-read"; else print $0}' $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta | fasta2frg.pl sr 200 > $SR_FRG.tmp && mv  $SR_FRG.tmp  $SR_FRG || error_exit "failed to create super-reads frg file";
 	fi
     fi
-    COVERAGE=`ls $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{cov=int(n/int('$ESTIMATED_GENOME_SIZE')/int('$PLOIDY')); if(cov<15) cov=15; print cov;}'`;
+    COVERAGE=`ls $SR_FRG $COORDS.1.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | awk '{n+=$1}END{cov=int(n/int('$ESTIMATED_GENOME_SIZE')/int('$PLOIDY')); if(cov<15) cov=15; print cov;}'`;
     TCOVERAGE=$COVERAGE;
 fi
 
 rm -f .rerun
 rm -f $CA.log
 
-OVLMIN=`head -n 100000 $SR_FRG $COORDS.1.frg $COORDS.1.mates.frg $OTHER_FRG 2>/dev/null | grep -A 1 '^seq:' |grep -v '^seq:' | grep -v '\-\-' | awk 'BEGIN{minlen=100000}{if(length($1)<minlen && length($1)>=64) minlen=length($1);}END{if(minlen>=250) print "250"; else print minlen-1;}'`
+OVLMIN=`head -n 100000 $SR_FRG $COORDS.1.frg $OTHER_FRG 2>/dev/null | grep -A 1 '^seq:' |grep -v '^seq:' | grep -v '\-\-' | awk 'BEGIN{minlen=100000}{if(length($1)<minlen && length($1)>=64) minlen=length($1);}END{if(minlen>=250) print "250"; else print minlen-1;}'`
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el $OVLMIN "
 OVL_MER=22
 
@@ -602,7 +610,7 @@ ovlThreads=$OVL_THREADS
 ovlHashBlockLength=10000000
 ovlRefBlockSize=1000000
 ovlConcurrency=$NUM_THREADS
-doOverlapBasedTrimming=1
+doOverlapBasedTrimming=0
 doUnitigSplitting=0
 doChimeraDetection=normal
 merylThreads=$NUM_THREADS
@@ -624,12 +632,12 @@ if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
   #need to start from the beginning
   #this is helpful for re-starts
   rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh
-    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
     #this is a fix for sometimes failing fragment correction
     if [ ! -e "${CA}/4-unitigger/unitigger.success" ]; then
       rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh
       echo "doFragmentCorrection=0" >> runCA.spec
-      $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+      $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg  $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
     fi
     rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
     $CA_PATH/runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
@@ -648,9 +656,9 @@ fi
 
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
   #after deduplicate we need to rebuild the unitigs, we rerun CA on deduplicated overlapStore
-    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg  $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
     rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
-    $CA_PATH/runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    $CA_PATH/runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg  $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 fi
 
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
@@ -668,8 +676,8 @@ if [ $MCOVERAGE -le 5 ]; then
 fi
 
 #we start from here if the scaffolder has been run or continue here  
-$CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+$CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
-$CA_PATH/runCA -s runCA.spec -p genome -d $CA  cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 && \
+$CA_PATH/runCA -s runCA.spec -p genome -d $CA  cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 && \
     echo "Mega-reads initial assembly complete." || echo "Assembly stopped or failed, see $CA.log"
 
