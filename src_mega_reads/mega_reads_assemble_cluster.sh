@@ -7,6 +7,7 @@ set -o pipefail
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 ESTIMATED_GENOME_SIZE=0
+#minimum 50
 MAX_GAP=100
 MER=15
 B=17
@@ -162,10 +163,10 @@ if [ "$LONGREADS" = "$NANOPORE" ];then
     if [ ! -s "ont_${PB_HC}xlongest.fa" ] ;then
 	echo "Using ${PB_HC}x of the longest ONT reads" 
 	if [ "$FIRSTCHAR" = ">" ];then
-          zcat -f $LONGREADS |ufasta extract -f <(zcat -f $LONGREADS | ufasta sizes -H | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin > ont_${PB_HC}xlongest.fa.tmp && mv ont_${PB_HC}xlongest.fa.tmp ont_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
+          zcat -f $LONGREADS |ufasta extract -f <(zcat -f $LONGREADS | ufasta sizes -H | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin | ufasta one > ont_${PB_HC}xlongest.fa.tmp && mv ont_${PB_HC}xlongest.fa.tmp ont_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
         else
 	    if [ "$FIRSTCHAR" = "@" ];then
-		zcat -f $LONGREADS |fastqToFasta.pl |ufasta extract -f <(zcat -f $LONGREADS | fastqToFasta.pl | ufasta sizes -H | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin > ont_${PB_HC}xlongest.fa.tmp && mv ont_${PB_HC}xlongest.fa.tmp ont_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
+		zcat -f $LONGREADS |fastqToFasta.pl |ufasta extract -f <(zcat -f $LONGREADS | fastqToFasta.pl | ufasta sizes -H | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin | ufasta one > ont_${PB_HC}xlongest.fa.tmp && mv ont_${PB_HC}xlongest.fa.tmp ont_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
 	    else
 		error_exit "Unknown file format $LONGREADS, exiting";
 	    fi
@@ -177,10 +178,10 @@ else
 	echo "Pacbio coverage >${PB_HC}x, using ${PB_HC}x of the longest reads";
 	if [ ! -s "pacbio_${PB_HC}xlongest.fa" ] ;then
 	    if [ "$FIRSTCHAR" = ">" ];then
-		zcat -f $LONGREADS |ufasta extract -f <(zcat -f $LONGREADS | grep --text '^>' | awk '{split($1,a,"/");split(a[3],b,"_");len=b[2]-b[1];if($2 ~ /^RQ/){split($2,c,"=");len=int(len*c[2]/0.85);}print substr($1,2)" "len;}'  | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
+		zcat -f $LONGREADS |ufasta extract -f <(zcat -f $LONGREADS | grep --text '^>' | awk '{split($1,a,"/");split(a[3],b,"_");len=b[2]-b[1];if($2 ~ /^RQ/){split($2,c,"=");len=int(len*c[2]/0.85);}print substr($1,2)" "len;}'  | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin |ufasta one > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
 	    else
 		if [ "$FIRSTCHAR" = "@" ];then
-		    zcat -f $LONGREADS | fastqToFasta.pl |ufasta extract -f <(zcat -f $LONGREADS | fastqToFasta.pl | grep --text '^>' | awk '{split($1,a,"/");split(a[3],b,"_");len=b[2]-b[1];if($2 ~ /^RQ/){split($2,c,"=");len=int(len*c[2]/0.85);}print substr($1,2)" "len;}'  |LC_ALL=C  sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin  > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
+		    zcat -f $LONGREADS | fastqToFasta.pl |ufasta extract -f <(zcat -f $LONGREADS | fastqToFasta.pl | grep --text '^>' | awk '{split($1,a,"/");split(a[3],b,"_");len=b[2]-b[1];if($2 ~ /^RQ/){split($2,c,"=");len=int(len*c[2]/0.85);}print substr($1,2)" "len;}'  |LC_ALL=C  sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin |ufasta one > pacbio_${PB_HC}xlongest.fa.tmp && mv pacbio_${PB_HC}xlongest.fa.tmp pacbio_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
 		else
 		    error_exit "Unknown file format $LONGREADS, exiting";
 		fi
@@ -191,10 +192,10 @@ else
 	echo "Pacbio coverage <${PB_HC}x, using the longest subreads";
 	if [ ! -s "pacbio_nonredundant.fa" ] ;then
 	    if [ "$FIRSTCHAR" = ">" ];then
-		zcat -f $LONGREADS |ufasta extract -f <(zcat -f $LONGREADS |grep --text '^>' | awk '{print $1}' | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | LC_ALL=C sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') /dev/stdin > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa || error_exit "failed to extract the longest subreads"; 
+		zcat -f $LONGREADS |ufasta extract -f <(zcat -f $LONGREADS |grep --text '^>' | awk '{print $1}' | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | LC_ALL=C sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') /dev/stdin |ufasta one > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa || error_exit "failed to extract the longest subreads"; 
 	    else
 		if [ "$FIRSTCHAR" = "@" ];then
-		    zcat -f $LONGREADS | fastqToFasta.pl |ufasta extract -f <(zcat -f $LONGREADS | fastqToFasta.pl |grep --text '^>' | awk '{print $1}' | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | LC_ALL=C sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') /dev/stdin > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa || error_exit "failed to extract the longest subreads";
+		    zcat -f $LONGREADS | fastqToFasta.pl |ufasta extract -f <(zcat -f $LONGREADS | fastqToFasta.pl |grep --text '^>' | awk '{print $1}' | awk -F '/' '{split($3,a,"_");print substr($0,2)" "$1"/"$2" "a[2]-a[1]}' | LC_ALL=C sort -nrk3 -S50% | perl -ane '{if(not(defined($h{$F[1]}))){$h{$F[1]}=1;print $F[0],"\n"}}') /dev/stdin |ufasta one > pacbio_nonredundant.fa.tmp && mv pacbio_nonredundant.fa.tmp pacbio_nonredundant.fa || error_exit "failed to extract the longest subreads";
 		else
 		    error_exit "Unknown file format $LONGREADS, exiting";
 		fi
@@ -505,15 +506,12 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
     rm -rf ${COORDS}.join_consensus
     mkdir -p ${COORDS}.join_consensus
     (cd ${COORDS}.join_consensus;
-    awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'") && $6==1) {if($3==prev3 &&$4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1.allowed |grep '^1 ' |awk '{print $0}' > refs.txt && \
-    awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")) {if($3==prev3 &&$4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1.allowed |awk '{print $0}' > qrys.txt && \
+    awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")-50 && $6==1) {if($3==prev3 &&$4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1.allowed |grep '^1 ' |awk '{print $0}' > refs.txt && \
+    awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")-50) {if($3==prev3 &&$4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1.allowed |awk '{print $0}' > qrys.txt && \
     ufasta extract -f <(awk '{print $2}' qrys.txt) ../$LONGREADS1 > qrys.all.fa && \
     ufasta extract -v -f <(awk '{print $2}' refs.txt) qrys.all.fa > qrys.fa && \
     ufasta extract -f <(awk '{print $2}' refs.txt) qrys.all.fa > refs.fa && \
     perl -ane '{$h{$F[1]}="$F[2]_$F[3]"}END{open(FILE,"refs.fa");while($line=<FILE>){if($line=~/^>/){chomp($line);@f=split(/\s+/,$line);print ">",$h{substr($f[0],1)},"\n";}else{print $line}}}' refs.txt > refs.renamed.fa && \
-    blasr qrys.fa   refs.renamed.fa  -nproc $NUM_THREADS -bestn 15 -minMatch 11 -m 5 -out mapped.m5 1>blasr.err 2>&1 && \
-    perl -ane '{{$h{"$F[1] $F[2]_$F[3]"}=1;}END{open(FILE,"mapped.m5");while($line=<FILE>){@f=split(/\s+/,$line);@ff=split(/\//,$f[0]);$f[0]=join("/",@ff[0..2]) if(scalar(@ff)>1);$matches{$f[5]}.=$line if(defined($h{"$f[0] $f[5]"}));}foreach $k(keys %matches){print $matches{$k}}}}' qrys.txt > mapped.m5.sorted && \
-    pbdagcon -j $NUM_THREADS -t 0 -c 1 mapped.m5.sorted  1>join_consensus.fasta 2>pbdagcon.err && \
     TOJOIN_BATCHES=$(($(stat -c%s -L ../${COORDS}.1.to_join.fa.tmp)/100000000))
     if [ $TOJOIN_BATCHES -le 2 ];then
       TOJOIN_BATCHES=2
@@ -521,19 +519,28 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
     if [ $TOJOIN_BATCHES -ge 500 ];then
       TOJOIN_BATCHES=500
     fi
+    for i in $(seq 1 $TOJOIN_BATCHES);do ref_names[$i]="ref.$i.fa";done;
+    for i in $(seq 1 $TOJOIN_BATCHES);do m5_names[$i]="mapped.$i.m5";done;
+    ufasta split -i  refs.renamed.fa ${ref_names[@]}
+    split_reads_to_join.pl qrys.txt to_blasr ${ref_names[@]} < qrys.fa
+    seq 1 $TOJOIN_BATCHES |xargs -P 2  -I % blasr to_blasr.%.fa   ref.%.fa  -nproc $NUM_THREADS -bestn 15 -minMatch 11 -m 5 -out mapped.%.m5 1>blasr.err 2>&1 && \
+    cat ${m5_names[@]} > mapped.m5 && \
+    perl -ane '{{$h{"$F[1] $F[2]_$F[3]"}=1;}END{open(FILE,"mapped.m5");while($line=<FILE>){@f=split(/\s+/,$line);@ff=split(/\//,$f[0]);$f[0]=join("/",@ff[0..($#ff-1)]) if(scalar(@ff)>1);$matches{$f[5]}.=$line if(defined($h{"$f[0] $f[5]"}));}foreach $k(keys %matches){print $matches{$k}}}}' qrys.txt > mapped.m5.sorted && \
+    pbdagcon -j $NUM_THREADS -t 0 -c 1 mapped.m5.sorted  1>join_consensus.fasta 2>pbdagcon.err && \
     for i in $(seq 1 $TOJOIN_BATCHES);do join_cons_names[$i]="join_consensus.$i.fasta";done;
     for i in $(seq 1 $TOJOIN_BATCHES);do join_delta_names[$i]="join.$i.delta";done;
     ufasta split -i join_consensus.fasta ${join_cons_names[@]}
     split_reads_to_join.pl qrys.txt to_join ${join_cons_names[@]} < ../${COORDS}.1.to_join.fa.tmp
-    seq 1 $TOJOIN_BATCHES |xargs -P 2 -I % nucmer -p join.% --maxmatch -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.% join_consensus.%.fasta && \
-    cat <(head -n 2 join.1.delta) <(tail -n +3 ${join_delta_names[@]} |grep -v -P '^$|\=\=') | show-coords -lcHq /dev/stdin| \
-    awk '{if($2>$12-20 || $1<20){split($(NF-1),a,":");print $0}}' | \
-    perl -ane 'BEGIN{open(FILE,"qrys.txt");while($line=<FILE>){chomp($line);@f=split(/\s+/,$line); $h{"$f[1] $f[2]_$f[3]"}=1;}}{@f1=split(/\./,$F[-2]);@f2=split(/\//,$F[-1]); print if(defined($h{"$f1[0] $f2[0]"}))}'| \
+    seq 1 $TOJOIN_BATCHES |xargs -P 2 -I % nucmer -p join.% --maxmatch -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.%.fa join_consensus.%.fasta && \
+    cat <(head -n 2 join.1.delta) <(tail -n +3 ${join_delta_names[@]} |grep -v -P '^$|\=\=') | \
+    perl -e 'open(FILE,"qrys.txt");while($line=<FILE>){chomp($line);@f=split(/\s+/,$line); $h{"$f[1] $f[2]_$f[3]"}=1;}$line=<STDIN>;print $line;$line=<STDIN>;print $line;$output=0;while($line=<STDIN>){if($line =~ /^>/){chomp($line);@f1=split(/\s+/,substr($line,1));@f2=split(/\//,$f1[1]); @f3=split(/\./,$f1[0]); if(defined($h{"$f3[0] $f2[0]"})){$output=1; $hline=$line;$houtput=1}else{$output=0;}}elsif($output){chomp($line);@f4=split(/\s+/,$line);if(scalar(@f4)>1 && $f4[0]<20 ||$f1[2]-$f4[1]<20){if($houtput){print "$hline\n";$houtput=0;} print "$line\n0\n";}}}' | \
+    show-coords -lcHq /dev/stdin| \
     extract_merges_mega-reads.pl  join_consensus.fasta > merges.txt && \
     merge_mega-reads.pl  < merges.txt | \
     create_merged_mega-reads.pl ../${COORDS}.1.to_join.fa.tmp merges.txt > ${COORDS}.1.joined.fa.tmp && mv ${COORDS}.1.joined.fa.tmp  ../${COORDS}.1.joined.fa ) && \
     cat $COORDS.1.unjoined.fa  $COORDS.1.joined.fa > $COORDS.1.fa.tmp || cat $COORDS.1.to_join.fa.tmp $COORDS.1.unjoined.fa > $COORDS.1.fa.tmp;
-    mv $COORDS.1.fa.tmp $COORDS.1.fa && rm -rf $COORDS.1.unjoined.fa $COORDS.1.joined.fa $COORDS.1.to_join.fa.tmp
+
+    mv $COORDS.1.fa.tmp $COORDS.1.fa && rm -rf $COORDS.1.unjoined.fa $COORDS.1.joined.fa $COORDS.1.to_join.fa.tmp 
     touch .rerun
     if  [ ! -s $COORDS.1.fa ];then
       error_exit "refine/join alignments failed"
