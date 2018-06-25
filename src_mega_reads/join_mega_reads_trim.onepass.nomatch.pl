@@ -104,25 +104,25 @@ sub process_sorted_lines{
 
     return($outread) if($sum_chunk_size/$num_chunks<$min_len_output);#average chunk size must be >$min_len_output
 
-    for(my $i=0;$i<=$#args;$i++){
-        ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
-	$outread_len+=$mend-$mbgn;
-	$seq_len=$mend-$mbgn;
-        $max_gap_local=$gap_coeff*($outread_len>$seq_len?$outread_len:$seq_len);
-        $max_gap_local=$max_gap if($max_gap_local>$max_gap);
-	push(@max_gap_local_fwd,$max_gap_local);
-    }
+    #for(my $i=0;$i<=$#args;$i++){
+    #    ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
+#	$outread_len+=$mend-$mbgn;
+#	$seq_len=$mend-$mbgn;
+#        $max_gap_local=$gap_coeff*($outread_len>$seq_len?$outread_len:$seq_len);
+#        $max_gap_local=$max_gap if($max_gap_local>$max_gap);
+#	push(@max_gap_local_fwd,$max_gap_local);
+#    }
 
-    $outread_len=0;
-    $seq_len=0;
-    for(my $i=$#args;$i>=0;$i--){
-        ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
-        $outread_len+=$mend-$mbgn;
-        $seq_len=$mend-$mbgn;
-        $max_gap_local=$gap_coeff*($outread_len>$seq_len?$outread_len:$seq_len);
-        $max_gap_local=$max_gap if($max_gap_local>$max_gap);
-        unshift(@max_gap_local_rev,$max_gap_local);
-    }
+#    $outread_len=0;
+#    $seq_len=0;
+#    for(my $i=$#args;$i>=0;$i--){
+#        ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
+#        $outread_len+=$mend-$mbgn;
+#        $seq_len=$mend-$mbgn;
+#        $max_gap_local=$gap_coeff*($outread_len>$seq_len?$outread_len:$seq_len);
+#        $max_gap_local=$max_gap if($max_gap_local>$max_gap);
+#        unshift(@max_gap_local_rev,$max_gap_local);
+#    }
     
     my $gap_index=-1;
     foreach $l(@args){
@@ -151,8 +151,8 @@ sub process_sorted_lines{
             $join_allowed=1 if($last_mr eq $name && $bgn-$last_coord<-5); #allow rejoining broken megareads when overlapping ends
 
             if($bgn>$last_coord){#if gap -- check if the closure is allowed
-		$max_gap_local=$max_gap_local_fwd[$gap_index]<$max_gap_local_rev[$gap_index]?$max_gap_local_fwd[$gap_index]:$max_gap_local_rev[$gap_index];
-                #$max_gap_local=$max_gap;
+		#$max_gap_local=$max_gap_local_fwd[$gap_index]<$max_gap_local_rev[$gap_index]?$max_gap_local_fwd[$gap_index]:$max_gap_local_rev[$gap_index];
+                $max_gap_local=$max_gap;
                 if($bgn-$last_coord<=$max_gap_local && $join_allowed){#then put N's and later split
 		    $outread.=lc(substr($pbseq{$pb},$last_coord,$bgn-$last_coord-1)).$seq;
                     #print STDERR "$str ",lc(substr($pbseq{$pb},$last_coord,$bgn-$last_coord-1)),"\n";
