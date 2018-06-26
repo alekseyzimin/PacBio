@@ -475,7 +475,7 @@ if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
     touch .rerun
 fi
 
-if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
+if [ ! -s $COORDS.1.unjoined.fa ] || [ -e .rerun ];then
     echo "Joining"
     awk 'BEGIN{flag=0}{
         if($0 ~ /^>/){
@@ -501,9 +501,14 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
         last_coord_lr=$2;
 }' ${COORDS}.all.txt | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed && \
     join_mega_reads_trim.onepass.nomatch.pl $LONGREADS1 ${COORDS}.1.allowed  $MAX_GAP < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.to_join.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.unjoined.fa || error_exit "mega-reads joining failed"
+    touch .rerun
+fi
 
+
+if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
+    echo "Gap consensus"    
     #making consensus for the large gaps
-    rm -rf ${COORDS}.join_consensus.tmp && mkdir -p ${COORDS}.join_consensus.tmp && \
+    mkdir -p ${COORDS}.join_consensus.tmp && \
     (cd ${COORDS}.join_consensus.tmp;
     TOJOIN_BATCHES=$(($(stat -c%s -L ../${COORDS}.1.to_join.fa.tmp)/100000000))
     if [ $TOJOIN_BATCHES -le 2 ];then
@@ -519,33 +524,34 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 
     awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")/2 && $6==1) {if($3==prev3 && $4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1.allowed |grep '^1 ' |awk '{print $0}' > refs.txt && \
     awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")/2) {if($3==prev3 && $4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1.allowed |awk '{print $0}' > qrys.txt && \
-    ufasta extract -f <(awk '{print $2}' qrys.txt) ../$LONGREADS1 > qrys.all.fa && \
+    if [ ! -s qrys.all.fa ]; then ufasta extract -f <(awk '{print $2}' qrys.txt) ../$LONGREADS1 > qrys.all.fa.tmp && mv qrys.all.fa.tmp qrys.all.fa; fi && \
     ufasta extract -v -f <(awk '{print $2}' refs.txt) qrys.all.fa > qrys.fa && \
     ufasta extract -f <(awk '{print $2}' refs.txt) qrys.all.fa > refs.fa && \
     perl -ane '{$h{$F[1]}="$F[2]_$F[3]"}END{open(FILE,"refs.fa");while($line=<FILE>){if($line=~/^>/){chomp($line);@f=split(/\s+/,$line);print ">",$h{substr($f[0],1)},"\n";}else{print $line}}}' refs.txt > refs.renamed.fa && \
-    ufasta split -i  refs.renamed.fa ${ref_names[@]} && \
+    rm -f ${ref_names[@]} && ufasta split -i  refs.renamed.fa ${ref_names[@]} && \
     split_reads_to_join.pl qrys.txt to_blasr ${ref_names[@]} < qrys.fa && \
     for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_blasr.$F.fa;echo "ACGT" >> to_blasr.$F.fa;done && \
-    seq 1 $TOJOIN_BATCHES |xargs -P 4 -I % blasr to_blasr.%.fa   ref.%.fa  -nproc $NUM_THREADS -bestn 10 -m 5 -out mapped.%.m5 1>blasr.err 2>&1 && \
+    seq 1 $TOJOIN_BATCHES |xargs -P 2 -I % blasr to_blasr.%.fa   ref.%.fa  -nproc $NUM_THREADS -bestn 10 -m 5 -out mapped.%.m5 1>blasr.err 2>&1 && \
     cat ${m5_names[@]} | sort -k 6 -S 50% > mapped.m5.sorted && \
     #perl -ane '{{$h{"$F[1] $F[2]_$F[3]"}=1;}END{open(FILE,"mapped.m5");while($line=<FILE>){@f=split(/\s+/,$line);@ff=split(/\//,$f[0]);$f[0]=join("/",@ff[0..($#ff-1)]) if(scalar(@ff)>1);$matches{$f[5]}.=$line if(defined($h{"$f[0] $f[5]"}));}foreach $k(keys %matches){print $matches{$k}}}}' qrys.txt > mapped.m5.sorted && \
     pbdagcon -j $NUM_THREADS -t 0 -c 1 mapped.m5.sorted  1>join_consensus.fasta 2>pbdagcon.err && \
-    ufasta split -i join_consensus.fasta ${join_cons_names[@]} && \
+    rm -f ${join_cons_names[@]} && ufasta split -i join_consensus.fasta ${join_cons_names[@]} && \
     split_reads_to_join.pl qrys.txt to_join ${join_cons_names[@]} < ../${COORDS}.1.to_join.fa.tmp && \
     for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_join.$F.fa;echo "ACGT" >> to_join.$F.fa;done && \
-    seq 1 $TOJOIN_BATCHES |xargs -P 4 -I % nucmer -p join.% --maxmatch -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.%.fa join_consensus.%.fasta && \
+    seq 1 $TOJOIN_BATCHES |xargs -P 2 -I % nucmer -p join.% --maxmatch -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.%.fa join_consensus.%.fasta && \
     cat <(head -n 2 join.1.delta) <(tail -n +3 ${join_delta_names[@]} |grep -v -P '^$|\=\=') | \
     perl -e 'open(FILE,"qrys.txt");while($line=<FILE>){chomp($line);@f=split(/\s+/,$line); $h{"$f[1] $f[2]_$f[3]"}=1;}$line=<STDIN>;print $line;$line=<STDIN>;print $line;$output=0;while($line=<STDIN>){if($line =~ /^>/){chomp($line);@f1=split(/\s+/,substr($line,1));@f2=split(/\//,$f1[1]); @f3=split(/\./,$f1[0]); if(defined($h{"$f3[0] $f2[0]"})){$output=1; $hline=$line;$houtput=1}else{$output=0;}}elsif($output){chomp($line);@f4=split(/\s+/,$line);if(scalar(@f4)>1 && $f4[0]<10 ||$f1[2]-$f4[1]<10){if($houtput){print "$hline\n";$houtput=0;} print "$line\n0\n";}}}' | \
     show-coords -lcHq -I 88 /dev/stdin| \
     extract_merges_mega-reads.pl  join_consensus.fasta > merges.txt && \
     merge_mega-reads.pl  < merges.txt | \
     create_merged_mega-reads.pl ../${COORDS}.1.to_join.fa.tmp merges.txt > ${COORDS}.1.joined.fa.tmp && mv ${COORDS}.1.joined.fa.tmp  ../${COORDS}.1.joined.fa ) && \
+    #rm -rf ${COORDS}.join_consensus.tmp && \
     cat $COORDS.1.joined.fa $COORDS.1.unjoined.fa  > $COORDS.1.fa.tmp || cat $COORDS.1.unjoined.fa $COORDS.1.to_join.fa.tmp  > $COORDS.1.fa.tmp;
 
-    mv $COORDS.1.fa.tmp $COORDS.1.fa && rm -rf $COORDS.1.unjoined.fa $COORDS.1.joined.fa $COORDS.1.to_join.fa.tmp 
+    mv $COORDS.1.fa.tmp $COORDS.1.fa && rm -rf $COORDS.1.joined.fa $COORDS.1.to_join.fa.tmp 
     touch .rerun
     if  [ ! -s $COORDS.1.fa ];then
-      error_exit "refine/join alignments failed"
+      error_exit "Gap consensus failed"
     fi
 fi
 
