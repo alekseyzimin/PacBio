@@ -538,7 +538,7 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
     echo "$CA_PATH/blasr to_blasr.\$1.fa   ref.\$1.fa  -nproc \$2 -bestn 10 -m 5 2>blasr.err | sort -k6 -S10% | $CA_PATH/pbdagcon -j \$2 -t 0 -c 1 /dev/stdin  2>pbdagcon.err | $MYPATH/nucmer -p join.\$1 --maxmatch -l 17 -c 51 -L 200 -t \$2 to_join.\$1.fa /dev/stdin && touch consensus.\$1.success" >> do_consensus.sh
     echo "fi" >> do_consensus.sh
     chmod 0755 do_consensus.sh
-    seq 1 $TOJOIN_BATCHES | xargs -P 2 -I % do_consensus.sh % $NUM_THREADS && \
+    seq 1 $TOJOIN_BATCHES | xargs -P 8 -I % do_consensus.sh % $NUM_THREADS && \
     cat <(head -n 2 join.1.delta) <(tail -n +3 ${join_delta_names[@]} |grep -v -P '^$|\=\=') | \
     perl -e 'open(FILE,"qrys.txt");while($line=<FILE>){chomp($line);@f=split(/\s+/,$line); $h{"$f[1] $f[2]_$f[3]"}=1;}$line=<STDIN>;print $line;$line=<STDIN>;print $line;$output=0;while($line=<STDIN>){if($line =~ /^>/){chomp($line);@f1=split(/\s+/,substr($line,1));@f2=split(/\//,$f1[1]); @f3=split(/\./,$f1[0]); if(defined($h{"$f3[0] $f2[0]"})){$output=1; $hline=$line;$houtput=1}else{$output=0;}}elsif($output){chomp($line);@f4=split(/\s+/,$line);if(scalar(@f4)>1 && $f4[0]<10 ||$f1[2]-$f4[1]<10){if($houtput){print "$hline\n";$houtput=0;} print "$line\n0\n";}}}' | \
     show-coords -lcHq -I 88 /dev/stdin| \
