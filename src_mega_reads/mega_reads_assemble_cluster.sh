@@ -531,11 +531,7 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
     rm -f ${ref_names[@]} && ufasta split -i  refs.renamed.fa ${ref_names[@]} && \
     split_reads_to_join.pl qrys.txt to_blasr ${ref_names[@]} < qrys.fa && \
     for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_blasr.$F.fa;echo "ACGT" >> to_blasr.$F.fa;done && \
-    seq 1 $TOJOIN_BATCHES |xargs -P 2 -I % blasr to_blasr.%.fa   ref.%.fa  -nproc $NUM_THREADS -bestn 10 -m 5 -out mapped.%.m5 1>blasr.err 2>&1 && \
-    cat ${m5_names[@]} | sort -k 6 -S 50% > mapped.m5.sorted && \
-    #perl -ane '{{$h{"$F[1] $F[2]_$F[3]"}=1;}END{open(FILE,"mapped.m5");while($line=<FILE>){@f=split(/\s+/,$line);@ff=split(/\//,$f[0]);$f[0]=join("/",@ff[0..($#ff-1)]) if(scalar(@ff)>1);$matches{$f[5]}.=$line if(defined($h{"$f[0] $f[5]"}));}foreach $k(keys %matches){print $matches{$k}}}}' qrys.txt > mapped.m5.sorted && \
-    pbdagcon -j $NUM_THREADS -t 0 -c 1 mapped.m5.sorted  1>join_consensus.fasta 2>pbdagcon.err && \
-    rm -f ${join_cons_names[@]} && ufasta split -i join_consensus.fasta ${join_cons_names[@]} && \
+    for F in $(seq 1 $TOJOIN_BATCHES);do blasr to_blasr.$F.fa   ref.$F.fa  -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | sort -k6 -S10% | pbdagcon -j $NUM_THREADS -t 0 -c 1 mapped.m5.sorted  1>join_consensus.$F.fasta 2>pbdagcon.err; done && \
     split_reads_to_join.pl qrys.txt to_join ${join_cons_names[@]} < ../${COORDS}.1.to_join.fa.tmp && \
     for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_join.$F.fa;echo "ACGT" >> to_join.$F.fa;done && \
     seq 1 $TOJOIN_BATCHES |xargs -P 2 -I % nucmer -p join.% --maxmatch -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.%.fa join_consensus.%.fasta && \
