@@ -4,6 +4,9 @@
 #ASSUMES show-coords -q output, that is sorted by query coord!!!!!!
 
 #open(FILE,"delta-filter -q -i 98 $ARGV[0] | show-coords -lcHq -L 1000 /dev/stdin |"); 
+my $slack=200;
+my $maxgap=100000;
+my $mingap=-50;
 
 open(FILE,$ARGV[0]);#file with query contigs
 while($line=<FILE>){
@@ -24,9 +27,6 @@ while($line=<FILE>){
 
 #first we read in all the matches into an array
 my $prevline="";
-my $slack=500;
-my $maxgap=100000;
-my $mingap=-50;
 while($line=<STDIN>){
     chomp($line);
     $line=~s/^\s+//;

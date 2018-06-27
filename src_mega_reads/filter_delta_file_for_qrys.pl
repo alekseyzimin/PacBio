@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #this code filters the matches in delta file for alignments contained in qrys.txt
-$qrys_file=$ARGV[0];
+my $qrys_file=$ARGV[0];
 open(FILE,$qrys_file);
 while($line=<FILE>){
   chomp($line);
@@ -29,7 +29,7 @@ while($line=<STDIN>){
   }elsif($output){
     chomp($line);
     @f4=split(/\s+/,$line);
-    if(scalar(@f4)>1 && $f4[0]<10 ||$f1[2]-$f4[1]<10){
+    if(scalar(@f4)>1){
       if($houtput){
         print "$hline\n";
         $houtput=0;
