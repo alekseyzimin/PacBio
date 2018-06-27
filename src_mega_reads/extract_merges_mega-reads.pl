@@ -15,6 +15,13 @@ while($line=<FILE>){
 	$qseq{$qn}.=$line;
     }
 }
+
+open(FILE,$ARGV[1]);#file valid merges 
+while($line=<FILE>){
+  chomp($line);
+  $valid_merges{$line}=1;
+}
+
 #first we read in all the matches into an array
 my $prevline="";
 my $slack=500;
@@ -45,7 +52,8 @@ for($i=0;$i<=$#lines;$i++){
         $gap=$f2[3]-$f1[4];
         my $trim_e=$f1[11]-$f1[1];
         my $trim_b=$f2[0]-1;
-        if($trim_e<=$slack && $trim_b<=$slack && $gap<$maxgap && $gap>$mingap){
+        if($trim_e<=$slack && $trim_b<=$slack && $gap<$maxgap && $gap>$mingap && $valid_merges{"$f1[-2] $f2[-2]"}){
+          $valid_merges{"$f1[-2] $f2[-2]"}=0;
           print "$f1[-2] $trim_e F $f2[-2] $trim_b F $gap ";
           die("Query sequence $f1[-1] is not found") if(not(defined($qseq{$f1[-1]})));
           print substr($qseq{$f1[-1]},$f1[4],$gap) if($gap>0);
@@ -59,7 +67,8 @@ for($i=0;$i<=$#lines;$i++){
         $gap=$f2[4]-$f1[3];
         my $trim_e=$f1[0]-1;
         my $trim_b=$f2[11]-$f2[1];
-        if($trim_e<$slack && $trim_b<$slack && $gap<$maxgap  && $gap>$mingap){
+        if($trim_e<$slack && $trim_b<$slack && $gap<$maxgap  && $gap>$mingap &&  $valid_merges{"$f2[-2] $f1[-2]"}){
+          $valid_merges{"$f2[-2] $f1[-2]"}=0;
           print "$f1[-2] $trim_e R $f2[-2] $trim_b R $gap ";
           die("Query sequence $f1[-1] is not found") if(not(defined($qseq{$f1[-1]})));
           print substr($qseq{$f1[-1]},$f1[3],$gap) if($gap>0);
