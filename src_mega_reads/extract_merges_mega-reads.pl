@@ -47,6 +47,7 @@ for($i=0;$i<=$#lines;$i++){
         my $trim_b=$f2[0]-1;
         if($trim_e<=$slack && $trim_b<=$slack && $gap<$maxgap && $gap>$mingap){
           print "$f1[-2] $trim_e F $f2[-2] $trim_b F $gap ";
+          die("Query sequence $f1[-1] is not found") if(not(defined($qseq{$f1[-1]})));
           print substr($qseq{$f1[-1]},$f1[4],$gap) if($gap>0);
           print "\n";
           last;
@@ -60,6 +61,7 @@ for($i=0;$i<=$#lines;$i++){
         my $trim_b=$f2[11]-$f2[1];
         if($trim_e<$slack && $trim_b<$slack && $gap<$maxgap  && $gap>$mingap){
           print "$f1[-2] $trim_e R $f2[-2] $trim_b R $gap ";
+          die("Query sequence $f1[-1] is not found") if(not(defined($qseq{$f1[-1]})));
           print substr($qseq{$f1[-1]},$f1[3],$gap) if($gap>0);
           print "\n";
           last;
