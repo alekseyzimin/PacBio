@@ -4,7 +4,7 @@
 #ASSUMES show-coords -q output, that is sorted by query coord!!!!!!
 
 #open(FILE,"delta-filter -q -i 98 $ARGV[0] | show-coords -lcHq -L 1000 /dev/stdin |"); 
-my $slack=300;
+my $slack=400;
 my $maxgap=100000;
 my $mingap=-50;
 
