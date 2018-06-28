@@ -4,7 +4,7 @@
 #ASSUMES show-coords -q output, that is sorted by query coord!!!!!!
 
 #open(FILE,"delta-filter -q -i 98 $ARGV[0] | show-coords -lcHq -L 1000 /dev/stdin |"); 
-my $slack=200;
+my $slack=300;
 my $maxgap=100000;
 my $mingap=-50;
 
@@ -53,7 +53,7 @@ for($i=0;$i<=$#lines;$i++){
         my $trim_e=$f1[11]-$f1[1];
         my $trim_b=$f2[0]-1;
         if($trim_e<=$slack && $trim_b<=$slack && $gap<$maxgap && $gap>$mingap && $valid_merges{"$f1[-2] $f2[-2]"}){
-          $valid_merges{"$f1[-2] $f2[-2]"}=0;
+          #$valid_merges{"$f1[-2] $f2[-2]"}=0;
           print "$f1[-2] $trim_e F $f2[-2] $trim_b F $gap ";
           die("Query sequence $f1[-1] is not found") if(not(defined($qseq{$f1[-1]})));
           print substr($qseq{$f1[-1]},$f1[4],$gap) if($gap>0);
@@ -68,7 +68,7 @@ for($i=0;$i<=$#lines;$i++){
         my $trim_e=$f1[0]-1;
         my $trim_b=$f2[11]-$f2[1];
         if($trim_e<$slack && $trim_b<$slack && $gap<$maxgap  && $gap>$mingap &&  $valid_merges{"$f2[-2] $f1[-2]"}){
-          $valid_merges{"$f2[-2] $f1[-2]"}=0;
+          #$valid_merges{"$f2[-2] $f1[-2]"}=0;
           print "$f1[-2] $trim_e R $f2[-2] $trim_b R $gap ";
           die("Query sequence $f1[-1] is not found") if(not(defined($qseq{$f1[-1]})));
           print substr($qseq{$f1[-1]},$f1[3],$gap) if($gap>0);

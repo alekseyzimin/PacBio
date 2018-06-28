@@ -543,8 +543,9 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
     NUM_THREADSd4=$(($NUM_THREADS/4)) && \
     if [ $NUM_THREADSd4 -lt 2 ];then NUM_THREADSd4=2; fi && \
     seq 1 $TOJOIN_BATCHES | xargs -P $NUM_THREADSd4 -I % do_consensus.sh % && \
-    cat  ${merges_names[@]} | merge_mega-reads.pl | \
-    create_merged_mega-reads.pl ../${COORDS}.1.to_join.fa.tmp <(cat  ${merges_names[@]}) > ${COORDS}.1.joined.fa.tmp && mv ${COORDS}.1.joined.fa.tmp  ../${COORDS}.1.joined.fa ) && \
+    cat  ${merges_names[@]} |perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} if(not(defined($h{$merge}))|| $h{$merge} > $F[1]+$F[4]){$hl{$merge}=join(" ",@F);$h{$merge}=$F[1]+$F[4];}}END{foreach $k(keys %hl){print $hl{$k},"\n"}}' > merges.best.txt && \
+    merge_mega-reads.pl < merges.best.txt | \
+    create_merged_mega-reads.pl ../${COORDS}.1.to_join.fa.tmp merges.best.txt > ${COORDS}.1.joined.fa.tmp && mv ${COORDS}.1.joined.fa.tmp  ../${COORDS}.1.joined.fa ) && \
     #rm -rf ${COORDS}.join_consensus.tmp && \
     cat $COORDS.1.joined.fa $COORDS.1.unjoined.fa  > $COORDS.1.fa.tmp || cat $COORDS.1.unjoined.fa $COORDS.1.to_join.fa.tmp  > $COORDS.1.fa.tmp;
 
