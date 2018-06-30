@@ -546,11 +546,11 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ] || [ ! -e  ${COORDS}.join_consensus.tm
     cat  ${merges_names[@]} |perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} if(not(defined($h{$merge}))|| $h{$merge} > $F[1]+$F[4]){$hl{$merge}=join(" ",@F);$h{$merge}=$F[1]+$F[4];}}END{foreach $k(keys %hl){print $hl{$k},"\n"}}' > merges.best.txt && \
     merge_mega-reads.pl < merges.best.txt | \
     create_merged_mega-reads.pl ../${COORDS}.1.to_join.fa.tmp merges.best.txt > ${COORDS}.1.joined.fa.tmp && mv ${COORDS}.1.joined.fa.tmp  ../${COORDS}.1.joined.fa && rm -rf ../$COORDS.1.to_join.fa.tmp && touch join_consensus.success)
-    if [ ! -e ${COORDS}.join_consensus.tmp/join_consensus.succes ];then
-      cat $COORDS.1.joined.fa $COORDS.1.unjoined.fa  > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa && rm -rf $COORDS.1.joined.fa
+    if [ -e ${COORDS}.join_consensus.tmp/join_consensus.success ];then
+      cat $COORDS.1.joined.fa $COORDS.1.unjoined.fa  > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa && rm -rf ${COORDS}.join_consensus.tmp
     else
       echo "Warning! Creation of gap consensus sequences failed, see files in ${COORDS}.join_consensus.tmp, proceeding without it"
-      cat $COORDS.1.unjoined.fa $COORDS.1.to_join.fa.tmp  > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa && rm -rf $COORDS.1.joined.fa
+      cat $COORDS.1.unjoined.fa $COORDS.1.to_join.fa.tmp  > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa
     fi
     touch .rerun
     if  [ ! -s $COORDS.1.fa ];then
