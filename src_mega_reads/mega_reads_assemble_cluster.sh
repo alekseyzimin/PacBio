@@ -527,7 +527,25 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ] || [ ! -e  ${COORDS}.join_consensus.tm
     if [ ! -s qrys.all.fa ]; then ufasta extract -f <(awk '{print $2}' qrys.txt) ../$LONGREADS1 > qrys.all.fa.tmp && mv qrys.all.fa.tmp qrys.all.fa; fi && \
     ufasta extract -v -f <(awk '{print $2}' refs.txt) qrys.all.fa > qrys.fa && \
     ufasta extract -f <(awk '{print $2}' refs.txt) qrys.all.fa > refs.fa && \
-    perl -ane '{$h{$F[1]}="$F[2]_$F[3]"}END{open(FILE,"refs.fa");while($line=<FILE>){if($line=~/^>/){chomp($line);@f=split(/\s+/,$line);print ">",$h{substr($f[0],1)},"\n";}else{print $line}}}' refs.txt > refs.renamed.fa && \
+    perl -ane '{
+      $h{$F[1]}="$F[2]_$F[3]";
+      }END{
+      $flag=0;
+      open(FILE,"refs.fa");
+      while($line=<FILE>){
+        if($line=~/^>/){
+          chomp($line);
+          @f=split(/\s+/,$line);
+          if(defined($h{substr($f[0],1)}) && not(defined($output{$h{substr($f[0],1)}}))){
+            print ">",$h{substr($f[0],1)},"\n";
+            $output{$h{substr($f[0],1)}}=1;
+            $flag=1;
+          }else{
+            $flag=0;
+          }
+        }else{
+          print $line if($flag);
+        }}}' refs.txt > refs.renamed.fa && \
     rm -f ${ref_names[@]} && ufasta split -i  refs.renamed.fa ${ref_names[@]} && \
     split_reads_to_join.pl qrys.txt to_blasr ${ref_names[@]} < qrys.fa && \
     split_reads_to_join.pl qrys.txt to_join ${ref_names[@]} < ../${COORDS}.1.to_join.fa.tmp && \
