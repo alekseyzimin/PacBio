@@ -22,6 +22,7 @@ QUEUE=""
 USE_SGE=0
 PACBIO=""
 NANOPORE=""
+ONEPASS=0
 
 function error_exit {
     echo "$1" >&2   
@@ -87,6 +88,9 @@ do
 	    QUEUE="$2"
 	    shift
 	    ;;
+        -1|--onepass)
+            ONEPASS=1;
+            ;;
 	-o|--other_frg)
 	    OTHER_FRG="$2"
 	    shift
@@ -366,6 +370,9 @@ $out{$mega_read}=1;
     fi
 fi
 
+#onepass
+if [ $ONEPASS -lt 1 ];then 
+
 #figure out which long reads corrected into one chunk on the first pass
 if [ ! -s $COORDS.single.txt ] || [ -e .rerun ];then
     awk 'BEGIN{counter=0}{if($1~ /^>/){if(counter==1){print rn}rn=substr($1,2);counter=0}else{if($8>'$d'*4){counter++}else{counter+=2}}}END{if(counter==1){print rn}}' $COORDS.txt > $COORDS.single.txt.tmp && mv  $COORDS.single.txt.tmp  $COORDS.single.txt || error_exit "failed to extract names of single-chunk mega-reads pass 1";
@@ -466,6 +473,13 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
     if  [ ! -s $COORDS.mr.txt ];then
       error_exit "mega-reads pass 2 failed"
     fi
+fi
+
+#onepass
+else 
+echo "" > $COORDS.mr.txt
+grep --text '^>' $COORDS.txt | awk '{print substr($1,2)}' > $COORDS.single.txt
+#onepass
 fi
 
 if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
