@@ -339,6 +339,9 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
     fi
 fi
 
+#onepass
+if [ $ONEPASS -lt 1 ];then
+
 if [ ! -s $COORDS.all_mr.maximal.fa ] || [ -e .rerun ];then
     perl -ane '{
 if($F[0] =~ /^\>/){
@@ -369,9 +372,6 @@ $out{$mega_read}=1;
       error_exit "failed to create maximal mega-reads from pass 1"
     fi
 fi
-
-#onepass
-if [ $ONEPASS -lt 1 ];then 
 
 #figure out which long reads corrected into one chunk on the first pass
 if [ ! -s $COORDS.single.txt ] || [ -e .rerun ];then
