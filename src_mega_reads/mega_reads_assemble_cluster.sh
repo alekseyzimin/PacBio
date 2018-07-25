@@ -477,7 +477,8 @@ fi
 
 #onepass
 else 
-awk '{if($1 ~ /^>/ || $8 > '$d'*2) print $0}' $COORDS.txt > $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
+cp $COORDS.txt $COORDS.mr.txt
+#awk '{if($1 ~ /^>/ || $8 > '$d'*1) print $0}' $COORDS.txt > $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
 #perl -ane '{if($F[0] =~ /^>/){if($#lines>-1){print $rn,"\n";if($#lines==0){print $lines[0],"\n";}else{foreach $line(@lines){@f=split(/\s+/,$line); print $line,"\n" if($f[7]>'$d');}}}@lines=();$rn=$F[0];}else{push(@lines,join(" ",@F));}}END{print $rn,"\n";if($#lines==0){print $lines[0],"\n";}else{foreach $line(@lines){@f=split(/\s+/,$line); print $line,"\n" if($f[7]>'$d');}}}' $COORDS.txt > $COORDS.mr.txt
 echo "" > $COORDS.single.txt
 #onepass
