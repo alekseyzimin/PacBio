@@ -580,13 +580,20 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ] || [ ! -e  ${COORDS}.join_consensus.tm
     
     cat merges.[0-9]*.txt |perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} if(not(defined($h{$merge}))|| $h{$merge} > $F[1]+$F[4]){$hl{$merge}=join(" ",@F);$h{$merge}=$F[1]+$F[4];}}END{foreach $k(keys %hl){print $hl{$k},"\n"}}' > merges.best.txt && \
     merge_mega-reads.pl < merges.best.txt | \
-    create_merged_mega-reads.pl ../${COORDS}.1.to_join.fa.tmp merges.best.txt > ${COORDS}.1.joined.fa.tmp && mv ${COORDS}.1.joined.fa.tmp  ../${COORDS}.1.joined.fa && rm -rf ../$COORDS.1.to_join.fa.tmp && touch join_consensus.success)
+    create_merged_mega-reads.pl ../${COORDS}.1.to_join.fa.tmp merges.best.txt > ${COORDS}.1.joined.fa.tmp && \
+    mv ${COORDS}.1.joined.fa.tmp  ../${COORDS}.1.joined.fa && \
+    cat ${merges_names[@]} > /dev/null && \
+    touch join_consensus.success)
+
     if [ -e ${COORDS}.join_consensus.tmp/join_consensus.success ];then
-      cat $COORDS.1.joined.fa $COORDS.1.unjoined.fa  > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa 
-      (cd ${COORDS}.join_consensus.tmp && cat ${merges_names[@]} > /dev/null) && rm -rf ${COORDS}.join_consensus.tmp
+      cat $COORDS.1.joined.fa $COORDS.1.unjoined.fa  > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa && rm -rf ${COORDS}.join_consensus.tmp $COORDS.1.to_join.fa.tmp
     else
-      echo "Warning! Creation of gap consensus sequences failed, see files in ${COORDS}.join_consensus.tmp, proceeding without it"
-      cat $COORDS.1.unjoined.fa $COORDS.1.to_join.fa.tmp  > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa
+      echo "Warning! Some or all gap consensus jobs failed, see files in ${COORDS}.join_consensus.tmp, proceeding anyway, to rerun gap consensus erase $COORDS.1.fa and re-run assemble.sh"
+      if [ -s ${COORDS}.1.joined.fa ];then
+        cat $COORDS.1.joined.fa $COORDS.1.unjoined.fa  > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa
+      else
+        cat $COORDS.1.unjoined.fa $COORDS.1.to_join.fa.tmp  > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa
+      fi
     fi
     touch .rerun
     if  [ ! -s $COORDS.1.fa ];then
