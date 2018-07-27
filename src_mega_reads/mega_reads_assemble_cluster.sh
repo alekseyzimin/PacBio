@@ -582,7 +582,8 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ] || [ ! -e  ${COORDS}.join_consensus.tm
     merge_mega-reads.pl < merges.best.txt | \
     create_merged_mega-reads.pl ../${COORDS}.1.to_join.fa.tmp merges.best.txt > ${COORDS}.1.joined.fa.tmp && mv ${COORDS}.1.joined.fa.tmp  ../${COORDS}.1.joined.fa && rm -rf ../$COORDS.1.to_join.fa.tmp && touch join_consensus.success)
     if [ -e ${COORDS}.join_consensus.tmp/join_consensus.success ];then
-      cat $COORDS.1.joined.fa $COORDS.1.unjoined.fa  > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa && rm -rf ${COORDS}.join_consensus.tmp
+      cat $COORDS.1.joined.fa $COORDS.1.unjoined.fa  > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa 
+      (cd ${COORDS}.join_consensus.tmp && cat ${merges_names[@]} > /dev/null) && rm -rf ${COORDS}.join_consensus.tmp
     else
       echo "Warning! Creation of gap consensus sequences failed, see files in ${COORDS}.join_consensus.tmp, proceeding without it"
       cat $COORDS.1.unjoined.fa $COORDS.1.to_join.fa.tmp  > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa
