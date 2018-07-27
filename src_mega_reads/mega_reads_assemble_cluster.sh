@@ -562,14 +562,14 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
         }}}' refs.txt > refs.renamed.fa && \
     rm -f ${ref_names[@]} && ufasta split -i  refs.renamed.fa ${ref_names[@]} && \
     split_reads_to_join.pl qrys.txt to_blasr ${ref_names[@]} < qrys.fa && \
-    split_reads_to_join.pl qrys.txt to_join ${ref_names[@]} < ../${COORDS}.1.to_join.fa.tmp && \
+    perl -ane '{if($F[0] =~ /^>/){$rn=$F[0];}else{$seq=$F[0]; $seq=~ tr/a-zA-Z//s; print "$rn\n$F[0]\n" if(length($seq)>length($F[0])*0.1);}}' ../${COORDS}.1.to_join.fa.tmp | split_reads_to_join.pl qrys.txt to_join ${ref_names[@]} && \
     grep '^>' --text ../$COORDS.1.to_join.fa.tmp | perl -ane '{($rn,$coord)=split(/\./,substr($F[0],1));$h{$rn}.=substr($F[0],1)." ";}END{foreach $r(keys %h){@f=split(/\s+/,$h{$r}); for ($i=0;$i<$#f;$i++){print $f[$i]," ",$f[$i+1],"\n"}}}' > valid_join_pairs.txt && \
     for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_join.$F.fa;echo "ACGT" >> to_join.$F.fa;done && \
     for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_blasr.$F.fa;echo "ACGT" >> to_blasr.$F.fa;done && \
     echo "#!/bin/bash" > do_consensus.sh && \
     echo "set -o pipefail" >> do_consensus.sh && \
     echo "if [ ! -e consensus.\$1.success ];then" >> do_consensus.sh && \
-    echo "$CA_PATH/blasr to_blasr.\$1.fa   ref.\$1.fa  -nproc 16 -bestn 10 -m 5 2>blasr.err | sort -k6 -S2% | $CA_PATH/pbdagcon -j 8 -t 0 -c 1 /dev/stdin  2>pbdagcon.err | perl -ane '{if(\$F[0] =~ /^>/){\$rn=\$F[0];}else{\$seq=\$F[0]; \$seq=~ tr/a-zA-Z//s; print \"\$rn\\n\$F[0]\\n\" if(length(\$seq)>length(\$F[0])*0.1);}}' | tee join_consensus.\$1.fasta | $MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t 16 to_join.\$1.fa /dev/stdin | $MYPATH/filter_delta_file_for_qrys.pl qrys.txt | $MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$1 && cat coords.\$1 | $MYPATH/extract_merges_mega-reads.pl join_consensus.\$1.fasta  valid_join_pairs.txt > merges.\$1.txt && touch consensus.\$1.success" >> do_consensus.sh && \
+    echo "$CA_PATH/blasr to_blasr.\$1.fa   ref.\$1.fa  -nproc 16 -bestn 10 -m 5 2>blasr.err | sort -k6 -S2% | $CA_PATH/pbdagcon -j 8 -t 0 -c 1 /dev/stdin  2>pbdagcon.err | tee join_consensus.\$1.fasta | $MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t 16 to_join.\$1.fa /dev/stdin | $MYPATH/filter_delta_file_for_qrys.pl qrys.txt | $MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$1 && cat coords.\$1 | $MYPATH/extract_merges_mega-reads.pl join_consensus.\$1.fasta  valid_join_pairs.txt > merges.\$1.txt && touch consensus.\$1.success" >> do_consensus.sh && \
     echo "fi" >> do_consensus.sh && \
     chmod 0755 do_consensus.sh && \
     NUM_THREADSd8=$(($NUM_THREADS/8+1)) 
