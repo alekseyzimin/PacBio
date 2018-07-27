@@ -519,7 +519,7 @@ if [ ! -s $COORDS.1.unjoined.fa ] || [ -e .rerun ];then
 fi
 
 
-if [ ! -s $COORDS.1.fa ] || [ -e .rerun ] || [ ! -e  ${COORDS}.join_consensus.tmp/join_consensus.success ];then
+if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
     echo "Gap consensus"    
     #making consensus for the large gaps
     mkdir -p ${COORDS}.join_consensus.tmp && \
