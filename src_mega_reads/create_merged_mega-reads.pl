@@ -2,7 +2,7 @@
 #first we read in sequences of contigs to merge
 my $contigs_to_merge=$ARGV[0];
 my $ctg="",$seq="";
-my %seq =(),%output=();
+my %seq =(),%output=(),@ctgnames=();
 open(FILE,$contigs_to_merge);
 while($line=<FILE>){
   chomp($line);
@@ -10,6 +10,8 @@ while($line=<FILE>){
     my @f=split(/\s+/,$line);
     if(not($seq eq "")){
       $seq{$ctg}=$seq;
+      #to preserve order
+      push(@ctgnames,$ctg);
     }
     $ctg=substr($f[0],1);
     $seq="";
@@ -19,6 +21,7 @@ while($line=<FILE>){
 }
 if(not($seq eq "")){
   $seq{$ctg}=$seq;
+  push(@ctgnames,$ctg);
 }
 
 #then we read in the merging sequences and trim points; we record the sequence that follows each contig
@@ -100,7 +103,7 @@ while($line=<STDIN>){
     print "\n";
 }
 
-foreach $c(keys %seq){
+foreach $c(@ctgnames){
     print ">$c\n$seq{$c}\n" if(not(defined($output{$c})));
 }
 

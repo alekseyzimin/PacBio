@@ -601,7 +601,7 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
     fi
 fi
 
-if [ ! -s $COORDS.1.frg ] || [ -e .rerun ];then
+if [ ! -s $COORDS.1.frg ] || [ ! -s $COORDS.1.mates.frg ] || [ -e .rerun ];then
     echo "Generating assembly input files"
     awk 'BEGIN{n=0}{if($1~/^>/){}else{print ">sr"n"\n"$0;n+=2;}}'  $COORDS.1.fa  > mr.fa.in && \
 	create_k_unitigs_large_k -q 1 -c 30 -t $NUM_THREADS -m 31 -n $ESTIMATED_GENOME_SIZE -l 31 -n $(($ESTIMATED_GENOME_SIZE*2)) -f `perl -e 'print 1/31/1e5'` mr.fa.in   | grep --text -v '^>' | perl -ane '{$seq=$F[0]; $F[0]=~tr/ACTGactg/TGACtgac/;$revseq=reverse($F[0]); $h{($seq ge $revseq)?$seq:$revseq}=1;}END{$n=0;foreach $k(keys %h){print ">",$n++," length:",length($k),"\n$k\n"}}' > guillaumeKUnitigsAtLeast32bases_all.fasta.tmp && mv guillaumeKUnitigsAtLeast32bases_all.fasta.tmp guillaumeKUnitigsAtLeast32bases_all.31.fasta && \
@@ -609,7 +609,8 @@ if [ ! -s $COORDS.1.frg ] || [ -e .rerun ];then
 	createSuperReadsForDirectory.perl -minreadsinsuperread 1 -l 31 -mean-and-stdev-by-prefix-file meanAndStdevByPrefix.pe.txt -kunitigsfile guillaumeKUnitigsAtLeast32bases_all.31.fasta -t $NUM_THREADS -mikedebug work1_mr1 mr.fa.in  1> super1.err 2>&1 && \
 	find_contained_reads.pl work1_mr1/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt $COORDS.1.fa > containees.txt && \
         super-read_to_mega-read.pl work1_mr1/readPositionsInSuperReads $COORDS.1.fa | trim_by_kunitigs.pl work1_mr1/superReadNames.txt work1_mr1/kUnitigLengths.txt > $COORDS.1.trims.txt && \
-        trim_mega_reads.pl $COORDS.1.trims.txt < $COORDS.1.fa |ufasta extract -v -f containees.txt |make_mr_frg.pl mr 600  > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg && \
+        trim_mega_reads.pl $COORDS.1.trims.txt < $COORDS.1.fa | ufasta extract -v -f containees.txt |make_mr_frg.pl mr 600  > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg && \
+        trim_mega_reads.pl $COORDS.1.trims.txt < $COORDS.1.fa | make_mate_frg.pl > $COORDS.1.mates.frg.tmp && mv $COORDS.1.mates.frg.tmp $COORDS.1.mates.frg && \
         rm -rf $CA work1_mr1 guillaumeKUnitigsAtLeast32bases_all.31.fasta mr.fa.in || error_exit "failed to create mega-reads frg file";
   if  [ ! -s $COORDS.1.frg ];then
     error_exit "failed to create mega-reads frg file"
@@ -693,15 +694,15 @@ if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
   #need to start from the beginning
   #this is helpful for re-starts
   rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh
-    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
     #this is a fix for sometimes failing fragment correction
     if [ ! -e "${CA}/4-unitigger/unitigger.success" ]; then
       rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh
       echo "doFragmentCorrection=0" >> runCA.spec
-      $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg  $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+      $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
     fi
     rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
-    $CA_PATH/runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    $CA_PATH/runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 fi
 
 #at athis point we check if the unitig consensus is done
@@ -717,9 +718,9 @@ fi
 
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
   #after deduplicate we need to rebuild the unitigs, we rerun CA on deduplicated overlapStore
-    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg  $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
     rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
-    $CA_PATH/runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg  $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    $CA_PATH/runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 fi
 
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
@@ -737,8 +738,8 @@ if [ $MCOVERAGE -le 5 ]; then
 fi
 
 #we start from here if the scaffolder has been run or continue here  
-$CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+$CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
-$CA_PATH/runCA -s runCA.spec -p genome -d $CA  cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 && \
+$CA_PATH/runCA -s runCA.spec -p genome -d $CA  cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $COORDS.1.mates.frg  $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 && \
     echo "Mega-reads initial assembly complete." || echo "Assembly stopped or failed, see $CA.log"
 
