@@ -8,7 +8,8 @@ MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 ESTIMATED_GENOME_SIZE=0
 #minimum 50
-MAX_GAP=125
+#MAX_GAP=125
+MAX_GAP=1250
 MER=15
 B=17
 d=0.029
@@ -489,8 +490,9 @@ if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
     touch .rerun
 fi
 
-if [ ! -s $COORDS.1.unjoined.fa ] || [ -e .rerun ];then
-    echo "Joining"
+#if [ ! -s $COORDS.1.unjoined.fa ] || [ -e .rerun ];then
+if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
+echo "Joining"
     awk 'BEGIN{flag=0}{
         if($0 ~ /^>/){
                 flag=0;
@@ -514,13 +516,15 @@ if [ ! -s $COORDS.1.unjoined.fa ] || [ -e .rerun ];then
         last_coord=$2+$5-$4;
         last_coord_lr=$2;
 }' ${COORDS}.all.txt | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed && \
-    join_mega_reads_trim.onepass.nomatch.pl $LONGREADS1 ${COORDS}.1.allowed  $MAX_GAP < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.to_join.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.unjoined.fa || error_exit "mega-reads joining failed"
+    join_mega_reads_trim.onepass.nomatch.pl $LONGREADS1 ${COORDS}.1.allowed  $MAX_GAP < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.to_join.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.unjoined.fa || error_exit "mega-reads joining failed" && \
+    cat $COORDS.1.unjoined.fa $COORDS.1.to_join.fa.tmp > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa && rm $COORDS.1.unjoined.fa $COORDS.1.to_join.fa.tmp
     touch .rerun
 fi
 
 
-if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
-    echo "Gap consensus"    
+#if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
+if [ ! -s $COORDS.1.fa ];then
+echo "Gap consensus"    
     #making consensus for the large gaps
     mkdir -p ${COORDS}.join_consensus.tmp && \
     (cd ${COORDS}.join_consensus.tmp;
@@ -673,7 +677,7 @@ ovlThreads=$OVL_THREADS
 ovlHashBlockLength=10000000
 ovlRefBlockSize=1000000
 ovlConcurrency=$NUM_THREADS
-doOverlapBasedTrimming=0
+doOverlapBasedTrimming=1
 doUnitigSplitting=0
 doChimeraDetection=normal
 merylThreads=$NUM_THREADS
@@ -743,4 +747,28 @@ $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=cons
 rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
 $CA_PATH/runCA -s runCA.spec -p genome -d $CA  cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $COORDS.1.mates.frg  $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 && \
     echo "Mega-reads initial assembly complete." || echo "Assembly stopped or failed, see $CA.log"
+
+if [ ! -e "${CA}/10-gapclose/gapclose.success" ]; then
+echo "Closing gaps in scaffolds"
+mkdir -p ${CA}/10-gapclose
+(cd ${CA}/10-gapclose && \
+process_scaffold_gaps.pl ../9-terminator/genome.posmap.ctgscf ../9-terminator/genome.posmap.frgctg |sort -k 2 -S 10% > read_scaffold.txt && \
+splitScaffoldsAtNs.pl  < ../9-terminator/genome.scf.fasta > genome.scf.split.fa && \
+grep '^>' --text genome.scf.split.fa | perl -ane '{($rn,$coord)=split(/\./,substr($F[0],1));$h{$rn}.=substr($F[0],1)." ";}END{foreach $r(keys %h){@f=split(/\s+/,$h{$r}); for ($i=0;$i<$#f;$i++){print $f[$i]," ",$f[$i+1],"\n"}}}' > valid_join_pairs.txt && \
+ufasta extract -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) genome.scf.split.fa > to_join.scf.fa && \
+ufasta extract -f <(awk '{print $1;}' read_scaffold.txt) ont_30xlongest.fa > qrys.all.fa && \
+ufasta extract -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > refs.fa && \
+perl -ane '{$s{$F[0]}=$F[1];}END{open(FILE,"refs.fa");while($line=<FILE>){if($line=~/^>/){chomp($line);($rn)=split(/\s+/,$line);print ">",$s{substr($rn,1)},"\n";}else{print $line;}}}' read_scaffold.txt > refs.renamed.fa && \
+ufasta extract -v -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > qrys.fa && \
+blasr qrys.fa  refs.renamed.fa  -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \
+sort -k6 -S10% | \
+pbdagcon -j $NUM_THREADS -t 0 -c 1 /dev/stdin  2>pbdagcon.err | \
+tee join_consensus.fasta | \
+nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.scf.fa /dev/stdin | \
+show-coords -lcHq /dev/stdin > scf_join.coords && \
+perl -ane '{($scf1)=split(/\./,$F[-1]);($scf2)=split(/\./,$F[-2]); print if($scf1 eq $scf2);}' scf_join.coords | \
+extract_merges_mega-reads.pl join_consensus.fasta  valid_join_pairs.txt > merges.txt && \
+perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} if(not(defined($h{$merge}))|| $h{$merge} > $F[1]+$F[4]){$hl{$merge}=join(" ",@F);$h{$merge}=$F[1]+$F[4];}}END{foreach $k(keys %hl){print $hl{$k},"\n"}}' merges.txt > merges.best.txt && \
+cat <(ufasta extract -v -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) genome.scf.split.fa) <(merge_mega-reads.pl < merges.best.txt | create_merged_mega-reads.pl to_join.scf.fa  merges.best.txt) > genome.scf.joined.fa.tmp && mv genome.scf.joined.fa.tmp genome.scf.fasta && touch gapclose.success
+fi
 
