@@ -5,7 +5,7 @@
 #!/usr/bin/env perl
 $errorRateAllowed = .1;
 $errorMin = 10;
-$correctnessCodeForSingletons = 1;
+$correctnessCodeForSingletons = -1;
 &processArgs;
 my %groups;
 

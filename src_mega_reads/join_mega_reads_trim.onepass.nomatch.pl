@@ -143,19 +143,15 @@ sub process_sorted_lines{
             $str="$pb $k2s[0] $k1s[$#k1s]" if($k1s[$#k1s]>$k2s[0]);
 
             $join_allowed=0;
-            if(scalar(keys %allowed)>0){
-		$join_allowed=$allowed{$str} if(defined($allowed{$str})); #allow joins that are in multiple pacbios with a gap.  without gap we need to see at least 11 bp overlap/alignment 
-            }else{
-		$join_allowed=1;
-            }
+	    $join_allowed=$allowed{$str} if(defined($allowed{$str})); #allow joins that are in multiple pacbios with a gap.  without gap we need to see at least 11 bp overlap/alignment 
             $join_allowed=1 if($last_mr eq $name && $bgn-$last_coord<-5); #allow rejoining broken megareads when overlapping ends
 
             if($bgn>$last_coord){#if gap -- check if the closure is allowed
 		$max_gap_local=$max_gap_local_fwd[$gap_index]<$max_gap_local_rev[$gap_index]?$max_gap_local_fwd[$gap_index]:$max_gap_local_rev[$gap_index];
                 #$max_gap_local=$max_gap;
-                if($bgn-$last_coord<=$max_gap_local && $join_allowed){#then put N's and later split
+                
+                if($bgn-$last_coord<=$max_gap_local && ($join_allowed==1 || $join_allowed==-1)){#join or then put N's and later split
 		    $outread.=lc(substr($pbseq{$pb},$last_coord,$bgn-$last_coord-1)).$seq;
-                    #print STDERR "$str ",lc(substr($pbseq{$pb},$last_coord,$bgn-$last_coord-1)),"\n";
                 }else{
 		    $outread.="N"x($bgn-$last_coord).$seq;
                 }
@@ -164,6 +160,7 @@ sub process_sorted_lines{
 		my $ind=-1;
 		my %ind=();
                 my $offset=-1;
+                $join_allowed=abs($join_allowed);
 
 		if($last_coord-$bgn > $min_match){ #it is possible to check for overlap
 		    for(my $j=0;$j<10;$j++){
@@ -184,14 +181,14 @@ sub process_sorted_lines{
                     $join_allowed=1;
 		}
 
-		if($join_allowed){#here if allowed means that either the overlap was too short or match was found
+		if($join_allowed==1){#here if allowed means that either the overlap was too short or match was found
 		    if($offset>-1){
 			$outread=substr($outread,0,length($outread)-$offset).$seq;
 		    }elsif($ind>-1){
 			$outread=substr($outread,0,$ind).$seq;
 		    }else{
                         #we should never get here
-                        die("error in joining $offset $ind $pb $name");
+                        die("error in joining $offset $ind $pb $name $join_allowed");
                     }
 		}else{
 		    $outread.="N".$seq;
