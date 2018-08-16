@@ -8,7 +8,7 @@ MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 ESTIMATED_GENOME_SIZE=0
 #minimum 50
-MAX_GAP=125
+MAX_GAP=100
 #MAX_GAP=1000
 MER=15
 B=17
