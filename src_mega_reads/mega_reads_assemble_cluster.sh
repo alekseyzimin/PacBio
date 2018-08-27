@@ -34,13 +34,13 @@ if tty -s < /dev/fd/1 2> /dev/null; then
 fi
 
 log () {
-  d=$(date)
-    echo -e "${GC}[$d]${NC} $@"
+  dddd=$(date)
+    echo -e "${GC}[$dddd]${NC} $@"
 }
 
 
 function error_exit {
-    echo "$1" >&2   
+    echo -e "${RC}[$1]${NC}" >&2   
     exit "${2:-1}" 
 }
 
@@ -126,7 +126,7 @@ do
 done
 
 ###############checking arguments#########################
-log "Using CABOG from is $CA_PATH"
+log "Using CABOG from $CA_PATH"
 if [ ! -e $CA_PATH/runCA ];then
     error_exit "runCA not found at $CA_PATH!";
 fi
