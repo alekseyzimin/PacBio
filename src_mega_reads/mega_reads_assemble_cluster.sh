@@ -35,12 +35,13 @@ fi
 
 log () {
   dddd=$(date)
-    echo -e "${GC}[$dddd]${NC} $@"
+  echo -e "${GC}[$dddd]${NC} $@"
 }
 
 
 function error_exit {
-    echo -e "${RC}[$1]${NC}" >&2   
+    dddd=$(date)
+    echo -e "${RC}[$dddd]${NC} $1" >&2   
     exit "${2:-1}" 
 }
 
