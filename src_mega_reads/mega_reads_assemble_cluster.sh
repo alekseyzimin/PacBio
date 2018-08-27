@@ -24,6 +24,14 @@ USE_SGE=0
 PACBIO=""
 NANOPORE=""
 ONEPASS=0
+GC=
+RC=
+NC=
+if tty -s < /dev/fd/1 2> /dev/null; then
+  GC='\e[0;32m'
+  RC='\e[0;31m'
+  NC='\e[0m'
+fi
 
 log () {
   d=$(date)
