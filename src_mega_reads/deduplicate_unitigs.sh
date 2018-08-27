@@ -62,29 +62,16 @@ jellyfish count -L $REPEAT_COUNT -C -m $OVL_MER -s `tigStore -g $ASM_DIR/$ASM_PR
 touch $ASM_DIR/unitig_mer.success || exit
 fi
 
-#we backup the assembly
-if [ -e "$ASM_DIR/filter_map.success" ] && [ -e "$ASM_DIR/unitig_mer.success" ];then
-rm -rf $ASM_DIR/ovlStoreBackup
-mkdir -p $ASM_DIR/ovlStoreBackup && \
-mv $ASM_DIR/{4-unitigger,5-consensus,5-consensus-coverage-stat,5-consensus-insert-sizes,genome.tigStore,genome.ovlStore} $ASM_DIR/ovlStoreBackup
-else
-echo "Failed to self-map or build unitig mer database: no $ASM_DIR/self_map.success or $ASM_DIR/unitig_mer.success"
-exit
-fi
-
 #we filter the overlaps -- if ALL k-mers in the overlap region are repetitive from above -- break overlap
-if [ ! -e "$ASM_DIR/overlap_filter.success" ];then
+if [ ! -e "$ASM_DIR/overlap_filter.success" ] && [ -e "$ASM_DIR/unitig_mer.success" ] && [ -e "$ASM_DIR/filter_map.success" ];then
 rm -f $ASM_DIR/overlapStore_rebuild.success
-overlapStore -d $ASM_DIR/ovlStoreBackup/$ASM_PREFIX.ovlStore |  awk 'BEGIN{while(getline line < "'$ASM_DIR/duplicates.iid.txt'"){diid[line]=1}}{if($1<$2){if(diid[$1]!=1 && diid[$2]!=1) print $0;}}'  | filter_overlap_file -t $NUM_THREADS <(gatekeeper  -dumpfragments -withsequence $ASM_DIR/$ASM_PREFIX.gkpStore| grep -P '^fragmentIdent|^fragmentSequence' | \
+overlapStore -d $ASM_DIR/$ASM_PREFIX.ovlStore |  awk 'BEGIN{while(getline line < "'$ASM_DIR/duplicates.iid.txt'"){diid[line]=1}}{if($1<$2){if(diid[$1]!=1 && diid[$2]!=1) print $0;}}'  | filter_overlap_file -t $NUM_THREADS <(gatekeeper  -dumpfragments -withsequence $ASM_DIR/$ASM_PREFIX.gkpStore| grep -P '^fragmentIdent|^fragmentSequence' | \
 awk 'BEGIN{flag=1}{if(flag){print ">"$3}else{ print $3;} flag=1-flag; }') $ASM_DIR/unitig_mers /dev/fd/0 | convertOverlap -ovl | gzip -c > $ASM_DIR/overlaps_dedup.ovb.gz && touch $ASM_DIR/overlap_filter.success || exit
 fi
 
 #rebuild the overlapstore
 if [ ! -e "$ASM_DIR/overlapStore_rebuild.success" ];then
-overlapStoreBuild -o $ASM_DIR/$ASM_PREFIX.ovlStore -M 65536 -g $ASM_DIR/$ASM_PREFIX.gkpStore $ASM_DIR/overlaps_dedup.ovb.gz 1>$ASM_DIR/overlapStore.rebuild.err 2>&1 && rm $ASM_DIR/overlaps_dedup.ovb.gz && touch $ASM_DIR/overlapStore_rebuild.success
+overlapStoreBuild -o $ASM_DIR/$ASM_PREFIX.ovlStore.BUILDING -M 65536 -g $ASM_DIR/$ASM_PREFIX.gkpStore $ASM_DIR/overlaps_dedup.ovb.gz 1>$ASM_DIR/overlapStore.rebuild.err 2>&1 && rm $ASM_DIR/overlaps_dedup.ovb.gz && rm -rf $ASM_DIR/ovlStoreBackup && mkdir -p $ASM_DIR/ovlStoreBackup && mv $ASM_DIR/{4-unitigger,5-consensus,5-consensus-coverage-stat,5-consensus-insert-sizes,genome.tigStore,genome.ovlStore} $ASM_DIR/ovlStoreBackup && mv $ASM_DIR/$ASM_PREFIX.ovlStore.BUILDING $ASM_DIR/$ASM_PREFIX.ovlStore && touch $ASM_DIR/overlapStore_rebuild.success
 fi
 
 touch $ASM_DIR/deduplicate.success
-#overlapStore -d $ASM_DIR/ovlStoreBackup/$ASM_PREFIX.ovlStore | perl -ane 'BEGIN{open(FILE,"'$ASM_DIR/duplicates.iid.txt'");while($l=<FILE>){chomp($l);$diid{$l}=1}}{if($F[0]<$F[1]){if(not(defined($diid{$F[0]})) && not(defined($diid{$F[1]}))){ print join(" ",@F[0..6]),"\n"}}}' | convertOverlap -ovl | gzip -c > $ASM_DIR/overlaps_dedup.ovb.gz && \
-#overlapStoreBuild -o $ASM_DIR/$ASM_PREFIX.ovlStore -M 65536 -g $ASM_DIR/$ASM_PREFIX.gkpStore $ASM_DIR/overlaps_dedup.ovb.gz 1>$ASM_DIR/overlapStore.rebuild.err 2>&1
-
