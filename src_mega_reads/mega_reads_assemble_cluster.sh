@@ -496,7 +496,7 @@ fi
 if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
     log "Refining alignments"
     NUM_LONGREADS_READS_PER_BATCH=`grep --text '^>'  $LONGREADS1 | wc -l | awk '{bs=int($1/1024);if(bs<1000){bs=1000};if(bs>100000){bs=100000};}END{print bs}'` 
-    cat <(ufasta extract -f $COORDS.single.txt $COORDS.txt) <(ufasta extract -v -f $COORDS.single.txt $COORDS.mr.txt)| awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' | add_pb_seq.pl $LONGREADS1 | split_matches_file.pl $NUM_LONGREADS_READS_PER_BATCH .matches && ls .matches.* | xargs -P $NUM_THREADS -I % refine.sh $COORDS % $KMER && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp 
+    cat <(ufasta extract -f $COORDS.single.txt $COORDS.txt) <(ufasta extract -v -f $COORDS.single.txt $COORDS.mr.txt)| awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' | add_pb_seq.pl $LONGREADS1 | split_matches_file.pl $NUM_LONGREADS_READS_PER_BATCH .matches && ls .matches.* | xargs -P $NUM_THREADS -I % ./refine.sh $COORDS % $KMER && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp 
     touch .rerun
 fi
 
@@ -587,9 +587,9 @@ log "Gap consensus"
     chmod 0755 do_consensus.sh && \
     NUM_THREADSd8=$(($NUM_THREADS/8+1)) 
 
-    seq 1 $TOJOIN_BATCHES | xargs -P $NUM_THREADSd8 -I % do_consensus.sh %    
+    seq 1 $TOJOIN_BATCHES | xargs -P $NUM_THREADSd8 -I % ./do_consensus.sh %    
     #the above line may fail due to out of memory, etc -- re-running with 2 CPUs
-    seq 1 $TOJOIN_BATCHES | xargs -P 2 -I % do_consensus.sh % 
+    seq 1 $TOJOIN_BATCHES | xargs -P 2 -I % ./do_consensus.sh % 
     
     cat merges.[0-9]*.txt |perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} if(not(defined($h{$merge}))|| $h{$merge} > $F[1]+$F[4]){$hl{$merge}=join(" ",@F);$h{$merge}=$F[1]+$F[4];}}END{foreach $k(keys %hl){print $hl{$k},"\n"}}' > merges.best.txt && \
     merge_mega-reads.pl < merges.best.txt | \
