@@ -175,8 +175,13 @@ if [ ! -e $LONGREADS ];then
   error_exit "Long reads reads file $LONGREADS not found!";
 fi
 
-PB_SIZE=$(stat -L -c%s $LONGREADS);
-FIRSTCHAR=`zcat -f $LONGREADS | head -c 1`;
+LR_SIZE=$(stat -L -c%s $LONGREADS);
+FIRSTCHAR=`zcat -f $LONGREADS | head -c 1`
+LR_COVERAGE=$(($LR_SIZE/$ESTIMATED_GENOME_SIZE/$PLOIDY))
+
+#here we can set the parameters for low and high coverage runs; for high coverage we disallow single-joins, set max gap to 100, and do no OBT, and for lower coverage (<50x) we allow single joins set max_gap to 1000 and do OBT
+#to be determined of we should do this
+
 if [ "$LONGREADS" = "$NANOPORE" ];then
     if [ ! -s "ont_${PB_HC}xlongest.fa" ] ;then
 	log "Using ${PB_HC}x of the longest ONT reads" 
@@ -192,7 +197,7 @@ if [ "$LONGREADS" = "$NANOPORE" ];then
     fi
     LONGREADS1="ont_${PB_HC}xlongest.fa";
 else
-    if [ $(($PB_SIZE/$ESTIMATED_GENOME_SIZE/$PLOIDY)) -gt ${PB_HC} ];then
+    if [ $LR_COVERAGE -gt $PB_HC ];then
 	log "Pacbio coverage >${PB_HC}x, using ${PB_HC}x of the longest reads";
 	if [ ! -s "pacbio_${PB_HC}xlongest.fa" ] ;then
 	    if [ "$FIRSTCHAR" = ">" ];then
