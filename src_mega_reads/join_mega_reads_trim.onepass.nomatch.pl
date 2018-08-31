@@ -147,9 +147,9 @@ sub process_sorted_lines{
             $join_allowed=1 if($last_mr eq $name && $bgn-$last_coord<-5); #allow rejoining broken megareads when overlapping ends
 
             if($bgn>$last_coord){#if gap -- check if the closure is allowed
-		$max_gap_local=$max_gap_local_fwd[$gap_index]<$max_gap_local_rev[$gap_index]?$max_gap_local_fwd[$gap_index]:$max_gap_local_rev[$gap_index];
-                #$max_gap_local=$max_gap;
-                #$max_gap_local=$max_gap_local/2 if($join_allowed==-1); 
+		#$max_gap_local=$max_gap_local_fwd[$gap_index]<$max_gap_local_rev[$gap_index]?$max_gap_local_fwd[$gap_index]:$max_gap_local_rev[$gap_index];
+                $max_gap_local=$max_gap;
+                $max_gap_local=$max_gap_local/2 if($join_allowed==-1); 
                 if($bgn-$last_coord<=$max_gap_local && ($join_allowed==1 || $join_allowed==-1)){#join or then put N's and later split
 		    $outread.=lc(substr($pbseq{$pb},$last_coord,$bgn-$last_coord-1)).$seq;
                 }else{
