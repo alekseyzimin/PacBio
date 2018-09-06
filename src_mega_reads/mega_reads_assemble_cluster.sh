@@ -769,7 +769,7 @@ if [ ! -e "${CA}/10-gapclose/gapclose.success" ] && [ $(stat -c%s ${CA}/9-termin
   ufasta extract -f <(awk '{print $1;}' read_scaffold.txt) ../../$LONGREADS1 > qrys.all.fa && \
   ufasta extract -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > refs.fa && \
    perl -ane '{
-      $h{$F[1]}="$F[2]_$F[3]";
+      $h{$F[0]}=$F[1];
       }END{
       $flag=0;
       open(FILE,"refs.fa");
