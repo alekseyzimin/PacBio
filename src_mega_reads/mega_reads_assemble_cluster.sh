@@ -786,7 +786,7 @@ if [ ! -e "${CA}/10-gapclose/gapclose.success" ] && [ $(stat -c%s ${CA}/9-termin
           }
         }else{
           print $line if($flag);
-        }}}' refs.txt > refs.renamed.fa && \
+        }}}' read_scaffold.txt > refs.renamed.fa && \
   ufasta extract -v -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > qrys.fa && \
   blasr qrys.fa  refs.renamed.fa  -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \
   sort -k6 -S10% | \
