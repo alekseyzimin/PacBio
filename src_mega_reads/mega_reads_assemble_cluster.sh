@@ -768,7 +768,25 @@ if [ ! -e "${CA}/10-gapclose/gapclose.success" ] && [ $(stat -c%s ${CA}/9-termin
   ufasta extract -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) genome.scf.split.fa > to_join.scf.fa && \
   ufasta extract -f <(awk '{print $1;}' read_scaffold.txt) ../../$LONGREADS1 > qrys.all.fa && \
   ufasta extract -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > refs.fa && \
-  perl -ane '{$s{$F[0]}=$F[1];}END{open(FILE,"refs.fa");while($line=<FILE>){if($line=~/^>/){chomp($line);($rn)=split(/\s+/,$line);print ">",$s{substr($rn,1)},"\n";}else{print $line;}}}' read_scaffold.txt > refs.renamed.fa && \
+   perl -ane '{
+      $h{$F[1]}="$F[2]_$F[3]";
+      }END{
+      $flag=0;
+      open(FILE,"refs.fa");
+      while($line=<FILE>){
+        if($line=~/^>/){
+          chomp($line);
+          @f=split(/\s+/,$line);
+          if(defined($h{substr($f[0],1)}) && not(defined($output{$h{substr($f[0],1)}}))){
+            print ">",$h{substr($f[0],1)},"\n";
+            $output{$h{substr($f[0],1)}}=1;
+            $flag=1;
+          }else{
+            $flag=0;
+          }
+        }else{
+          print $line if($flag);
+        }}}' refs.txt > refs.renamed.fa && \
   ufasta extract -v -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > qrys.fa && \
   blasr qrys.fa  refs.renamed.fa  -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \
   sort -k6 -S10% | \
