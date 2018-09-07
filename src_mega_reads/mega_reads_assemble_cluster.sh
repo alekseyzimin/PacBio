@@ -650,6 +650,8 @@ if [ $ESTIMATED_GENOME_SIZE -gt 1 ];then
     TCOVERAGE=$COVERAGE;
 fi
 
+OVLREFSIZE=`ls $SR_FRG $COORDS.1.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | perl -ane '$n+=$F[0];END{if(int($n/750)<50000){print "50000";}else{print int($n/750)}}'`
+
 rm -f .rerun
 rm -f $CA.log
 
@@ -687,7 +689,7 @@ frgCorrConcurrency=6
 mbtThreads=$NUM_THREADS
 ovlThreads=$OVL_THREADS
 ovlHashBlockLength=10000000
-ovlRefBlockSize=5000000
+ovlRefBlockSize=$OVLREFSIZE
 ovlConcurrency=$NUM_THREADS
 doOverlapBasedTrimming=1
 doUnitigSplitting=0
