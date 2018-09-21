@@ -128,8 +128,9 @@ sub process_sorted_lines{
     foreach $l(@args){
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$l};
 	$seq=substr($mseq,$mbgn-1,$mend-$mbgn+1);
-        die("inconsistent sequence length") if(not(length($mseq)==$mlen));
-        die("pacbio read $pb does not exist in the sequence file!!!") if(not(defined($pbseq{$pb})));
+        next if(not(length($mseq)==$mlen));
+        #die("inconsistent sequence length for $pb") if(not(length($mseq)==$mlen));
+        die("long read $pb does not exist in the sequence file!!!") if(not(defined($pbseq{$pb})));
         $gap_index++;
         if($outread eq ""){
 	    $outread=$seq; # the first chunk

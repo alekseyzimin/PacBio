@@ -87,7 +87,7 @@ fi
 ################setting parameters#########################
 MER=17
 B=20
-d=0.05
+d=0.15
 KMER=41
 COORDS=mr.$KMER.$MER.$B.$d
 CA=CA.${COORDS}
@@ -176,35 +176,26 @@ JF_SIZE=$(stat -c%s $KUNITIGS);
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 echo "Mega-reads pass 1"
 if numactl --show 1> /dev/null 2>&1;then
-numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
+numactl --interleave=all create_mega_reads -s $JF_SIZE -O 1.1 -e 5 -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
 else
-create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
+create_mega_reads -s $JF_SIZE -O 1.1 -e 5 -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt
 fi
 touch .rerun
 fi
 
-if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
-echo "Refining alignments"
-NUM_LONGREADS_READS_PER_BATCH=`grep --text '^>'  $REF_SPLIT | wc -l | awk '{bs=int($1/100);if(bs<100){bs=100};if(bs>100000){bs=100000};}END{print bs}'`
-awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.txt | add_pb_seq.pl $REF_SPLIT | split_matches_file.pl $NUM_LONGREADS_READS_PER_BATCH .matches && ls .matches.* | xargs -P $NUM_THREADS -I % refine.sh $COORDS % $KMER && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp
-#awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.txt | add_pb_seq.pl $REF_SPLIT > .matches.0 && refine.sh $COORDS .matches.0 $KMER && mv $COORDS.matches.0.all.txt.tmp $COORDS.all.txt && rm .matches.0
-touch .rerun
-fi
+#if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
+#echo "Refining alignments"
+#NUM_LONGREADS_READS_PER_BATCH=`grep --text '^>'  $REF_SPLIT | wc -l | awk '{bs=int($1/100);if(bs<100){bs=100};if(bs>100000){bs=100000};}END{print bs}'`
+#awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.txt | add_pb_seq.pl $REF_SPLIT | split_matches_file.pl $NUM_LONGREADS_READS_PER_BATCH .matches && ls .matches.* | xargs -P $NUM_THREADS -I % refine.sh $COORDS % $KMER && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp
+##awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.txt | add_pb_seq.pl $REF_SPLIT > .matches.0 && refine.sh $COORDS .matches.0 $KMER && mv $COORDS.matches.0.all.txt.tmp $COORDS.all.txt && rm .matches.0
+#touch .rerun
+#fi
 
 #this is different from joining the mega-reads, because we create scaffolds, not contigs; one scaffold per reference contig
 if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 echo "Joining"
-join_mega_reads_trim.onepass.ref.pl < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>/dev/null && mv $COORDS.1.fa.tmp $COORDS.1.fa
+awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.txt |join_mega_reads_trim.onepass.ref.pl 1>$COORDS.1.fa.tmp 2>/dev/null && mv $COORDS.1.fa.tmp $COORDS.1.fa
 touch .rerun
-fi
-
-#now we attempt to close gaps in reference assisted scaffolds
-if [ ! -s $COORDS.1.gapclose.fa ] || [ -e .rerun ];then
-echo "Closing gaps in reference assisted scaffolds"
-(mkdir -p ref_gapclose && \
-cd ref_gapclose && \
-closeGapsInScaffFastaFile.perl --split 1 --max-reads-in-memory 1000000000 -s $(($ESTIMATED_GENOME_SIZE*5)) --scaffold-fasta-file ../$COORDS.1.fa  --reads-file ../pe.cor.fa --output-directory gapclose.tmp --min-kmer-len 19 --max-kmer-len 127 --num-threads $NUM_THREADS --contig-length-for-joining 300 --contig-length-for-fishing 450 --reduce-read-set-kmer-size 25 1>gapClose.err 2>&1 && \
-mv gapclose.tmp/genome.scf.fasta ../$COORDS.1.gapclose.fa ) || error_exit "reference gapclose failed"
 fi
 
 SR_FRG=$COORDS.sr.frg
@@ -278,6 +269,26 @@ fi
 
 #we start from here if the scaffolder has been run or continue here  
 $CA_PATH/runCA -s runCA.spec -p genome -d $CA $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+
+#now we attempt to close gaps in reference assisted scaffolds
+if [ ! -e gapclose.success ] || [ -e .rerun ];then
+echo "Closing gaps in reference assisted scaffolds"
+(mkdir -p ref_gapclose && \
+cd ref_gapclose && \
+splitScaffoldsAtNs.pl  < ../$COORDS.1.fa > genome.scf.split.fa
+grep '^>' --text genome.scf.split.fa | perl -ane '{($rn,$coord)=split(/\./,substr($F[0],1));$h{$rn}.=substr($F[0],1)." ";}END{foreach $r(keys %h){@f=split(/\s+/,$h{$r}); for ($i=0;$i<$#f;$i++){print $f[$i]," ",$f[$i+1],"\n"}}}' > valid_join_pairs.txt && \
+ufasta extract -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) genome.scf.split.fa > to_join.scf.fa
+nucmer --delta scf_join.delta -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.scf.fa ../${CA}/9-terminator/genome.ctg.fasta  && \
+delta-filter -1 scf_join.delta > scf_join.1delta && \
+show-coords -lcHq scf_join.1delta > scf_join.coords && \
+cat scf_join.coords | extract_merges_mega-reads.pl ../${CA}/9-terminator/genome.ctg.fasta  valid_join_pairs.txt > merges.txt && \
+cat <(ufasta extract -v -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) genome.scf.split.fa) <(merge_mega-reads.pl < merges.txt | create_merged_mega-reads.pl to_join.scf.fa  merges.txt) > genome.scf.joined.fa.tmp && mv genome.scf.joined.fa.tmp genome.scf.fasta && mv genome.scf.fasta ../$COORDS.1.gapclose.fa && touch ../gapclose.success ) || error_exit "reference gapclose failed"
+
+#closeGapsInScaffFastaFile.perl --split 1 --max-reads-in-memory 1000000000 -s $(($ESTIMATED_GENOME_SIZE*5)) --scaffold-fasta-file ../$COORDS.1.fa  --reads-file ../pe.cor.fa --output-directory gapclose.tmp --min-kmer-len 19 --max-kmer-len 127 --num-threads $NUM_THREADS --contig-length-for-joining 300 --contig-length-for-fishing 450 --reduce-read-set-kmer-size 25 1>gapClose.err 2>&1 && \
+#mv gapclose.tmp/genome.scf.fasta ../$COORDS.1.gapclose.fa ) || error_exit "reference gapclose failed"
+
+fi
+
 
 #reconcile the reference "scaffolds" with the Illumina assembly
 if [ ! -e reconcile.success ];then

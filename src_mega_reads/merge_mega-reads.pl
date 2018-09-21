@@ -32,6 +32,7 @@ foreach my  $e(keys %edge_fwd){
   $path="$e F ";
   my $current_dir="F";
   my $c=$e;
+  my $last=0;
   do{
     if($current_dir eq "F"){
       ($c,$d,$g)=split(/\s+/,$edge_fwd{$c});
@@ -39,13 +40,13 @@ foreach my  $e(keys %edge_fwd){
       ($c,$d,$g)=split(/\s+/,$edge_rev{$c});
       $d=~tr/FR/RF/;
     }
-    next if($ctg_used{$c});# if found a fork
+    $last=1 if($ctg_used{$c});# if found a fork
 #print "DEBUG $path $g $c $d | $current_dir\n";
     $path.="$g $c $d ";
     $current_dir=$d;
 #die("fork detected in the forward loop $c $path") if($ctg_used{$c});
     $ctg_used{$c}=1;
-  }while(defined($edge_rev{$c}) && defined($edge_fwd{$c}));
+  }while(defined($edge_rev{$c}) && defined($edge_fwd{$c}) && $last==0);
   print $path,"\n";
 }
 
@@ -57,6 +58,7 @@ foreach my $e(keys %edge_rev){
   $path=" $e F";
   my $current_dir="F";
   my $c=$e;
+  my $last=0;
   do{
     if($current_dir eq "F"){
       ($c,$d,$g)=split(/\s+/,$edge_rev{$c});
@@ -64,12 +66,12 @@ foreach my $e(keys %edge_rev){
       ($c,$d,$g)=split(/\s+/,$edge_fwd{$c});
       $d=~tr/FR/RF/;
     }
-    next if($ctg_used{$c});
+    $last=1 if($ctg_used{$c});
     $path=" $c $d $g".$path;
     $current_dir=$d;
 #die("fork detected in the reverse loop $c $path") if($ctg_used{$c});
     $ctg_used{$c}=1;
-  }while(defined($edge_rev{$c}) && defined($edge_fwd{$c}));
+  }while(defined($edge_rev{$c}) && defined($edge_fwd{$c}) && $last==0);
   $path=~s/^\s//;
   print $path,"\n";
 }
