@@ -33,51 +33,53 @@ while($line=<STDIN>){
 
 #traverse the graph, go though edges, find terminal nodes and construct the graph
 my $path="";
-for my $e(keys %edge_fwd){
-    next if(defined($edge_rev{$e})); #skip if internal node
-    next if(defined($ctg_used{$e}));
-    $ctg_used{$e}=1;
-    $path="$e F ";
-    my $current_dir="F";
-    my $c=$e;
-    do{
-	if($current_dir eq "F"){
-($c,$d,$g)=split(/\s+/,$edge_fwd{$c});
-	}else{
-($c,$d,$g)=split(/\s+/,$edge_rev{$c});
-$d=~tr/FR/RF/;
-}
-last if($ctg_used{$c});# if found a fork
-#print "DEBUG $path $g $c $d | $current_dir\n";
-$path.="$g $c $d ";
-$current_dir=$d;
-#die("fork detected in the forward loop $c $path") if($ctg_used{$c});
-$ctg_used{$c}=1;
-    }while(defined($edge_rev{$c}) && defined($edge_fwd{$c}));
-print $path,"\n";
-}
-#print "reverse loop\n";
-for my $e(keys %edge_rev){
-    next if(defined($edge_fwd{$e})); #skip if internal node
-next if(defined($ctg_used{$e}));
-$ctg_used{$e}=1;
-$path=" $e F";
-my $current_dir="F";
-my $c=$e;
-do{
+foreach my $e(keys %edge_fwd){
+  next if(defined($edge_rev{$e})); #skip if internal node
+  next if(defined($ctg_used{$e}));
+  $ctg_used{$e}=1;
+  $path="$e F ";
+  my $current_dir="F";
+  my $c=$e;
+  my $last=0;
+  do{
     if($current_dir eq "F"){
-($c,$d,$g)=split(/\s+/,$edge_rev{$c});
-}else{
-($c,$d,$g)=split(/\s+/,$edge_fwd{$c});
-$d=~tr/FR/RF/;
+      ($c,$d,$g)=split(/\s+/,$edge_fwd{$c});
+    }else{
+      ($c,$d,$g)=split(/\s+/,$edge_rev{$c});
+      $d=~tr/FR/RF/;
+    }
+    $last=1 if($ctg_used{$c});# if found a fork
+    $path.="$g $c $d ";
+    $current_dir=$d;
+#die("fork detected in the forward loop $c $path") if($ctg_used{$c});
+    $ctg_used{$c}=1;
+  }while(defined($edge_rev{$c}) && defined($edge_fwd{$c}) && $last==0);
+  print $path,"\n";
 }
-last if($ctg_used{$c});
-$path=" $c $d $g".$path;
-$current_dir=$d;
+
+#print "reverse loop\n";
+foreach my $e(keys %edge_rev){
+  next if(defined($edge_fwd{$e})); #skip if internal node
+  next if(defined($ctg_used{$e}));
+  $ctg_used{$e}=1;
+  $path=" $e F";
+  my $current_dir="F";
+  my $c=$e;
+  my $last=0;
+  do{
+    if($current_dir eq "F"){
+      ($c,$d,$g)=split(/\s+/,$edge_rev{$c});
+    }else{
+      ($c,$d,$g)=split(/\s+/,$edge_fwd{$c});
+      $d=~tr/FR/RF/;
+    }
+    $last=1 if($ctg_used{$c});
+    $path=" $c $d $g".$path;
+    $current_dir=$d;
 #die("fork detected in the reverse loop $c $path") if($ctg_used{$c});
-$ctg_used{$c}=1;
-}while(defined($edge_rev{$c}) && defined($edge_fwd{$c}));
-$path=~s/^\s//;
-print $path,"\n";
+    $ctg_used{$c}=1;
+  }while(defined($edge_rev{$c}) && defined($edge_fwd{$c}) && $last==0);
+  $path=~s/^\s//;
+  print $path,"\n";
 }
 
