@@ -5,7 +5,7 @@ export PATH=$MYPATH:$PATH;
 set -o pipefail
 NUM_THREADS=1
 MIN_MATCH=1000
-IDENTITY=99
+IDENTITY=98
 
 
 function error_exit {
@@ -24,7 +24,7 @@ do
             NUM_THREADS="$2"
             shift
             ;;
-        -i|-identity)
+        -i|--identity)
             IDENTITY="$2"
             shift
             ;;
@@ -74,7 +74,7 @@ fi
 
 #delta-filter
 if [ ! -e merge_filter.success ];then
-parallel_delta-filter.sh $DELTAFILE "-q -l 200" 9 && mv $DELTAFILE.fdelta $DELTAFILE.r.delta && \
+parallel_delta-filter.sh $DELTAFILE "-1 -l 200" 9 && mv $DELTAFILE.fdelta $DELTAFILE.r.delta && \
 touch merge_filter.success && rm -f  merge_merge.success || exit
 fi
 

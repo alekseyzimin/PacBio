@@ -27,7 +27,7 @@ do
             QRY="$2"
             shift
             ;;
-        -s|--similarity)
+        -i|--identity)
             SIMILARITY_RATE="$2"
             shift
             ;;

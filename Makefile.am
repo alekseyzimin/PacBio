@@ -115,7 +115,7 @@ dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_nomatch.sh src_mega_reads
 		    src_mega_reads/split_long_unitigs.pl \
 		    src_mega_reads/super-read_to_mega-read.pl  src_mega_reads/trim_by_kunitigs.pl  src_mega_reads/trim_mega_reads.pl \
 		    src_reconcile/compute_coverage.pl  \
-		    src_reconcile/evaluate_splits.pl  \
+		    src_reconcile/evaluate_splits.pl  src_reconcile/evaluate_consensus_error_rate.sh\
 		    src_reconcile/extract_single_best_match_coords_file.pl \
 		    src_reconcile/reconcile_hybrid_contigs_chromosomes.sh \
 		    src_reconcile/break_contigs.pl src_reconcile/merge_sequences_simple.pl \

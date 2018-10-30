@@ -17,7 +17,7 @@ while($line=<STDIN>){
   while($line=<STDIN>){
     chomp($line);
     my $ctg="";
-    if($line=~/^b/ || $line=~/^a/){
+    if($line=~/^break/ || $line=~/^alnbreak/){
       push(@breaks,$line);
     }elsif($line=~/^\-\-/){
       my $mincov=1000;

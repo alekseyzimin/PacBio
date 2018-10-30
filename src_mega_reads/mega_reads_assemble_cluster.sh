@@ -764,12 +764,12 @@ if [ ! -e "${CA}/10-gapclose/gapclose.success" ] && [ $(stat -c%s ${CA}/9-termin
   log "Closing gaps in scaffolds"
   mkdir -p ${CA}/10-gapclose
   (cd ${CA}/10-gapclose && \
-  process_scaffold_gaps.pl ../9-terminator/genome.posmap.ctgscf ../9-terminator/genome.posmap.frgctg |sort -k 2 -S 10% > read_scaffold.txt && \
-  splitScaffoldsAtNs.pl  < ../9-terminator/genome.scf.fasta > genome.scf.split.fa && \
+  $MYPATH/process_scaffold_gaps.pl ../9-terminator/genome.posmap.ctgscf ../9-terminator/genome.posmap.frgctg |sort -k 2 -S 10% > read_scaffold.txt && \
+  $MYPATH/splitScaffoldsAtNs.pl  < ../9-terminator/genome.scf.fasta > genome.scf.split.fa && \
   grep '^>' --text genome.scf.split.fa | perl -ane '{($rn,$coord)=split(/\./,substr($F[0],1));$h{$rn}.=substr($F[0],1)." ";}END{foreach $r(keys %h){@f=split(/\s+/,$h{$r}); for ($i=0;$i<$#f;$i++){print $f[$i]," ",$f[$i+1],"\n"}}}' > valid_join_pairs.txt && \
-  ufasta extract -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) genome.scf.split.fa > to_join.scf.fa && \
-  ufasta extract -f <(awk '{print $1;}' read_scaffold.txt) ../../$LONGREADS1 > qrys.all.fa && \
-  ufasta extract -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > refs.fa && \
+  $MYPATH/ufasta extract -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) genome.scf.split.fa > to_join.scf.fa && \
+  $MYPATH/ufasta extract -f <(awk '{print $1;}' read_scaffold.txt) ../../$LONGREADS1 > qrys.all.fa && \
+  $MYPATH/ufasta extract -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > refs.fa && \
    perl -ane '{
       $h{$F[0]}=$F[1];
       }END{
@@ -789,17 +789,17 @@ if [ ! -e "${CA}/10-gapclose/gapclose.success" ] && [ $(stat -c%s ${CA}/9-termin
         }else{
           print $line if($flag);
         }}}' read_scaffold.txt > refs.renamed.fa && \
-  ufasta extract -v -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > qrys.fa && \
-  blasr qrys.fa  refs.renamed.fa  -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \
+  $MYPATH/ufasta extract -v -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > qrys.fa && \
+  $CAPATH/blasr qrys.fa  refs.renamed.fa  -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \
   sort -k6 -S10% | \
-  pbdagcon -j $NUM_THREADS -t 0 -c 1 /dev/stdin  2>pbdagcon.err | \
+  $CAPATH/pbdagcon -j $NUM_THREADS -t 0 -c 1 /dev/stdin  2>pbdagcon.err | \
   tee join_consensus.fasta | \
-  nucmer --delta /dev/stdout -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.scf.fa /dev/stdin | \
-  show-coords -lcHq /dev/stdin > scf_join.coords && \
+  $MYPATH/nucmer --delta /dev/stdout -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.scf.fa /dev/stdin | \
+  $MYPATH/show-coords -lcHq /dev/stdin > scf_join.coords && \
   perl -ane '{($scf1)=split(/\./,$F[-1]);($scf2)=split(/\./,$F[-2]); print if($scf1 eq $scf2);}' scf_join.coords | \
-  extract_merges_mega-reads.pl join_consensus.fasta  valid_join_pairs.txt > merges.txt && \
+  $MYPATH/extract_merges_mega-reads.pl join_consensus.fasta  valid_join_pairs.txt > merges.txt && \
   perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} if(not(defined($h{$merge}))|| $h{$merge} > $F[1]+$F[4]){$hl{$merge}=join(" ",@F);$h{$merge}=$F[1]+$F[4];}}END{foreach $k(keys %hl){print $hl{$k},"\n"}}' merges.txt > merges.best.txt && \
-  cat <(ufasta extract -v -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) genome.scf.split.fa) <(merge_mega-reads.pl < merges.best.txt | create_merged_mega-reads.pl to_join.scf.fa  merges.best.txt) > genome.scf.joined.fa.tmp && mv genome.scf.joined.fa.tmp genome.scf.fasta && touch gapclose.success 
+  cat <($MYPATH/ufasta extract -v -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) genome.scf.split.fa) <($MYPATH/merge_mega-reads.pl < merges.best.txt | $MYPATH/create_merged_mega-reads.pl to_join.scf.fa  merges.best.txt) > genome.scf.joined.fa.tmp && mv genome.scf.joined.fa.tmp genome.scf.fasta && touch gapclose.success 
   )
 fi
 
