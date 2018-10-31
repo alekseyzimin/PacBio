@@ -560,8 +560,8 @@ log "Gap consensus"
     awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")*.75 && $6==1) {if($3==prev3 && $4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1.allowed |grep '^1 ' |awk '{print $0}' > refs.txt && \
     awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")*.75 && $6==1) {if($3==prev3 && $4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1.allowed |awk '{print $0}' > qrys.txt && \
     if [ ! -s qrys.all.fa ]; then $MYPATH/ufasta extract -f <(awk '{print $2}' qrys.txt) ../$LONGREADS1 > qrys.all.fa.tmp && mv qrys.all.fa.tmp qrys.all.fa; fi && \
-    $MYPATH/ufasta extract -v -f <(awk '{print $2}' refs.txt) qrys.all.fa > qrys.fa && \
-    $MYPATH/ufasta extract -f <(awk '{print $2}' refs.txt) qrys.all.fa > refs.fa && \
+    $MYPATH/ufasta extract -v -f <(awk '{print $2}' refs.txt) qrys.all.fa | $MYPATH/ufasta one > qrys.fa && \
+    $MYPATH/ufasta extract -f <(awk '{print $2}' refs.txt) qrys.all.fa | $MYPATH/ufasta one > refs.fa && \
     perl -ane '{
       $h{$F[1]}="$F[2]_$F[3]";
       }END{
@@ -571,16 +571,15 @@ log "Gap consensus"
         if($line=~/^>/){
           chomp($line);
           @f=split(/\s+/,$line);
-          if(defined($h{substr($f[0],1)}) && not(defined($output{$h{substr($f[0],1)}}))){
-            print ">",$h{substr($f[0],1)},"\n";
-            $output{$h{substr($f[0],1)}}=1;
-            $flag=1;
-          }else{
-            $flag=0;
+          if(defined($h{substr($f[0],1)}))
+            $line=<FILE>;
+            chomp($line);
+            $hseq{substr($f[0],1)}=$line;
           }
-        }else{
-          print $line if($flag);
-        }}}' refs.txt > refs.renamed.fa && \
+        }
+      foreach $name(keys %hseq){
+      print ">$name\n$hseq{$name}\n";
+      }}' refs.txt > refs.renamed.fa && \
     rm -f ${ref_names[@]} && $MYPATH/ufasta split -i  refs.renamed.fa ${ref_names[@]} && \
     $MYPATH/split_reads_to_join.pl qrys.txt to_blasr ${ref_names[@]} < qrys.fa && \
     perl -ane '{if($F[0] =~ /^>/){$rn=$F[0];}else{$seq=$F[0]; $seq=~ tr/a-zA-Z//s; print "$rn\n$F[0]\n" if(length($seq)>length($F[0])*0.1);}}' ../${COORDS}.1.to_join.fa.tmp | $MYPATH/split_reads_to_join.pl qrys.txt to_join ${ref_names[@]} && \
@@ -776,8 +775,8 @@ if [ ! -e "${CA}/10-gapclose/gapclose.success" ] && [ $(stat -c%s ${CA}/9-termin
   $MYPATH/ufasta extract -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) genome.scf.split.fa > to_join.scf.fa && \
   $MYPATH/ufasta extract -f <(awk '{print $1;}' read_scaffold.txt) ../../$LONGREADS1 > qrys.all.fa && \
   $MYPATH/ufasta extract -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > refs.fa && \
-   perl -ane '{
-      $h{$F[0]}=$F[1];
+  perl -ane '{
+      $h{$F[1]}="$F[2]_$F[3]";
       }END{
       $flag=0;
       open(FILE,"refs.fa");
@@ -785,16 +784,15 @@ if [ ! -e "${CA}/10-gapclose/gapclose.success" ] && [ $(stat -c%s ${CA}/9-termin
         if($line=~/^>/){
           chomp($line);
           @f=split(/\s+/,$line);
-          if(defined($h{substr($f[0],1)}) && not(defined($output{$h{substr($f[0],1)}}))){
-            print ">",$h{substr($f[0],1)},"\n";
-            $output{$h{substr($f[0],1)}}=1;
-            $flag=1;
-          }else{
-            $flag=0;
+          if(defined($h{substr($f[0],1)}))
+            $line=<FILE>;
+            chomp($line);
+            $hseq{substr($f[0],1)}=$line;
           }
-        }else{
-          print $line if($flag);
-        }}}' read_scaffold.txt > refs.renamed.fa && \
+        }
+      foreach $name(keys %hseq){
+      print ">$name\n$hseq{$name}\n";
+      }}' read_scaffold.txt > refs.renamed.fa && \
   $MYPATH/ufasta extract -v -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > qrys.fa && \
   $CAPATH/blasr qrys.fa  refs.renamed.fa  -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \
   sort -k6 -S10% | \
