@@ -571,14 +571,15 @@ log "Gap consensus"
         if($line=~/^>/){
           chomp($line);
           @f=split(/\s+/,$line);
-          if(defined($h{substr($f[0],1)}))
+          if(defined($h{substr($f[0],1)})){
             $line=<FILE>;
             chomp($line);
             $hseq{substr($f[0],1)}=$line;
           }
         }
+      }
       foreach $name(keys %hseq){
-      print ">$name\n$hseq{$name}\n";
+      print ">$h{$name}\n$hseq{$name}\n";
       }}' refs.txt > refs.renamed.fa && \
     rm -f ${ref_names[@]} && $MYPATH/ufasta split -i  refs.renamed.fa ${ref_names[@]} && \
     $MYPATH/split_reads_to_join.pl qrys.txt to_blasr ${ref_names[@]} < qrys.fa && \
@@ -776,7 +777,7 @@ if [ ! -e "${CA}/10-gapclose/gapclose.success" ] && [ $(stat -c%s ${CA}/9-termin
   $MYPATH/ufasta extract -f <(awk '{print $1;}' read_scaffold.txt) ../../$LONGREADS1 > qrys.all.fa && \
   $MYPATH/ufasta extract -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > refs.fa && \
   perl -ane '{
-      $h{$F[1]}="$F[2]_$F[3]";
+      $h{$F[0]}=$F[1];
       }END{
       $flag=0;
       open(FILE,"refs.fa");
@@ -784,19 +785,20 @@ if [ ! -e "${CA}/10-gapclose/gapclose.success" ] && [ $(stat -c%s ${CA}/9-termin
         if($line=~/^>/){
           chomp($line);
           @f=split(/\s+/,$line);
-          if(defined($h{substr($f[0],1)}))
+          if(defined($h{substr($f[0],1)})){
             $line=<FILE>;
             chomp($line);
             $hseq{substr($f[0],1)}=$line;
           }
         }
+      }
       foreach $name(keys %hseq){
-      print ">$name\n$hseq{$name}\n";
+      print ">$h{$name}\n$hseq{$name}\n";
       }}' read_scaffold.txt > refs.renamed.fa && \
   $MYPATH/ufasta extract -v -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > qrys.fa && \
-  $CAPATH/blasr qrys.fa  refs.renamed.fa  -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \
+  $CA_PATH/blasr qrys.fa  refs.renamed.fa  -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \
   sort -k6 -S10% | \
-  $CAPATH/pbdagcon -j $NUM_THREADS -t 0 -c 1 /dev/stdin  2>pbdagcon.err | \
+  $CA_PATH/pbdagcon -j $NUM_THREADS -t 0 -c 1 /dev/stdin  2>pbdagcon.err | \
   tee join_consensus.fasta | \
   $MYPATH/nucmer --delta /dev/stdout -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.scf.fa /dev/stdin | \
   $MYPATH/show-coords -lcHq /dev/stdin > scf_join.coords && \
