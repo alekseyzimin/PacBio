@@ -3,6 +3,7 @@
 set -o pipefail
 set -e
 NUM_THREADS=4
+MEM=16000000000
 
 #parsing arguments
 while [[ $# > 0 ]]
@@ -20,6 +21,10 @@ do
             ;;
         -r|--reads)
             READS="$2";
+            shift
+            ;;
+        -m|--memory)
+            MEM="$2";
             shift
             ;;
         -v|--verbose)
@@ -60,7 +65,7 @@ fi
 
 if [ ! -e $BASM.sort.success ];then
 rm -f $BASM.vc.success
-$SAMTOOLS sort -m64000000000  $BASM.unSorted.bam $BASM.alignSorted && \
+$SAMTOOLS sort -m $MEM  $BASM.unSorted.bam $BASM.alignSorted && \
 $SAMTOOLS index $BASM.alignSorted.bam && touch  $BASM.sort.success
 fi
 

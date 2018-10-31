@@ -541,6 +541,9 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 log "Gap consensus"    
     #making consensus for large gaps
     mkdir -p ${COORDS}.join_consensus.tmp && \
+    
+    #start subshell execution
+
     (cd ${COORDS}.join_consensus.tmp;
     TOJOIN_BATCHES=$(($(stat -c%s -L ../${COORDS}.1.to_join.fa.tmp)/100000000))
     if [ $TOJOIN_BATCHES -le 1 ];then
@@ -556,9 +559,9 @@ log "Gap consensus"
 
     awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")*.75 && $6==1) {if($3==prev3 && $4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1.allowed |grep '^1 ' |awk '{print $0}' > refs.txt && \
     awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")*.75 && $6==1) {if($3==prev3 && $4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1.allowed |awk '{print $0}' > qrys.txt && \
-    if [ ! -s qrys.all.fa ]; then ufasta extract -f <(awk '{print $2}' qrys.txt) ../$LONGREADS1 > qrys.all.fa.tmp && mv qrys.all.fa.tmp qrys.all.fa; fi && \
-    ufasta extract -v -f <(awk '{print $2}' refs.txt) qrys.all.fa > qrys.fa && \
-    ufasta extract -f <(awk '{print $2}' refs.txt) qrys.all.fa > refs.fa && \
+    if [ ! -s qrys.all.fa ]; then $MYPATH/ufasta extract -f <(awk '{print $2}' qrys.txt) ../$LONGREADS1 > qrys.all.fa.tmp && mv qrys.all.fa.tmp qrys.all.fa; fi && \
+    $MYPATH/ufasta extract -v -f <(awk '{print $2}' refs.txt) qrys.all.fa > qrys.fa && \
+    $MYPATH/ufasta extract -f <(awk '{print $2}' refs.txt) qrys.all.fa > refs.fa && \
     perl -ane '{
       $h{$F[1]}="$F[2]_$F[3]";
       }END{
@@ -578,18 +581,19 @@ log "Gap consensus"
         }else{
           print $line if($flag);
         }}}' refs.txt > refs.renamed.fa && \
-    rm -f ${ref_names[@]} && ufasta split -i  refs.renamed.fa ${ref_names[@]} && \
-    split_reads_to_join.pl qrys.txt to_blasr ${ref_names[@]} < qrys.fa && \
-    perl -ane '{if($F[0] =~ /^>/){$rn=$F[0];}else{$seq=$F[0]; $seq=~ tr/a-zA-Z//s; print "$rn\n$F[0]\n" if(length($seq)>length($F[0])*0.1);}}' ../${COORDS}.1.to_join.fa.tmp | split_reads_to_join.pl qrys.txt to_join ${ref_names[@]} && \
+    rm -f ${ref_names[@]} && $MYPATH/ufasta split -i  refs.renamed.fa ${ref_names[@]} && \
+    $MYPATH/split_reads_to_join.pl qrys.txt to_blasr ${ref_names[@]} < qrys.fa && \
+    perl -ane '{if($F[0] =~ /^>/){$rn=$F[0];}else{$seq=$F[0]; $seq=~ tr/a-zA-Z//s; print "$rn\n$F[0]\n" if(length($seq)>length($F[0])*0.1);}}' ../${COORDS}.1.to_join.fa.tmp | $MYPATH/split_reads_to_join.pl qrys.txt to_join ${ref_names[@]} && \
     grep '^>' --text ../$COORDS.1.to_join.fa.tmp | perl -ane '{($rn,$coord)=split(/\./,substr($F[0],1));$h{$rn}.=substr($F[0],1)." ";}END{foreach $r(keys %h){@f=split(/\s+/,$h{$r}); for ($i=0;$i<$#f;$i++){print $f[$i]," ",$f[$i+1],"\n"}}}' > valid_join_pairs.txt && \
     for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_join.$F.fa;echo "ACGT" >> to_join.$F.fa;done && \
-    for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_blasr.$F.fa;echo "ACGT" >> to_blasr.$F.fa;done && \
-    echo "#!/bin/bash" > do_consensus.sh && \
-    echo "set -o pipefail" >> do_consensus.sh && \
-    echo "if [ ! -e consensus.\$1.success ];then" >> do_consensus.sh && \
-    echo "$CA_PATH/blasr to_blasr.\$1.fa   ref.\$1.fa  -nproc 16 -bestn 10 -m 5 2>blasr.err | sort -k6 -S2% | $CA_PATH/pbdagcon -j 8 -t 0 -c 1 /dev/stdin  2>pbdagcon.err | tee join_consensus.\$1.fasta | $MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t 16 to_join.\$1.fa /dev/stdin | $MYPATH/filter_delta_file_for_qrys.pl qrys.txt | $MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$1 && cat coords.\$1 | $MYPATH/extract_merges_mega-reads.pl join_consensus.\$1.fasta  valid_join_pairs.txt > merges.\$1.txt && touch consensus.\$1.success" >> do_consensus.sh && \
-    echo "fi" >> do_consensus.sh && \
-    chmod 0755 do_consensus.sh && \
+    for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_blasr.$F.fa;echo "ACGT" >> to_blasr.$F.fa;done 
+
+    echo "#!/bin/bash" > ./do_consensus.sh && \
+    echo "set -o pipefail" >> ./do_consensus.sh && \
+    echo "if [ ! -e consensus.\$1.success ];then" >> ./do_consensus.sh && \
+    echo "$CA_PATH/blasr to_blasr.\$1.fa   ref.\$1.fa  -nproc 16 -bestn 10 -m 5 2>blasr.err | sort -k6 -S2% | $CA_PATH/pbdagcon -j 8 -t 0 -c 1 /dev/stdin  2>pbdagcon.err | tee join_consensus.\$1.fasta | $MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t 16 to_join.\$1.fa /dev/stdin | $MYPATH/filter_delta_file_for_qrys.pl qrys.txt | $MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$1 && cat coords.\$1 | $MYPATH/extract_merges_mega-reads.pl join_consensus.\$1.fasta  valid_join_pairs.txt > merges.\$1.txt && touch consensus.\$1.success" >> ./do_consensus.sh && \
+    echo "fi" >> ./do_consensus.sh && \
+    chmod 0755 ./do_consensus.sh && \
     NUM_THREADSd8=$(($NUM_THREADS/8+1)) 
 
     seq 1 $TOJOIN_BATCHES | xargs -P $NUM_THREADSd8 -I % ./do_consensus.sh %    
@@ -597,11 +601,13 @@ log "Gap consensus"
     seq 1 $TOJOIN_BATCHES | xargs -P 2 -I % ./do_consensus.sh % 
     
     cat merges.[0-9]*.txt |perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} if(not(defined($h{$merge}))|| $h{$merge} > $F[1]+$F[4]){$hl{$merge}=join(" ",@F);$h{$merge}=$F[1]+$F[4];}}END{foreach $k(keys %hl){print $hl{$k},"\n"}}' > merges.best.txt && \
-    merge_mega-reads.pl < merges.best.txt | \
-    create_merged_mega-reads.pl ../${COORDS}.1.to_join.fa.tmp merges.best.txt > ${COORDS}.1.joined.fa.tmp && \
+    $MYPATH/merge_mega-reads.pl < merges.best.txt | \
+    $MYPATH/create_merged_mega-reads.pl ../${COORDS}.1.to_join.fa.tmp merges.best.txt > ${COORDS}.1.joined.fa.tmp && \
     mv ${COORDS}.1.joined.fa.tmp  ../${COORDS}.1.joined.fa && \
     cat ${merges_names[@]} > /dev/null && \
     touch join_consensus.success)
+
+    #end subshell execution
 
     if [ -e ${COORDS}.join_consensus.tmp/join_consensus.success ];then
       cat $COORDS.1.joined.fa $COORDS.1.unjoined.fa  > $COORDS.1.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.fa && rm -rf ${COORDS}.join_consensus.tmp $COORDS.1.to_join.fa.tmp
