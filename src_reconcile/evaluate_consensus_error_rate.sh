@@ -77,7 +77,8 @@ fi
 NUMERR=`grep -v "#" $BASM.vcf  |perl -ane '{if(length($F[3])==1 && length($F[3])==1){$nerr=1;}else{$nerr=abs(length($F[2])-length($F[3]));}print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'`
 ASMSIZE=`ufasta n50 -S $ASM | awk '{print $2}'`
 QUAL=`echo $NUMERR $ASMSIZE | awk '{print 100-$1/$2*100}'`
-echo "Errors: $NUMERR"
-echo "AsmSize: $ASMSIZE"
-echo "ConsensusQuality: $QUAL"
+
+echo "Errors: $NUMERR" > $BASM.report
+echo "AsmSize: $ASMSIZE" >> $BASM.report
+echo "ConsensusQuality: $QUAL" >> $BASM.report
 
