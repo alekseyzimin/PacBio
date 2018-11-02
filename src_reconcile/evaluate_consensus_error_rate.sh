@@ -74,11 +74,15 @@ rm -f $BASM.calc.success
 freebayes -C 2 -0 -O -q 20 -z 0.02 -E 0 -X -u -p 1 -F 0.5 -b $BASM.alignSorted.bam  -v $BASM.vcf -f $ASM && touch $BASM.vc.success
 fi
 
-NUMERR=`grep -v "#" $BASM.vcf  |perl -ane '{if(length($F[3])==1 && length($F[3])==1){$nerr=1;}else{$nerr=abs(length($F[2])-length($F[3]));}print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'`
+NUMSUB=`grep -v "#" $BASM.vcf  |perl -ane '{if(length($F[3])==1 && length($F[4])==1){$nerr=1;} print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'`
+NUMIND=`grep -v "#" $BASM.vcf  |perl -ane '{if(length($F[3])>1 || length($F[4])>1){$nerr=abs(length($F[3])-length($F[4]));}print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'`
 ASMSIZE=`ufasta n50 -S $ASM | awk '{print $2}'`
+NUMERR=$(($NUMSUB+$NUMIND))
 QUAL=`echo $NUMERR $ASMSIZE | awk '{print 100-$1/$2*100}'`
 
-echo "Errors: $NUMERR" > $BASM.report
-echo "AsmSize: $ASMSIZE" >> $BASM.report
-echo "ConsensusQuality: $QUAL" >> $BASM.report
+
+echo "Substitution Errors: $NUMSUB" > $BASM.report
+echo "Insertion/Deletion Errors: $NUMIND" >> $BASM.report
+echo "Assembly Size: $ASMSIZE" >> $BASM.report
+echo "Consensus Quality: $QUAL" >> $BASM.report
 
