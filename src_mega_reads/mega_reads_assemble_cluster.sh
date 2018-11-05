@@ -505,8 +505,7 @@ if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
     touch .rerun
 fi
 
-#if [ ! -s $COORDS.1.unjoined.fa ] || [ -e .rerun ];then
-if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
+if [ ! -s $COORDS.1.unjoined.fa ] || [ -e .rerun ];then
 log "Joining"
     awk 'BEGIN{flag=0}{
         if($0 ~ /^>/){
@@ -537,7 +536,6 @@ fi
 
 
 if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
-#if [ ! -s $COORDS.1.fa ];then
 log "Gap consensus"    
     #making consensus for large gaps
     mkdir -p ${COORDS}.join_consensus.tmp && \
