@@ -60,7 +60,7 @@ while($line=<STDIN>){
     ($rn,$junk)=split(/\s+/,substr($line,1));
   }else{
     my @ttt=split(/\s+/,$line);
-    push(@lines, \@ttt);
+    push(@lines, \@ttt) if($#ttt==7);
   }
 }
 #do not forget the last one
