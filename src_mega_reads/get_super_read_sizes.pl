@@ -22,6 +22,6 @@ while($line=<STDIN>){
   for(my $i=1;$i<=$#srname; $i++){
     $srsize+=($kusize[substr($srname[$i],0,-1)]);
     }
-    print "$f[1] $srsize\n";
+    print "$line $srsize\n";
 }
 
