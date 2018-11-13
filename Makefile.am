@@ -26,7 +26,7 @@ YAGGO_SOURCES = # Append all file to be built by yaggo
 # Build binaries #
 ##################
 bin_PROGRAMS += bin/jf_aligner bin/create_mega_reads bin/longest_path	\
-                bin/merge_coords bin/findGapsInCoverageOfPacbios
+                bin/merge_coords bin/findGapsInCoverageOfPacbios bin/get_super_read_sizes
 
 noinst_HEADERS += src_jf_aligner/zstr.hpp src_jf_aligner/strict_fstream.hpp \
 		  src_jf_aligner/superread_parser.hpp			\
@@ -96,6 +96,8 @@ bin_merge_coords_SOURCES = src_jf_aligner/merge_coords.cc
 
 bin_findGapsInCoverageOfPacbios_SOURCES = src_mega_reads/findGapsInCoverageOfPacbios.cc
 
+bin_get_super_read_sizes_SOURCES = src_mega_reads/get_super_read_sizes.cc
+
 dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_nomatch.sh src_mega_reads/mega_reads_assemble_cluster.sh		\
                     src_mega_reads/make_mr_frg.pl src_mega_reads/fastqToFasta.pl \
                     src_mega_reads/reconciliate_mega_reads.maximal.nucmer.pl	\
@@ -119,7 +121,7 @@ dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_nomatch.sh src_mega_reads
 		    src_reconcile/extract_single_best_match_coords_file.pl \
 		    src_reconcile/reconcile_hybrid_contigs_chromosomes.sh \
 		    src_reconcile/break_contigs.pl src_reconcile/merge_sequences_simple.pl \
-		    src_mega_reads/get_super_read_sizes.pl src_mega_reads/translate_reduced_reads.pl \
+		    src_mega_reads/translate_reduced_reads.pl \
 		    src_ref/recompute_astat_superreads_CA8.sh src_mega_reads/add_pb_seq.pl \
 		    src_mega_reads/deduplicate_unitigs.sh src_mega_reads/deduplicate_contigs.sh src_mega_reads/parallel_delta-filter.sh \
 		    src_reconcile/polish_with_illumina_assembly.sh src_reconcile/extract_merges.pl src_reconcile/merge_contigs.pl src_reconcile/create_merged_sequences.pl \
@@ -133,7 +135,8 @@ YAGGO_SOURCES += src_jf_aligner/jf_aligner_cmdline.hpp			\
 	         src_jf_aligner/create_mega_reads_cmdline.hpp		\
 	         src_jf_aligner/longest_path_overlap_graph2_cmdline.hpp	\
 	         src_jf_aligner/merge_coords_cmdline.hpp		\
-	         src_mega_reads/findGapsInCoverageOfPacbios_cmdline.hpp
+	         src_mega_reads/findGapsInCoverageOfPacbios_cmdline.hpp \
+		 src_mega_reads/get_super_read_sizes_cmdline.hpp
 
 
 # # Print the value of a variable
