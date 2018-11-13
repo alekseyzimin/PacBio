@@ -11,7 +11,7 @@ int32_t main (int argc, char *argv[]){
 cmdline_parse args;
 args.parse (argc, argv);
 
-std::map<long,long> kunitigsizes;
+std::vector<long> kunitigsizes;
 std::ifstream myfile;
 std::string line;
 myfile.open(args.kunitig_lenghts_file_arg);
@@ -22,16 +22,16 @@ myfile.open(args.kunitig_lenghts_file_arg);
       char*rest;
       long kunumber=strtol(strtok_r(tmpstr," ",&rest),NULL,10);
       long kusize=strtol(strtok_r(NULL," ",&rest),NULL,10);
-      kunitigsizes[kunumber]=kusize;
+      kunitigsizes.push_back(kusize);
       }
   }
   myfile.close();
 
 
 long minkunitigsize=10000000;
-for (std::map<long,long>::iterator it=kunitigsizes.begin(); it!=kunitigsizes.end(); ++it)
-    if(it ->second < minkunitigsize)
-        minkunitigsize=it ->second;
+for (unsigned long i=0;i<kunitigsizes.size()-1;i++)
+    if(kunitigsizes[i] < minkunitigsize)
+        minkunitigsize=kunitigsizes[i];
 
 minkunitigsize--;
 
