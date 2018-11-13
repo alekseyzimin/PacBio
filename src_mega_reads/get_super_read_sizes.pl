@@ -16,8 +16,7 @@ $kusize[$i]-=$minkusize;
 #now we read in the read positions file and compute the super-read sizes
 while($line=<STDIN>){
   chomp($line);
-  my @f=split(' ',$line);
-  @srname=split("_",$f[1]);
+  @srname=split(/_/,$line);
   my $srsize=$kusize[substr($srname[0],0,-1)]+$minkusize;
   
   for(my $i=1;$i<=$#srname; $i++){
