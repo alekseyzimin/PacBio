@@ -10,18 +10,19 @@ while($line=<FILE>){
   $minkusize=$sz if($sz< $minkusize);
   }
 $minkusize--;#need to know k-1
-#now we read in the super-read names WITHOUT F and R  and compute the super-read sizes
-for(my $i=0;$i<=$#kusize;$i++){
+for($i=0;$i<$#kusize;$i++){
 $kusize[$i]-=$minkusize;
 }
+#now we read in the read positions file and compute the super-read sizes
 while($line=<STDIN>){
   chomp($line);
-  @srname=split(/_/,$line);
+  my @f=split(' ',$line);
+  @srname=split("_",$f[1]);
   my $srsize=$kusize[substr($srname[0],0,-1)]+$minkusize;
   
   for(my $i=1;$i<=$#srname; $i++){
-    $srsize+=$kusize[substr($srname[$i],0,-1)];
+    $srsize+=($kusize[substr($srname[$i],0,-1)]);
     }
-    print "$line $srsize\n";
+    print "$f[1] $srsize\n";
 }
 
