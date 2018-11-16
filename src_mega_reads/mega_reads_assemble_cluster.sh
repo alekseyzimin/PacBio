@@ -572,12 +572,12 @@ log "Gap consensus"
           if(defined($h{substr($f[0],1)})){
             $line=<FILE>;
             chomp($line);
-            $hseq{substr($f[0],1)}=$line;
+            $hseq{$h{substr($f[0],1)}}=$line;
           }
         }
       }
-      foreach $name(keys %h){
-      print ">$h{$name}\n$hseq{$name}\n" if(defined($hseq{$name}));
+      foreach $name(keys %hseq){
+      print ">$name\n$hseq{$name}\n";
       }}' refs.txt > refs.renamed.fa && \
     rm -f ${ref_names[@]} && $MYPATH/ufasta split -i  refs.renamed.fa ${ref_names[@]} && \
     $MYPATH/split_reads_to_join.pl qrys.txt to_blasr ${ref_names[@]} < qrys.fa && \
@@ -790,12 +790,12 @@ if [ ! -e "${CA}/10-gapclose/gapclose.success" ] && [ $(stat -c%s ${CA}/9-termin
           if(defined($h{substr($f[0],1)})){
             $line=<FILE>;
             chomp($line);
-            $hseq{substr($f[0],1)}=$line;
+            $hseq{$h{substr($f[0],1)}}=$line;
           }
         }
       }
-      foreach $name(keys %h){
-      print ">$h{$name}\n$hseq{$name}\n" if(defined($hseq{$name}));
+      foreach $name(keys %hseq){
+      print ">$name\n$hseq{$name}\n";
       }}' read_scaffold.txt > refs.renamed.fa && \
   $MYPATH/ufasta extract -v -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > qrys.fa && \
   $CA_PATH/blasr qrys.fa  refs.renamed.fa  -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \
