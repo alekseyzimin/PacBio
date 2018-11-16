@@ -712,6 +712,7 @@ cgwErrorRate=0.1
 cgwMergeMissingThreshold=-1
 cgwMergeFilterLevel=1
 cgwDemoteRBP=0
+cgwPreserveConsensus=1
 cnsReuseUnitigs=1" > runCA.spec
 
 
@@ -793,8 +794,8 @@ if [ ! -e "${CA}/10-gapclose/gapclose.success" ] && [ $(stat -c%s ${CA}/9-termin
           }
         }
       }
-      foreach $name(keys %hseq){
-      print ">$h{$name}\n$hseq{$name}\n";
+      foreach $name(keys %h){
+      print ">$h{$name}\n$hseq{$name}\n" if(defined($hseq{$name}));
       }}' read_scaffold.txt > refs.renamed.fa && \
   $MYPATH/ufasta extract -v -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > qrys.fa && \
   $CA_PATH/blasr qrys.fa  refs.renamed.fa  -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \
