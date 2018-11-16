@@ -576,8 +576,8 @@ log "Gap consensus"
           }
         }
       }
-      foreach $name(keys %hseq){
-      print ">$h{$name}\n$hseq{$name}\n";
+      foreach $name(keys %h){
+      print ">$h{$name}\n$hseq{$name}\n" if(defined($hseq{$name}));
       }}' refs.txt > refs.renamed.fa && \
     rm -f ${ref_names[@]} && $MYPATH/ufasta split -i  refs.renamed.fa ${ref_names[@]} && \
     $MYPATH/split_reads_to_join.pl qrys.txt to_blasr ${ref_names[@]} < qrys.fa && \
