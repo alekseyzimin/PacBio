@@ -36,9 +36,9 @@ close(FILE);
 open(FILE,$kUnitigLengthsFile);
 while($line=<FILE>){
   chomp($line);
-  @ff=split(/\s+/,$line);
-  $len{$ff[0]}=$ff[1];
-  $kmer=$ff[1] if($kmer>$ff[1]);
+  my ($kuname,$kusize)=split(/\s+/,$line);
+  $len{$kuname}=$kusize;
+  $kmer=$kusize if($kmer>$kusize);
 }
 
 $kmer--;
@@ -54,18 +54,17 @@ open(FILE,$readPlacementFile);
 while($line=<FILE>){
   chomp($line);
   my ($read,$sread,$pos,$ori,$code)=split(/\s+/,$line);
-  my @ff=($mr_names[int(substr($read,2)/2)],$ori,$sread);
-  my @f=split(/_/,$ff[2]);
+  my @f=split(/_/,$sread);
   my $start_trim=0;
   my $end_trim=0;
-  if($ff[1] eq "F"){
+  if($ori eq "F"){
     $start_trim=$len{substr($f[0],0,-1)}-$kmer if(defined($trim_ku{substr($f[0],0,-1)}));
     $end_trim=$len{substr($f[-1],0,-1)}-$kmer if(defined($trim_ku{substr($f[-1],0,-1)}));
   }else{
     $end_trim=$len{substr($f[0],0,-1)}-$kmer if(defined($trim_ku{substr($f[0],0,-1)}));
     $start_trim=$len{substr($f[-1],0,-1)}-$kmer if(defined($trim_ku{substr($f[-1],0,-1)}));
   }
-  print "$ff[0] $start_trim $end_trim ",substr($f[0],0,-1)," ",substr($f[-1],0,-1),"\n";
+  print $mr_names[int(substr($read,2)/2)]," $start_trim $end_trim ",substr($f[0],0,-1)," ",substr($f[-1],0,-1),"\n";
 }
 
 
