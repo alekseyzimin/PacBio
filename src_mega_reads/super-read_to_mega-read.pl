@@ -20,7 +20,7 @@ push(@mr_sizes,length($line));
 open(FILE,$readPlacementFile);
 while($line=<FILE>){
 chomp($line);
-@f=split(/\s+/,$line);
-my $mrn=int(substr($f[0],2)/2);
-print "$mr_names[$mrn] $f[3] $f[1]\n";
+my ($read,$sread,$pos,$ori,$code)=split(/\s+/,$line);
+my $mrn=int(substr($read,2)/2);
+print "$mr_names[$mrn] $ori $sread\n";
 }

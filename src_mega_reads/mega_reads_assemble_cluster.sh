@@ -633,7 +633,7 @@ if [ ! -s $COORDS.1.frg ] || [ ! -s $COORDS.1.mates.frg ] || [ -e .rerun ];then
         reduce_sr `cat work1_mr1/numKUnitigs.txt` work1_mr1/kUnitigLengths.txt 31 work1_mr1/sr_sizes.tmp -o work1_mr1/reduce.tmp 1>reduce2.out 2>&1 && \
         translate_reduced_reads.pl work1_mr1/reduce.tmp < work1_mr1/readPositionsInSuperReads > work1_mr1/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt && \
 	find_contained_reads.pl work1_mr1/readPlacementsInSuperReads.final.read.superRead.offset.ori.txt $COORDS.1.fa > containees.txt && \
-        super-read_to_mega-read.pl work1_mr1/readPositionsInSuperReads $COORDS.1.fa | trim_by_kunitigs.pl work1_mr1/sr_sizes.tmp work1_mr1/kUnitigLengths.txt > $COORDS.1.trims.txt && \
+        trim_by_kunitigs.pl work1_mr1/readPositionsInSuperReads $COORDS.1.fa work1_mr1/sr_sizes.tmp work1_mr1/kUnitigLengths.txt > $COORDS.1.trims.txt && \
         trim_mega_reads.pl $COORDS.1.trims.txt < $COORDS.1.fa | ufasta extract -v -f containees.txt |make_mr_frg.pl mr 600  > $COORDS.1.frg.tmp && mv  $COORDS.1.frg.tmp  $COORDS.1.frg && \
         trim_mega_reads.pl $COORDS.1.trims.txt < $COORDS.1.fa | make_mate_frg.pl > $COORDS.1.mates.frg.tmp && mv $COORDS.1.mates.frg.tmp $COORDS.1.mates.frg && \
         rm -rf $CA work1_mr1 guillaumeKUnitigsAtLeast32bases_all.31.fasta mr.fa.in || error_exit "failed to create mega-reads frg file";
