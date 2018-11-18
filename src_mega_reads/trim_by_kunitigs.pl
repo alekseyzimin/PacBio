@@ -62,14 +62,16 @@ while($line=<FILE>){
   my @f=split(/_/,$sread);
   my $start_trim=0;
   my $end_trim=0;
+  my $firstKU=substr($f[0],0,-1);
+  my $lastKU=substr($f[-1],0,-1);
   if($ori eq "F"){
-    $start_trim=$len[substr($f[0],0,-1)]-$kmer if($trim_ku[substr($f[0],0,-1)]);
-    $end_trim=$len[substr($f[-1],0,-1)]-$kmer if($trim_ku[substr($f[-1],0,-1)]);
+    $start_trim=$len[$firstKU]-$kmer if($trim_ku[$firstKU]);
+    $end_trim=$len[$lastKU]-$kmer if($trim_ku[$lastKU]);
   }else{
-    $end_trim=$len[substr($f[0],0,-1)]-$kmer if($trim_ku[substr($f[0],0,-1)]);
-    $start_trim=$len[substr($f[-1],0,-1)]-$kmer if($trim_ku[substr($f[-1],0,-1)]);
+    $end_trim=$len[$firstKU]-$kmer if($trim_ku[$firstKU]);
+    $start_trim=$len[$lastKU]-$kmer if($trim_ku[$lastKU]);
   }
-  print $mr_names[int(substr($read,2)/2)]," $start_trim $end_trim ",substr($f[0],0,-1)," ",substr($f[-1],0,-1),"\n";
+  print $mr_names[int(substr($read,2)/2)]," $start_trim $end_trim $firstKU $lastKU\n";
 }
 
 
