@@ -1,13 +1,14 @@
 #!/usr/bin/env perl
 #this code trims mega-reads based on the unique k-unitigs on the ends of super-reads
-my $superReadNamesFile=$ARGV[0];
+my $superReadNamesSizesFile=$ARGV[0];
 my $kUnitigLengthsFile=$ARGV[1];
 my $kmer=1000000;
 
-open(FILE,$superReadNamesFile);
+open(FILE,$superReadNamesSizesFile);
 while($line=<FILE>){
 chomp($line);
-@f=split(/_/,$line);
+my ($name,$length)=split(/\s+/,$line);
+@f=split(/_/,$name);
 next if($#f<2);
 $sku{substr($f[0],0,-1)}++;
 for($i=1;$i<$#f;$i++){
