@@ -8,6 +8,10 @@ my $kmer=1000000;
 my @mr_sizes;
 my @mr_names;
 my %groups;
+my @sku=();
+my @mku=();
+my @eku=();
+
 
 open(FILE,$megaReadsFile);
 while($line=<FILE>){
@@ -25,11 +29,11 @@ while($line=<FILE>){
   my ($name,$length)=split(/\s+/,$line);
   @f=split(/_/,$name);
   next if($#f<2);
-  $sku{substr($f[0],0,-1)}++;
+  $sku[substr($f[0],0,-1)]++;
   for($i=1;$i<$#f;$i++){
-    $mku{substr($f[$i],0,-1)}++;
+    $mku[substr($f[$i],0,-1)]++;
   }
-  $eku{substr($f[-1],0,-1)}++;
+  $eku[substr($f[-1],0,-1)]++;
 }
 close(FILE);
 
