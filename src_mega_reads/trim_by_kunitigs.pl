@@ -8,10 +8,6 @@ my $kmer=1000000;
 my @mr_sizes;
 my @mr_names;
 my %groups;
-my @sku=();
-my @mku=();
-my @eku=();
-
 
 open(FILE,$megaReadsFile);
 while($line=<FILE>){
@@ -22,6 +18,21 @@ while($line=<FILE>){
     push(@mr_sizes,length($line));
   }
 }
+
+my $numKUnitigs=0;
+open(FILE,$kUnitigLengthsFile);
+while($line=<FILE>){
+  chomp($line);
+  my ($kunitig,$kulen)=split(/\s+/,$line);
+  $len[$kunitig]=$kulen;
+  $kmer=$kulen if($kmer>$kulen);
+  $numKUnitigs++;
+}
+
+my @sku=(0)x$numKUnitigs;
+my @mku=(0)x$numKUnitigs;
+my @eku=(0)x$numKUnitigs;
+my @trim_ku=(0)x$numKUnitigs;
 
 open(FILE,$superReadNamesSizesFile);
 while($line=<FILE>){
@@ -37,21 +48,11 @@ while($line=<FILE>){
 }
 close(FILE);
 
-open(FILE,$kUnitigLengthsFile);
-while($line=<FILE>){
-  chomp($line);
-  my ($kuname,$kusize)=split(/\s+/,$line);
-  $len{$kuname}=$kusize;
-  $kmer=$kusize if($kmer>$kusize);
-}
-
 $kmer--;
 
-foreach $k(keys %sku){
-  $trim_ku{$k}=1 if($sku{$k}==1 && not(defined($mku{$k}))&&not(defined($eku{$k})));
-}
-foreach $k(keys %eku){
-  $trim_ku{$k}=1 if($eku{$k}==1 && not(defined($mku{$k}))&&not(defined($sku{$k})));
+for($k=0;$k<$numKUnitigs;$k++){
+  $trim_ku[$k]=1 if($sku[$k]==1 && $mku[$k]==0 && $eku[$k]==0); 
+  $trim_ku[$k]=1 if($eku[$k]==1 && $mku[$k]==0 && $sku[$k]==0);
 }
 
 open(FILE,$readPlacementFile);
@@ -62,11 +63,11 @@ while($line=<FILE>){
   my $start_trim=0;
   my $end_trim=0;
   if($ori eq "F"){
-    $start_trim=$len{substr($f[0],0,-1)}-$kmer if(defined($trim_ku{substr($f[0],0,-1)}));
-    $end_trim=$len{substr($f[-1],0,-1)}-$kmer if(defined($trim_ku{substr($f[-1],0,-1)}));
+    $start_trim=$len[substr($f[0],0,-1)]-$kmer if($trim_ku[substr($f[0],0,-1)]);
+    $end_trim=$len[substr($f[-1],0,-1)]-$kmer if($trim_ku[substr($f[-1],0,-1)]);
   }else{
-    $end_trim=$len{substr($f[0],0,-1)}-$kmer if(defined($trim_ku{substr($f[0],0,-1)}));
-    $start_trim=$len{substr($f[-1],0,-1)}-$kmer if(defined($trim_ku{substr($f[-1],0,-1)}));
+    $end_trim=$len[substr($f[0],0,-1)]-$kmer if($trim_ku[substr($f[0],0,-1)]);
+    $start_trim=$len[substr($f[-1],0,-1)]-$kmer if($trim_ku[substr($f[-1],0,-1)]);
   }
   print $mr_names[int(substr($read,2)/2)]," $start_trim $end_trim ",substr($f[0],0,-1)," ",substr($f[-1],0,-1),"\n";
 }
