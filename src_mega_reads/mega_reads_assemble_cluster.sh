@@ -96,6 +96,10 @@ do
 	    USE_SGE="$2"
             shift
 	    ;;
+        -E|--Grid-engine)
+            GRID_ENGINE="$2"
+            shift
+            ;;
         -Pb|--pbatch-size)
             PBATCH_SIZE="$2"
             shift
@@ -287,46 +291,56 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
     if [ $PBATCHES -ge 2 ] && [ $USE_SGE -eq 1 ];then
 	log "Running on the grid in $PBATCHES batches";
 	if [ "$QUEUE" = "" ];then
-	    error_exit "Queue for SGE is undefined, must specify which queue to submit jobs to"
+	    error_exit "Queue for the grid is undefined, must specify which queue to submit jobs to"
 	fi
 
 #here we run on a cluster;first split and then merge alignments
 
 #working inside mr_pass1
-	mkdir -p mr_pass1
+        mkdir -p mr_pass1
 #running in sub-shell
-	( cd mr_pass1;
+        ( cd mr_pass1;
 #split the super-reads
-	    if [ ! -e split.success ];then
-		ufasta split -i ../$LONGREADS1 ${larr[@]} && touch split.success
-	    fi
-#creating run scripts
-#jf_aligner qsub version
-	    echo "#!/bin/sh" > create_mega_reads.sh && \
-		echo "if [ ! -e mr.batch\$SGE_TASK_ID.success ];then" >> create_mega_reads.sh && \
-		echo "$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SGE_TASK_ID -o mr.batch\$SGE_TASK_ID.tmp && mv mr.batch\$SGE_TASK_ID.tmp mr.batch\$SGE_TASK_ID.txt && touch mr.batch\$SGE_TASK_ID.success" >> create_mega_reads.sh && \
-		echo "else" >> create_mega_reads.sh && \
-		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> create_mega_reads.sh && \
-		echo "fi"  >> create_mega_reads.sh && chmod 0755 create_mega_reads.sh
+          if [ ! -e split.success ];then
+          ufasta split -i ../$LONGREADS1 ${larr[@]} && touch split.success
+          fi
+#creating run scripts for SGE or SLURM
+          if [ $GRID_ENGINE = "SGE" ];then
+          echo "#!/bin/sh" > create_mega_reads.sh && \
+          echo "if [ ! -e mr.batch\$SGE_TASK_ID.success ];then" >> create_mega_reads.sh && \
+          echo "$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SGE_TASK_ID -o mr.batch\$SGE_TASK_ID.tmp && mv mr.batch\$SGE_TASK_ID.tmp mr.batch\$SGE_TASK_ID.txt && touch mr.batch\$SGE_TASK_ID.success" >> create_mega_reads.sh && \
+          echo "else" >> create_mega_reads.sh && \
+          echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> create_mega_reads.sh && \
+          echo "fi"  >> create_mega_reads.sh && chmod 0755 create_mega_reads.sh
+          else
+          echo "#!/bin/sh" > create_mega_reads.sh && \
+          echo "if [ ! -e mr.batch\$SLURM_ARRAY_TASK_ID.success ];then" >> create_mega_reads.sh && \
+          echo "$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SLURM_ARRAY_TASK_ID -o mr.batch\$SLURM_ARRAY_TASK_ID.tmp && mv mr.batch\$SLURM_ARRAY_TASK_ID.tmp mr.batch\$SLURM_ARRAY_TASK_ID.txt && touch mr.batch\$SLURM_ARRAY_TASK_ID.success" >> create_mega_reads.sh && \
+          echo "else" >> create_mega_reads.sh && \
+          echo "echo \"job \$SLURM_ARRAY_TASK_ID previously completed successfully\"" >> create_mega_reads.sh && \
+          echo "fi"  >> create_mega_reads.sh && chmod 0755 create_mega_reads.sh
+          fi
 
 #here we use two ways to submit jobs for now. It is straighforward with SGE -- we use the sync option.  For SLURM, we submit the jobs and exit, instructing the used to restart assemble.sh when all jobs finish
 
 #maybe the jobs finished successfully already?
-            unset failArr;
-            failArr=();
-            for i in $(seq 1 $PBATCHES);do
-              if [ ! -e mr.batch$i.success ];then
-                failArr+=('mr.batch$i')
-              fi
-            done
-            if [ ${#failArr[@]} -ge 1 ];then
-              if [ $GRID_ENGINE = "SGE" ];then
-              log "submitting SGE create_mega_reads jobs to the grid"
-              qsub -q $QUEUE -cwd -j y -sync y -N "create_mega_reads"  -t 1-$PBATCHES create_mega_reads.sh 1> mqsub2.out 2>&1 || error_exit "create_mega_reads failed on the grid"
-              else
-              error_exit "submitting SLURM jobs to the grid.  The script will exit now.  Please re-run assemble.sh when all jobs finish."
-              fi
-            fi
+        unset failArr;
+        failArr=();
+        for i in $(seq 1 $PBATCHES);do
+        if [ ! -e mr.batch$i.success ];then
+        failArr+=('mr.batch$i')
+        fi
+        done
+        if [ ${#failArr[@]} -ge 1 ];then
+        if [ $GRID_ENGINE = "SGE" ];then
+        log "submitting SGE create_mega_reads jobs to the grid"
+        qsub -q $QUEUE -cwd -j y -sync y -N "create_mega_reads"  -t 1-$PBATCHES create_mega_reads.sh 1> mqsub2.out 2>&1 || error_exit "create_mega_reads failed on the grid"
+        else
+        echo "To submit SLURM jobs, please run"
+        echo "sbatch -D `pwd` -J create_mega_reads -a 1-$PBATCHES -n $NUM_THREADS -p $QUEUE -N 1 create_mega_reads.sh"
+        error_exit "Please re-run assemble.sh when all jobs finish."
+        fi
+        fi
 
 #check if the jobs finished successfully -- needed if we used SGE, redundant for SLURM
             unset failArr;
@@ -399,7 +413,6 @@ SBATCHES=$(($(($(($(stat -c%s -L $COORDS.all_mr.maximal.fa)/100000))*$(($(stat -
 if [ $(stat -c%s -L $COORDS.all_mr.maximal.fa) -lt 5000000000 ];then
 SBATCHES=1
 fi
-
 #if there is one batch then we do not use SGE
 if [ $SBATCHES -ge 1001 ];then
 SBATCHES=1000
@@ -417,7 +430,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
     if [ $SBATCHES -ge 2 ] && [ $USE_SGE -eq 1 ];then
       log "Running on the grid in $SBATCHES batches";
       if [ "$QUEUE" = "" ];then
-          error_exit "Queue for SGE is undefined, must specify which queue to submit jobs to"
+          error_exit "Queue for the grid is undefined, must specify which queue to submit jobs to"
       fi
 
 #here we run on a cluster;first split and then merge alignments
@@ -432,6 +445,8 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 	    fi
 #creating run scripts
 #jf_aligner qsub version
+#SLURM_ARRAY_TASK_ID
+                if [ $GRID_ENGINE = "SGE" ];then
 	        echo "#!/bin/bash" > jf_aligner.sh && \
                 echo "set -o pipefail" >> jf_aligner.sh && \
 		echo "if [ ! -e coords.batch\$SGE_TASK_ID.success ];then" >> jf_aligner.sh && \
@@ -439,7 +454,15 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 		echo "else" >> jf_aligner.sh && \
 		echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
 		echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
-
+                else
+                echo "#!/bin/bash" > jf_aligner.sh && \
+                echo "set -o pipefail" >> jf_aligner.sh && \
+                echo "if [ ! -e coords.batch\$SLURM_ARRAY_TASK_ID.success ];then" >> jf_aligner.sh && \
+                echo "$MYPATH/ufasta extract -v -f ../$COORDS.single.txt ../$LONGREADS1 | $MYPATH/jf_aligner --zero-match -s 1 -m $(($MER+2)) -t $NUM_THREADS -f -B $(($B-4)) --stretch-cap 6000 --max-count $((4000/$SBATCHES)) --psa-min 13 --coords /dev/stdout -u ../$KUNITIGS -k $KMER -H -r sr.batch\$SLURM_ARRAY_TASK_ID -p /dev/stdin | $MYPATH/ufasta sort -k 2 /dev/stdin | gzip -c -1 > coords.batch\$SLURM_ARRAY_TASK_ID.gz && touch coords.batch\$SLURM_ARRAY_TASK_ID.success" >> jf_aligner.sh && \
+                echo "else" >> jf_aligner.sh && \
+                echo "echo \"job \$SLURM_ARRAY_TASK_ID previously completed successfully\"" >> jf_aligner.sh && \
+                echo "fi"  >> jf_aligner.sh && chmod 0755 jf_aligner.sh
+                fi
 #maybe the jobs finished successfully already?
             unset failArr;
             failArr=();
@@ -450,10 +473,12 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
             done
             if [ ${#failArr[@]} -ge 1 ];then
               if [ $GRID_ENGINE = "SGE" ];then
-              log "submitting SGE jf_aligner jobs to the grid"
-              qsub -q $QUEUE -cwd -j y -sync y -N "jf_aligner"  -t 1-$SBATCHES jf_aligner.sh 1> jqsub2.out 2>&1 || error_exit "jf_aligner failed on the grid"
+                log "submitting SGE jf_aligner jobs to the grid"
+                qsub -q $QUEUE -cwd -j y -sync y -N "jf_aligner"  -t 1-$SBATCHES jf_aligner.sh 1> jqsub2.out 2>&1 || error_exit "jf_aligner failed on the grid"
               else
-              error_exit "submitting SLURM jobs to the grid.  The script will exit now.  Please re-run assemble.sh when all jobs finish."
+                echo "To submit SLURM jobs, please run"
+                echo "sbatch -D `pwd` -J jf_aligner -a 1-$SBATCHES -n $NUM_THREADS -p $QUEUE -N 1 jf_aligner.sh"
+                error_exit "Please re-run assemble.sh when all jobs finish."
               fi
             fi
  
@@ -672,6 +697,11 @@ if [ $USE_SGE -ge 1 ];then
 OVL_THREADS=4
 else
 OVL_THREADS=2
+fi
+
+#for now no SLURM for CABOG
+if [ $GRID_ENGINE = "SLURM" ];then
+USE_SGE=0;
 fi
 
 echo "batOptions=$batOptions
