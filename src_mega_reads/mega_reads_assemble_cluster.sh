@@ -707,15 +707,10 @@ else
 OVL_THREADS=2
 fi
 
-#for now no SLURM for CABOG
-if [ $GRID_ENGINE = "SLURM" ];then
-USE_SGE=0;
-fi
-
 echo "batOptions=$batOptions
 useGrid=$USE_SGE
+gridEngine=$GRID_ENGINE
 cnsOnGrid=0
-gridSubmitCommand=qsub
 cnsConcurrency=$NUM_THREADS
 cnsMinFrags=10000
 obtMerSize=$OVL_MER
