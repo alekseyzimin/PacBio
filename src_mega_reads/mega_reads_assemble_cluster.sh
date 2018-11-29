@@ -340,9 +340,9 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
         echo " "
         echo "sbatch -D `pwd` -J create_mega_reads -a 1-$PBATCHES -n $NUM_THREADS -p $QUEUE -N 1 mr_pass1/create_mega_reads.sh"
         echo " "
-        echo "Please re-run assemble.sh when all jobs finish."
+        echo "Please re-run assemble.sh when all jobs finish. If you get this message again, it means that some jobs failed, simply re-submit again using the above command."
         echo " "
-        error_exit "Disregard the following failure messages."
+        exit(1)
         fi
         fi
 
@@ -484,9 +484,9 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
                 echo " "
                 echo "sbatch -D `pwd` -J jf_aligner -a 1-$SBATCHES -n $NUM_THREADS -p $QUEUE -N 1 mr_pass2/jf_aligner.sh"
                 echo " "
-                echo "Please re-run assemble.sh when all jobs finish."
+                echo "Please re-run assemble.sh when all jobs finish. If you get this message again, it means that some jobs failed, simply re-submit again using the above command."
                 echo " "
-                error_exit "Disregard the following failure messages."
+                exit(1) 
               fi
             fi
  
