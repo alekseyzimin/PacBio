@@ -338,7 +338,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
         else
         echo "To submit SLURM jobs, please run"
         echo " "
-        echo "sbatch -D `pwd` -J create_mega_reads -a 1-$PBATCHES -n $NUM_THREADS -p $QUEUE -N 1 create_mega_reads.sh"
+        echo "sbatch -D `pwd` -J create_mega_reads -a 1-$PBATCHES -n $NUM_THREADS -p $QUEUE -N 1 mr_pass1/create_mega_reads.sh"
         echo " "
         echo "Please re-run assemble.sh when all jobs finish."
         echo " "
@@ -414,7 +414,7 @@ fi
 SBATCHES=$(($(($(($(stat -c%s -L $COORDS.all_mr.maximal.fa)/100000))*$(($(stat -c%s -L $LONGREADS1)/200000))))/$PBATCH_SIZE));
 
 #if fits into 128Gb of RAM, prefer to run on one computer
-if [ $(stat -c%s -L $COORDS.all_mr.maximal.fa) -lt 5000000000 ];then
+if [ $(stat -c%s -L $COORDS.all_mr.maximal.fa) -lt 25000000000 ];then
 SBATCHES=1
 fi
 #if there is one batch then we do not use SGE
@@ -482,7 +482,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
               else
                 echo "To submit SLURM jobs, please run"
                 echo " "
-                echo "sbatch -D `pwd` -J jf_aligner -a 1-$SBATCHES -n $NUM_THREADS -p $QUEUE -N 1 jf_aligner.sh"
+                echo "sbatch -D `pwd` -J jf_aligner -a 1-$SBATCHES -n $NUM_THREADS -p $QUEUE -N 1 mr_pass2/jf_aligner.sh"
                 echo " "
                 echo "Please re-run assemble.sh when all jobs finish."
                 echo " "
