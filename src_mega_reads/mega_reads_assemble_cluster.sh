@@ -342,7 +342,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
         echo " "
         echo "Please re-run assemble.sh when all jobs finish. If you get this message again, it means that some jobs failed, simply re-submit again using the above command."
         echo " "
-        exit(1)
+        exit 1
         fi
         fi
 
@@ -486,7 +486,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
                 echo " "
                 echo "Please re-run assemble.sh when all jobs finish. If you get this message again, it means that some jobs failed, simply re-submit again using the above command."
                 echo " "
-                exit(1) 
+                exit 1  
               fi
             fi
  
