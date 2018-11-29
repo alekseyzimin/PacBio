@@ -355,10 +355,10 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
               fi
             done
             if [ ${#failArr[@]} -ge 1 ];then
-              error_exit "${#failArr[@]} create_mega_reads jobs failed in mr_pass1: ${failArr[@]}"
+              error_exit "${#failArr[@]} create_mega_reads jobs failed in mr_pass1: ${failArr[@]}, re-run assemble.sh"
             fi
 #cat the results
-	    cat ${lmrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.txt || error_exit "concatenation of mega-read grid output files failed" ) && rm -rf mr_pass1 || error_exit "mega-reads pass 1 on the grid failed or stopped, please re-run assemble.sh"
+	    cat ${lmrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.txt || error_exit "concatenation of mega-read grid output files failed" ) && rm -rf mr_pass1 || error_exit "mega-reads pass 1 on the grid exited, please re-run assemble.sh"
     else #single computer
 	log "Running locally in 1 batch";
 	if numactl --show 1> /dev/null 2>&1;then
@@ -499,7 +499,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
               fi
             done
             if [ ${#failArr[@]} -ge 1 ];then
-              error_exit "${#failArr[@]} jf_aligner jobs failed in mr_pass2: ${failArr[@]}"
+              error_exit "${#failArr[@]} jf_aligner jobs failed in mr_pass2: ${failArr[@]}, re-run assemble.sh"
             fi
 
 #longest path one machine
@@ -507,7 +507,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
             echo "set -o pipefail" >> longest_path.sh
             echo "$MYPATH/merge_coords ${arrOut[@]} |$MYPATH/ufasta extract -v -n \"0\" | ufasta split -i /dev/stdin >($MYPATH/longest_path -t 20  -u ../$KUNITIGS  -k $KMER -d $d -o mr.txt.1.tmp /dev/stdin) >($MYPATH/longest_path -t 20  -u ../$KUNITIGS  -k $KMER -d $d -o mr.txt.2.tmp /dev/stdin) >($MYPATH/longest_path -t 20  -u ../$KUNITIGS  -k $KMER -d $d -o mr.txt.3.tmp /dev/stdin) && cat mr.txt.{1,2,3}.tmp > ../$COORDS.mr.txt" >> longest_path.sh
             chmod 0755 ./longest_path.sh && ./longest_path.sh 
-            ) && rm -rf mr_pass2 || error_exit "mega-reads pass 2 on the grid failed or stopped, please re-run assemble.sh"
+            ) && rm -rf mr_pass2 || error_exit "mega-reads pass 2 on the grid exited, please re-run assemble.sh"
     else #single computer
         log "Running locally in 1 batch";
 	if numactl --show 1> /dev/null 2>&1;then
