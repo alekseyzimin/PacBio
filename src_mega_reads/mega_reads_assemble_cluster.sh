@@ -336,6 +336,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
         log "submitting SGE create_mega_reads jobs to the grid"
         qsub -q $QUEUE -cwd -j y -sync y -N "create_mega_reads"  -t 1-$PBATCHES create_mega_reads.sh 1> mqsub2.out 2>&1 || error_exit "create_mega_reads failed on the grid"
         else
+        echo " "
         echo "To submit SLURM jobs, please run"
         echo " "
         echo "sbatch -D `pwd` -J create_mega_reads -a 1-$PBATCHES -n $NUM_THREADS -p $QUEUE -N 1 mr_pass1/create_mega_reads.sh"
@@ -480,6 +481,7 @@ if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
                 log "submitting SGE jf_aligner jobs to the grid"
                 qsub -q $QUEUE -cwd -j y -sync y -N "jf_aligner"  -t 1-$SBATCHES jf_aligner.sh 1> jqsub2.out 2>&1 || error_exit "jf_aligner failed on the grid"
               else
+                echo " "
                 echo "To submit SLURM jobs, please run"
                 echo " "
                 echo "sbatch -D `pwd` -J jf_aligner -a 1-$SBATCHES -n $NUM_THREADS -p $QUEUE -N 1 mr_pass2/jf_aligner.sh"
