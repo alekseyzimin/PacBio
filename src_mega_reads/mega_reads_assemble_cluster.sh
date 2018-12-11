@@ -712,9 +712,6 @@ fi
 echo "batOptions=$batOptions
 useGrid=$USE_SGE
 gridEngine=$GRID_ENGINE
-cnsOnGrid=0
-cnsConcurrency=$NUM_THREADS
-cnsMinFrags=10000
 obtMerSize=$OVL_MER
 ovlMerSize=$OVL_MER
 unitigger=bogart
@@ -725,9 +722,9 @@ utgMergeErrorLimit=1000
 utgGraphErrorRate=0.03
 utgMergeErrorRate=0.03
 ovlCorrBatchSize=100000
-ovlCorrConcurrency=8
-frgCorrThreads=$NUM_THREADS
-frgCorrConcurrency=6
+ovlCorrConcurrency=$NUM_THREADSd4
+frgCorrThreads=$NUM_THREADSd4
+frgCorrConcurrency=$NUM_THREADSd4
 mbtThreads=$NUM_THREADS
 ovlThreads=$OVL_THREADS
 ovlHashBlockLength=10000000
@@ -742,13 +739,17 @@ doExtendClearRanges=0
 computeInsertSize=0
 maxRepeatLength=12000
 ovlErrorRate=0.1
+cnsOnGrid=0
+cnsConcurrency=$NUM_THREADS
+cnsMinFrags=10000
 cnsErrorRate=0.1
+cnsMaxCoverage=7
+cnsReuseUnitigs=1
 cgwErrorRate=0.1
 cgwMergeMissingThreshold=-1
 cgwMergeFilterLevel=1
 cgwDemoteRBP=0
-cgwPreserveConsensus=1
-cnsReuseUnitigs=1" > runCA.spec
+cgwPreserveConsensus=1" > runCA.spec
 
 
 log "Running assembly"
