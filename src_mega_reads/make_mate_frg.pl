@@ -53,7 +53,7 @@ print STDOUT "mea:$i\n";
 print STDOUT "std:",int($i*.15),"\n";
 print STDOUT "src:\n";
 print STDOUT ".\n";
-print STDOUT "nft:3\n";
+print STDOUT "nft:4\n";
 print STDOUT "fea:\n";
 print STDOUT "doRemoveChimericReads=1\n";
 print STDOUT "doRemoveSpurReads=1\n";
