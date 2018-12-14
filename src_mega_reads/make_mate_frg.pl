@@ -58,6 +58,7 @@ print STDOUT "fea:\n";
 print STDOUT "doRemoveChimericReads=1\n";
 print STDOUT "doRemoveSpurReads=1\n";
 print STDOUT "isNotRandom=1\n";
+print STDOUT "constantInsertSize=1\n";
 print STDOUT ".\n";
 print STDOUT "}\n";
 }
