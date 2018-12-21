@@ -757,9 +757,22 @@ if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
   #need to start from the beginning
   #this is helpful for re-starts
   rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh
+  $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+
+#sometimes overlap jobs need to be resubmitted -- check of OBT worked
+  if [ ! -d "${CA}/1-overlapper" ]; then
+    rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh && \
     $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
-    #this is a fix for sometimes failing fragment correction
-    if [ ! -e "${CA}/4-unitigger/unitigger.success" ]; then
+  fi
+
+#sometimes overlap jobs need to be resubmitted -- check of OVL worked
+  if [ ! -d "${CA}/3-overlapcorrection" ]; then
+    rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh && \
+    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+  fi
+
+#this is a fix for sometimes failing fragment correction
+  if [ ! -e "${CA}/4-unitigger/unitigger.success" ]; then
       rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh
       echo "doFragmentCorrection=0" >> runCA.spec
       $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
