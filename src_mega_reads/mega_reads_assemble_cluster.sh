@@ -757,28 +757,28 @@ if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
   #need to start from the beginning
   #this is helpful for re-starts
   rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh
-  $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+  $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopBefore=scaffolder $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 
 #sometimes overlap jobs need to be resubmitted -- check of OBT worked
   if [ ! -d "${CA}/1-overlapper" ]; then
     rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh && \
-    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopBefore=scaffolder $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
   fi
 
 #sometimes overlap jobs need to be resubmitted -- check of OVL worked
   if [ ! -d "${CA}/3-overlapcorrection" ]; then
     rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh && \
-    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopBefore=scaffolder $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
   fi
 
 #this is a fix for sometimes failing fragment correction
   if [ ! -e "${CA}/4-unitigger/unitigger.success" ]; then
       rm -f $CA/0-overlaptrim-overlap/overlap.sh $CA/1-overlapper/overlap.sh
       echo "doFragmentCorrection=0" >> runCA.spec
-      $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+      $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA stopBefore=scaffolder $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
     fi
     rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
-    $CA_PATH/runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    $CA_PATH/runCA -s runCA.spec -p genome -d $CA  stopBefore=scaffolder $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 fi
 
 #at athis point we check if the unitig consensus is done
@@ -793,9 +793,9 @@ fi
 
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
   #after deduplicate we need to rebuild the unitigs, we rerun CA on deduplicated overlapStore
-    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterUnitigger $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    $CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopBefore=scaffolder $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
     rm -rf $CA/5-consensus/*.success $CA/5-consensus/consensus.sh
-    $CA_PATH/runCA -s runCA.spec -p genome -d $CA  stopAfter=consensusAfterUnitigger cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+    $CA_PATH/runCA -s runCA.spec -p genome -d $CA  stopBefore=scaffolder cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 fi
 
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
@@ -812,7 +812,7 @@ if [ $MCOVERAGE -le 5 ]; then
 fi
 
 #we start from here if the scaffolder has been run or continue here  
-$CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopAfter=consensusAfterScaffolder $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
+$CA_PATH/runCA -s runCA.spec consensus=pbutgcns -p genome -d $CA  stopBefore=terminator $COORDS.1.frg $COORDS.1.mates.frg $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 rm -rf $CA/8-consensus/*.success $CA/8-consensus/consensus.sh
 $CA_PATH/runCA -s runCA.spec -p genome -d $CA  cnsConcurrency=$(($NUM_THREADS/2+1)) $COORDS.1.frg $COORDS.1.mates.frg  $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1 && \
 log "Mega-reads initial assembly complete" || error_exit "Assembly stopped or failed, see $CA.log"
