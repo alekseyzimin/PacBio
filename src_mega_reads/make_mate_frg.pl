@@ -50,7 +50,7 @@ for($i=2000;$i<=$max_length;$i+=1000){
     print STDOUT "acc:mr_",int(($i+500)/1000),"\n";
 print STDOUT "ori:I\n";
 print STDOUT "mea:$i\n";
-print STDOUT "std:",int($i*.15),"\n";
+print STDOUT "std:",int($i*.075),"\n";
 print STDOUT "src:\n";
 print STDOUT ".\n";
 print STDOUT "nft:4\n";
