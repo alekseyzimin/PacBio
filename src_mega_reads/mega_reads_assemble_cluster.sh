@@ -146,7 +146,7 @@ fi
 if [ -s PLOIDY.txt ];then
 PLOIDY=`head -n 1 PLOIDY.txt`
 else
-PLOIDY=$(($JF_SIZE/$ESTIMATED_GENOME_SIZE/3))
+PLOIDY=$(($JF_SIZE/$ESTIMATED_GENOME_SIZE/2))
 fi
 if [ $PLOIDY -lt 1 ];then PLOIDY=1; fi
 if [ $PLOIDY -gt 2 ];then PLOIDY=2; fi
