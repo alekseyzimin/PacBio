@@ -13,7 +13,7 @@ IDENTITY=97
 #parameter for merging alignments
 MERGE=100000
 #low coverage threshold for breaking
-COV_THRESH=2
+COV_THRESH=3
 
 function error_exit {
     echo "$1" >&2
@@ -59,7 +59,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage: polish_with_illumina_assembly.sh -r <sequence to be polished> -q <sequence to polish with> -t <number of threads> -s <minimum sequence similarity percentage> -m <merge polishing sequence alignments slack (advanced)> "
+            echo "Usage: reconcile_hybrid_contigs_chromosomes.sh -r <reference genome> -q <assembly to be scaffolded with the reference> -t <number of threads> -s <minimum sequence similarity percentage> -m <merge polishing sequence alignments slack (advanced)> -v <verbose> -p <posmap file for the assembly> -c <coverage threshold for splitting at misassemblies, default 3>"
             exit 0
             ;;
         *)
