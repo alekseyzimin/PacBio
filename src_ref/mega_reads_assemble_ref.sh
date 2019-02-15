@@ -149,7 +149,13 @@ perl -ane '{
         if(not($c=~/^N/) && length($c)>0){
           $start=$n;
           $end=$n+length($c)-1;
-          print ">$rn:$start-$end\n$c\n";
+          for(my $i=0;$i<length($c);$i+=10000000){
+            if($i>0 && length($c)-$i<10000){
+              print ">$rn:$start-$end:$i\n",substr($c,length($c)-10000,10000),"\n";
+            }else{
+              print ">$rn:$start-$end:$i\n",substr($c,$i,10000000),"\n"; 
+            }
+          }
         }
         $n+=length($c);
       }
@@ -166,7 +172,13 @@ perl -ane '{
     if(not($c=~/^N/) && length($c)>0){
       $start=$n;
       $end=$n+length($c)-1;
-      print ">$rn:$start-$end\n$c\n";
+      for(my $i=0;$i<length($c);$i+=10000000){
+        if($i>0 && length($c)-$i<10000){
+          print ">$rn:$start-$end:$i\n",substr($c,length($c)-10000,10000),"\n";
+        }else{
+          print ">$rn:$start-$end:$i\n",substr($c,$i,10000000),"\n"; 
+        }
+      }
     }
     $n+=length($c);
   }

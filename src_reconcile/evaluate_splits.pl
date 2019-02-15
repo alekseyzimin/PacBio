@@ -11,7 +11,6 @@ $sizes{$ctg}=$size;
 my @breaks;
 my @lines;
 while($line=<STDIN>){
-  @abreaks=();
   @breaks=();
   @lines=();
   while($line=<STDIN>){
@@ -21,6 +20,7 @@ while($line=<STDIN>){
       push(@breaks,$line);
     }elsif($line=~/^\-\-/){
       my $mincov=1000;
+      my $maxcov=0;
       my $mincovline="";
       my @f=split(/\s+/,$breaks[0]);
       $ctg=$f[1];
@@ -31,15 +31,25 @@ while($line=<STDIN>){
           $mincov=$f[-1];
           $mincovline=$l;
         }
+        if($f[-1]>$maxcov){
+          $maxcov=$f[-1];
+        }
       }
       if(not($mincovline eq "")){
         @f=split(/\s+/,$mincovline);
         if($f[2]<5000 ||$f[2]>$sizes{$f[1]}-5000){
-          print "$f[0] end_too_close_$f[1] $f[2] $f[3]";
+          print "$f[0] end_too_close_$f[1] $f[2] $f[3] ",join(" ",@breaks),"\n";
         }else{
-          print $mincovline;
+          print "$mincovline ",join(" ",@breaks),"\n";
         }
-        print " ",join(" ",@breaks),"\n";
+        }
+        foreach $b(@breaks){
+          my @ff=split(/\s+/,$b);
+          if($f[2]<5000 ||$f[2]>$sizes{$f[1]}-5000){
+            print "repeat end_too_close_$ff[1] $ff[2] $maxcov ",join(" ",@breaks),"\n";
+          }else{
+            print "repeat $ff[1] $ff[2] $maxcov ",join(" ",@breaks),"\n";
+          }
         }
         last;
     }else{

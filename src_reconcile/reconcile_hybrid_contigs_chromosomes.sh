@@ -14,6 +14,7 @@ IDENTITY=97
 MERGE=100000
 #low coverage threshold for breaking
 COV_THRESH=3
+REP_COV_THRESH=30
 
 function error_exit {
     echo "$1" >&2
@@ -43,8 +44,12 @@ do
             POSMAP="$2"
             shift
             ;;
-        -c|--coverage_threshold)
+        -cl|--low_coverage_threshold)
             COV_THRESH="$2"
+            shift
+            ;;
+        -ch|--repeat_threshold)
+            REP_COV_THRESH="$2"
             shift
             ;;
         -m|--merge-slack)
@@ -59,7 +64,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage: reconcile_hybrid_contigs_chromosomes.sh -r <reference genome> -q <assembly to be scaffolded with the reference> -t <number of threads> -s <minimum sequence similarity percentage> -m <merge polishing sequence alignments slack (advanced)> -v <verbose> -p <posmap file for the assembly> -c <coverage threshold for splitting at misassemblies, default 3>"
+            echo "Usage: reconcile_hybrid_contigs_chromosomes.sh -r <reference genome> -q <assembly to be scaffolded with the reference> -t <number of threads> -s <minimum sequence similarity percentage> -m <merge polishing sequence alignments slack (advanced)> -v <verbose> -p <posmap file for the assembly> -cl <coverage threshold for splitting at misassemblies, default 3> -ch <repeat coverage threshold for splitting at misassemblies, default 30>" 
             exit 0
             ;;
         *)
@@ -119,10 +124,10 @@ cat $REF_CHR.$HYB_CTG.1.coords.breaks $HYB_POS.coverage  | sort -nk2 -k3n -S 10%
 touch .rerun
 fi
 
-grep -C 20 break $HYB_POS.coverage.w_breaks  | evaluate_splits.pl <(ufasta sizes -H $QRY | awk '{print substr($1,4)" "$2}') | sort -nk3 -S 10% >  $HYB_POS.coverage.w_breaks.validated
+grep -C 50 break $HYB_POS.coverage.w_breaks  | evaluate_splits.pl <(ufasta sizes -H $QRY | awk '{print substr($1,4)" "$2}') | sort -nk3 -S 10% >  $HYB_POS.coverage.w_breaks.validated
 
 if [ ! -s $HYB_CTG.broken ] || [ -e .rerun ];then
-break_contigs.pl <(grep -v "end" $HYB_POS.coverage.w_breaks.validated |awk '{if($4<=int("'$COV_THRESH'")) print $0}') < $QRY > $HYB_CTG.broken
+break_contigs.pl <(grep -v "end" $HYB_POS.coverage.w_breaks.validated |awk '{if($4<=int("'$COV_THRESH'") || ($1="repeat" && $4>=int("'$REP_COV_THRESH'"))) print $0}') < $QRY > $HYB_CTG.broken
 touch .rerun
 fi
 
