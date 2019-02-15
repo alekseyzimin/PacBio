@@ -7,7 +7,7 @@
 $last_pb_read="";
 $last_pb_start=-1;
 $last_seq="";
-$max_read_length=400;
+$max_read_length=500;
 @mate_pairs=();
 while($line=<STDIN>){
     chomp($line);

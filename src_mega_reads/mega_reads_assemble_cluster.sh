@@ -24,6 +24,7 @@ USE_SGE=0
 PACBIO=""
 NANOPORE=""
 ONEPASS=0
+OVLMIN_DEFAULT=250
 GC=
 RC=
 NC=
@@ -182,6 +183,11 @@ fi
 LR_SIZE=$(stat -L -c%s $LONGREADS);
 FIRSTCHAR=`zcat -f $LONGREADS | head -c 1`
 LR_COVERAGE=$(($LR_SIZE/$ESTIMATED_GENOME_SIZE/$PLOIDY))
+
+if [ $LR_COVERAGE -gt $PB_HC ];then
+  OVLMIN_DEFAULT=499
+fi
+
 
 #here we can set the parameters for low and high coverage runs; for high coverage we disallow single-joins, set max gap to 100, and do no OBT, and for lower coverage (<50x) we allow single joins set max_gap to 1000 and do OBT
 #to be determined of we should do this
@@ -697,7 +703,7 @@ OVLREFSIZE=`ls $SR_FRG $COORDS.1.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | 
 rm -f .rerun
 rm -f $CA.log
 
-OVLMIN=`head -n 100000 $SR_FRG $COORDS.1.frg $OTHER_FRG 2>/dev/null | grep -A 1 '^seq:' |grep -v '^seq:' | grep -v '\-\-' | awk 'BEGIN{minlen=100000}{if(length($1)<minlen && length($1)>=64) minlen=length($1);}END{if(minlen>=250) print "250"; else print minlen-1;}'`
+OVLMIN=`head -n 100000 $SR_FRG $COORDS.1.frg $OTHER_FRG 2>/dev/null | grep -A 1 '^seq:' |grep -v '^seq:' | grep -v '\-\-' | awk 'BEGIN{minlen=100000}{if(length($1)<minlen && length($1)>=64) minlen=length($1);}END{if(minlen>=int("'$OVLMIN_DEFAULT'")) print "'$OVLMIN_DEFAULT'"; else print minlen-1;}'`
 batOptions="-repeatdetect $TCOVERAGE $TCOVERAGE $TCOVERAGE -el $OVLMIN -RS"
 OVL_MER=22
 
