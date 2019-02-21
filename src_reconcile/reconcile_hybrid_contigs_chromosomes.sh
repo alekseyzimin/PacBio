@@ -115,7 +115,6 @@ fi
 if [ ! -s $REF_CHR.$HYB_CTG.1.coords ] || [ -e .rerun ];then
 show-coords -lcHr $REF_CHR.$HYB_CTG.1.delta | \
 merge_matches_and_tile_coords_file.pl $MERGE | \
-merge_matches_and_tile_coords_file.pl $(($MERGE/10)) | \
 awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
 awk '{if($16>5 || $7>5000 ) print $0}' > $REF_CHR.$HYB_CTG.1.coords
 touch .rerun
