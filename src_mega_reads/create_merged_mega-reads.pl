@@ -66,7 +66,7 @@ while($line=<STDIN>){
     for(my $i=1;$i<=$#f;$i++){
       if($i%3==0){
         my @ff=split(/\./,$f[$i]);
-        $readname.=":$ff[1]";
+        $readname.=":$ff[-1]";
       }else{
         $readname.=":$f[$i]";
       }

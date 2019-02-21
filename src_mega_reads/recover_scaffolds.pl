@@ -1,16 +1,20 @@
 #!/usr/bin/env perl
 #this code recovers the original scaffolds after gap closing -- all gaps are 100N's
+my $ctgName="";
+my $scf="";
+my $chunk="";
 while($line=<STDIN>){
   chomp($line);
   if($line=~/^>/){
     $ctgName=substr($line,1);
     my @f=split(/\./,$ctgName);
-    my $scf=$f[0];
-    my $scf=join(".",@f[0..($#f-1)]) if($#f>1);
-    my $chunk=$f[-1];   
+    $scf=$f[0];
+    $scf=join(".",@f[0..($#f-1)]) if($#f>1);
+    my @ff=split(/:/,$f[-1]);
+    $chunk=$ff[0];   
     $scfChunks{$scf}.="$chunk ";
   }else{
-    $ctgSeq{$ctgName}=$line;
+    $ctgSeq{$scf.".".$chunk}=$line;
   }
 }
 
