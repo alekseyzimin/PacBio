@@ -1,7 +1,7 @@
 #!/bin/bash
 #this code aims at reconciling the hybrid contigs and the chromosomes of the previously produces assembly
 #arguments are: reference chromosomes, hybrid contigs, hybrid posmap (frgctg), filtered delta-file of alignments of ref to hyb
-#MUST HAVE MaSURCA bin on the PATH
+#MUST HAVE blasr on the PATH
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:$PATH;
@@ -32,16 +32,16 @@ do
             NUM_THREADS="$2"
             shift
             ;;
+        -s|--sequenced_reads)
+            READS="$2"
+            shift
+            ;;
         -q|--query)
             QRY="$2"
             shift
             ;;
         -i|--identity)
             IDENTITY="$2"
-            shift
-            ;;
-        -p|--posmap)
-            POSMAP="$2"
             shift
             ;;
         -cl|--low_coverage_threshold)
@@ -64,7 +64,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage: reconcile_hybrid_contigs_chromosomes.sh -r <reference genome> -q <assembly to be scaffolded with the reference> -t <number of threads> -s <minimum sequence similarity percentage> -m <merge polishing sequence alignments slack (advanced)> -v <verbose> -p <posmap file for the assembly> -cl <coverage threshold for splitting at misassemblies, default 3> -ch <repeat coverage threshold for splitting at misassemblies, default 30>" 
+            echo "Usage: reconcile_hybrid_contigs_chromosomes.sh -r <reference genome> -q <assembly to be scaffolded with the reference> -t <number of threads> -i <minimum sequence similarity percentage> -m <merge polishing sequence alignments slack (advanced)> -v <verbose> -s <reads to align to the assembly to check for misassemblies> -cl <coverage threshold for splitting at misassemblies, default 3> -ch <repeat coverage threshold for splitting at misassemblies, default 30>" 
             exit 0
             ;;
         *)
@@ -76,11 +76,22 @@ do
 done
 
 REF_CHR=`basename $REF`
-HYB_CTG=`basename $QRY`
-HYB_POS=$POSMAP
+HYB_CTG=`basename $QRY`.split
+HYB_POS=$HYB_CTG.posmap
+rm -rf .rerun
+
+if [ ! -s $QRY.split ];then
+splitFileAtNs $QRY 1 && mv genome.ctg.fasta $HYB_CTG &&\
+touch .rerun
+fi
+
+if [ ! -s $HYB_POS ];then
+blasr -nproc $NUM_THREADS -bestn 1 $READS $HYB_CTG | awk '{if(($11-$10)/$12>0.75){if($4==0) print $1" "substr($2,4)" "$7" "$8" f"; else print  $1" "substr($2,4)" "$9-$8" "$9-$7" r"}}' $1 | sort -nk2 -k3n -S 10% > $HYB_POS
+touch .rerun
+fi
 
 if [ ! -s $REF_CHR.$HYB_CTG.delta ];then
-nucmer -t $NUM_THREADS -p $REF_CHR.$HYB_CTG -c 200 $REF $QRY
+nucmer -t $NUM_THREADS -p $REF_CHR.$HYB_CTG -c 200 $REF $HYB_CTG
 touch .rerun
 fi
 
@@ -124,10 +135,10 @@ cat $REF_CHR.$HYB_CTG.1.coords.breaks $HYB_POS.coverage  | sort -nk2 -k3n -S 10%
 touch .rerun
 fi
 
-grep -C 50 break $HYB_POS.coverage.w_breaks  | evaluate_splits.pl <(ufasta sizes -H $QRY | awk '{print substr($1,4)" "$2}') | sort -nk3 -S 10% >  $HYB_POS.coverage.w_breaks.validated
+grep -C 50 break $HYB_POS.coverage.w_breaks  | evaluate_splits.pl <(ufasta sizes -H $HYB_CTG | awk '{print substr($1,4)" "$2}') | sort -nk3 -S 10% >  $HYB_POS.coverage.w_breaks.validated
 
 if [ ! -s $HYB_CTG.broken ] || [ -e .rerun ];then
-break_contigs.pl <(grep -v "end" $HYB_POS.coverage.w_breaks.validated |awk '{if($4<=int("'$COV_THRESH'") || ($1="repeat" && $4>=int("'$REP_COV_THRESH'"))) print $0}') < $QRY > $HYB_CTG.broken
+break_contigs.pl <(grep -v "end" $HYB_POS.coverage.w_breaks.validated |awk '{if($4<=int("'$COV_THRESH'") || ($1="repeat" && $4>=int("'$REP_COV_THRESH'"))) print $0}') < $HYB_CTG > $HYB_CTG.broken
 touch .rerun
 fi
 
