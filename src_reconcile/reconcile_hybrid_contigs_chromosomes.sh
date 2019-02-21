@@ -1,4 +1,4 @@
-#!/bin/bash
+e!/bin/bash
 #this code aims at reconciling the hybrid contigs and the chromosomes of the previously produces assembly
 #arguments are: reference chromosomes, hybrid contigs, hybrid posmap (frgctg), filtered delta-file of alignments of ref to hyb
 #MUST HAVE blasr on the PATH
@@ -80,8 +80,8 @@ HYB_CTG=`basename $QRY`.split
 HYB_POS=$HYB_CTG.posmap
 rm -rf .rerun
 
-if [ ! -s $QRY.split ];then
-splitFileAtNs $QRY 1 && mv genome.ctg.fasta $HYB_CTG &&\
+if [ ! -s $HYB_CTG ];then
+splitFileAtNs $QRY 1 > $HYB_CTG &&\
 touch .rerun
 fi
 
@@ -157,12 +157,11 @@ rm -rf .rerun
 #now we merge/rebuild chromosomes
 show-coords -lcHr $REF_CHR.$HYB_CTG.broken.1.delta | \
 merge_matches_and_tile_coords_file.pl $MERGE | \
-merge_matches_and_tile_coords_file.pl $(($MERGE/10)) | \
 awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
-awk '{if($16>5 || $7>5000 ) print $0}' > $REF_CHR.$HYB_CTG.broken.1.coords
-
-# here we split everything so the contigs are "perfect"
-cat $REF_CHR.$HYB_CTG.broken.1.coords  |  extract_single_best_match_coords_file.pl  |reconcile_matches.pl gap_coordinates.txt  > reconciled_coords.txt
-
-cat reconciled_coords.txt  | output_reconciled_scaffolds.pl $HYB_CTG.broken| perl -ane '{if($F[0] =~ /^>/){print;}else{@f=split(/N+/,$F[0]); print join("N"x100,@f),"\n"}}'  | ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa
+awk '{if($16>5 || $7>5000 ) print $0}' |\
+extract_single_best_match_coords_file.pl  |\
+reconcile_matches.pl gap_coordinates.txt  |\
+output_reconciled_scaffolds.pl $HYB_CTG.broken|\
+perl -ane '{if($F[0] =~ /^>/){print;}else{@f=split(/N+/,$F[0]); print join("N"x100,@f),"\n"}}'  |\
+ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa
 
