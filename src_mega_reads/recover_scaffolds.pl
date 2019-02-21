@@ -4,7 +4,10 @@ while($line=<STDIN>){
   chomp($line);
   if($line=~/^>/){
     $ctgName=substr($line,1);
-    my ($scf,$chunk)=split(/\./,$ctgName);
+    my @f=split(/\./,$ctgName);
+    my $scf=$f[0];
+    my $scf=join(".",@f[0..($#f-1)]) if($#f>1);
+    my $chunk=$f[-1];   
     $scfChunks{$scf}.="$chunk ";
   }else{
     $ctgSeq{$ctgName}=$line;

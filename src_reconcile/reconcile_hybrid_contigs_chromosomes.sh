@@ -1,4 +1,4 @@
-e!/bin/bash
+#!/bin/bash
 #this code aims at reconciling the hybrid contigs and the chromosomes of the previously produces assembly
 #arguments are: reference chromosomes, hybrid contigs, hybrid posmap (frgctg), filtered delta-file of alignments of ref to hyb
 #MUST HAVE blasr on the PATH
