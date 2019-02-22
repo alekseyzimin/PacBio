@@ -1,4 +1,5 @@
 #!/bin/bash
+#this script closes gaps in chromosome scaffolds using another assembly or the reference
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:$PATH;
@@ -89,9 +90,12 @@ fi
 
 #perform merge
 if [ ! -e scaffold_merge.merge.success ];then
-$MYPATH/show-coords -lcHq $DELTAFILE.r.delta |perl -ane '{($scf1)=split(/\./,$F[-1]);($scf2)=split(/\./,$F[-2]); print if($scf1 eq $scf2);}' | $MYPATH/extract_merges_mega-reads.pl $QRY  valid_join_pairs.txt > merges.txt && \
+$MYPATH/show-coords -lcHq $DELTAFILE.r.delta | $MYPATH/extract_merges_mega-reads.pl $QRY  valid_join_pairs.txt > merges.txt && \
 perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} if(not(defined($h{$merge}))|| $h{$merge} > $F[1]+$F[4]){$hl{$merge}=join(" ",@F);$h{$merge}=$F[1]+$F[4];}}END{foreach $k(keys %hl){print $hl{$k},"\n"}}' merges.txt > merges.best.txt && \
-cat <($MYPATH/ufasta extract -v -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) $REFN.split) <($MYPATH/merge_mega-reads.pl < merges.best.txt | $MYPATH/create_merged_mega-reads.pl <($MYPATH/ufasta extract -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) $REFN.split) merges.best.txt) | $MYPATH/recover_scaffolds.pl > $REFN.split.joined.tmp && \
+cat \
+<($MYPATH/ufasta extract -v -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) $REFN.split) \
+<($MYPATH/merge_mega-reads.pl < merges.best.txt | $MYPATH/create_merged_mega-reads.pl <($MYPATH/ufasta extract -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) $REFN.split) merges.best.txt) | \
+$MYPATH/recover_scaffolds.pl > $REFN.split.joined.tmp && \
 mv $REFN.split.joined.tmp $REFN.split.joined.fa && \
 touch scaffold_merge.merge.success
 fi
