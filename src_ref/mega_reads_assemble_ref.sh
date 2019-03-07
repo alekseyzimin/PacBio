@@ -281,8 +281,8 @@ touch ${CA}/recompute_astat.success
 fi
 
 $CA_PATH/runCA -s runCA.spec -p genome -d $CA $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
-ln -s $CA/9-terminator/genome.ctg.fasta $COORDS.unitigs.fa
-ln -s $CA/9-terminator/genome.ctg.fasta $COORDS.scaffolds.fa
+ln -sf $CA/9-terminator/genome.ctg.fasta $COORDS.unitigs.fa
+ln -sf $CA/9-terminator/genome.scf.fasta $COORDS.scaffolds.fa
 touch .rerun
 fi
 
