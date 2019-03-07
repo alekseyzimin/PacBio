@@ -318,9 +318,9 @@ fi
 
 #final assembly with Flye
 if [ ! -e final_assembly.success ];then
-log "Final assembly"
+log "Final assembly please make sure flye assembler in on the PATH"
 cat $COORDS.1.contigs.fa $COORDS.scaffolds.fa > $COORDS.subassemblies.fa && \
-/genome2/raid/alekseyz/Flye_mod/bin/flye -t $NUM_THREADS -i 0 --subassemblies $COORDS.subassemblies.fa  --kmer-size 25 -g $ESTIMATED_GENOME_SIZE -m 250 -o flye.$COORDS 1>flye.$COORDS.log 2>&1 && \
+flye -t $NUM_THREADS -i 0 --subassemblies $COORDS.subassemblies.fa  --kmer-size 25 -g $ESTIMATED_GENOME_SIZE -m 250 -o flye.$COORDS 1>flye.$COORDS.log 2>&1 && \
 touch final_assembly.success || error_exit "Final assembly failure, see flye.$COORDS.log"
 fi
 
