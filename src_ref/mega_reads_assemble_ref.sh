@@ -6,6 +6,7 @@
 set -e
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
+FLYE_PATH="$MYPATH/../Flye/bin";
 ESTIMATED_GENOME_SIZE=0
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 MER=17
@@ -97,7 +98,7 @@ echo "runCA not found at $CA_PATH!";
 exit 1;
 fi
 
-export PATH=$CA_PATH:$MYPATH:$PATH
+export PATH=$CA_PATH:$MYPATH:$PATH:$FLYE_PATH
 
 if [ ! -e $REF ];then
 echo "Reference sequence file $REF not found!";
