@@ -7,8 +7,9 @@
 my $slack=400;
 my $maxgap=100000;
 my $mingap=-50;
-$slack= $ARGV[2] if(not($ARGV[2] eq ""));
-$mingap= $ARGV[3] if(not($ARGV[3] eq ""));
+$slack = $ARGV[2] if(not($ARGV[2] eq ""));
+$mingap = $ARGV[3] if(not($ARGV[3] eq ""));
+$maxgap = $ARGV[4] if(not($ARGV[4] eq ""));
 
 open(FILE,$ARGV[0]);#file with query contigs
 while($line=<FILE>){
