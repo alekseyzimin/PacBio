@@ -7,6 +7,7 @@
 my $slack=400;
 my $maxgap=100000;
 my $mingap=-50;
+$slack= $ARGV[2] if(not($ARGV[2] eq ""));
 
 open(FILE,$ARGV[0]);#file with query contigs
 while($line=<FILE>){

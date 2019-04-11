@@ -90,7 +90,7 @@ fi
 
 #perform merge
 if [ ! -e scaffold_merge.merge.success ];then
-$MYPATH/show-coords -lcHq $DELTAFILE.r.delta | $MYPATH/extract_merges_mega-reads.pl $QRY  valid_join_pairs.txt > merges.txt && \
+$MYPATH/show-coords -lcHq $DELTAFILE.r.delta | $MYPATH/extract_merges_mega-reads.pl $QRY  valid_join_pairs.txt 1000 > merges.txt && \
 perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} if(not(defined($h{$merge}))|| $h{$merge} > $F[1]+$F[4]){$hl{$merge}=join(" ",@F);$h{$merge}=$F[1]+$F[4];}}END{foreach $k(keys %hl){print $hl{$k},"\n"}}' merges.txt > merges.best.txt && \
 cat \
 <($MYPATH/ufasta extract -v -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) $REFN.split) \

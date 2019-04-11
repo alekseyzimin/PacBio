@@ -10,7 +10,7 @@ while($line=<FILE>){
     my @f=split(/\s+/,$line);
     if(not($seq eq "")){
       $seq{$ctg}=$seq;
-      #to preserve order
+#to preserve order
       push(@ctgnames,$ctg);
     }
     $ctg=substr($f[0],1);
@@ -55,7 +55,9 @@ my $beg=0;
 my $end=length($seq{$ctg});
 $beg+=$trim5{$ctg} if(defined($trim5{$ctg}));
 $end-=$trim3{$ctg} if(defined($trim3{$ctg}));
-$seq{$ctg}=substr($seq{$ctg},$beg,$end);
+die("trim $beg for contig $ctg outside range") if($beg>= length($seq{$ctg}));
+die("trim $end for contig $ctg outside range") if($end<=0);
+$seq{$ctg}=substr($seq{$ctg},$beg,$end-$beg);
 }
 
 #now read in the merges file
