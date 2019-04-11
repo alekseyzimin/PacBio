@@ -8,6 +8,7 @@ my $slack=400;
 my $maxgap=100000;
 my $mingap=-50;
 $slack= $ARGV[2] if(not($ARGV[2] eq ""));
+$mingap= $ARGV[3] if(not($ARGV[3] eq ""));
 
 open(FILE,$ARGV[0]);#file with query contigs
 while($line=<FILE>){
@@ -32,7 +33,7 @@ while($line=<STDIN>){
     chomp($line);
     $line=~s/^\s+//;
     my @f=split(/\s+/,$line);
-    push(@lines,$line) if($f[0]<=$slack || $f[1]>=$f[11]-$slack);#only see useful lines
+    push(@lines,$line) if($f[0]<=$slack || $f[1]>=$f[11]-$slack);#only see potentially useful lines
 }
 
 #now we go through the array and collect the possible merges
@@ -42,14 +43,19 @@ for($i=0;$i<=$#lines;$i++){
   @f1=split(/\s+/,$lines[$i]);
   ($r1,$junk)=split(/\./,$f1[-2]);
   for($j=$i+1;$j<=$#lines;$j++){ 
-#print "DEBUG $i $j\n$lines[$i]\n$lines[$j]\n\n"; 
     @f2=split(/\s+/,$lines[$j]);
-    last if(not($f2[-1] eq $f1[-1]));
+    #if switched to the next reference contig, stop
+    if(not($f2[-1] eq $f1[-1])){$j=$#lines;next;}
     ($r2,$junk)=split(/\./,$f2[-2]);
+    #next if matches to the same contig or chunks of different contigs
     next if($f1[-2] eq $f2[-2] || not($r1 eq $r2));
+    #next if merge not valid
+    next if(not(defined($valid_merges{"$f1[-2] $f2[-2]"})) && not(defined($valid_merges{"$f2[-2] $f1[-2]"})));
+    #print STDERR "testing\n$lines[$i]\n$lines[$j]\n";
+    #now testing merge
     if($f1[3]<$f1[4]){
       if($f2[3]<$f2[4]){
-      #forward join ---->     ------>
+      #forward merge ---->     ------>
         $gap=$f2[3]-$f1[4];
         my $trim_e=$f1[11]-$f1[1];
         my $trim_b=$f2[0]-1;
@@ -59,12 +65,12 @@ for($i=0;$i<=$#lines;$i++){
           die("Query sequence $f1[-1] is not found") if(not(defined($qseq{$f1[-1]})));
           print substr($qseq{$f1[-1]},$f1[4],$gap) if($gap>0);
           print "\n";
-          last;
+          #last;
         }
       }
     }else{
       if($f2[3]>$f2[4]){
-      #reverse join   <---------   <----------
+      #reverse merge  <---------   <----------
         $gap=$f2[4]-$f1[3];
         my $trim_e=$f1[0]-1;
         my $trim_b=$f2[11]-$f2[1];
@@ -74,7 +80,7 @@ for($i=0;$i<=$#lines;$i++){
           die("Query sequence $f1[-1] is not found") if(not(defined($qseq{$f1[-1]})));
           print substr($qseq{$f1[-1]},$f1[3],$gap) if($gap>0);
           print "\n";
-          last;
+          #last;
         } 
       }
     }
