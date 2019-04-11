@@ -38,9 +38,9 @@ while($line=<FILE>){
     }
 
     if($d2 eq "F"){
-      $trim5{$c2}=$t1;
+      $trim5{$c2}=$t2;
     }else{
-      $trim3{$c1}=$t1;
+      $trim3{$c2}=$t2;
     }   
 
     $gseq{"$c1$d1$c2$d2"}=$s;
