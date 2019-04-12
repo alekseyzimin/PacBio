@@ -157,7 +157,7 @@ rm -rf .rerun
 $MYPATH/show-coords -lcHr $REF_CHR.$HYB_CTG.broken.1.delta | \
 $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
 awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
-awk '{if($16>5 || $7>5000 ) print $0}' |\
+awk '{if($16>25 && $7>2000 ) print $0}' |\
 $MYPATH/extract_single_best_match_coords_file.pl  |\
 $MYPATH/reconcile_matches.pl gap_coordinates.txt  |\
 $MYPATH/output_reconciled_scaffolds.pl $HYB_CTG.broken|\
