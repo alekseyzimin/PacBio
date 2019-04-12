@@ -42,17 +42,12 @@ while($line=<STDIN>){
 #
 for($i=0;$i<=$#lines;$i++){
   @f1=split(/\s+/,$lines[$i]);
-  ($r1,$junk)=split(/\./,$f1[-2]);
   for($j=$i+1;$j<=$#lines;$j++){ 
     @f2=split(/\s+/,$lines[$j]);
     #if switched to the next reference contig, stop
     if(not($f2[-1] eq $f1[-1])){$j=$#lines;next;}
-    ($r2,$junk)=split(/\./,$f2[-2]);
-    #next if matches to the same contig or chunks of different contigs
-    next if($f1[-2] eq $f2[-2] || not($r1 eq $r2));
     #next if merge not valid
     next if(not(defined($valid_merges{"$f1[-2] $f2[-2]"})) && not(defined($valid_merges{"$f2[-2] $f1[-2]"})));
-    #print STDERR "testing\n$lines[$i]\n$lines[$j]\n";
     #now testing merge
     if($f1[3]<$f1[4]){
       if($f2[3]<$f2[4]){
@@ -61,7 +56,6 @@ for($i=0;$i<=$#lines;$i++){
         my $trim_e=$f1[11]-$f1[1];
         my $trim_b=$f2[0]-1;
         if($trim_e<=$slack && $trim_b<=$slack && $gap<$maxgap && $gap>$mingap && $valid_merges{"$f1[-2] $f2[-2]"}){
-          #$valid_merges{"$f1[-2] $f2[-2]"}=0;
           print "$f1[-2] $trim_e F $f2[-2] $trim_b F $gap ";
           die("Query sequence $f1[-1] is not found") if(not(defined($qseq{$f1[-1]})));
           print substr($qseq{$f1[-1]},$f1[4],$gap) if($gap>0);
@@ -76,7 +70,6 @@ for($i=0;$i<=$#lines;$i++){
         my $trim_e=$f1[0]-1;
         my $trim_b=$f2[11]-$f2[1];
         if($trim_e<$slack && $trim_b<$slack && $gap<$maxgap  && $gap>$mingap &&  $valid_merges{"$f2[-2] $f1[-2]"}){
-          #$valid_merges{"$f2[-2] $f1[-2]"}=0;
           print "$f1[-2] $trim_e R $f2[-2] $trim_b R $gap ";
           die("Query sequence $f1[-1] is not found") if(not(defined($qseq{$f1[-1]})));
           print substr($qseq{$f1[-1]},$f1[3],$gap) if($gap>0);
