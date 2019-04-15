@@ -109,7 +109,7 @@ perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} i
 cat \
 <($MYPATH/ufasta extract -v -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) $REFN.split) \
 <($MYPATH/merge_mega-reads.pl < merges.best.txt | $MYPATH/create_merged_mega-reads.pl <($MYPATH/ufasta extract -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) $REFN.split) merges.best.txt) | \
-$MYPATH/recover_scaffolds.pl > $REFN.split.joined.tmp && \
+$MYPATH/recover_scaffolds.pl |ufasta format > $REFN.split.joined.tmp && \
 mv $REFN.split.joined.tmp $REFN.split.joined.fa && \
 touch scaffold_merge.merge.success
 fi
