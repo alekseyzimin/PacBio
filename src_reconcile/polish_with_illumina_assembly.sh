@@ -43,7 +43,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage: polish_with_illumina_assembly.sh -r <sequence to be polished> -q <sequence to polish with> -t <number of threads> -s <minimum sequence similarity percentage> -m <merge polishing sequence alignments slack (advanced)> "
+            echo "Usage: polish_with_illumina_assembly.sh -r <sequence to be polished> -q <sequence to polish with> -t <number of threads> -i <minimum sequence identity percentage> -m <merge polishing sequence alignments slack (advanced)> "
             exit 0
             ;;
         *)
