@@ -58,7 +58,7 @@ for($i=0;$i<=$#lines;$i++){
         if($trim_e<=$slack && $trim_b<=$slack && $gap<$maxgap && $gap>$mingap && $valid_merges{"$f1[-2] $f2[-2]"}){
           print "$f1[-2] $trim_e F $f2[-2] $trim_b F $gap ";
           die("Query sequence $f1[-1] is not found") if(not(defined($qseq{$f1[-1]})));
-          print substr($qseq{$f1[-1]},$f1[4],$gap) if($gap>0);
+          print lc(substr($qseq{$f1[-1]},$f1[4],$gap)) if($gap>0);
           print "\n";
           #last;
         }
@@ -72,7 +72,7 @@ for($i=0;$i<=$#lines;$i++){
         if($trim_e<$slack && $trim_b<$slack && $gap<$maxgap  && $gap>$mingap &&  $valid_merges{"$f2[-2] $f1[-2]"}){
           print "$f1[-2] $trim_e R $f2[-2] $trim_b R $gap ";
           die("Query sequence $f1[-1] is not found") if(not(defined($qseq{$f1[-1]})));
-          print substr($qseq{$f1[-1]},$f1[3],$gap) if($gap>0);
+          print lc(substr($qseq{$f1[-1]},$f1[3],$gap)) if($gap>0);
           print "\n";
           #last;
         } 

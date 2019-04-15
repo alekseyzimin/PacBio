@@ -42,7 +42,7 @@ for($j=$i+1;$j<=$#lines;$j++){
 		$gap=$f2[3]-$f1[4];
 		if($f1[1]>$f1[11]-$slack && $f2[0]<$slack && $gap<$maxgap && $gap>$mingap){
 		    print "$f1[-2] F $f2[-2] F $gap ";
-		    print substr($qseq{$f1[-1]},$f1[4],$gap) if($gap>0);
+		    print lc(substr($qseq{$f1[-1]},$f1[4],$gap)) if($gap>0);
 		    print "\n";
                     last;
 		}
@@ -50,7 +50,7 @@ for($j=$i+1;$j<=$#lines;$j++){
 		$gap=$f2[4]-$f1[4];
 		if($f1[1]>$f1[11]-$slack && $f2[1]>$f2[11]-$slack && $gap<$maxgap  && $gap>$mingap){
 		    print "$f1[-2] F $f2[-2] R $gap ";
-		    print substr($qseq{$f1[-1]},$f1[4],$gap) if($gap>0);
+		    print lc(substr($qseq{$f1[-1]},$f1[4],$gap)) if($gap>0);
 		    print "\n";
                     last;
 		}
@@ -60,7 +60,7 @@ for($j=$i+1;$j<=$#lines;$j++){
 		$gap=$f2[3]-$f1[3];
 		if($f1[0]<$slack && $f2[0]<$slack && $gap<$maxgap  && $gap>$mingap){
 		    print "$f1[-2] R $f2[-2] F $gap ";
-		    print substr($qseq{$f1[-1]},$f1[3],$gap) if($gap>0);
+		    print lc(substr($qseq{$f1[-1]},$f1[3],$gap)) if($gap>0);
 		    print "\n";
                     last;
 		}
@@ -68,7 +68,7 @@ for($j=$i+1;$j<=$#lines;$j++){
 		$gap=$f2[4]-$f1[3];
 		if($f1[0]<$slack && $f2[1]>$f2[11]-$slack && $gap<$maxgap  && $gap>$mingap){
 		    print "$f1[-2] R $f2[-2] R $gap ";
-		    print substr($qseq{$f1[-1]},$f1[3],$gap) if($gap>0);
+		    print lc(substr($qseq{$f1[-1]},$f1[3],$gap)) if($gap>0);
 		    print "\n";
                     last;
 		} 
