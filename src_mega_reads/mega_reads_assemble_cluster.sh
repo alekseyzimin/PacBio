@@ -673,7 +673,9 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 fi
 
 if [ $FLYE -gt 0 ];then
-    $CA_PATH/flye -t $(($NUM_THREADS/2+1)) --nano-corr $COORDS.1.fa -g $ESTIMATED_GENOME_SIZE --kmer-size 21 -m 2500 -o flye -i 0
+    if [ ! -s "flye/scaffolds.fasta" ];then
+      $CA_PATH/flye -t $(($NUM_THREADS/2+1)) --nano-corr $COORDS.1.fa -g $ESTIMATED_GENOME_SIZE --kmer-size 21 -m 2500 -o flye -i 0
+    fi
 else
     if [ ! -s $COORDS.1.frg ] || [ ! -s $COORDS.1.mates.frg ] || [ -e .rerun ];then
 	log "Generating assembly input files"
