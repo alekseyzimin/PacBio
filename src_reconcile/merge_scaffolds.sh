@@ -84,7 +84,7 @@ DELTAFILE=$REFN.$QRYN
 
 #split
 if [ ! -e "scaffold_merge.split.success" ];then
-$MYPATH/splitScaffoldsAtNs.pl  < $REF > $REFN.split && \
+$MYPATH/splitScaffoldsAtNs.pl  < $REF | ufasta one > $REFN.split && \
 grep '^>' --text $REFN.split | perl -ane '{($rn,$coord)=split(/\./,substr($F[0],1));$h{$rn}.=substr($F[0],1)." ";}END{foreach $r(keys %h){@f=split(/\s+/,$h{$r}); for ($i=0;$i<$#f;$i++){print $f[$i]," ",$f[$i+1],"\n"}}}' > valid_join_pairs.txt && \
 touch scaffold_merge.split.success && rm -rf scaffold_merge.align.success
 fi

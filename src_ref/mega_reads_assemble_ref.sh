@@ -221,7 +221,7 @@ touch .rerun
 fi ) &
 PID1=$!
 
-( if [ ! -s $COORDS.unitigs.fa ] || [ ! -s $COORDS.scaffolds.fa ] || [ -e .rerun ];then
+( if [ ! -s $COORDS.contigs.fa ] || [ -e .rerun ];then
 SR_FRG=$COORDS.sr.frg
 log "Running preliminary assembly"
 if [ ! -s $SR_FRG ];then
@@ -277,8 +277,7 @@ touch ${CA}/recompute_astat.success
 fi
 
 $CA_PATH/runCA -s runCA.spec -p genome -d $CA $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
-ln -sf $CA/9-terminator/genome.ctg.fasta $COORDS.unitigs.fa
-ln -sf $CA/9-terminator/genome.scf.fasta $COORDS.scaffolds.fa
+cat $CA/9-terminator/genome.{ctg,deg}.fasta > $COORDS.contigs.fa.tmp && mv $COORDS.contigs.fa.tmp $COORDS.contigs.fa
 touch .rerun
 fi ) &
 PID2=$!
@@ -297,8 +296,8 @@ fi
 
 #final assembly with Flye
 if [ ! -e final_assembly.success ];then
-log "Final assembly please make sure flye assembler in on the PATH"
-cat $COORDS.1.contigs.fa $COORDS.scaffolds.fa > $COORDS.subassemblies.fa && \
+log "Final assembly"
+cat $COORDS.1.contigs.fa $COORDS.contigs.fa > $COORDS.subassemblies.fa && \
 flye -t $NUM_THREADS -i 0 --subassemblies $COORDS.subassemblies.fa  --kmer-size 25 -g $ESTIMATED_GENOME_SIZE -m 250 -o flye.$COORDS 1>flye.$COORDS.log 2>&1 && \
 touch final_assembly.success || error_exit "Final assembly failure, see flye.$COORDS.log"
 fi
@@ -307,20 +306,3 @@ if [ -e final_assembly.success ];then
 log "Final output sequences are in flye.$COORDS/scaffolds.fasta"
 ufasta n50 -a flye.$COORDS/scaffolds.fasta
 fi
-
-#now we merge
-#if [ ! -e merge1.success ];then
-#echo "Merging reference contigs 1"
-#mkdir -p final_merge1 && \
-#(cd final_merge1 && merge_contigs.sh -i 99 -m 1000 -r ../$COORDS.1.contigs.fa -q ../$CA/9-terminator/genome.ctg.fasta -t $NUM_THREADS 1>/dev/null && mv  $COORDS.1.contigs.fa.genome.ctg.fasta.merged.fa ../contigs.merge1.fasta) && touch merge1.success || error_exit "final merge1 failed"
-#fi
-
-#if [ ! -e merge2.success ];then
-#echo "Merging reference contigs 2"
-#mkdir -p final_merge2 && \
-#(cd final_merge2 && merge_contigs.sh -i 98 -m 500 -r ../contigs.merge1.fasta -q ../$REF_SPLIT -t $NUM_THREADS 1>/dev/null && mv  contigs.merge1.fasta.$REF_SPLIT.merged.fa ../contigs.final.fasta) && touch merge2.success || error_exit "final merge2 failed"
-#fi
-
-
-#echo "Final output contigs are in contigs.final.fasta"
-#ufasta n50 -A -S -N50 -C contigs.final.fasta
