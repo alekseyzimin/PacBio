@@ -114,8 +114,6 @@ log "Using CA installation from $CA_PATH"
 log "Using $NUM_THREADS threads"
 log "Output prefix $COORDS"
 
-rm -f .rerun
-
 #first we re-create k-unitigs and super reads with smaller K
 if [ ! -e superReadSequences.named.fasta ];then
 rm -f mega-reads.success
@@ -137,7 +135,6 @@ END{
   }
 }' < work1_mr/superReadNames.txt > superReadSequences.named.fasta.tmp && mv superReadSequences.named.fasta.tmp superReadSequences.named.fasta
 rm -f superReadSequences.fasta.in
-touch .rerun
 fi
 
 SUPERREADS=superReadSequences.named.fasta
@@ -151,7 +148,7 @@ error_exit "K-unitigs file $KUNITIGS not found!";
 fi
 
 REF_SPLIT="reference.split.fa"
-if [ ! -e prepare.success ] || [ -e .rerun ];then
+if [ ! -e prepare.success ];then
 rm -f mega-reads.success
 log "Preparing reference"
 perl -ane '{
@@ -197,30 +194,27 @@ perl -ane '{
     $n+=length($c);
   }
 }'  $REF > $REF_SPLIT.tmp && mv $REF_SPLIT.tmp $REF_SPLIT &&  touch prepare.success
-touch .rerun
 fi
 
 JF_SIZE=$(stat -c%s $KUNITIGS);
 
 #the following two steps take the longest, so we run them in two parallel subshells
 
-( if [ ! -e mega-reads.success ] || [ -e .rerun ];then
+( if [ ! -e mega-reads.success ];then
 rm -f reconcile.success
+rm -f join.success
 log "Mega-reads pass 1"
 if numactl --show 1> /dev/null 2>&1;then
-numactl --interleave=all create_mega_reads -s $JF_SIZE -O 1.1 -e 5 -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt || error_exit "Create_mega_reads failed"
+numactl --interleave=all create_mega_reads -s $JF_SIZE -O 1.1 -e 5 -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt && touch mega-reads.success || error_exit "Create_mega_reads failed"
 else
-create_mega_reads -s $JF_SIZE -O 1.1 -e 5 -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt ||
- error_exit "Create_mega_reads failed"
+create_mega_reads -s $JF_SIZE -O 1.1 -e 5 -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt && touch mega-reads.success || error_exit "Create_mega_reads failed"
 fi
-touch .rerun
 fi
 
 #this is different from joining the mega-reads, because we create scaffolds, not contigs; one scaffold per reference contig
-if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
+if [ ! -e join.success ];then
 log "Joining"
-awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.txt |join_mega_reads_trim.onepass.ref.pl 1>$COORDS.1.fa.tmp 2>/dev/null && mv $COORDS.1.fa.tmp $COORDS.1.fa && touch mega-reads.success
-touch .rerun
+awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.txt |join_mega_reads_trim.onepass.ref.pl 1>$COORDS.1.fa.tmp 2>/dev/null && mv $COORDS.1.fa.tmp $COORDS.1.fa && touch join.success
 fi ) &
 PID1=$!
 
