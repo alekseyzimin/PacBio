@@ -292,7 +292,7 @@ rm -f final_assembly.success
 log "Polishing reference contigs"
 mkdir -p reconcile
 (cd reconcile && polish_with_illumina_assembly.sh -r ../$COORDS.1.fa -q ../$COORDS.contigs.fa -t $NUM_THREADS -m 10000 1> /dev/null && \
-splitScaffoldsAtNs.pl < $COORDS.1.fa.$COORDS.unitigs.fa.all.polished.deduplicated.fa > ../$COORDS.1.contigs.fa.tmp && mv ../$COORDS.1.contigs.fa.tmp ../$COORDS.1.contigs.fa ) && \
+splitScaffoldsAtNs.pl < $COORDS.1.fa.$COORDS.contigs.fa.all.polished.deduplicated.fa > ../$COORDS.1.contigs.fa.tmp && mv ../$COORDS.1.contigs.fa.tmp ../$COORDS.1.contigs.fa ) && \
 touch reconcile.success || error_exit "reconcile failed"
 rm -f final_assembly.success
 fi
