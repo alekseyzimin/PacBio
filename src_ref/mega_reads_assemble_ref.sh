@@ -118,6 +118,7 @@ rm -f .rerun
 
 #first we re-create k-unitigs and super reads with smaller K
 if [ ! -e superReadSequences.named.fasta ];then
+rm -f mega-reads.success
 log "Reducing super-read k-mer size"
 awk 'BEGIN{n=0}{if($1~/^>/){}else{print ">sr"n"\n"$0;n+=2;}}' $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > superReadSequences.fasta.in
 create_k_unitigs_large_k -q 1 -c $(($KMER-1)) -t $NUM_THREADS -m $KMER -n $(($ESTIMATED_GENOME_SIZE*2)) -l $KMER -f `perl -e 'print 1/'$KMER'/1e5'` $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta.all  | grep --text -v '^>' | perl -ane '{$seq=$F[0]; $F[0]=~tr/ACTGactg/TGACtgac/;$revseq=reverse($F[0]); $h{($seq ge $revseq)?$seq:$revseq}=1;}END{$n=0;foreach $k(keys %h){print ">",$n++," length:",length($k),"\n$k\n"}}' > guillaumeKUnitigsAtLeast32bases_all.fasta.tmp && mv guillaumeKUnitigsAtLeast32bases_all.fasta.tmp guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta
@@ -150,7 +151,8 @@ error_exit "K-unitigs file $KUNITIGS not found!";
 fi
 
 REF_SPLIT="reference.split.fa"
-if [ ! -s $REF_SPLIT ] || [ -e .rerun ];then
+if [ ! -e prepare.success ] || [ -e .rerun ];then
+rm -f mega-reads.success
 log "Preparing reference"
 perl -ane '{
   if($F[0]=~/^>/){
@@ -194,7 +196,7 @@ perl -ane '{
     }
     $n+=length($c);
   }
-}'  $REF > $REF_SPLIT.tmp && mv $REF_SPLIT.tmp $REF_SPLIT
+}'  $REF > $REF_SPLIT.tmp && mv $REF_SPLIT.tmp $REF_SPLIT &&  touch prepare.success
 touch .rerun
 fi
 
@@ -202,7 +204,7 @@ JF_SIZE=$(stat -c%s $KUNITIGS);
 
 #the following two steps take the longest, so we run them in two parallel subshells
 
-( if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
+( if [ ! -e mega-reads.success ] || [ -e .rerun ];then
 rm -f reconcile.success
 log "Mega-reads pass 1"
 if numactl --show 1> /dev/null 2>&1;then
@@ -217,12 +219,12 @@ fi
 #this is different from joining the mega-reads, because we create scaffolds, not contigs; one scaffold per reference contig
 if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 log "Joining"
-awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.txt |join_mega_reads_trim.onepass.ref.pl 1>$COORDS.1.fa.tmp 2>/dev/null && mv $COORDS.1.fa.tmp $COORDS.1.fa
+awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.txt |join_mega_reads_trim.onepass.ref.pl 1>$COORDS.1.fa.tmp 2>/dev/null && mv $COORDS.1.fa.tmp $COORDS.1.fa && touch mega-reads.success
 touch .rerun
 fi ) &
 PID1=$!
 
-( if [ ! -s $COORDS.contigs.fa ] || [ -e .rerun ];then
+( if [ ! -e CA.success ] || [ -e .rerun ];then
 rm -f reconcile.success
 SR_FRG=$COORDS.sr.frg
 log "Running preliminary assembly"
@@ -279,7 +281,7 @@ touch ${CA}/recompute_astat.success
 fi
 
 $CA_PATH/runCA -s runCA.spec -p genome -d $CA $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
-cat $CA/9-terminator/genome.{ctg,deg}.fasta > $COORDS.contigs.fa.tmp && mv $COORDS.contigs.fa.tmp $COORDS.contigs.fa
+cat $CA/9-terminator/genome.{ctg,deg}.fasta > CA.contigs.fa.tmp && mv CA.contigs.fa.tmp CA.contigs.fa && touch CA.success
 touch .rerun
 fi ) &
 PID2=$!
@@ -291,8 +293,8 @@ if [ ! -e reconcile.success ];then
 rm -f final_assembly.success
 log "Polishing reference contigs"
 mkdir -p reconcile
-(cd reconcile && polish_with_illumina_assembly.sh -r ../$COORDS.1.fa -q ../$COORDS.contigs.fa -t $NUM_THREADS -m 10000 1> /dev/null && \
-splitScaffoldsAtNs.pl < $COORDS.1.fa.$COORDS.contigs.fa.all.polished.deduplicated.fa > ../$COORDS.1.contigs.fa.tmp && mv ../$COORDS.1.contigs.fa.tmp ../$COORDS.1.contigs.fa ) && \
+(cd reconcile && polish_with_illumina_assembly.sh -r ../$COORDS.1.fa -q ../CA.contigs.fa -t $NUM_THREADS -m 10000 1> /dev/null && \
+splitScaffoldsAtNs.pl < $COORDS.1.fa.CA.contigs.fa.all.polished.deduplicated.fa > ../$COORDS.1.contigs.fa.tmp && mv ../$COORDS.1.contigs.fa.tmp ../$COORDS.1.contigs.fa ) && \
 touch reconcile.success || error_exit "reconcile failed"
 rm -f final_assembly.success
 fi
