@@ -7,6 +7,7 @@ set -e
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 FLYE_PATH="$MYPATH/../Flye/bin";
+CA_PATH="$MYPATH/../CA8/Linux-amd64/bin";
 ESTIMATED_GENOME_SIZE=0
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 MER=17
@@ -94,15 +95,17 @@ done
 
 ###############checking arguments#########################
 if [ ! -e $CA_PATH/runCA ];then
-echo "runCA not found at $CA_PATH!";
-exit 1;
+error_exit "runCA not found at $CA_PATH, please check your MaSuRCA install";
+fi
+
+if [ ! -e $FLYE_PATH/flye ];then
+error_exit "flye not found at $FLYE_PATH, please check your MaSuRCA install";
 fi
 
 export PATH=$CA_PATH:$MYPATH:$PATH:$FLYE_PATH
 
 if [ ! -e $REF ];then
-echo "Reference sequence file $REF not found!";
-exit 1 ;
+error_exit "Reference sequence file $REF not found!";
 fi
 
 COORDS=mr.$KMER.$MER.$B.$d
@@ -115,13 +118,13 @@ log "Using $NUM_THREADS threads"
 log "Output prefix $COORDS"
 
 #first we re-create k-unitigs and super reads with smaller K
-if [ ! -e superReadSequences.named.fasta ];then
+if [ ! -e reduce-super-reads.success ];then
 rm -f mega-reads.success
 log "Reducing super-read k-mer size"
-awk 'BEGIN{n=0}{if($1~/^>/){}else{print ">sr"n"\n"$0;n+=2;}}' $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > superReadSequences.fasta.in
-create_k_unitigs_large_k -q 1 -c $(($KMER-1)) -t $NUM_THREADS -m $KMER -n $(($ESTIMATED_GENOME_SIZE*2)) -l $KMER -f `perl -e 'print 1/'$KMER'/1e5'` $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta.all  | grep --text -v '^>' | perl -ane '{$seq=$F[0]; $F[0]=~tr/ACTGactg/TGACtgac/;$revseq=reverse($F[0]); $h{($seq ge $revseq)?$seq:$revseq}=1;}END{$n=0;foreach $k(keys %h){print ">",$n++," length:",length($k),"\n$k\n"}}' > guillaumeKUnitigsAtLeast32bases_all.fasta.tmp && mv guillaumeKUnitigsAtLeast32bases_all.fasta.tmp guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta
-rm -rf work1_mr
-createSuperReadsForDirectory.perl -minreadsinsuperread 1 -l $KMER -mean-and-stdev-by-prefix-file meanAndStdevByPrefix.pe.txt -kunitigsfile guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta -t $NUM_THREADS -mikedebug work1_mr superReadSequences.fasta.in 1> super1.err 2>&1
+awk 'BEGIN{n=0}{if($1~/^>/){}else{print ">sr"n"\n"$0;n+=2;}}' $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > superReadSequences.fasta.in && \
+create_k_unitigs_large_k -q 1 -c $(($KMER-1)) -t $NUM_THREADS -m $KMER -n $(($ESTIMATED_GENOME_SIZE*2)) -l $KMER -f `perl -e 'print 1/'$KMER'/1e5'` $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta.all  | grep --text -v '^>' | perl -ane '{$seq=$F[0]; $F[0]=~tr/ACTGactg/TGACtgac/;$revseq=reverse($F[0]); $h{($seq ge $revseq)?$seq:$revseq}=1;}END{$n=0;foreach $k(keys %h){print ">",$n++," length:",length($k),"\n$k\n"}}' > guillaumeKUnitigsAtLeast32bases_all.fasta.tmp && mv guillaumeKUnitigsAtLeast32bases_all.fasta.tmp guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta && \
+rm -rf work1_mr && \
+createSuperReadsForDirectory.perl -minreadsinsuperread 1 -l $KMER -mean-and-stdev-by-prefix-file meanAndStdevByPrefix.pe.txt -kunitigsfile guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta -t $NUM_THREADS -mikedebug work1_mr superReadSequences.fasta.in 1> super1.err 2>&1 && \
 perl -ane 'push(@names,$F[0]);
 END{
   open(FILE,"'work1_mr/superReadSequences.fasta.all'");
@@ -133,8 +136,10 @@ END{
       print $line;
     }
   }
-}' < work1_mr/superReadNames.txt > superReadSequences.named.fasta.tmp && mv superReadSequences.named.fasta.tmp superReadSequences.named.fasta
-rm -f superReadSequences.fasta.in
+}' < work1_mr/superReadNames.txt > superReadSequences.named.fasta.tmp && mv superReadSequences.named.fasta.tmp superReadSequences.named.fasta && touch reduce-super-reads.success && rm -f superReadSequences.fasta.in
+if [ ! -e reduce-super-reads.success ];then
+error_exit "Failed to reduce super-reads k-mer size, check super1.err"
+fi
 fi
 
 SUPERREADS=superReadSequences.named.fasta
@@ -218,9 +223,9 @@ awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10
 fi ) &
 PID1=$!
 
-( if [ ! -e CA.success ] || [ -e .rerun ];then
+( if [ ! -e CA.success ];then
 rm -f reconcile.success
-SR_FRG=$COORDS.sr.frg
+SR_FRG=superReads.frg
 log "Running preliminary assembly"
 if [ ! -s $SR_FRG ];then
 create_sr_frg.pl 65525 < $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta | fasta2frg.pl super > $SR_FRG.tmp && mv  $SR_FRG.tmp  $SR_FRG && rm -rf $CA
@@ -264,8 +269,6 @@ fi
 
 if [ ! -e "${CA}/5-consensus/consensus.success" ]; then
 error_exit "Preliminary assembly failure, see $CA.log"
-#else
-#$CA_PATH/tigStore -g $CA/genome.gkpStore -t $CA/genome.tigStore 2 -U -d consensus -nreads 3 100000000 > $COORDS.unitigs.fa.tmp && mv $COORDS.unitigs.fa.tmp $COORDS.unitigs.fa
 fi
 
 if [ ! -e ${CA}/recompute_astat.success ];then
@@ -276,7 +279,6 @@ fi
 
 $CA_PATH/runCA -s runCA.spec -p genome -d $CA $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
 cat $CA/9-terminator/genome.{ctg,deg}.fasta > CA.contigs.fa.tmp && mv CA.contigs.fa.tmp CA.contigs.fa && touch CA.success
-touch .rerun
 fi ) &
 PID2=$!
 
@@ -296,8 +298,8 @@ fi
 #final assembly with Flye
 if [ ! -e final_assembly.success ];then
 log "Final assembly"
-cat $COORDS.1.contigs.fa $COORDS.contigs.fa > $COORDS.subassemblies.fa && \
-$MYPATH/flye -t $NUM_THREADS -i 0 --subassemblies $COORDS.subassemblies.fa  --kmer-size 25 -g $ESTIMATED_GENOME_SIZE -m 250 -o flye.$COORDS 1>flye.$COORDS.log 2>&1 && \
+cat $COORDS.1.contigs.fa CA.contigs.fa > $COORDS.subassemblies.fa && \
+$FLYE_PATH/flye -t $NUM_THREADS -i 0 --subassemblies $COORDS.subassemblies.fa  --kmer-size 25 -g $ESTIMATED_GENOME_SIZE -m 250 -o flye.$COORDS 1>flye.$COORDS.log 2>&1 && \
 touch final_assembly.success || error_exit "Final assembly failure, see flye.$COORDS.log"
 fi
 
