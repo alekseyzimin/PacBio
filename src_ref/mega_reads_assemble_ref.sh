@@ -203,6 +203,7 @@ JF_SIZE=$(stat -c%s $KUNITIGS);
 #the following two steps take the longest, so we run them in two parallel subshells
 
 ( if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
+rm -f reconcile.success
 log "Mega-reads pass 1"
 if numactl --show 1> /dev/null 2>&1;then
 numactl --interleave=all create_mega_reads -s $JF_SIZE -O 1.1 -e 5 -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt || error_exit "Create_mega_reads failed"
@@ -222,6 +223,7 @@ fi ) &
 PID1=$!
 
 ( if [ ! -s $COORDS.contigs.fa ] || [ -e .rerun ];then
+rm -f reconcile.success
 SR_FRG=$COORDS.sr.frg
 log "Running preliminary assembly"
 if [ ! -s $SR_FRG ];then
@@ -286,9 +288,10 @@ wait $PID1 $PID2
 
 #reconcile the reference "scaffolds" with the Illumina assembly
 if [ ! -e reconcile.success ];then
+rm -f final_assembly.success
 log "Polishing reference contigs"
 mkdir -p reconcile
-(cd reconcile && polish_with_illumina_assembly.sh -r ../$COORDS.1.fa -q ../$COORDS.unitigs.fa -t $NUM_THREADS -m 10000 1> /dev/null && \
+(cd reconcile && polish_with_illumina_assembly.sh -r ../$COORDS.1.fa -q ../$COORDS.contigs.fa -t $NUM_THREADS -m 10000 1> /dev/null && \
 splitScaffoldsAtNs.pl < $COORDS.1.fa.$COORDS.unitigs.fa.all.polished.deduplicated.fa > ../$COORDS.1.contigs.fa.tmp && mv ../$COORDS.1.contigs.fa.tmp ../$COORDS.1.contigs.fa ) && \
 touch reconcile.success || error_exit "reconcile failed"
 rm -f final_assembly.success
