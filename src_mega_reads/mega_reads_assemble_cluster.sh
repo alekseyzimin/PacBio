@@ -556,6 +556,13 @@ if [ ! -s $COORDS.all.txt ] || [ -e .rerun ];then
 fi
 
 if [ ! -s $COORDS.1.unjoined.fa ] || [ -e .rerun ];then
+    if [ $FLYE -gt 0 ];then
+      MIN_PROPORTION="0.25"
+      MIN_RADIUS="50"
+    else
+      MIN_PROPORTION="0.15"
+      MIN_RADIUS="15"
+    fi
     log "Joining"
     awk 'BEGIN{flag=0}{
         if($0 ~ /^>/){
@@ -579,7 +586,7 @@ if [ ! -s $COORDS.1.unjoined.fa ] || [ -e .rerun ];then
         last_mr=$8;
         last_coord=$2+$5-$4;
         last_coord_lr=$2;
-}' ${COORDS}.all.txt | determineUnjoinablePacbioSubmegas.perl --min-range-proportion 0.15 --min-range-radius 15 > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed && \
+}' ${COORDS}.all.txt | determineUnjoinablePacbioSubmegas.perl --min-range-proportion $MIN_PROPORTION --min-range-radius $MIN_RADIUS > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed && \
     join_mega_reads_trim.onepass.nomatch.pl $LONGREADS1 ${COORDS}.1.allowed  $MAX_GAP < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.to_join.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.unjoined.fa || error_exit "mega-reads joining failed" && \
     touch .rerun
 fi
@@ -638,7 +645,7 @@ if [ ! -s $COORDS.1.fa ] || [ -e .rerun ];then
 	echo "#!/bin/bash" > ./do_consensus.sh && \
 	    echo "set -o pipefail" >> ./do_consensus.sh && \
 	    echo "if [ ! -e consensus.\$1.success ];then" >> ./do_consensus.sh && \
-	    echo "$CA_PATH/blasr to_blasr.\$1.fa   ref.\$1.fa  -nproc 16 -bestn 10 -m 5 2>blasr.err | sort -k6 -S2% | $CA_PATH/pbdagcon -j 8 -t 0 -c 1 /dev/stdin  2>pbdagcon.err | tee join_consensus.\$1.fasta | $MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t 16 to_join.\$1.fa /dev/stdin | $MYPATH/filter_delta_file_for_qrys.pl qrys.txt | $MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$1 && cat coords.\$1 | $MYPATH/extract_merges_mega-reads.pl join_consensus.\$1.fasta  valid_join_pairs.txt > merges.\$1.txt && touch consensus.\$1.success" >> ./do_consensus.sh && \
+	    echo "$MYPATH/../CA8/Linux-amd64/bin/blasr to_blasr.\$1.fa   ref.\$1.fa  -nproc 16 -bestn 10 -m 5 2>blasr.err | sort -k6 -S2% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j 8 -t 0 -c 1 /dev/stdin  2>pbdagcon.err | tee join_consensus.\$1.fasta | $MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t 16 to_join.\$1.fa /dev/stdin | $MYPATH/filter_delta_file_for_qrys.pl qrys.txt | $MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$1 && cat coords.\$1 | $MYPATH/extract_merges_mega-reads.pl join_consensus.\$1.fasta  valid_join_pairs.txt > merges.\$1.txt && touch consensus.\$1.success" >> ./do_consensus.sh && \
 	    echo "fi" >> ./do_consensus.sh && \
 	    chmod 0755 ./do_consensus.sh && \
 	    NUM_THREADSd8=$(($NUM_THREADS/8+1)) 
@@ -867,9 +874,9 @@ cgwPreserveConsensus=1" > runCA.spec
       print ">$name\n$hseq{$name}\n";
       }}' read_scaffold.txt > refs.renamed.fa && \
 	  $MYPATH/ufasta extract -v -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > qrys.fa && \
-	  $CA_PATH/blasr qrys.fa  refs.renamed.fa  -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \
+	  $MYPATH/../CA8/Linux-amd64/bin/blasr qrys.fa  refs.renamed.fa  -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \
 	  sort -k6 -S10% | \
-	  $CA_PATH/pbdagcon -j $NUM_THREADS -t 0 -c 1 /dev/stdin  2>pbdagcon.err | \
+	  $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j $NUM_THREADS -t 0 -c 1 /dev/stdin  2>pbdagcon.err | \
 	  tee join_consensus.fasta | \
 	  $MYPATH/nucmer --delta /dev/stdout -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.scf.fa /dev/stdin | \
 	  $MYPATH/show-coords -lcHq /dev/stdin > scf_join.coords && \

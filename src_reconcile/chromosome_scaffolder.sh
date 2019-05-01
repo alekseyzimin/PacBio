@@ -64,7 +64,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage: reconcile_hybrid_contigs_chromosomes.sh -r <reference genome> -q <assembly to be scaffolded with the reference> -t <number of threads> -i <minimum sequence similarity percentage> -m <merge polishing sequence alignments slack (advanced)> -v <verbose> -s <reads to align to the assembly to check for misassemblies> -cl <coverage threshold for splitting at misassemblies, default 3> -ch <repeat coverage threshold for splitting at misassemblies, default 30>" 
+            echo "Usage: chromosome_scaffolder.sh -r <reference genome> -q <assembly to be scaffolded with the reference> -t <number of threads> -i <minimum sequence similarity percentage> -m <merge polishing sequence alignments slack (advanced)> -v <verbose> -s <reads to align to the assembly to check for misassemblies> -cl <coverage threshold for splitting at misassemblies, default 3> -ch <repeat coverage threshold for splitting at misassemblies, default 30>" 
             exit 0
             ;;
         *)
