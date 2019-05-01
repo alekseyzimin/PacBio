@@ -119,7 +119,7 @@ dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_nomatch.sh src_mega_reads
 		    src_reconcile/compute_coverage.pl  \
 		    src_reconcile/evaluate_splits.pl  src_reconcile/evaluate_consensus_error_rate.sh\
 		    src_reconcile/extract_single_best_match_coords_file.pl \
-		    src_reconcile/reconcile_hybrid_contigs_chromosomes.sh \
+		    src_reconcile/chromosome_scaffolder.sh \
 		    src_reconcile/break_contigs.pl src_reconcile/merge_sequences_simple.pl \
 		    src_mega_reads/get_super_read_sizes.pl src_mega_reads/translate_reduced_reads.pl \
 		    src_ref/recompute_astat_superreads_CA8.sh src_mega_reads/add_pb_seq.pl \
