@@ -38,6 +38,6 @@ while(my $line=<STDIN>){
       $countboth{$ctg}++ if($count1>$noise_thresh && $count2>$noise_thresh);
       $count{$ctg}++;
     }
-    print "$ctg ",$countp1{$ctg}-$countboth{$ctg}," ",$countp2{$ctg}-$countboth{$ctg},"$countboth{$ctg} $count{$ctg}\n";
+    print "$ctg ",$countp1{$ctg}-$countboth{$ctg}," ",$countp2{$ctg}-$countboth{$ctg}," $countboth{$ctg} $count{$ctg}\n";
   }
 }
