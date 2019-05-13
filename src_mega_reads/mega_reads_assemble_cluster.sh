@@ -558,35 +558,13 @@ fi
 if [ ! -s $COORDS.1.unjoined.fa ] || [ -e .rerun ];then
     if [ $FLYE -gt 0 ];then
       MIN_PROPORTION="0.25"
-      MIN_RADIUS="50"
+      MIN_RADIUS="400"
     else
       MIN_PROPORTION="0.15"
       MIN_RADIUS="15"
     fi
     log "Joining"
-    awk 'BEGIN{flag=0}{
-        if($0 ~ /^>/){
-                flag=0;
-                pb=substr($1,2);
-        }else{
-                flag++;
-        }; 
-        if(flag>1 && last_mr!=$8){
-                l=split(last_mr,a,"_");
-                split($8,b,"_");
-                k1=int(substr(a[l],1,length(a[l])-1));
-                k2=int(substr(b[1],1,length(b[1])-1));
-                if(k1<k2){
-                        print pb" "$1-$3-last_coord" "k1" "k2" "$1-last_coord_lr
-                }else 
-                        if(k1>k2){
-                                print pb" "$1-$3-last_coord" "k2" "k1" "$1-last_coord_lr
-                        }
-        };
-        last_mr=$8;
-        last_coord=$2+$5-$4;
-        last_coord_lr=$2;
-}' ${COORDS}.all.txt | determineUnjoinablePacbioSubmegas.perl --min-range-proportion $MIN_PROPORTION --min-range-radius $MIN_RADIUS > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed && \
+    cat ${COORDS}.all.txt | determineUnjoinablePacbioSubmegas.perl --min-range-proportion $MIN_PROPORTION --min-range-radius $MIN_RADIUS > ${COORDS}.1.allowed.tmp && mv ${COORDS}.1.allowed.tmp ${COORDS}.1.allowed && \
     join_mega_reads_trim.onepass.nomatch.pl $LONGREADS1 ${COORDS}.1.allowed  $MAX_GAP < ${COORDS}.all.txt 1>$COORDS.1.fa.tmp 2>$COORDS.1.to_join.fa.tmp && mv $COORDS.1.fa.tmp $COORDS.1.unjoined.fa || error_exit "mega-reads joining failed" && \
     touch .rerun
 fi

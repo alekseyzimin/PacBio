@@ -9,11 +9,42 @@ $correctnessCodeForSingletons = -1;
 &processArgs;
 my %groups;
 
-#load data
+#load data -- directly from all.txt file
+my $pb;
+my $flag=0;
+my $tmpstr,$k1,$k2,$last_coord, $last_coord_lr;
 while($line=<STDIN>){
   chomp($line);
-  @f=split(/\s+/,$line);
-  push(@{$groups{"$f[2] $f[3]"}},$line);
+  my @f=split(/\s+/,$line);
+  if(substr($f[0],0,1) eq ">"){
+    $flag=0;
+    $pb=substr($f[0],1);
+  }else{
+    $flag++;
+  }
+
+  if($flag>1 && not($last_mr eq $f[7])){
+    $tmpstr=$f[7];
+    $tmpstr=substr($f[7],0,24) if(length($f[7])>24);
+    my @ff=split(/_/,$tmpstr);
+    $k2=substr($ff[0],0,-1);
+    if($k1<$k2){
+      push(@{$groups{"$k1 $k2"}},"$pb ".($f[0]-$f[2]-$last_coord)." $k1 $k2 ".($f[0]-$last_coord_lr));
+    }else{
+      push(@{$groups{"$k2 $k1"}},"$pb ".($f[0]-$f[2]-$last_coord)." $k2 $k1 ".($f[0]-$last_coord_lr));
+    }
+    $tmpstr=$f[7];
+    $tmpstr=substr($f[7],length($f[7])-24) if(length($f[7])>24);
+    my @ff=split(/_/,$tmpstr);
+    $k1=substr($ff[-1],0,-1);
+  }elsif($flag==1){
+    $tmpstr=$f[7];
+    $tmpstr=substr($f[7],length($f[7])-24) if(length($f[7])>24);
+    my @ff=split(/_/,$tmpstr);
+    $k1=substr($ff[-1],0,-1);
+  }
+  $last_coord=$f[1]+$f[4]-$f[3];
+  $last_coord_lr=$f[1];
 }
 
 foreach $group(keys %groups){
@@ -87,7 +118,7 @@ foreach $group(keys %groups){
       #print "DEBUG3 $new_median_value $radius $best_overhang\n";
       for($i=0;$i<=$#lines_sorted;$i++){
         #print "DEBUG4 $line_overhangs[$i]\n";
-        if(($line_overhangs[$i]<$best_overhang*3 || $line_overhangs[$i]<100) && $line_gaps[$i]>=$new_median_value-$radius && $line_gaps[$i]<=$new_median_value+$radius){
+        if(($line_overhangs[$i]<$best_overhang*3 || $line_overhangs[$i]<250) && $line_gaps[$i]>=$new_median_value-$radius && $line_gaps[$i]<=$new_median_value+$radius){
         #if($line_gaps[$i]>=$new_median_value-$radius && $line_gaps[$i]<=$new_median_value+$radius){
           print $lines_sorted[$i]," 1\n";
         }else{
