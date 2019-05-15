@@ -415,9 +415,14 @@ if(substr($kunis[0],0,-1)>substr($kunis[-1],0,-1)){
         $sequence=reverse($sequence);
         $sequence=~tr/ACGTNacgtn/TGCANtgcan/;
 }
-if(not(defined($out{$mega_read}))){
+if(length($mega_read)<length($sequence)){
+$mega_read_index=$mega_read;
+}else{
+$mega_read_index=$sequence;
+}
+if(not(defined($out{$mega_read_index}))){
 print ">$mega_read\n$sequence\n";
-$out{$mega_read}=1;
+$out{$mega_read_index}=1;
 }
 }
 }' $COORDS.txt 1> $COORDS.all_mr.fa.tmp && mv $COORDS.all_mr.fa.tmp $COORDS.all_mr.fa || error_exit "failed to extract mega-reads from pass 1 output file";
