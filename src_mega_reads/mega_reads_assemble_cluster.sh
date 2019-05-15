@@ -591,12 +591,10 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
 	    TOJOIN_BATCHES=500
 	fi
 	for i in $(seq 1 $TOJOIN_BATCHES);do ref_names[$i]="ref.$i.fa";done;
-	for i in $(seq 1 $TOJOIN_BATCHES);do m5_names[$i]="mapped.$i.m5";done;
-	for i in $(seq 1 $TOJOIN_BATCHES);do join_cons_names[$i]="join_consensus.$i.fasta";done;
 	for i in $(seq 1 $TOJOIN_BATCHES);do merges_names[$i]="merges.$i.txt";done;
 
-	awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")*.75 && $6==1) {if($3==prev3 && $4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1$POSTFIX.allowed |grep '^1 ' |awk '{print $0}' > refs.txt && \
-	    awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")*.75 && $6==1) {if($3==prev3 && $4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1$POSTFIX.allowed |awk '{print $0}' > qrys.txt && \
+	awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")*.75 && $6==1) {if($3==prev3 && $4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1$POSTFIX.allowed  > qrys.txt && \
+            grep '^1 ' qrys.txt > refs.txt && \
 	    if [ ! -s qrys.all.fa ]; then $MYPATH/ufasta extract -f <(awk '{print $2}' qrys.txt) ../$LONGREADS1 > qrys.all.fa.tmp && mv qrys.all.fa.tmp qrys.all.fa; fi && \
 	    $MYPATH/ufasta extract -v -f <(awk '{print $2}' refs.txt) qrys.all.fa | $MYPATH/ufasta one > qrys.fa && \
 	    $MYPATH/ufasta extract -f <(awk '{print $2}' refs.txt) qrys.all.fa | $MYPATH/ufasta one > refs.fa && \
