@@ -575,13 +575,11 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
 	for i in $(seq 1 $TOJOIN_BATCHES);do merges_names[$i]="merges.$i.txt";done;
 
 	awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")*.75 && $6==1) {if($3==prev3 && $4==prev4) flag++; else flag=1;  print $5-$2" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1$POSTFIX.allowed  > qrys.txt && \
-            perl -ane '{$index="$F[2] $F[3]";if(not(defined($hl{$index})) || $ho{$index}>$F[0]){$hl{$index}=join(" ",@F);$ho{$index}=$F[0];}}END{foreach $k(keys %hl){print $hl{$k},"\n";}}' qrys.txt > refs.txt && \
-         #awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")*.75 && $6==1) {if($3==prev3 && $4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1$POSTFIX.allowed  > qrys.txt && \
-            #grep '^1 ' qrys.txt > refs.txt && \
-	    if [ ! -s qrys.all.fa ]; then $MYPATH/ufasta extract -f <(awk '{print $2}' qrys.txt) ../$LONGREADS1 > qrys.all.fa.tmp && mv qrys.all.fa.tmp qrys.all.fa; fi && \
-	    $MYPATH/ufasta extract -v -f <(awk '{print $2}' refs.txt) qrys.all.fa | $MYPATH/ufasta one > qrys.fa && \
-	    $MYPATH/ufasta extract -f <(awk '{print $2}' refs.txt) qrys.all.fa | $MYPATH/ufasta one > refs.fa && \
-	    perl -ane '{
+          perl -ane '{$index="$F[2] $F[3]";if(not(defined($hl{$index})) || $ho{$index}>$F[0]){$hl{$index}=join(" ",@F);$ho{$index}=$F[0];}}END{foreach $k(keys %hl){print $hl{$k},"\n";}}' qrys.txt > refs.txt && \
+	  if [ ! -s qrys.all.fa ]; then $MYPATH/ufasta extract -f <(awk '{print $2}' qrys.txt) ../$LONGREADS1 > qrys.all.fa.tmp && mv qrys.all.fa.tmp qrys.all.fa; fi && \
+	  $MYPATH/ufasta extract -v -f <(awk '{print $2}' refs.txt) qrys.all.fa | $MYPATH/ufasta one > qrys.fa && \
+	  $MYPATH/ufasta extract -f <(awk '{print $2}' refs.txt) qrys.all.fa | $MYPATH/ufasta one > refs.fa && \
+	  perl -ane '{
       $h{$F[1]}="$F[2]_$F[3]";
       }END{
       $flag=0;
