@@ -29,7 +29,7 @@ POSTFIX=""
 #MIN_PROPORTION="0.15"
 #MIN_RADIUS="15"
 MIN_PROPORTION="0.25"
-MIN_RADIUS="400"
+MIN_RADIUS="50"
 GC=
 RC=
 NC=
@@ -552,7 +552,7 @@ fi
 
 if [ ! -s ${COORDS}.1$POSTFIX.unjoined.fa ] || [ -e .rerun ];then
     log "Joining"
-    join_mega_reads_trim.onepass.nomatch.pl $LONGREADS1 ${COORDS}.1$POSTFIX.allowed  $MAX_GAP < ${COORDS}.all.txt 1>$COORDS.1$POSTFIX.fa.tmp 2>$COORDS.1$POSTFIX.to_join.fa.tmp && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.unjoined.fa || error_exit "mega-reads joining failed"
+    join_mega_reads_trim.onepass.nomatch.pl $LONGREADS1 ${COORDS}.1$POSTFIX.allowed  $MAX_GAP < ${COORDS}.all.txt 1>$COORDS.1$POSTFIX.fa.tmp 2>$COORDS.1$POSTFIX.to_join.fa.tmp && mv $COORDS.1$POSTFIX.to_join.fa.tmp $COORDS.1$POSTFIX.to_join.fa && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.unjoined.fa || error_exit "mega-reads joining failed"
     touch .rerun
 fi
 
@@ -564,7 +564,7 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
     #start subshell execution
 
     (cd ${COORDS}.join_consensus.tmp;
-	TOJOIN_BATCHES=$(($(stat -c%s -L ../${COORDS}.1$POSTFIX.to_join.fa.tmp)/100000000))
+	TOJOIN_BATCHES=$(($(stat -c%s -L ../${COORDS}.1$POSTFIX.to_join.fa)/100000000))
 	if [ $TOJOIN_BATCHES -le 1 ];then
 	    TOJOIN_BATCHES=1
 	fi
@@ -602,8 +602,8 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
       }}' refs.txt > refs.renamed.fa && \
 	  rm -f ${ref_names[@]} && $MYPATH/ufasta split -i  refs.renamed.fa ${ref_names[@]} && \
 	  $MYPATH/split_reads_to_join.pl qrys.txt to_blasr ${ref_names[@]} < qrys.fa && \
-	  perl -ane '{if($F[0] =~ /^>/){$rn=$F[0];}else{$seq=$F[0]; $seq=~ tr/a-zA-Z//s; print "$rn\n$F[0]\n" if(length($seq)>length($F[0])*0.1);}}' ../${COORDS}.1$POSTFIX.to_join.fa.tmp | $MYPATH/split_reads_to_join.pl qrys.txt to_join ${ref_names[@]} && \
-	  grep '^>' --text ../$COORDS.1$POSTFIX.to_join.fa.tmp | perl -ane '{($rn,$coord)=split(/\./,substr($F[0],1));$h{$rn}.=substr($F[0],1)." ";}END{foreach $r(keys %h){@f=split(/\s+/,$h{$r}); for ($i=0;$i<$#f;$i++){print $f[$i]," ",$f[$i+1],"\n"}}}' > valid_join_pairs.txt && \
+	  perl -ane '{if($F[0] =~ /^>/){$rn=$F[0];}else{$seq=$F[0]; $seq=~ tr/a-zA-Z//s; print "$rn\n$F[0]\n" if(length($seq)>length($F[0])*0.1);}}' ../${COORDS}.1$POSTFIX.to_join.fa | $MYPATH/split_reads_to_join.pl qrys.txt to_join ${ref_names[@]} && \
+	  grep '^>' --text ../$COORDS.1$POSTFIX.to_join.fa | perl -ane '{($rn,$coord)=split(/\./,substr($F[0],1));$h{$rn}.=substr($F[0],1)." ";}END{foreach $r(keys %h){@f=split(/\s+/,$h{$r}); for ($i=0;$i<$#f;$i++){print $f[$i]," ",$f[$i+1],"\n"}}}' > valid_join_pairs.txt && \
 	  for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_join.$F.fa;echo "ACGT" >> to_join.$F.fa;done && \
 	  for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_blasr.$F.fa;echo "ACGT" >> to_blasr.$F.fa;done 
 
@@ -620,7 +620,7 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
 	
 	cat merges.[0-9]*.txt |perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} if(not(defined($h{$merge}))|| $h{$merge} > $F[1]+$F[4]){$hl{$merge}=join(" ",@F);$h{$merge}=$F[1]+$F[4];}}END{foreach $k(keys %hl){print $hl{$k},"\n"}}' > merges.best.txt && \
 	    $MYPATH/merge_mega-reads.pl < merges.best.txt | \
-	    $MYPATH/create_merged_mega-reads.pl ../${COORDS}.1$POSTFIX.to_join.fa.tmp merges.best.txt > ${COORDS}.1$POSTFIX.joined.fa.tmp && \
+	    $MYPATH/create_merged_mega-reads.pl ../${COORDS}.1$POSTFIX.to_join.fa merges.best.txt > ${COORDS}.1$POSTFIX.joined.fa.tmp && \
 	    mv ${COORDS}.1$POSTFIX.joined.fa.tmp  ../${COORDS}.1$POSTFIX.joined.fa && \
 	    cat ${merges_names[@]} > /dev/null && \
 	    touch join_consensus.success)
@@ -628,13 +628,15 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
     #end subshell execution
 
     if [ -e ${COORDS}.join_consensus.tmp/join_consensus.success ];then
-	cat ${COORDS}.1$POSTFIX.joined.fa ${COORDS}.1$POSTFIX.unjoined.fa  > ${COORDS}.1$POSTFIX.fa.tmp && mv ${COORDS}.1$POSTFIX.fa.tmp ${COORDS}.1$POSTFIX.fa && rm -rf ${COORDS}.join_consensus.tmp ${COORDS}.1$POSTFIX.to_join.fa.tmp
+	cat ${COORDS}.1$POSTFIX.joined.fa ${COORDS}.1$POSTFIX.unjoined.fa  > ${COORDS}.1$POSTFIX.fa.tmp && \
+          mv ${COORDS}.1$POSTFIX.fa.tmp ${COORDS}.1$POSTFIX.fa && \
+          rm -rf ${COORDS}.join_consensus.tmp 
     else
 	log "Warning! Some or all gap consensus jobs failed, see files in ${COORDS}.join_consensus.tmp, however this is fine and assembly can proceed normally"
 	if [ -s ${COORDS}.1$POSTFIX.joined.fa ];then
             cat $COORDS.1$POSTFIX.joined.fa $COORDS.1$POSTFIX.unjoined.fa  > $COORDS.1$POSTFIX.fa.tmp && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.fa
 	else
-            cat $COORDS.1$POSTFIX.unjoined.fa $COORDS.1$POSTFIX.to_join.fa.tmp  > $COORDS.1$POSTFIX.fa.tmp && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.fa
+            cat $COORDS.1$POSTFIX.unjoined.fa $COORDS.1$POSTFIX.to_join.fa  > $COORDS.1$POSTFIX.fa.tmp && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.fa
 	fi
     fi
     touch .rerun
