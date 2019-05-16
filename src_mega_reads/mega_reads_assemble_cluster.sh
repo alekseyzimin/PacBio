@@ -8,7 +8,6 @@ MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 ESTIMATED_GENOME_SIZE=0
 #minimum 50
-#MAX_GAP=100
 MAX_GAP=1000
 MER=15
 B=17
@@ -402,42 +401,19 @@ fi
 if [ $ONEPASS -lt 1 ];then
 
     if [ ! -s $COORDS.all_mr.maximal.fa ] || [ -e .rerun ];then
-	perl -ane '{
-if($F[0] =~ /^\>/){
-$pb=substr($F[0],1);
-}else{
-$mega_read=$F[8];
-@kunis=split(/_/,$mega_read);
-$sequence=$F[10];
-if(substr($kunis[0],0,-1)>substr($kunis[-1],0,-1)){
-        $mega_read=join("_",reverse(@kunis));
-        $mega_read=~tr/FR/RF/;
-        $sequence=reverse($sequence);
-        $sequence=~tr/ACGTNacgtn/TGCANtgcan/;
-}
-if(length($mega_read)<length($sequence)){
-$mega_read_index=$mega_read;
-}else{
-$mega_read_index=$sequence;
-}
-if(not(defined($out{$mega_read_index}))){
-print ">$mega_read\n$sequence\n";
-$out{$mega_read_index}=1;
-}
-}
-}' $COORDS.txt 1> $COORDS.all_mr.fa.tmp && mv $COORDS.all_mr.fa.tmp $COORDS.all_mr.fa || error_exit "failed to extract mega-reads from pass 1 output file";
-        ufasta sizes -H $COORDS.all_mr.fa | LC_ALL=C sort -nrk2 -S 50%  > $COORDS.mr_sizes.tmp && \
-	    reduce_sr `wc -l $KUNITIGLENGTHS | perl -ane 'print $F[0]'`  $KUNITIGLENGTHS $KMER $COORDS.mr_sizes.tmp -o $COORDS.reduce.tmp && \
-	    cat <(awk '{print $1}' $COORDS.reduce.tmp) <(awk '{print $1}'  $COORDS.mr_sizes.tmp) | LC_ALL=C sort -S 50% | uniq -u > $COORDS.maximal_mr.txt && \
-	    ufasta extract -f $COORDS.maximal_mr.txt $COORDS.all_mr.fa > $COORDS.all_mr.maximal.fa && \
-	    rm $COORDS.mr_sizes.tmp $COORDS.reduce.tmp ||  error_exit "failed to create maximal pass 1 mega-reads ";
+      extract_unique_mega-reads.pl < $COORDS.txt 1>$COORDS.all_mr.fa.tmp 2>$COORDS.mr_sizes.unsorted.tmp && mv $COORDS.all_mr.fa.tmp $COORDS.all_mr.fa || error_exit "failed to extract mega-reads from pass 1 output file";
+      LC_ALL=C sort -nrk2 -S 50%  $COORDS.mr_sizes.unsorted.tmp > $COORDS.mr_sizes.tmp && rm $COORDS.mr_sizes.unsorted.tmp && \
+	reduce_sr `wc -l $KUNITIGLENGTHS | perl -ane 'print $F[0]'`  $KUNITIGLENGTHS $KMER $COORDS.mr_sizes.tmp -o $COORDS.reduce.tmp && \
+	cat <(awk '{print $1}' $COORDS.reduce.tmp) <(awk '{print $1}'  $COORDS.mr_sizes.tmp) | LC_ALL=C sort -S 50% | uniq -u > $COORDS.maximal_mr.txt && \
+	ufasta extract -f $COORDS.maximal_mr.txt $COORDS.all_mr.fa > $COORDS.all_mr.maximal.fa && \
+	rm $COORDS.mr_sizes.tmp $COORDS.reduce.tmp ||  error_exit "failed to create maximal pass 1 mega-reads ";
 	touch .rerun
 	if  [ ! -s $COORDS.all_mr.maximal.fa ];then
 	    error_exit "failed to create maximal mega-reads from pass 1"
 	fi
 
 #figure out which long reads corrected into one chunk on the first pass
-	awk 'BEGIN{counter=0}{if($1~ /^>/){if(counter==1){print rn}rn=substr($1,2);counter=0}else{if($8>'$d'*4){counter++}else{counter+=2}}}END{if(counter==1){print rn}}' $COORDS.txt > $COORDS.single.txt.tmp && mv  $COORDS.single.txt.tmp  $COORDS.single.txt || error_exit "failed to extract names of single-chunk mega-reads pass 1";
+      awk 'BEGIN{counter=0}{if($1~ /^>/){if(counter==1){print rn}rn=substr($1,2);counter=0}else{if($8>'$d'*4){counter++}else{counter+=2}}}END{if(counter==1){print rn}}' $COORDS.txt > $COORDS.single.txt.tmp && mv  $COORDS.single.txt.tmp  $COORDS.single.txt || error_exit "failed to extract names of single-chunk mega-reads pass 1";
     fi
 
 #here we compute the number of batches to run for secondary create_mega_reads
@@ -600,6 +576,8 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
 
 	awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")*.75 && $6==1) {if($3==prev3 && $4==prev4) flag++; else flag=1;  print $5-$2" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1$POSTFIX.allowed  > qrys.txt && \
             perl -ane '{$index="$F[2] $F[3]";if(not(defined($hl{$index})) || $ho{$index}>$F[0]){$hl{$index}=join(" ",@F);$ho{$index}=$F[0];}}END{foreach $k(keys %hl){print $hl{$k},"\n";}}' qrys.txt > refs.txt && \
+         #awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")*.75 && $6==1) {if($3==prev3 && $4==prev4) flag++; else flag=1;  print flag" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1$POSTFIX.allowed  > qrys.txt && \
+            #grep '^1 ' qrys.txt > refs.txt && \
 	    if [ ! -s qrys.all.fa ]; then $MYPATH/ufasta extract -f <(awk '{print $2}' qrys.txt) ../$LONGREADS1 > qrys.all.fa.tmp && mv qrys.all.fa.tmp qrys.all.fa; fi && \
 	    $MYPATH/ufasta extract -v -f <(awk '{print $2}' refs.txt) qrys.all.fa | $MYPATH/ufasta one > qrys.fa && \
 	    $MYPATH/ufasta extract -f <(awk '{print $2}' refs.txt) qrys.all.fa | $MYPATH/ufasta one > refs.fa && \
