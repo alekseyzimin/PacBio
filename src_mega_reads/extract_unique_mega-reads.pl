@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 #this code extracts the unique mega-reads from the output of create_mega_reads, normalizes their names and prints them out on STDOUT, lengths are printed out on STDERR
 while($line=<STDIN>){
+  next if(length($line) > 100000000); #this prevents perl split loop errors if file is corrupted
   chomp($line);
   if(substr($line,0,1) eq ">"){
     $pb=substr($line,1);
