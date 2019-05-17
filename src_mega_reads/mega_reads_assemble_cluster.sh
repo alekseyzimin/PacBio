@@ -411,8 +411,10 @@ if [ $ONEPASS -lt 1 ];then
 	if  [ ! -s $COORDS.all_mr.maximal.fa ];then
 	    error_exit "failed to create maximal mega-reads from pass 1"
 	fi
+    fi
 
 #figure out which long reads corrected into one chunk on the first pass
+    if [ ! -s $COORDS.single.txt ] || [ -e .rerun ];then
       awk 'BEGIN{counter=0}{if($1~ /^>/){if(counter==1){print rn}rn=substr($1,2);counter=0}else{if($8>'$d'*4){counter++}else{counter+=2}}}END{if(counter==1){print rn}}' $COORDS.txt > $COORDS.single.txt.tmp && mv  $COORDS.single.txt.tmp  $COORDS.single.txt || error_exit "failed to extract names of single-chunk mega-reads pass 1";
     fi
 
