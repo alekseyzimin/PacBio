@@ -6,25 +6,11 @@
 #
 #this code produces joined mega-reads
 #
-#first we read in PB sequences
-my $pbseqfile=$ARGV[0];
-my $allowed_gaps=$ARGV[1];
-my $max_gap=$ARGV[2];
+my $allowed_gaps=$ARGV[0];
+my $max_gap=$ARGV[1];
 my $min_len_output=500;
 my $fudge_factor=1.2;
-
-my $rn="";
-my %pbseq;
-open(FILE,$pbseqfile);
-while($line=<FILE>){
-    chomp($line);
-    if($line =~ /^>/){
-	@f=split(/\s+/,$line);
-	$rn=substr($f[0],1);
-    }else{
-	$pbseq{$rn}.=$line;
-    }
-}
+my $pbseq="";
 
 open(FILE,$allowed_gaps);
 while($line=<FILE>){
@@ -57,7 +43,7 @@ while($line=<STDIN>){
       }
       @lines=();
     }
-    ($rn,$junk)=split(/\s+/,substr($line,1));
+    ($rn,$pbseq)=split(/\s+/,substr($line,1));
   }else{
     my @ttt=split(/\s+/,$line);
     push(@lines, \@ttt) if($#ttt==7);
@@ -130,7 +116,7 @@ sub process_sorted_lines{
 	$seq=substr($mseq,$mbgn-1,$mend-$mbgn+1);
         next if(not(length($mseq)==$mlen));
         #die("inconsistent sequence length for $pb") if(not(length($mseq)==$mlen));
-        die("long read $pb does not exist in the sequence file!!!") if(not(defined($pbseq{$pb})));
+        die("long read $pb does not exist in the sequence file!!!") if(not(defined($pbseq)));
         $gap_index++;
         if($outread eq ""){
 	    $outread=$seq; # the first chunk
@@ -152,7 +138,7 @@ sub process_sorted_lines{
                 $max_gap_local=$max_gap;
                 $max_gap_local=$max_gap_local/2 if($join_allowed==-1); 
                 if($bgn-$last_coord<=$max_gap_local && ($join_allowed==1 || $join_allowed==-1)){#join or then put N's and later split
-		    $outread.=lc(substr($pbseq{$pb},$last_coord,$bgn-$last_coord-1)).$seq;
+		    $outread.=lc(substr($pbseq,$last_coord,$bgn-$last_coord-1)).$seq;
                 }else{
 		    $outread.="N"x($bgn-$last_coord).$seq;
                 }
