@@ -298,8 +298,8 @@ fi
 
 PBATCHES=$(($(stat -c%s -L $LONGREADS1)/$PBATCH_SIZE));
 #if there is one batch then we do not use SGE
-if [ $PBATCHES -ge 1001 ];then
-    PBATCHES=1000
+if [ $PBATCHES -ge 512 ];then
+    PBATCHES=512
 fi
 if [ $PBATCHES -le 1 ];then
     PBATCHES=1
@@ -426,8 +426,8 @@ if [ $ONEPASS -lt 1 ];then
 	SBATCHES=1
     fi
 #if there is one batch then we do not use SGE
-    if [ $SBATCHES -ge 1001 ];then
-	SBATCHES=1000
+    if [ $SBATCHES -ge 512 ];then
+	SBATCHES=512
     fi
     if [ $SBATCHES -le 1 ];then
 	SBATCHES=1
