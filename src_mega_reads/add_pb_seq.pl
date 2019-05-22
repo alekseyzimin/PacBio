@@ -17,7 +17,7 @@ while($line=<STDIN>){
   if(substr($line,0,1) eq ">"){
     $rn=substr($line,1);
     if(not(defined($pbseq{$rn}))){
-      print STDERR "read sequence for $rn not found");
+      print STDERR "read sequence for $rn not found\n";
       print "$line ".("N"x50000)."\n";
     }else{
       print "$line $pbseq{$rn}\n";
