@@ -14,12 +14,16 @@ while($line=<FILE>){
 
 while($line=<STDIN>){
   chomp($line);
-    if(substr($line,0,1) eq ">"){
+  if(substr($line,0,1) eq ">"){
     $rn=substr($line,1);
-    die("read sequence for $rn not found") if(not(defined($pbseq{$rn})));
-    print "$line $pbseq{$rn}\n";
+    if(not(defined($pbseq{$rn}))){
+      print STDERR "read sequence for $rn not found");
+      print "$line ".("N"x50000)\n";
     }else{
-    print $line,"\n";
+      print "$line $pbseq{$rn}\n";
     }
+  }else{
+    print $line,"\n";
+  }
 }
 

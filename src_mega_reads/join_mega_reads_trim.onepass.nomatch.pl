@@ -25,7 +25,7 @@ my $outread="";
 while($line=<STDIN>){
   chomp($line);
   if($line =~ /^>/){
-    if(@lines){
+    if(@lines && not($rn eq "") && not($pbseq eq "")){
       $outread = "";
       $outread = process_sorted_lines(sort {$$a[0] <=> $$b[0]} @lines);
       if(not($outread eq "")){
@@ -50,7 +50,7 @@ while($line=<STDIN>){
   }
 }
 #do not forget the last one
-if(@lines){
+if(@lines && not($rn eq "") && not($pbseq eq "")){
   $outread = process_sorted_lines(sort {$$a[0] <=> $$b[0]} @lines);
   if(not($outread eq "")){
     $indx=0;
