@@ -40,8 +40,8 @@ fi
 
 if [ ! -s extract.success ];then
 awk '{if($2>$3){c1=$2+0.0001;c2=$3+0.0001;}else{c2=$2+0.0001;c1=$3+0.0001;}if(c1+c2<20 || c1/c2<='$HAP_THRESH') print $1}' $PID.counts.txt > $MEGAREADS_BOTH.txt && \
-awk '{c1=$2+0.0001;c2=$3+0.0001;if(c1+c2>=20 && c1/c2>'$HAP_THRESH') print $1}' > $MEGAREADS_P1.txt && \
-awk '{c1=$2+0.0001;c2=$3+0.0001;if(c1+c2>=20 && c2/c1>'$HAP_THRESH') print $1}' > $MEGAREADS_P2.txt && \
+awk '{c1=$2+0.0001;c2=$3+0.0001;if(c1+c2>=20 && c1/c2>'$HAP_THRESH') print $1}' $PID.counts.txt > $MEGAREADS_P1.txt && \
+awk '{c1=$2+0.0001;c2=$3+0.0001;if(c1+c2>=20 && c2/c1>'$HAP_THRESH') print $1}' $PID.counts.txt > $MEGAREADS_P2.txt && \
 ufasta extract -f <(cat $MEGAREADS_BOTH.txt $MEGAREADS_P1.txt ) $MEGAREADS > $MEGAREADS_P1.fa && \
 ufasta extract -f <(cat $MEGAREADS_BOTH.txt $MEGAREADS_P2.txt ) $MEGAREADS > $MEGAREADS_P2.fa && \
 touch extract.success
