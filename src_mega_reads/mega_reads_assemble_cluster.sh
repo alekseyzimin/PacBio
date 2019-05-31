@@ -22,6 +22,7 @@ QUEUE=""
 USE_SGE=0
 PACBIO=""
 NANOPORE=""
+NANOPORE_RNA=0
 ONEPASS=0
 OVLMIN_DEFAULT=250
 FLYE=0
@@ -82,6 +83,11 @@ do
 	    PACBIO="$2"
 	    shift
 	    ;;
+        -r|--rnaseq)
+            NANOPORE="$2"
+            NANOPORE_RNA=1
+            shift
+            ;;
         -n|--nanopore)
             NANOPORE="$2"
             shift
@@ -547,6 +553,12 @@ if [ ! -s ${COORDS}.all.txt ] || [ -e .rerun ];then
     cat <(ufasta extract -f $COORDS.single.txt $COORDS.txt) <(ufasta extract -v -f $COORDS.single.txt $COORDS.mr.txt)| awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' | add_pb_seq.pl $LONGREADS1 | split_matches_file.pl $NUM_LONGREADS_READS_PER_BATCH .matches && ls .matches.* | xargs -P $NUM_THREADS -I % refine.sh $COORDS % $KMER && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp 
     touch .rerun
 fi
+
+if [ $NANOPORE_RNA -gt 0 ];then
+join_mega_reads_trim.onepass.ref.pl <$COORDS.all.txt 1>$COORDS.transcripts.fa 2>$COORDS.transcripts.err
+exit
+fi
+
 
 if [ ! -s ${COORDS}.1$POSTFIX.allowed ] || [ -e .rerun ];then
     log "Computing allowed merges"
