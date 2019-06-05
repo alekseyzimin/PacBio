@@ -49,7 +49,7 @@ sub process_lines{
     my @args=@_;
     my $o=mummer::Options->new;
     $o->minmatch(10);
-    $o->mincluster(60);
+    $o->mincluster(40);
     $o->diagfactor(0.2);
     $o->maxgap(200);
     $o->breaklen(120);
