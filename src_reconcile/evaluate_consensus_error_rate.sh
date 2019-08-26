@@ -60,7 +60,7 @@ fi
 
 if [ ! -e $BASM.map.success ];then
 rm -f $BASM.sort.success
-$BWA mem -p -t 64 $BASM.bwa $READS 2>bwasterr |samtools view -bhS /dev/stdin > $BASM.unSorted.bam && touch $BASM.map.success
+$BWA mem -SP -t 64 $BASM.bwa $READS 2>bwasterr |samtools view -bhS /dev/stdin > $BASM.unSorted.bam && touch $BASM.map.success
 fi
 
 if [ ! -e $BASM.sort.success ];then

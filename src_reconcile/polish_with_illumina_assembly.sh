@@ -73,7 +73,7 @@ fi
 
 #delta-filter
 if [ ! -e polish_filter.success ];then
-parallel_delta-filter.sh $DELTAFILE '-r -l 100  -o 20 ' 9 && mv $DELTAFILE.fdelta $DELTAFILE.1.delta && \
+parallel_delta-filter.sh $DELTAFILE '-1 -l 100  -o 20 ' 9 && mv $DELTAFILE.fdelta $DELTAFILE.1.delta && \
 touch polish_filter.success && rm -f  polish_add_not_aligning.success || exit
 fi
 
