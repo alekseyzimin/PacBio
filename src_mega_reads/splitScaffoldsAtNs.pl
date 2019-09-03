@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-
+#this script splits scaffolds at Ns
 while($line=<STDIN>){
   chomp($line);
   if($line=~/^>/){
@@ -15,7 +15,7 @@ while($line=<STDIN>){
         $n+=length($c);
       }
   }
-  $rn=substr($line,1);
+  ($rn,$junk)=split(/\s+/,substr($line,1));
   $seq="";
   }else{
   $seq.=$line;
