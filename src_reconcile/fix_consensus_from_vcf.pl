@@ -51,7 +51,7 @@ if(not($f[0] eq $ctg)){
 }
 my @ff=split(/:/,$f[9]);
 #print "$f[9]\n";
-if($ff[3]==0 && $ff[5]>$min_alt_obs){
+if($ff[3]==0 && $ff[5]>=$min_alt_obs){
   push(@fixes,$f[4]);
   push(@originals,$f[3]);
   push(@offsets,$f[1]);
