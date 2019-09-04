@@ -36,9 +36,10 @@ if(not($f[0] eq $ctg)){
   if($#fixes>=0){
   #proceed with fixing
     for(my $i=$#fixes;$i>-1;$i--){#going in reverse order to avoid shifting sequence due to indels
+      die("sequence $ctg not found in the input fasta file") if(not(defined($rseq{$ctg})));
       #first we check if the sequence at given offset matches the original variant
       my $original_seq=substr($rseq{$ctg},$offsets[$i]-1,length($originals[$i]));
-      #print "$offsets[$i] $originals[$i] $original_seq $fixes[$i]\n";
+      #print "$i $ctg $offsets[$i] $originals[$i] $original_seq $fixes[$i]\n";
       die("sequence does not match the original $original_seq $originals[$i]") if(not($originals[$i] eq $original_seq));
       #then substitute
       $rseq{$ctg}=substr($rseq{$ctg},0,$offsets[$i]-1).$fixes[$i].substr($rseq{$ctg},$offsets[$i]+length($originals[$i])-1);
@@ -46,7 +47,7 @@ if(not($f[0] eq $ctg)){
   }
   @fixes=();
   @originals=();
-  $offsets=();
+  @offsets=();
   $ctg=$f[0];
 }
 my @ff=split(/:/,$f[9]);
@@ -62,6 +63,7 @@ if($#fixes>=0){
 #proceed with fixing
   for(my $i=$#fixes;$i>-1;$i--){#going in reverse order to avoid shifting sequence due to indels
 #first we check if the sequence at given offset matches the original variant
+    die("sequence $ctg not found in the input fasta file") if(not(defined($rseq{$ctg})));
     my $original_seq=substr($rseq{$ctg},$offsets[$i]-1,length($originals[$i]));
     #print "$offsets[$i] $originals[$i] $original_seq $fixes[$i]\n";
     die("sequence does not match the original $original_seq $originals[$i]") if(not($originals[$i] eq $original_seq));
