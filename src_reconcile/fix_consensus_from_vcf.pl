@@ -2,7 +2,7 @@
 #this code fixes errors in the consensus called in vcf file by freebayes
 #first we read the sequences into memory
 #
-my $min_alt_obs=3;
+my $min_alt_obs=2;
 my $ref_contigs=$ARGV[0];
 my $ctg="",$seq="";
 my %rseq =();
