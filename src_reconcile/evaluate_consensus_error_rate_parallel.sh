@@ -88,17 +88,38 @@ mkdir -p $BASM.work
 #subshell
 (
   cd $BASM.work
+  CONTIGS=`wc -l ../$BASM.names | awk '{print $1}'`;
+  BATCH_SIZE=$(($CONTIGS / $NUM_THREADS+1));
+  BATCH=1;
+  echo "Processing $BATCH_SIZE scaffold(s) per batch"
+  LIST="";
+  INDEX=1;
   for f in $(cat ../$BASM.names);do
-    if [ ! -e $f.extract.success ];then
-      $SAMTOOLS view -h ../$BASM.alignSorted.bam $f 2>>samtools.err |$SAMTOOLS view -S -b /dev/stdin 2>>samtools.err 1> $f.alignSorted.bam && touch $f.extract.success
-    fi
+    LIST="$LIST $f"
+    let INDEX=$INDEX+1;
+      if [ $INDEX -gt $BATCH_SIZE ];then
+        if [ ! -e $BATCH.extract.success ];then
+          $SAMTOOLS view -h ../$BASM.alignSorted.bam $LIST 2>>samtools.err |$SAMTOOLS view -S -b /dev/stdin 2>>samtools.err 1> $BATCH.alignSorted.bam && touch $BATCH.extract.success
+        fi
+          LIST=""
+          INDEX=1
+          let BATCH=$BATCH+1
+      fi
   done
+  if [ $INDEX -gt 1 ];then
+    if [ ! -e $BATCH.extract.success ];then
+      $SAMTOOLS view -h ../$BASM.alignSorted.bam $LIST 2>>samtools.err |$SAMTOOLS view -S -b /dev/stdin 2>>samtools.err 1> $BATCH.alignSorted.bam && touch $BATCH.extract.success
+    fi
+  else
+    let BATCH=$BATCH-1
+  fi
+
   echo '#!/bin/bash' > commands.sh
   echo 'if [ ! -e $1.vc.success ];then' >> commands.sh
   echo '  $FREEBAYES -C 2 -0 -O -q 20 -z 0.02 -E 0 -X -u -p 1 -F 0.5 -b $1.alignSorted.bam  -v $1.vcf -f ../$ASM && touch $1.vc.success' >> commands.sh
   echo 'fi' >> commands.sh
   chmod 0755 commands.sh && \
-  cat ../$BASM.names |xargs -P $NUM_THREADS -I % ./commands.sh % && \
+  seq 1 $BATCH |xargs -P $NUM_THREADS -I % ./commands.sh % && \
   cat *.vcf > ../$BASM.vcf
 ) && rm -rf $BASM.work;
 touch $BASM.vc.success
