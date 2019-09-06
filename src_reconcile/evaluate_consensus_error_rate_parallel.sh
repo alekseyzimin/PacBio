@@ -120,17 +120,19 @@ mkdir -p $BASM.work
   echo 'fi' >> commands.sh
   chmod 0755 commands.sh && \
   seq 1 $BATCH |xargs -P $NUM_THREADS -I % ./commands.sh % && \
-  rm -f ../BASM.vcf
   for f in $(seq 1 $BATCH);do
-    if [ -e $f.vc.success ];then
-      cat $f.vcf >> ../$BASM.vcf
-    else
+    if [ ! -e $f.vc.success ];then
       echo "freebayes failed on batch $f in $BASM.work";
       exit 1
     fi
   done
-) && rm -rf $BASM.work;
 touch $BASM.vc.success
+);
+if [ -e ./$BASM.work/$BASM.vc.success ];then
+  cat ./$BASM.work/*.vcf > $BASM.vcf
+  rm -rf $BASM.work;
+  touch $BASM.vc.success
+fi
 fi
 
 NUMSUB=`grep -v "#" $BASM.vcf  |perl -ane '{if(length($F[3])==1 && length($F[4])==1){$nerr=1;} print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'`
