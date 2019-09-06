@@ -82,6 +82,7 @@ fi
 
 #here we are doing variant calling in parallel, per input contig/scaffold
 if [ ! -e $BASM.vc.success ];then
+rm -f  $BASM.fix.success
 echo "Calling variants"
 grep '^>' $ASM |awk '{print substr($1,2)}' > $BASM.names
 mkdir -p $BASM.work
