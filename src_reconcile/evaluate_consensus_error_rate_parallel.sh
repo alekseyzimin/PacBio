@@ -52,49 +52,50 @@ export BASM=`basename $ASM`
 export BWA=`which bwa`
 export FREEBAYES=`which freebayes`
 export SAMTOOLS=`which samtools`
+rm -f bwa.err samtools.err
 
 if [ ! -e $BASM.index.success ];then 
+echo "Creating BWA index for $ASM"
 rm -f $BASM.map.success
-$BWA index $ASM -p $BASM.bwa && touch $BASM.index.success
+$BWA index $ASM -p $BASM.bwa 2>>bwa.err && touch $BASM.index.success
 fi
 
 if [ ! -e $BASM.map.success ];then
+echo "Aligning reads to $ASM"
 rm -f $BASM.sort.success
-$BWA mem -SP -t 64 $BASM.bwa $READS 2>bwasterr |samtools view -bhS /dev/stdin > $BASM.unSorted.bam && touch $BASM.map.success
+$BWA mem -SP -t $NUM_THREADS $BASM.bwa $READS 2>>bwa.err |samtools view -bhS /dev/stdin 1>$BASM.unSorted.bam 2>>samtools.err && touch $BASM.map.success
 fi
-#here we are doing sorting, indexing and variant calling in parallel, per input contig/scaffold
-if [ ! -e $BASM.call.success ];then
-grep '^>' $BASM |awk '{print substr($1,2)}' > $BASM.names
+
+if [ ! -e $BASM.sort.success ];then
+echo "Sorting and indexing alignment file"
+rm -f $BASM.vc.success
+$SAMTOOLS sort -m $MEM  $BASM.unSorted.bam $BASM.alignSorted 2>>samtools.err && \
+$SAMTOOLS index $BASM.alignSorted.bam 2>>samtools.err && touch  $BASM.sort.success
+fi
+
+#here we are doing variant calling in parallel, per input contig/scaffold
+if [ ! -e $BASM.vc.success ];then
+echo "Calling variants"
+grep '^>' $ASM |awk '{print substr($1,2)}' > $BASM.names
 mkdir -p $BASM.work
-(cd $BASM.work
-for f in $(cat ../$BASM.names);do
-  $SAMTOOLS view -h ../$BASM.unSorted.bam $f |$SAMTOOLS view -S -b /dev/stdin > $f.unSorted.bam
-done
-echo '#!/bin/bash' > commands.sh
-echo 'if [ ! -e $1.sort.success]'
-echo '  $SAMTOOLS sort $1.unSorted.bam $1.alignSorted && $SAMTOOLS index $1.alignSorted.bam && touch  $1.sort.success'
-echo 'fi'
-echo 'if [ ! -e $1.vc.success]'
-echo '  $FREEBAYES -C 2 -0 -O -q 20 -z 0.02 -E 0 -X -u -p 1 -F 0.5 -b $1.alignSorted.bam  -v $1.vcf -f ../$ASM && touch $1.vc.success'
-echo 'fi'
-chmod 0755 commands.sh
-cat ../$BASM.names |xargs -P $NUM_THREADS -I % ./commands.sh
-cat *.vcf > ../$BASM.vcf);
-touch $BASM.call.success
+#subshell
+(
+  cd $BASM.work
+  for f in $(cat ../$BASM.names);do
+    if [ ! -e $f.extract.success ];then
+      $SAMTOOLS view -h ../$BASM.alignSorted.bam $f 2>>samtools.err |$SAMTOOLS view -S -b /dev/stdin 2>>samtools.err 1> $f.alignSorted.bam && touch $f.extract.success
+    fi
+  done
+  echo '#!/bin/bash' > commands.sh
+  echo 'if [ ! -e $1.vc.success ];then' >> commands.sh
+  echo '  $FREEBAYES -C 2 -0 -O -q 20 -z 0.02 -E 0 -X -u -p 1 -F 0.5 -b $1.alignSorted.bam  -v $1.vcf -f ../$ASM && touch $1.vc.success' >> commands.sh
+  echo 'fi' >> commands.sh
+  chmod 0755 commands.sh && \
+  cat ../$BASM.names |xargs -P $NUM_THREADS -I % ./commands.sh % && \
+  cat *.vcf > ../$BASM.vcf
+) && rm -rf $BASM.work;
+touch $BASM.vc.success
 fi
-
-
-
-#if [ ! -e $BASM.sort.success ];then
-#rm -f $BASM.vc.success
-#$SAMTOOLS sort -m $MEM  $BASM.unSorted.bam $BASM.alignSorted && \
-#$SAMTOOLS index $BASM.alignSorted.bam && touch  $BASM.sort.success
-#fi
-
-#if [ ! -e $BASM.vc.success ];then
-#rm -f $BASM.calc.success
-#freebayes -C 2 -0 -O -q 20 -z 0.02 -E 0 -X -u -p 1 -F 0.5 -b $BASM.alignSorted.bam  -v $BASM.vcf -f $ASM && touch $BASM.vc.success
-#fi
 
 NUMSUB=`grep -v "#" $BASM.vcf  |perl -ane '{if(length($F[3])==1 && length($F[4])==1){$nerr=1;} print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'`
 NUMIND=`grep -v "#" $BASM.vcf  |perl -ane '{if(length($F[3])>1 || length($F[4])>1){$nerr=abs(length($F[3])-length($F[4]));}print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'`
@@ -107,4 +108,4 @@ echo "Substitution Errors: $NUMSUB" > $BASM.report
 echo "Insertion/Deletion Errors: $NUMIND" >> $BASM.report
 echo "Assembly Size: $ASMSIZE" >> $BASM.report
 echo "Consensus Quality: $QUAL" >> $BASM.report
-
+cat $BASM.report
