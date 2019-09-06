@@ -1,9 +1,13 @@
 #!/bin/bash
 
+MYPATH="`dirname \"$0\"`"
+MYPATH="`( cd \"$MYPATH\" && pwd )`"
+export PATH=$MYPATH:$PATH;
 set -o pipefail
 set -e
 NUM_THREADS=4
 MEM=16000000000
+FIX=0
 
 #parsing arguments
 while [[ $# > 0 ]]
@@ -14,6 +18,9 @@ do
         -t|--threads)
             export NUM_THREADS="$2"
             shift
+            ;;
+        -f|--fix)
+            FIX=1
             ;;
         -a|--assembly)
             export ASM="$2"
@@ -31,7 +38,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage:  evaluate_consensus_error_rate.sh -a <assembly contigs or scaffolds> -r <Illumina reads fastq> -t <number of threads>"
+            echo "Usage:  evaluate_consensus_error_rate.sh -a <assembly contigs or scaffolds> -r <Illumina reads fastq> -t <number of threads [-f] optional:fix errors that are found>"
             echo "Must have bwa, samtools and freebayes available on the PATH"
             exit 0
             ;;
@@ -109,3 +116,9 @@ echo "Insertion/Deletion Errors: $NUMIND" >> $BASM.report
 echo "Assembly Size: $ASMSIZE" >> $BASM.report
 echo "Consensus Quality: $QUAL" >> $BASM.report
 cat $BASM.report
+
+if [ $FIX -gt 0 && ! -e $BASM.fix.success ];then
+  echo "Fixing errors"
+  fix_consensus_from_vcf.pl $ASM < $BASM.vcf > $BASM.fixed && touch $BASM.fix.success
+fi
+
