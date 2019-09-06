@@ -12,11 +12,11 @@ do
 
     case $key in
         -t|--threads)
-            NUM_THREADS="$2"
+            export NUM_THREADS="$2"
             shift
             ;;
         -a|--assembly)
-            ASM="$2"
+            export ASM="$2"
             shift
             ;;
         -r|--reads)
@@ -24,7 +24,7 @@ do
             shift
             ;;
         -m|--memory)
-            MEM="$2";
+            export MEM="$2";
             shift
             ;;
         -v|--verbose)
@@ -48,10 +48,10 @@ echo "assembly file $ASM or Illumina reads file $READS not found!"
 exit 1
 fi
 
-BASM=`basename $ASM`
-BWA=`which bwa`
-FREEBAYES=`which freebayes`
-SAMTOOLS=`which samtools`
+export BASM=`basename $ASM`
+export BWA=`which bwa`
+export FREEBAYES=`which freebayes`
+export SAMTOOLS=`which samtools`
 
 if [ ! -e $BASM.index.success ];then 
 rm -f $BASM.map.success
@@ -62,17 +62,39 @@ if [ ! -e $BASM.map.success ];then
 rm -f $BASM.sort.success
 $BWA mem -SP -t 64 $BASM.bwa $READS 2>bwasterr |samtools view -bhS /dev/stdin > $BASM.unSorted.bam && touch $BASM.map.success
 fi
-
-if [ ! -e $BASM.sort.success ];then
-rm -f $BASM.vc.success
-$SAMTOOLS sort -m $MEM  $BASM.unSorted.bam $BASM.alignSorted && \
-$SAMTOOLS index $BASM.alignSorted.bam && touch  $BASM.sort.success
+#here we are doing sorting, indexing and variant calling in parallel, per input contig/scaffold
+if [ ! -e $BASM.call.success ];then
+grep '^>' $BASM |awk '{print substr($1,2)}' > $BASM.names
+mkdir -p $BASM.work
+(cd $BASM.work
+for f in $(cat ../$BASM.names);do
+  $SAMTOOLS view -h ../$BASM.unSorted.bam $f |$SAMTOOLS view -S -b /dev/stdin > $f.unSorted.bam
+done
+echo '#!/bin/bash' > commands.sh
+echo 'if [ ! -e $1.sort.success]'
+echo '  $SAMTOOLS sort $1.unSorted.bam $1.alignSorted && $SAMTOOLS index $1.alignSorted.bam && touch  $1.sort.success'
+echo 'fi'
+echo 'if [ ! -e $1.vc.success]'
+echo '  $FREEBAYES -C 2 -0 -O -q 20 -z 0.02 -E 0 -X -u -p 1 -F 0.5 -b $1.alignSorted.bam  -v $1.vcf -f ../$ASM && touch $1.vc.success'
+echo 'fi'
+chmod 0755 commands.sh
+cat ../$BASM.names |xargs -P $NUM_THREADS -I % ./commands.sh
+cat *.vcf > ../$BASM.vcf);
+touch $BASM.call.success
 fi
 
-if [ ! -e $BASM.vc.success ];then
-rm -f $BASM.calc.success
-$FREEBAYES -C 2 -0 -O -q 20 -z 0.02 -E 0 -X -u -p 1 -F 0.5 -b $BASM.alignSorted.bam  -v $BASM.vcf -f $ASM && touch $BASM.vc.success
-fi
+
+
+#if [ ! -e $BASM.sort.success ];then
+#rm -f $BASM.vc.success
+#$SAMTOOLS sort -m $MEM  $BASM.unSorted.bam $BASM.alignSorted && \
+#$SAMTOOLS index $BASM.alignSorted.bam && touch  $BASM.sort.success
+#fi
+
+#if [ ! -e $BASM.vc.success ];then
+#rm -f $BASM.calc.success
+#freebayes -C 2 -0 -O -q 20 -z 0.02 -E 0 -X -u -p 1 -F 0.5 -b $BASM.alignSorted.bam  -v $BASM.vcf -f $ASM && touch $BASM.vc.success
+#fi
 
 NUMSUB=`grep -v "#" $BASM.vcf  |perl -ane '{if(length($F[3])==1 && length($F[4])==1){$nerr=1;} print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'`
 NUMIND=`grep -v "#" $BASM.vcf  |perl -ane '{if(length($F[3])>1 || length($F[4])>1){$nerr=abs(length($F[3])-length($F[4]));}print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'`

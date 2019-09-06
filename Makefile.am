@@ -118,7 +118,7 @@ dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_nomatch.sh src_mega_reads
 		    src_mega_reads/recover_scaffolds.pl  src_mega_reads/trim_by_kunitigs.pl  src_mega_reads/trim_mega_reads.pl \
 		    src_reconcile/compute_coverage.pl  \
 		    src_reconcile/evaluate_splits.pl \
-		    src_reconcile/evaluate_consensus_error_rate.sh \
+		    src_reconcile/evaluate_consensus_error_rate.sh src_reconcile/evaluate_consensus_error_rate_parallel.sh \
 		    src_reconcile/fix_consensus_from_vcf.pl \ 
 		    src_reconcile/extract_single_best_match_coords_file.pl \
 		    src_reconcile/chromosome_scaffolder.sh \
