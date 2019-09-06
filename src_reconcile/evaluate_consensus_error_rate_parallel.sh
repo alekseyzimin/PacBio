@@ -117,8 +117,10 @@ echo "Assembly Size: $ASMSIZE" >> $BASM.report
 echo "Consensus Quality: $QUAL" >> $BASM.report
 cat $BASM.report
 
-if [ $FIX -gt 0 && ! -e $BASM.fix.success ];then
-  echo "Fixing errors"
-  fix_consensus_from_vcf.pl $ASM < $BASM.vcf > $BASM.fixed && touch $BASM.fix.success
+if [ $FIX -gt 0 ];then
+  if [ ! -e $BASM.fix.success ];then
+    echo "Fixing errors"
+    fix_consensus_from_vcf.pl $ASM < $BASM.vcf > $BASM.fixed && touch $BASM.fix.success
+  fi
 fi
 
