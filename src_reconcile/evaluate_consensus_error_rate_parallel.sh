@@ -91,6 +91,9 @@ mkdir -p $BASM.work
   cd $BASM.work
   CONTIGS=`wc -l ../$BASM.names | awk '{print $1}'`;
   BATCH_SIZE=$(($CONTIGS / $NUM_THREADS+1));
+  if [ $BATCH_SIZE -gt 1000 ];then
+    BATCH_SIZE=1000
+  fi
   BATCH=1;
   echo "Processing $BATCH_SIZE scaffold(s) per batch"
   LIST="";

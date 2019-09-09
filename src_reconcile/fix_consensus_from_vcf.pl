@@ -40,7 +40,7 @@ if(not($f[0] eq $ctg)){
       #first we check if the sequence at given offset matches the original variant
       my $original_seq=substr($rseq{$ctg},$offsets[$i]-1,length($originals[$i]));
       #print "$i $ctg $offsets[$i] $originals[$i] $original_seq $fixes[$i]\n";
-      die("sequence does not match the original $original_seq $originals[$i]") if(not($originals[$i] eq $original_seq));
+      die("sequence does not match the original $original_seq $originals[$i]") if(not(uc($originals[$i]) eq uc($original_seq)));
       #then substitute
       $rseq{$ctg}=substr($rseq{$ctg},0,$offsets[$i]-1).$fixes[$i].substr($rseq{$ctg},$offsets[$i]+length($originals[$i])-1);
       }
@@ -66,7 +66,7 @@ if($#fixes>=0){
     die("sequence $ctg not found in the input fasta file") if(not(defined($rseq{$ctg})));
     my $original_seq=substr($rseq{$ctg},$offsets[$i]-1,length($originals[$i]));
     #print "$offsets[$i] $originals[$i] $original_seq $fixes[$i]\n";
-    die("sequence does not match the original $original_seq $originals[$i]") if(not($originals[$i] eq $original_seq));
+    die("sequence does not match the original $original_seq $originals[$i]") if(not(uc($originals[$i]) eq uc($original_seq)));
 #then substitute
     $rseq{$ctg}=substr($rseq{$ctg},0,$offsets[$i]-1).$fixes[$i].substr($rseq{$ctg},$offsets[$i]+length($originals[$i])-1);
   }
