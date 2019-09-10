@@ -43,7 +43,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage:  evaluate_consensus_error_rate.sh -a <assembly contigs or scaffolds> -r <Illumina reads fastq> -t <number of threads [-f] optional:fix errors that are found>"
+            echo "Usage:  evaluate_consensus_error_rate.sh -a <assembly contigs or scaffolds> -r <\'Illumina_reads_fastq1 Illumina_reads_fastq\'> -t <number of threads [-f] optional:fix errors that are found>"
             echo "Must have bwa, samtools and freebayes available on the PATH"
             exit 0
             ;;
@@ -55,8 +55,8 @@ do
     shift
 done
 
-if [ ! -e $ASM ] || [ ! -e $READS ];then
-echo "assembly file $ASM or Illumina reads file $READS not found!"
+if [ ! -e $ASM ];then
+echo "assembly file $ASM not found!"
 exit 1
 fi
 
@@ -75,7 +75,7 @@ fi
 if [ ! -e $BASM.map.success ];then
 echo "Aligning reads to $ASM"
 rm -f $BASM.sort.success
-$BWA mem -SP -t $NUM_THREADS $BASM.bwa $READS 2>>bwa.err |samtools view -bhS /dev/stdin 1>$BASM.unSorted.bam 2>>samtools.err && touch $BASM.map.success
+cat $(echo $READS) | $BWA mem -SP -t $NUM_THREADS $BASM.bwa /dev/stdin 2>>bwa.err |samtools view -bhS /dev/stdin 1>$BASM.unSorted.bam 2>>samtools.err && touch $BASM.map.success
 fi
 
 if [ ! -e $BASM.sort.success ];then
