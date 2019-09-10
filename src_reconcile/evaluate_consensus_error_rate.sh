@@ -8,6 +8,7 @@ set -e
 NUM_THREADS=4
 MEM=16000000000
 FIX=0
+BATCH_SIZE=0
 
 #parsing arguments
 while [[ $# > 0 ]]
@@ -15,6 +16,10 @@ do
     key="$1"
 
     case $key in
+        -b|--batch)
+            export BATCH_SIZE="$2"
+            shift
+            ;;
         -t|--threads)
             export NUM_THREADS="$2"
             shift
@@ -77,20 +82,25 @@ if [ ! -e $BASM.sort.success ];then
 echo "Sorting and indexing alignment file"
 rm -f $BASM.vc.success
 $SAMTOOLS sort -m $MEM  $BASM.unSorted.bam $BASM.alignSorted 2>>samtools.err && \
-$SAMTOOLS index $BASM.alignSorted.bam 2>>samtools.err && touch  $BASM.sort.success
+$SAMTOOLS index $BASM.alignSorted.bam 2>>samtools.err && \
+$SAMTOOLS index $ASM  2>>samtools.err && \
+touch  $BASM.sort.success
 fi
 
 #here we are doing variant calling in parallel, per input contig/scaffold
 if [ ! -e $BASM.vc.success ];then
 rm -f  $BASM.fix.success
 echo "Calling variants"
-grep '^>' $ASM |awk '{print substr($1,2)}' > $BASM.names
+#I do this to mix scaffolds up to equalize batch sizes
+ufasta sizes -H $ASM |sort -S 10% -k2 |awk '{print $1}' > $BASM.names
 mkdir -p $BASM.work
 #subshell
 (
   cd $BASM.work
   CONTIGS=`wc -l ../$BASM.names | awk '{print $1}'`;
-  BATCH_SIZE=$(($CONTIGS / $NUM_THREADS+1));
+  if [ $BATCH_SIZE -lt 1 ];then
+    BATCH_SIZE=$(($CONTIGS / $NUM_THREADS+1));
+  fi
   if [ $BATCH_SIZE -gt 1000 ];then
     BATCH_SIZE=1000
   fi
