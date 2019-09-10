@@ -83,7 +83,7 @@ echo "Sorting and indexing alignment file"
 rm -f $BASM.vc.success
 $SAMTOOLS sort -m $MEM  $BASM.unSorted.bam $BASM.alignSorted 2>>samtools.err && \
 $SAMTOOLS index $BASM.alignSorted.bam 2>>samtools.err && \
-$SAMTOOLS index $ASM  2>>samtools.err && \
+$SAMTOOLS faidx $ASM  2>>samtools.err && \
 touch  $BASM.sort.success
 fi
 
