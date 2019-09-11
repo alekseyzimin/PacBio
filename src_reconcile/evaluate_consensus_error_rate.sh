@@ -75,7 +75,7 @@ fi
 if [ ! -e $BASM.map.success ];then
 echo "Aligning reads to $ASM"
 rm -f $BASM.sort.success
-cat $(echo $READS) | $BWA mem -SP -t $NUM_THREADS $BASM.bwa /dev/stdin 2>>bwa.err |samtools view -bhS /dev/stdin 1>$BASM.unSorted.bam 2>>samtools.err && touch $BASM.map.success
+zcat -f $(echo $READS) | $BWA mem -SP -t $NUM_THREADS $BASM.bwa /dev/stdin 2>>bwa.err |samtools view -bhS /dev/stdin 1>$BASM.unSorted.bam 2>>samtools.err && touch $BASM.map.success
 fi
 
 if [ ! -e $BASM.sort.success ];then
