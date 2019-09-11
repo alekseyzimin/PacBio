@@ -5,10 +5,10 @@ MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:$PATH;
 set -o pipefail
 set -e
-NUM_THREADS=4
-MEM=16000000000
-FIX=0
-BATCH_SIZE=0
+export NUM_THREADS=4
+export MEM=16000000000
+export FIX=1
+export BATCH_SIZE=0
 
 #parsing arguments
 while [[ $# > 0 ]]
@@ -24,8 +24,8 @@ do
             export NUM_THREADS="$2"
             shift
             ;;
-        -f|--fix)
-            FIX=1
+        -n|--nofix)
+            export FIX=0
             ;;
         -a|--assembly)
             export ASM="$2"
@@ -43,7 +43,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage:  evaluate_consensus_error_rate.sh -a <assembly contigs or scaffolds> -r <\'Illumina_reads_fastq1 Illumina_reads_fastq\'> -t <number of threads [-f] optional:fix errors that are found>"
+            echo "Usage:  evaluate_consensus_error_rate.sh -a <assembly contigs or scaffolds> -r <\'Illumina_reads_fastq1 Illumina_reads_fastq\'> -t <number of threads [-n] optional:do not fix errors that are found>"
             echo "Must have bwa, samtools and freebayes available on the PATH"
             exit 0
             ;;
@@ -90,6 +90,7 @@ fi
 #here we are doing variant calling in parallel, per input contig/scaffold
 if [ ! -e $BASM.vc.success ];then
 rm -f  $BASM.fix.success
+rm -f  $BASM.report.success
 echo "Calling variants"
 #I do this to mix scaffolds up to equalize batch sizes
 ufasta sizes -H $ASM |sort -S 10% -k2 |awk '{print $1}' > $BASM.names
@@ -113,6 +114,7 @@ mkdir -p $BASM.work
     let INDEX=$INDEX+1;
       if [ $INDEX -gt $BATCH_SIZE ];then
         if [ ! -e $BATCH.extract.success ];then
+          echo $LIST | tr " " "\n" > $BATCH.names
           $SAMTOOLS view -h ../$BASM.alignSorted.bam $LIST 2>>samtools.err |$SAMTOOLS view -S -b /dev/stdin 2>>samtools.err 1> $BATCH.alignSorted.bam && touch $BATCH.extract.success
         fi
           LIST=""
@@ -122,6 +124,7 @@ mkdir -p $BASM.work
   done
   if [ $INDEX -gt 1 ];then
     if [ ! -e $BATCH.extract.success ];then
+      echo $LIST | tr " " "\n" > $BATCH.names
       $SAMTOOLS view -h ../$BASM.alignSorted.bam $LIST 2>>samtools.err |$SAMTOOLS view -S -b /dev/stdin 2>>samtools.err 1> $BATCH.alignSorted.bam && touch $BATCH.extract.success
     fi
   else
@@ -132,6 +135,11 @@ mkdir -p $BASM.work
   echo 'if [ ! -e $1.vc.success ];then' >> commands.sh
   echo '  $FREEBAYES -C 2 -0 -O -q 20 -z 0.02 -E 0 -X -u -p 1 -F 0.5 -b $1.alignSorted.bam  -v $1.vcf -f ../$ASM && touch $1.vc.success' >> commands.sh
   echo 'fi' >> commands.sh
+  echo 'if [ $FIX -gt 0 ];then' >> commands.sh
+  echo '  if [ ! -e $1.fix.success ];then' >> commands.sh
+  echo '    fix_consensus_from_vcf.pl <(ufasta extract -f $1.names ../$ASM) < $1.vcf > $1.fixed && touch $1.fix.success'  >> commands.sh
+  echo '  fi' >> commands.sh
+  echo 'fi' >> commands.sh
   chmod 0755 commands.sh && \
   seq 1 $BATCH |xargs -P $NUM_THREADS -I % ./commands.sh % && \
   for f in $(seq 1 $BATCH);do
@@ -140,32 +148,37 @@ mkdir -p $BASM.work
       exit 1
     fi
   done
+  for f in $(seq 1 $BATCH);do
+    if [ ! -e $f.fix.success ];then
+      echo "fixing errors failed on batch $f in $BASM.work";
+      exit 1
+    fi
+  done
+touch $BASM.fix.success
 touch $BASM.vc.success
 );
 if [ -e ./$BASM.work/$BASM.vc.success ];then
   cat ./$BASM.work/*.vcf > $BASM.vcf
-  rm -rf $BASM.work;
   touch $BASM.vc.success
 fi
+if [ -e ./$BASM.work/$BASM.fix.success ];then
+  cat ./$BASM.work/*.fixed > $BASM.fixed
+  touch $BASM.fix.success
+fi
+rm -rf $BASM.work;
 fi
 
-NUMSUB=`grep --text -v '^#'  $BASM.vcf  |perl -ane '{if(length($F[3])==1 && length($F[4])==1){$nerr=1;} print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'`
-NUMIND=`grep --text -v '^#' $BASM.vcf  |perl -ane '{if(length($F[3])>1 || length($F[4])>1){$nerr=abs(length($F[3])-length($F[4]));}print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'`
-ASMSIZE=`ufasta n50 -S $ASM | awk '{print $2}'`
-NUMERR=$(($NUMSUB+$NUMIND))
-QUAL=`echo $NUMERR $ASMSIZE | awk '{print 100-$1/$2*100}'`
-
-
-echo "Substitution Errors: $NUMSUB" > $BASM.report
-echo "Insertion/Deletion Errors: $NUMIND" >> $BASM.report
-echo "Assembly Size: $ASMSIZE" >> $BASM.report
-echo "Consensus Quality: $QUAL" >> $BASM.report
+if [ ! -e $BASM.report.success ];then
+NUMSUB=`grep --text -v '^#'  $BASM.vcf  |perl -ane '{if(length($F[3])==1 && length($F[4])==1){$nerr=1;} print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'` && \
+NUMIND=`grep --text -v '^#' $BASM.vcf  |perl -ane '{if(length($F[3])>1 || length($F[4])>1){$nerr=abs(length($F[3])-length($F[4]));}print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'` && \
+ASMSIZE=`ufasta n50 -S $ASM | awk '{print $2}'` && \
+NUMERR=$(($NUMSUB+$NUMIND)) && \
+QUAL=`echo $NUMERR $ASMSIZE | awk '{print 100-$1/$2*100}'` && \
+echo "Substitution Errors: $NUMSUB" > $BASM.report && \
+echo "Insertion/Deletion Errors: $NUMIND" >> $BASM.report && \
+echo "Assembly Size: $ASMSIZE" >> $BASM.report && \
+echo "Consensus Quality: $QUAL" >> $BASM.report && \
+touch $BASM.report.success
+fi
 cat $BASM.report
-
-if [ $FIX -gt 0 ];then
-  if [ ! -e $BASM.fix.success ];then
-    echo "Fixing errors"
-    fix_consensus_from_vcf.pl $ASM < $BASM.vcf > $BASM.fixed && touch $BASM.fix.success
-  fi
-fi
 
