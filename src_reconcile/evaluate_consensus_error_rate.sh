@@ -9,6 +9,26 @@ export NUM_THREADS=4
 export MEM=16000000000
 export FIX=1
 export BATCH_SIZE=0
+GC=
+RC=
+NC=
+if tty -s < /dev/fd/1 2> /dev/null; then
+    GC='\e[0;32m'
+    RC='\e[0;31m'
+    NC='\e[0m'
+fi
+
+log () {
+    dddd=$(date)
+    echo -e "${GC}[$dddd]${NC} $@"
+}
+
+
+function error_exit {
+    dddd=$(date)
+    echo -e "${RC}[$dddd]${NC} $1" >&2
+    exit "${2:-1}"
+}
 
 #parsing arguments
 while [[ $# > 0 ]]
@@ -67,19 +87,19 @@ export SAMTOOLS=`which samtools`
 rm -f bwa.err samtools.err
 
 if [ ! -e $BASM.index.success ];then 
-echo "Creating BWA index for $ASM"
+log "Creating BWA index for $ASM"
 rm -f $BASM.map.success
 $BWA index $ASM -p $BASM.bwa 2>>bwa.err && touch $BASM.index.success
 fi
 
 if [ ! -e $BASM.map.success ];then
-echo "Aligning reads to $ASM"
+log "Aligning reads to $ASM"
 rm -f $BASM.sort.success
 zcat -f $(echo $READS) | $BWA mem -SP -t $NUM_THREADS $BASM.bwa /dev/stdin 2>>bwa.err |samtools view -bhS /dev/stdin 1>$BASM.unSorted.bam 2>>samtools.err && touch $BASM.map.success
 fi
 
 if [ ! -e $BASM.sort.success ];then
-echo "Sorting and indexing alignment file"
+log "Sorting and indexing alignment file"
 rm -f $BASM.vc.success
 $SAMTOOLS sort -m $MEM  $BASM.unSorted.bam $BASM.alignSorted 2>>samtools.err && \
 $SAMTOOLS index $BASM.alignSorted.bam 2>>samtools.err && \
@@ -91,7 +111,7 @@ fi
 if [ ! -e $BASM.vc.success ];then
 rm -f  $BASM.fix.success
 rm -f  $BASM.report.success
-echo "Calling variants"
+log "Calling variants"
 #I do this to mix scaffolds up to equalize batch sizes
 ufasta sizes -H $ASM |sort -S 10% -k2 |awk '{print $1}' > $BASM.names
 mkdir -p $BASM.work
@@ -165,6 +185,7 @@ fi
 fi
 
 if [ ! -e $BASM.report.success ];then
+log "Creating report file"
 NUMSUB=`grep --text -v '^#'  $BASM.vcf  |perl -ane '{if(length($F[3])==1 && length($F[4])==1){$nerr=1;} print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'` && \
 NUMIND=`grep --text -v '^#' $BASM.vcf  |perl -ane '{if(length($F[3])>1 || length($F[4])>1){$nerr=abs(length($F[3])-length($F[4]));}print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'` && \
 ASMSIZE=`ufasta n50 -S $ASM | awk '{print $2}'` && \
@@ -177,4 +198,4 @@ echo "Consensus Quality: $QUAL" >> $BASM.report && \
 touch $BASM.report.success
 fi
 cat $BASM.report
-
+log "Success! Final report is in $BASM.report; corrected contigs are in $BASM.fixed"
