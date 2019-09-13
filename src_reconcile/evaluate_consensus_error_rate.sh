@@ -63,7 +63,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage:  evaluate_consensus_error_rate.sh -a <assembly contigs or scaffolds> -r <\'Illumina_reads_fastq1 Illumina_reads_fastq\'> -t <number of threads [-n] optional:do not fix errors that are found>"
+            echo "Usage:  evaluate_consensus_error_rate.sh -a <assembly contigs or scaffolds> -r <'Illumina_reads_fastq1 Illumina_reads_fastq'> -t <number of threads. [-n] <optional:do not fix errors that are found>"
             echo "Must have bwa, samtools and freebayes available on the PATH"
             exit 0
             ;;
