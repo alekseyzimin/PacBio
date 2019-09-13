@@ -89,13 +89,16 @@ rm -f bwa.err samtools.err
 if [ ! -e $BASM.index.success ];then 
 log "Creating BWA index for $ASM"
 rm -f $BASM.map.success
-$BWA index $ASM -p $BASM.bwa 2>>bwa.err && touch $BASM.index.success
+$BWA index $ASM -p $BASM.bwa 2>>bwa.err && touch $BASM.index.success || error_exit "Creating BWA index for $ASM failed"
 fi
 
 if [ ! -e $BASM.map.success ];then
 log "Aligning reads to $ASM"
 rm -f $BASM.sort.success
-zcat -f $(echo $READS) | $BWA mem -SP -t $NUM_THREADS $BASM.bwa /dev/stdin 2>>bwa.err |samtools view -bhS /dev/stdin 1>$BASM.unSorted.bam 2>>samtools.err && touch $BASM.map.success
+zcat -f $(echo $READS) | $BWA mem -SP -t $NUM_THREADS $BASM.bwa /dev/stdin 2>>bwa.err |samtools view -bhS /dev/stdin 1>$BASM.unSorted.bam.tmp 2>>samtools.err && mv $BASM.unSorted.bam.tmp $BASM.unSorted.bam && touch $BASM.map.success
+if [ ! -e $BASM.map.success ];then
+  error_exit "Aligning reads to $ASM failed"
+fi
 fi
 
 if [ ! -e $BASM.sort.success ];then
@@ -105,19 +108,22 @@ $SAMTOOLS sort -m $MEM  $BASM.unSorted.bam $BASM.alignSorted 2>>samtools.err && 
 $SAMTOOLS index $BASM.alignSorted.bam 2>>samtools.err && \
 $SAMTOOLS faidx $ASM  2>>samtools.err && \
 touch  $BASM.sort.success
+if [ ! -e $BASM.sort.success ];then
+  error_exit "Sorting and indexing alignment file failed"
+fi
 fi
 
 #here we are doing variant calling in parallel, per input contig/scaffold
 if [ ! -e $BASM.vc.success ];then
-rm -f  $BASM.fix.success
 rm -f  $BASM.report.success
 log "Calling variants"
 #I do this to mix scaffolds up to equalize batch sizes
 ufasta sizes -H $ASM |sort -S 10% -k2 |awk '{print $1}' > $BASM.names
 mkdir -p $BASM.work
-#subshell
+#begin subshell execution
 (
   cd $BASM.work
+  rm -f $BASM.vc.success $BASM.fix.success
   CONTIGS=`wc -l ../$BASM.names | awk '{print $1}'`;
   if [ $BATCH_SIZE -lt 1 ];then
     BATCH_SIZE=$(($CONTIGS / $NUM_THREADS+1));
@@ -152,34 +158,43 @@ mkdir -p $BASM.work
   echo '  $FREEBAYES -C 2 -0 -O -q 20 -z 0.02 -E 0 -X -u -p 1 -F 0.5 -b <($SAMTOOLS view -h ../$BASM.alignSorted.bam `head -n 1 $1.listnames` 2>>$1.samtools.err |$SAMTOOLS view -S -b /dev/stdin 2>>$1.samtools.err)  -v $1.vcf -f ../$ASM && touch $1.vc.success' >> commands.sh
   echo 'fi' >> commands.sh
   echo 'if [ $FIX -gt 0 ];then' >> commands.sh
-  echo '  if [ ! -e $1.fix.success ];then' >> commands.sh
-  echo '    fix_consensus_from_vcf.pl <(ufasta extract -f $1.names ../$ASM) < $1.vcf > $1.fixed && touch $1.fix.success'  >> commands.sh
+  echo '  if [ ! -e $1.fix.success ] && [ -e $1.vc.success ];then' >> commands.sh
+  echo '    fix_consensus_from_vcf.pl <(ufasta extract -f $1.names ../$ASM) < $1.vcf > $1.fixed.tmp && mv $1.fixed.tmp $1.fixed && touch $1.fix.success'  >> commands.sh
   echo '  fi' >> commands.sh
   echo 'fi' >> commands.sh
   chmod 0755 commands.sh && \
-  seq 1 $BATCH |xargs -P $NUM_THREADS -I % ./commands.sh % && \
+
+  seq 1 $BATCH |xargs -P $NUM_THREADS -I % ./commands.sh % 
+
+#checking if jobs finished properly
+
   for f in $(seq 1 $BATCH);do
     if [ ! -e $f.vc.success ];then
-      echo "freebayes failed on batch $f in $BASM.work";
-      exit 1
+      error_exit "Variant calling failed on batch $f in $BASM.work"
     fi
   done
+  touch $BASM.vc.success
+  if [ $FIX -gt 0 ];then
   for f in $(seq 1 $BATCH);do
     if [ ! -e $f.fix.success ];then
-      echo "fixing errors failed on batch $f in $BASM.work";
-      exit 1
+      error_exit "Fixing errors failed on batch $f in $BASM.work"
     fi
   done
-touch $BASM.fix.success
-touch $BASM.vc.success
-);
-if [ -e ./$BASM.work/$BASM.vc.success ];then
-  cat ./$BASM.work/*.vcf > $BASM.vcf
-  touch $BASM.vc.success
-fi
-if [ -e ./$BASM.work/$BASM.fix.success ];then
-  cat ./$BASM.work/*.fixed > $BASM.fixed
   touch $BASM.fix.success
+  fi
+);
+#end subshell execution
+if [ -e ./$BASM.work/$BASM.vc.success ];then
+  cat ./$BASM.work/*.vcf > $BASM.vcf.tmp && mv $BASM.vcf.tmp $BASM.vcf && touch $BASM.vc.success
+else
+  error_exit "Variant calling failed in ./$BASM.work"
+fi
+if [ $FIX -gt 0 ];then
+if [ -e ./$BASM.work/$BASM.fix.success ];then
+  cat ./$BASM.work/*.fixed > $BASM.fixed.tmp && mv $BASM.fixed.tmp $BASM.fixed && touch $BASM.fix.success
+else
+  error_exit "Fixing consensus failed in ./$BASM.work"
+fi
 fi
 #rm -rf $BASM.work;
 fi
@@ -198,4 +213,8 @@ echo "Consensus Quality: $QUAL" >> $BASM.report && \
 touch $BASM.report.success
 fi
 cat $BASM.report
+if [ $FIX -gt 0 ];then
 log "Success! Final report is in $BASM.report; corrected contigs are in $BASM.fixed"
+else
+log "Success! Final report is in $BASM.report"
+fi
