@@ -113,27 +113,23 @@ mkdir -p $BASM.work
     LIST="$LIST $f"
     let INDEX=$INDEX+1;
       if [ $INDEX -gt $BATCH_SIZE ];then
-        if [ ! -e $BATCH.extract.success ];then
           echo $LIST | tr " " "\n" > $BATCH.names
-          $SAMTOOLS view -h ../$BASM.alignSorted.bam $LIST 2>>samtools.err |$SAMTOOLS view -S -b /dev/stdin 2>>samtools.err 1> $BATCH.alignSorted.bam && touch $BATCH.extract.success
-        fi
+          echo $LIST > $BATCH.listnames
           LIST=""
           INDEX=1
           let BATCH=$BATCH+1
       fi
   done
   if [ $INDEX -gt 1 ];then
-    if [ ! -e $BATCH.extract.success ];then
       echo $LIST | tr " " "\n" > $BATCH.names
-      $SAMTOOLS view -h ../$BASM.alignSorted.bam $LIST 2>>samtools.err |$SAMTOOLS view -S -b /dev/stdin 2>>samtools.err 1> $BATCH.alignSorted.bam && touch $BATCH.extract.success
-    fi
+      echo $LIST > $BATCH.listnames
   else
     let BATCH=$BATCH-1
   fi
 
   echo '#!/bin/bash' > commands.sh
   echo 'if [ ! -e $1.vc.success ];then' >> commands.sh
-  echo '  $FREEBAYES -C 2 -0 -O -q 20 -z 0.02 -E 0 -X -u -p 1 -F 0.5 -b $1.alignSorted.bam  -v $1.vcf -f ../$ASM && touch $1.vc.success' >> commands.sh
+  echo '  $FREEBAYES -C 2 -0 -O -q 20 -z 0.02 -E 0 -X -u -p 1 -F 0.5 -b <($SAMTOOLS view -h ../$BASM.alignSorted.bam `head -n 1 $1.listnames` 2>>$1.samtools.err |$SAMTOOLS view -S -b /dev/stdin 2>>$1.samtools.err)  -v $1.vcf -f ../$ASM && touch $1.vc.success' >> commands.sh
   echo 'fi' >> commands.sh
   echo 'if [ $FIX -gt 0 ];then' >> commands.sh
   echo '  if [ ! -e $1.fix.success ];then' >> commands.sh
@@ -165,7 +161,7 @@ if [ -e ./$BASM.work/$BASM.fix.success ];then
   cat ./$BASM.work/*.fixed > $BASM.fixed
   touch $BASM.fix.success
 fi
-rm -rf $BASM.work;
+#rm -rf $BASM.work;
 fi
 
 if [ ! -e $BASM.report.success ];then
