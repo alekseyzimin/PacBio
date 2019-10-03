@@ -4,7 +4,6 @@ MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:$PATH;
 set -o pipefail
-set -e
 export NUM_THREADS=4
 export MEM=16000000000
 export FIX=1
@@ -201,15 +200,15 @@ fi
 
 if [ ! -e $BASM.report.success ];then
 log "Creating report file"
-NUMSUB=`grep --text -v '^#'  $BASM.vcf  |perl -ane '{if(length($F[3])==1 && length($F[4])==1){$nerr=1;} print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'` && \
-NUMIND=`grep --text -v '^#' $BASM.vcf  |perl -ane '{if(length($F[3])>1 || length($F[4])>1){$nerr=abs(length($F[3])-length($F[4]));}print "$F[9]:$nerr\n";}' | awk -F ':' '{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'` && \
-ASMSIZE=`ufasta n50 -S $ASM | awk '{print $2}'` && \
-NUMERR=$(($NUMSUB+$NUMIND)) && \
-QUAL=`echo $NUMERR $ASMSIZE | awk '{print 100-$1/$2*100}'` && \
-echo "Substitution Errors: $NUMSUB" > $BASM.report && \
-echo "Insertion/Deletion Errors: $NUMIND" >> $BASM.report && \
-echo "Assembly Size: $ASMSIZE" >> $BASM.report && \
-echo "Consensus Quality: $QUAL" >> $BASM.report && \
+NUMSUB=`grep --text -v '^#'  $BASM.vcf  |perl -ane '{if(length($F[3])==1 && length($F[4])==1){$nerr=1;} print "$F[9]:$nerr\n";}' | awk -F ':' 'BEGIN{nerr=0}{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'` 
+NUMIND=`grep --text -v '^#' $BASM.vcf  |perl -ane '{if(length($F[3])>1 || length($F[4])>1){$nerr=abs(length($F[3])-length($F[4]));}print "$F[9]:$nerr\n";}' | awk -F ':' 'BEGIN{nerr=0}{if($6>=3 && $4==0) nerr+=$NF}END{print nerr}'` 
+ASMSIZE=`ufasta n50 -S $ASM | awk '{print $2}'` 
+NUMERR=$(($NUMSUB+$NUMIND)) 
+QUAL=`echo $NUMERR $ASMSIZE | awk '{print 100-$1/$2*100}'`
+echo "Substitution Errors: $NUMSUB" > $BASM.report 
+echo "Insertion/Deletion Errors: $NUMIND" >> $BASM.report 
+echo "Assembly Size: $ASMSIZE" >> $BASM.report 
+echo "Consensus Quality: $QUAL" >> $BASM.report 
 touch $BASM.report.success
 fi
 cat $BASM.report
