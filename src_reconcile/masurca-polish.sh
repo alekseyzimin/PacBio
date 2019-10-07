@@ -115,7 +115,7 @@ fi
 #here we are doing variant calling in parallel, per input contig/scaffold
 if [ ! -e $BASM.vc.success ];then
 rm -f  $BASM.report.success
-log "Calling variants"
+log "Calling variants in $BASM"
 #I do this to mix scaffolds up to equalize batch sizes
 ufasta sizes -H $ASM |sort -S 10% -k2 |awk '{print $1}' > $BASM.names
 mkdir -p $BASM.work
@@ -152,13 +152,13 @@ mkdir -p $BASM.work
     let BATCH=$BATCH-1
   fi
 
-  echo '#!/bin/bash' > commands.sh
-  echo 'if [ ! -e $1.vc.success ];then' >> commands.sh
-  echo '  $FREEBAYES -C 2 -q 20 -R 0 -p 1 -F 0.4 -b <($SAMTOOLS view -h ../$BASM.alignSorted.bam `head -n 1 $1.listnames` 2>>$1.samtools.err |$SAMTOOLS view -S -b /dev/stdin 2>>$1.samtools.err)  -v $1.vcf -f ../$ASM && touch $1.vc.success' >> commands.sh 
+  echo "#!/bin/bash" > commands.sh
+  echo "if [ ! -e \$1.vc.success ];then" >> commands.sh
+  echo "  $FREEBAYES -C 2 -q 20 -R 0 -p 1 -F 0.4 -b <($SAMTOOLS view -h ../$BASM.alignSorted.bam \`head -n 1 \$1.listnames\` 2>>\$1.samtools.err |$SAMTOOLS view -S -b /dev/stdin 2>>\$1.samtools.err)  -v \$1.vcf -f ../$ASM && touch $1.vc.success" >> commands.sh 
   echo 'fi' >> commands.sh
-  echo 'if [ $FIX -gt 0 ];then' >> commands.sh
-  echo '  if [ ! -e $1.fix.success ] && [ -e $1.vc.success ];then' >> commands.sh
-  echo '    fix_consensus_from_vcf.pl <(ufasta extract -f $1.names ../$ASM) < $1.vcf > $1.fixed.tmp && mv $1.fixed.tmp $1.fixed && touch $1.fix.success'  >> commands.sh
+  echo "if [ $FIX -gt 0 ];then" >> commands.sh
+  echo "  if [ ! -e \$1.fix.success ] && [ -e \$1.vc.success ];then" >> commands.sh
+  echo "    fix_consensus_from_vcf.pl <(ufasta extract -f \$1.names ../$ASM) < \$1.vcf > \$1.fixed.tmp && mv \$1.fixed.tmp \$1.fixed && touch \$1.fix.success"  >> commands.sh
   echo '  fi' >> commands.sh
   echo 'fi' >> commands.sh
   chmod 0755 commands.sh && \
