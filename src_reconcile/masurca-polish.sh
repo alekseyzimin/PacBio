@@ -154,7 +154,7 @@ mkdir -p $BASM.work
 
   echo "#!/bin/bash" > commands.sh
   echo "if [ ! -e \$1.vc.success ];then" >> commands.sh
-  echo "  $FREEBAYES -C 2 -q 20 -R 0 -p 1 -F 0.4 -b <($SAMTOOLS view -h ../$BASM.alignSorted.bam \`head -n 1 \$1.listnames\` 2>>\$1.samtools.err |$SAMTOOLS view -S -b /dev/stdin 2>>\$1.samtools.err)  -v \$1.vcf -f ../$ASM && touch $1.vc.success" >> commands.sh 
+  echo "  $FREEBAYES -C 2 -q 20 -R 0 -p 1 -F 0.4 -b <($SAMTOOLS view -h ../$BASM.alignSorted.bam \`head -n 1 \$1.listnames\` 2>>\$1.samtools.err |$SAMTOOLS view -S -b /dev/stdin 2>>\$1.samtools.err)  -v \$1.vcf -f ../$ASM && touch \$1.vc.success" >> commands.sh 
   echo 'fi' >> commands.sh
   echo "if [ $FIX -gt 0 ];then" >> commands.sh
   echo "  if [ ! -e \$1.fix.success ] && [ -e \$1.vc.success ];then" >> commands.sh
@@ -190,7 +190,7 @@ else
 fi
 if [ $FIX -gt 0 ];then
 if [ -e ./$BASM.work/$BASM.fix.success ];then
-  cat ./$BASM.work/*.fixed > $BASM.fixed.tmp && mv $BASM.fixed.tmp $BASM.fixed && touch $BASM.fix.success
+  cat ./$BASM.work/*.fixed  | ufasta format > $BASM.fixed.tmp && mv $BASM.fixed.tmp $BASM.fixed && touch $BASM.fix.success
 else
   error_exit "Fixing consensus failed in ./$BASM.work"
 fi
@@ -201,7 +201,7 @@ fi
 if [ ! -e $BASM.report.success ];then
 log "Creating report file"
 NUMSUB=`grep --text -v '^#'  $BASM.vcf  |perl -ane '{if(length($F[3])==1 && length($F[4])==1){ print "$F[9]:1\n";}}' | awk -F ':' 'BEGIN{nerr=0}{if($6>=3 && $4<=1) nerr+=$NF}END{print nerr}'` 
-NUMIND=`grep --text -v '^#' $BASM.vcf  |perl -ane '{if(length($F[3])>1 || length($F[4])>1){$nerr=abs(length($F[3])-length($F[4]));}print "$F[9]:$nerr\n";}' | awk -F ':' 'BEGIN{nerr=0}{if($6>=3 && $4<=1) nerr+=$NF}END{print nerr}'` 
+NUMIND=`grep --text -v '^#' $BASM.vcf  |perl -ane '{if(length($F[3])>1 || length($F[4])>1){$nerr=abs(length($F[3])-length($F[4]));print "$F[9]:$nerr\n";}}' | awk -F ':' 'BEGIN{nerr=0}{if($6>=3 && $4<=1) nerr+=$NF}END{print nerr}'` 
 ASMSIZE=`ufasta n50 -S $ASM | awk '{print $2}'` 
 NUMERR=$(($NUMSUB+$NUMIND)) 
 QUAL=`echo $NUMERR $ASMSIZE | awk '{print 100-$1/$2*100}'`
