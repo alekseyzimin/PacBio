@@ -32,6 +32,7 @@ my $offsets=();
 while($line=<STDIN>){
 next if($line =~ /^\#/);
 my @f=split(/\s+/,$line);
+next if($f[4] =~ /,/);
 if(not($f[0] eq $ctg)){
   if($#fixes>=0){
   #proceed with fixing
