@@ -10,6 +10,7 @@ set -o pipefail
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PERL5LIB="$MYPATH/../lib/perl/"
+export PATH=$MYPATH:$PATH
 
 JF_P1=`basename $READSP1`.jf
 JF_P2=`basename $READSP2`.jf

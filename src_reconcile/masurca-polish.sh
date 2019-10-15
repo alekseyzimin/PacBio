@@ -114,7 +114,7 @@ fi
 
 #here we are doing variant calling in parallel, per input contig/scaffold
 if [ ! -e $BASM.vc.success ];then
-rm -f  $BASM.report.success
+rm -f  $BASM.report.success $BASM.fix.success
 log "Calling variants in $BASM"
 #I do this to mix scaffolds up to equalize batch sizes
 ufasta sizes -H $ASM |sort -S 10% -k2 |awk '{print $1}' > $BASM.names
@@ -158,7 +158,7 @@ mkdir -p $BASM.work
   echo 'fi' >> commands.sh
   echo "if [ $FIX -gt 0 ];then" >> commands.sh
   echo "  if [ ! -e \$1.fix.success ] && [ -e \$1.vc.success ];then" >> commands.sh
-  echo "    fix_consensus_from_vcf.pl <(ufasta extract -f \$1.names ../$ASM) < \$1.vcf > \$1.fixed.tmp && mv \$1.fixed.tmp \$1.fixed && touch \$1.fix.success"  >> commands.sh
+  echo "    $MYPATH/fix_consensus_from_vcf.pl <($MYPATH/ufasta extract -f \$1.names ../$ASM) < \$1.vcf > \$1.fixed.tmp && mv \$1.fixed.tmp \$1.fixed && touch \$1.fix.success"  >> commands.sh
   echo '  fi' >> commands.sh
   echo 'fi' >> commands.sh
   chmod 0755 commands.sh && \
@@ -195,7 +195,7 @@ else
   error_exit "Fixing consensus failed in ./$BASM.work"
 fi
 fi
-#rm -rf $BASM.work;
+rm -rf $BASM.work;
 fi
 
 if [ ! -e $BASM.report.success ];then
