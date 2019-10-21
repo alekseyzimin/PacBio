@@ -188,7 +188,9 @@ awk '{if($16>25 && $7>2000 ) print $0}' |\
 $MYPATH/extract_single_best_match_coords_file.pl  |\
 $MYPATH/reconcile_matches.pl gap_coordinates.txt  |\
 $MYPATH/output_reconciled_scaffolds.pl $HYB_CTG.broken|\
-perl -ane '{if($F[0] =~ /^>/){print;}else{@f=split(/N+/,$F[0]); print join("N"x100,@f),"\n"}}'  |\
 ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa
 log "Success! Final scaffold are in $REF_CHR.$HYB_CTG.reconciled.fa"
+
+#this line resets all gaps to 100
+#perl -ane '{if($F[0] =~ /^>/){print;}else{@f=split(/N+/,$F[0]); print join("N"x100,@f),"\n"}}'  |\
 
