@@ -46,8 +46,8 @@ process_lines(@l);
 
 sub process_lines{
   my @lines=@_;
-  my $gap_before=500000;
-  my $gap_after=500000;
+  my $gap_before=10000000;
+  my $gap_after=10000000;
   if(@lines==1){
      @l2=split(/\s+/,$lines[0]);
     output_coords($gap_before,$gap_after,$l2[3],$l2[4],$l2[12],$l2[-2],$l2[-1],1);
@@ -71,7 +71,7 @@ sub process_lines{
     @l1=split(/\s+/,$lines[$#lines-1]);
     @l2=split(/\s+/,$lines[$#lines]);
     $gap_before=compute_gap($l1[1],$l2[0],$l2[-2]);
-    $gap_after=500000;
+    $gap_after=10000000;
     output_coords($gap_before,$gap_after,$l2[3],$l2[4],$l2[12],$l2[-2],$l2[-1],0);
   }
 }
@@ -80,7 +80,7 @@ sub output_coords{
   my $start,$end,$dir;
   my ($gap_b,$gap_a,$s,$e,$len,$scf,$ctg)=@_;
   my $sg_a=0,$sg_b=0;
-   
+  #print "$gap_b,$gap_a,$s,$e,$len,$scf,$ctg\n"; 
   if($gap_b<0){
     $gap_b=-$gap_b;
     $sg_b=1;
