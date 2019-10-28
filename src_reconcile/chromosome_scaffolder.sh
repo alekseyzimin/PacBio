@@ -168,7 +168,7 @@ fi
 #now we re-align the broken contigs to the reference
 if [ ! -s $REF_CHR.$HYB_CTG.broken.delta ] || [ -e .rerun ];then
 log "Re-aligning contigs after splitting"
-$MYPATH/nucmer -t $NUM_THREADS -p $REF_CHR.$HYB_CTG.broken -c 200  $REF $HYB_CTG.broken
+$MYPATH/nucmer --batch 100000000 -t $NUM_THREADS -p $REF_CHR.$HYB_CTG.broken -c 200  $REF $HYB_CTG.broken
 touch .rerun
 fi
 if [ ! -s $REF_CHR.$HYB_CTG.broken.1.delta ] || [ -e .rerun ];then
