@@ -12,6 +12,8 @@ NUM_THREADS=1
 IDENTITY=97
 #parameter for merging alignments
 MERGE=100000
+MERGE_SEQ=0
+
 #low coverage threshold for breaking
 COV_THRESH=3
 REP_COV_THRESH=30
@@ -70,6 +72,9 @@ do
         -m|--merge-slack)
             MERGE="$2"
             shift
+            ;;
+        -M|--merge-sequences)
+            MERGE_SEQ=1
             ;;
         -r|--reference)
             REF="$2"
@@ -181,6 +186,16 @@ rm -rf .rerun
 
 #now we merge/rebuild chromosomes
 log "Final scaffolding"
+if [ $MERGE_SEQ -gt 0 ];then
+$MYPATH/show-coords -lcHr $REF_CHR.$HYB_CTG.broken.1.delta | \
+$MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
+awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
+awk '{if($16>25 && $7>2000 ) print $0}' |\
+$MYPATH/extract_single_best_match_coords_file.pl  |\
+perl -ane '{if($F[3]<$F[4]){print "$F[0] $F[1] $F[2] 1 $F[12] ",join(" ",@F[5..$#F]),"\n"}else{print "$F[0] $F[1] $F[2] $F[12] 1 ",join(" ",@F[5..$#F]),"\n"}}' |\
+$MYPATH/reconcile_consensus.pl $REF_CHR $HYB_CTG.broken |\
+ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa
+else
 $MYPATH/show-coords -lcHr $REF_CHR.$HYB_CTG.broken.1.delta | \
 $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
 awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
@@ -189,6 +204,7 @@ $MYPATH/extract_single_best_match_coords_file.pl  |\
 $MYPATH/reconcile_matches.pl gap_coordinates.txt  |\
 $MYPATH/output_reconciled_scaffolds.pl $HYB_CTG.broken|\
 ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa
+fi
 log "Success! Final scaffold are in $REF_CHR.$HYB_CTG.reconciled.fa"
 
 #this line resets all gaps to 100
