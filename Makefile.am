@@ -116,6 +116,7 @@ dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_nomatch.sh src_mega_reads
 		    src_mega_reads/reconcile_alignments.sh \
 		    src_mega_reads/split_long_unitigs.pl \
 		    src_mega_reads/recover_scaffolds.pl  src_mega_reads/trim_by_kunitigs.pl  src_mega_reads/trim_mega_reads.pl \
+		    src_reconcile/introduce_errors_fasta_file.pl \
 		    src_reconcile/compute_coverage.pl  \
 		    src_reconcile/evaluate_splits.pl \
 		    src_reconcile/masurca-polish.sh \

@@ -46,8 +46,8 @@ process_lines(@l);
 
 sub process_lines{
   my @lines=@_;
-  my $gap_before=10000000;
-  my $gap_after=10000000;
+  my $gap_before=100000000;
+  my $gap_after=100000000;
   if(@lines==1){
      @l2=split(/\s+/,$lines[0]);
     output_coords($gap_before,$gap_after,$l2[3],$l2[4],$l2[12],$l2[-2],$l2[-1],1);
@@ -71,7 +71,7 @@ sub process_lines{
     @l1=split(/\s+/,$lines[$#lines-1]);
     @l2=split(/\s+/,$lines[$#lines]);
     $gap_before=compute_gap($l1[1],$l2[0],$l2[-2]);
-    $gap_after=10000000;
+    $gap_after=100000000;
     output_coords($gap_before,$gap_after,$l2[3],$l2[4],$l2[12],$l2[-2],$l2[-1],0);
   }
 }
