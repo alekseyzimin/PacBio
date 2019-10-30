@@ -178,7 +178,7 @@ touch .rerun
 fi
 if [ ! -s $REF_CHR.$HYB_CTG.broken.1.delta ] || [ -e .rerun ];then
 log "Filtering the alignments"
-$MYPATH/delta-filter -1 -o 20 -i $IDENTITY $REF_CHR.$HYB_CTG.broken.delta > $REF_CHR.$HYB_CTG.broken.1.delta
+$MYPATH/delta-filter -r -o 20 -i $IDENTITY $REF_CHR.$HYB_CTG.broken.delta | $MYPATH/delta-filter -q /dev/stdin > $REF_CHR.$HYB_CTG.broken.1.delta
 touch .rerun
 fi
 
