@@ -143,7 +143,7 @@ if [ ! -e $PREFIX.gaps.success ];then
   log "Computing gap coordinates in the reference"
   rm -f $PREFIX.scaffold.success
   $MYPATH/splitFileAtNs $REF 1 > $REF_CHR.split.fasta
-  perl -ane '{$h{substr($F[1],3)}=$F[0]}END{while($line=<STDIN>){chomp($line);@f=split(/\s+/,$line);print "$f[0] $h{$f[1]} ",$f[2]+1," $f[3] $f[4]\n";}}' scaffNameTranslations.txt < genome.posmap.ctgscf | awk 'BEGIN{pg=0}{print $2" "pg" "$3;pg=$4}' > gap_coordinates.txt && touch $PREFIX.gaps.success
+  perl -ane '{$h{substr($F[1],3)}=$F[0]}END{while($line=<STDIN>){chomp($line);@f=split(/\s+/,$line);print "$f[0] $h{$f[1]} ",$f[2]+1," $f[3] $f[4]\n";}}' scaffNameTranslations.txt < genome.posmap.ctgscf | awk 'BEGIN{pg=0}{print $2" "pg" "$3;pg=$4}' > $PREFIX.gap_coordinates.txt && touch $PREFIX.gaps.success
 fi
 
 if [ ! -e $PREFIX.merge1.success ];then
@@ -199,7 +199,7 @@ if [ ! -e $PREFIX.scaffold.success ];then
     awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
     awk '{if($16>25 && $7>2000 ) print $0}' |\
     $MYPATH/extract_single_best_match_coords_file.pl  |\
-    $MYPATH/reconcile_matches.pl gap_coordinates.txt  |\
+    $MYPATH/reconcile_matches.pl $PREFIX.gap_coordinates.txt  |\
     $MYPATH/output_reconciled_scaffolds.pl $HYB_CTG.broken|\
     ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa && touch $PREFIX.scaffold.success
   fi
