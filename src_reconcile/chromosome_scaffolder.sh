@@ -207,9 +207,9 @@ fi
 #we attampt to place extra contigs that were left unmapped due to repeats
 if [ ! -e $PREFIX.place_extra.success ];then
   $MYPATH/ufasta extract -v -f <(awk '{print $2}' $PREFIX.reconciled.txt) $HYB_CTG.broken > $PREFIX.unplaced.fa && \
-  $MYPATH/nucmer --maxmatch --batch 10000000 -l 100 -c 100 -p $PREFIX.map_unplaced $PREFIX.unplaced.fa $REF 
+  $MYPATH/nucmer --maxmatch --batch 10000000 -b 100 -l 100 -c 100 -p $PREFIX.map_unplaced $PREFIX.unplaced.fa $REF 
   if [ -s $PREFIX.map_unplaced.delta ];then
-    cat $REF_CHR.$HYB_CTG.broken.1.delta <(awk '{if($0 ~ /^>/){print ">"$2" "substr($1,2)" "$4" "$3}else if(NF==7){if($3<$4){print $3" "$4" "$1" "$2" "$6" "$5" "$7}else{print $4" "$3" "$2" "$1" "$6" "$5" "$7}}else{print $0}}' $PREFIX.map_unplaced.delta | $MYPATH/delta-filter -1 -o 99 /dev/stdin | tail -n +3 ) |\
+    cat $REF_CHR.$HYB_CTG.broken.1.delta <(awk '{if($0 ~ /^>/){print ">"$2" "substr($1,2)" "$4" "$3}else if(NF==7){if($3<$4){print $3" "$4" "$1" "$2" "$6" "$5" "$7}else{print $4" "$3" "$2" "$1" "$6" "$5" "$7}}else{print $0}}' $PREFIX.map_unplaced.delta | $MYPATH/delta-filter -r -o 99 -i $IDENTITY /dev/stdin | $MYPATH/delta-filter -q /dev/stdin | tail -n +3 ) |\
     $MYPATH/show-coords -lcHr /dev/stdin | \
     $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
     awk '{if($16>25 || $7>2000 ) print $0}' |\
