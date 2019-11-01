@@ -172,40 +172,59 @@ fi
 if [ ! -e $PREFIX.align2.success ];then
   log "Re-aligning contigs after splitting"
   rm -f $PREFIX.filter2.success
-  $MYPATH/nucmer --batch 100000000 -t $NUM_THREADS -p $REF_CHR.$HYB_CTG.broken -c 200  $REF $HYB_CTG.broken && touch $PREFIX.align2.success
+  $MYPATH/nucmer --batch 100000000 -t $NUM_THREADS -p $REF_CHR.$HYB_CTG.broken -c 200  $REF.w_noise $HYB_CTG.broken && touch $PREFIX.align2.success
 fi
 
 if [ ! -e $PREFIX.filter2.success ];then
   log "Filtering the alignments"
   rm -f $PREFIX.scaffold.success
-  $MYPATH/delta-filter -r -o 50 -i $IDENTITY $REF_CHR.$HYB_CTG.broken.delta | $MYPATH/delta-filter -q /dev/stdin > $REF_CHR.$HYB_CTG.broken.1.delta && touch $PREFIX.filter2.success
+  $MYPATH/delta-filter -r -o 99 -i $IDENTITY $REF_CHR.$HYB_CTG.broken.delta | $MYPATH/delta-filter -q /dev/stdin > $REF_CHR.$HYB_CTG.broken.1.delta && touch $PREFIX.filter2.success
 fi
 
 #now we merge/rebuild chromosomes
 if [ ! -e $PREFIX.scaffold.success ];then
+  rm -f $PREFIX.place_extra.success
   log "Final scaffolding"
   if [ $MERGE_SEQ -gt 0 ];then
     $MYPATH/show-coords -lcHr $REF_CHR.$HYB_CTG.broken.1.delta | \
     $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
+    awk '{if($16>25 || $7>2000 ) print $0}' |\
     awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
-    awk '{if($16>25 && $7>2000 ) print $0}' |\
     $MYPATH/extract_single_best_match_coords_file.pl  |\
     perl -ane '{if($F[3]<$F[4]){print "$F[0] $F[1] $F[2] 1 $F[12] ",join(" ",@F[5..$#F]),"\n"}else{print "$F[0] $F[1] $F[2] $F[12] 1 ",join(" ",@F[5..$#F]),"\n"}}' |\
     $MYPATH/reconcile_consensus.pl $REF_CHR $HYB_CTG.broken |\
-    ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa && touch $PREFIX.scaffold.success
+    ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa && touch $PREFIX.scaffold.success && touch $PREFIX.place_extra.success
   else
     $MYPATH/show-coords -lcHr $REF_CHR.$HYB_CTG.broken.1.delta | \
     $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
+    awk '{if($16>25 || $7>2000 ) print $0}' |\
     awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
-    awk '{if($16>25 && $7>2000 ) print $0}' |\
     $MYPATH/extract_single_best_match_coords_file.pl  |\
-    $MYPATH/reconcile_matches.pl $PREFIX.gap_coordinates.txt  |\
-    $MYPATH/output_reconciled_scaffolds.pl $HYB_CTG.broken|\
-    ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa && touch $PREFIX.scaffold.success
+    $MYPATH/reconcile_matches.pl $PREFIX.gap_coordinates.txt  > $PREFIX.reconciled.txt && touch $PREFIX.scaffold.success 
   fi
 fi
 
-if [ -e $PREFIX.scaffold.success ];then
+#we attampt to place extra contigs that were left unmapped due to repeats
+if [ ! -e $PREFIX.place_extra.success ];then
+  $MYPATH/ufasta extract -v -f <(awk '{print $2}' $PREFIX.reconciled.txt) $HYB_CTG.broken > $PREFIX.unplaced.fa && \
+  $MYPATH/nucmer --maxmatch --batch 10000000 -l 100 -c 100 -p $PREFIX.map_unplaced $PREFIX.unplaced.fa $REF 
+  if [ -s $PREFIX.map_unplaced.delta ];then
+    cat $REF_CHR.$HYB_CTG.broken.1.delta <(awk '{if($0 ~ /^>/){print ">"$2" "substr($1,2)" "$4" "$3}else if(NF==7){if($3<$4){print $3" "$4" "$1" "$2" "$6" "$5" "$7}else{print $4" "$3" "$2" "$1" "$6" "$5" "$7}}else{print $0}}' $PREFIX.map_unplaced.delta | $MYPATH/delta-filter -1 -o 99 /dev/stdin | tail -n +3 ) |\
+    $MYPATH/show-coords -lcHr /dev/stdin | \
+    $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
+    awk '{if($16>25 || $7>2000 ) print $0}' |\
+    awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
+    $MYPATH/extract_single_best_match_coords_file.pl  |\
+    $MYPATH/reconcile_matches.pl $PREFIX.gap_coordinates.txt |\
+    $MYPATH/output_reconciled_scaffolds.pl $HYB_CTG.broken|\
+    ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa && touch $PREFIX.place_extra.success
+  else
+    cat $PREFIX.reconciled.txt | $MYPATH/output_reconciled_scaffolds.pl $HYB_CTG.broken|\
+    ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa && touch $PREFIX.place_extra.success
+  fi
+fi
+
+if [ -e $PREFIX.place_extra.success ];then
   log "Success! Final scaffold are in $REF_CHR.$HYB_CTG.reconciled.fa"
 fi
 
