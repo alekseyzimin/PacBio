@@ -191,8 +191,8 @@ if [ ! -e $PREFIX.scaffold.success ];then
     awk '{if($16>25 || $7>2000 ) print $0}' |\
     awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
     $MYPATH/extract_single_best_match_coords_file.pl  |\
-    perl -ane '{if($F[3]<$F[4]){print "$F[0] $F[1] $F[2] 1 $F[12] ",join(" ",@F[5..$#F]),"\n"}else{print "$F[0] $F[1] $F[2] $F[12] 1 ",join(" ",@F[5..$#F]),"\n"}}' |\
-    $MYPATH/reconcile_consensus.pl $REF_CHR $HYB_CTG.broken |\
+    $MYPATH/fill_unaligned_gaps.pl $REF 2>$PREFIX.fillseq.fa | perl -ane '{$dir="f"; $dir="r" if($F[3]>$F[4]);print "$F[-2] $F[-1] 1 $F[12] $dir 100 100 $F[12]\n"}' |\
+    $MYPATH/output_reconciled_scaffolds.pl <(cat $PREFIX.fillseq.fa $HYB_CTG.broken) |\
     ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa && touch $PREFIX.scaffold.success && touch $PREFIX.place_extra.success
   else
     $MYPATH/show-coords -lcHr $REF_CHR.$HYB_CTG.broken.1.delta | \
