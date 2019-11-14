@@ -105,7 +105,8 @@ let IDENTITY=$IDENTITY-1
 if [ ! -e $PREFIX.split.success ];then
   log "Splitting query scaffolds into contigs"
   rm -f $PREFIX.blasr.success
-  $MYPATH/splitFileAtNs $QRY 1 > $HYB_CTG   && touch $PREFIX.split.success
+  $MYPATH/splitFileAtNs $QRY 1 > $HYB_CTG && rm  scaffNameTranslations.txt genome.asm genome.posmap.ctgscf && \
+  touch $PREFIX.split.success
 fi
 
 if [ ! -e $PREFIX.blasr.success ];then
@@ -119,16 +120,16 @@ if [ ! -e $PREFIX.blasr.success ];then
 fi
 
 if [ ! -e $PREFIX.noise.success ];then
-  log "adding noise to reference to align to duplicated regions"
+  log "Adding noise to reference to align to duplicated regions"
   rm -f $PREFIX.align1.success
   rm -f $PREFIX.align2.success
-  $MYPATH/introduce_errors_fasta_file.pl $REF 0.01 1 $REF | $MYPATH/fix_consensus_from_vcf.pl $REF > $REF.w_noise && touch $PREFIX.noise.success
+  $MYPATH/introduce_errors_fasta_file.pl $REF 0.01 1 $REF | $MYPATH/fix_consensus_from_vcf.pl $REF > $REF_CHR.w_noise && touch $PREFIX.noise.success
 fi 
 
 if [ ! -e $PREFIX.align1.success ];then
   log "Aligning query contigs to reference scaffolds"
   rm -f $PREFIX.filter1.success
-  $MYPATH/nucmer -t $NUM_THREADS -p $REF_CHR.$HYB_CTG -c 200 $REF.w_noise $HYB_CTG && touch $PREFIX.align1.success
+  $MYPATH/nucmer -t $NUM_THREADS -p $REF_CHR.$HYB_CTG -c 200 $REF_CHR.w_noise $HYB_CTG && touch $PREFIX.align1.success
   #$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -k 21 -a -Q $REF $HYB_CTG 2>minimap2.err | $MYPATH/samToDelta > $REF_CHR.$HYB_CTG.delta && touch $PREFIX.align1.success
 fi
 
@@ -148,8 +149,11 @@ fi
 if [ ! -e $PREFIX.gaps.success ];then
   log "Computing gap coordinates in the reference"
   rm -f $PREFIX.scaffold.success
-  $MYPATH/splitFileAtNs $REF 1 > $REF_CHR.split.fasta
-  perl -ane '{$h{substr($F[1],3)}=$F[0]}END{while($line=<STDIN>){chomp($line);@f=split(/\s+/,$line);print "$f[0] $h{$f[1]} ",$f[2]+1," $f[3] $f[4]\n";}}' scaffNameTranslations.txt < genome.posmap.ctgscf | awk 'BEGIN{pg=0}{print $2" "pg" "$3;pg=$4}' > $PREFIX.gap_coordinates.txt && touch $PREFIX.gaps.success
+  $MYPATH/splitFileAtNs $REF 1 > /dev/null && \
+  perl -ane '{$h{substr($F[1],3)}=$F[0]}END{while($line=<STDIN>){chomp($line);@f=split(/\s+/,$line);print "$f[0] $h{$f[1]} ",$f[2]+1," $f[3] $f[4]\n";}}' scaffNameTranslations.txt < genome.posmap.ctgscf | awk 'BEGIN{pg=0}{print $2" "pg" "$3;pg=$4}' > $PREFIX.gap_coordinates.txt.tmp && \
+  mv $PREFIX.gap_coordinates.txt.tmp $PREFIX.gap_coordinates.txt && \
+  rm scaffNameTranslations.txt genome.asm genome.posmap.ctgscf && \
+  touch $PREFIX.gaps.success
 fi
 
 if [ ! -e $PREFIX.merge1.success ];then
@@ -178,7 +182,7 @@ fi
 if [ ! -e $PREFIX.align2.success ];then
   log "Re-aligning contigs after splitting"
   rm -f $PREFIX.filter2.success
-  $MYPATH/nucmer -t $NUM_THREADS -p $REF_CHR.$HYB_CTG.broken -c 200  $REF.w_noise $HYB_CTG.broken && touch $PREFIX.align2.success
+  $MYPATH/nucmer -t $NUM_THREADS -p $REF_CHR.$HYB_CTG.broken -c 200  $REF_CHR.w_noise $HYB_CTG.broken && touch $PREFIX.align2.success
   #$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -k 21 -a -Q $REF $HYB_CTG.broken 2>minimap2.err | $MYPATH/samToDelta > $REF_CHR.$HYB_CTG.broken.delta && touch $PREFIX.align2.success
 fi
 
@@ -216,7 +220,9 @@ if [ ! -e $PREFIX.place_extra.success ];then
   log "Placing extra repeats"
   $MYPATH/ufasta extract -v -f <(awk '{print $2}' $PREFIX.reconciled.txt) $HYB_CTG.broken > $PREFIX.unplaced.fa && \
   #$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -k 21 -a -Q $PREFIX.unplaced.fa $REF 2>minimap2.err | $MYPATH/samToDelta > $PREFIX.map_unplaced.delta 
-  $MYPATH/nucmer -t $NUM_THREADS  --maxmatch --batch 10000000 -b 100 -l 100 -c 100 -p $PREFIX.map_unplaced $PREFIX.unplaced.fa $REF 
+  if [ -s $PREFIX.unplaced.fa ];then
+    $MYPATH/nucmer -t $NUM_THREADS  --maxmatch --batch 10000000 -b 100 -l 100 -c 100 -p $PREFIX.map_unplaced $PREFIX.unplaced.fa $REF 
+  fi
   if [ -s $PREFIX.map_unplaced.delta ];then
     cat $REF_CHR.$HYB_CTG.broken.1.delta <(awk '{if($0 ~ /^>/){print ">"$2" "substr($1,2)" "$4" "$3}else if(NF==7){if($3<$4){print $3" "$4" "$1" "$2" "$6" "$5" "$7}else{print $4" "$3" "$2" "$1" "$6" "$5" "$7}}else{print $0}}' $PREFIX.map_unplaced.delta | $MYPATH/delta-filter -r -o 99 -i $IDENTITY /dev/stdin | $MYPATH/delta-filter -q /dev/stdin | tail -n +3 ) |\
     $MYPATH/show-coords -lcHr /dev/stdin | \
