@@ -44,7 +44,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage: merge_contigs.sh -r <sequences to be merged> -q <sequence to merge with> -t <number of threads> "
+            echo "Usage: merge_contigs.sh -r <sequences to be merged> -q <sequence to merge with> -t <number of threads> -m <minimum matching length, default:1000> -i <matching identity, default:98>"
             exit 0
             ;;
         *)
