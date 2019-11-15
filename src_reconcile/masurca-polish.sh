@@ -5,7 +5,7 @@ MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:$PATH;
 set -o pipefail
 export NUM_THREADS=4
-export MEM=16000000000
+export MEM=1G
 export FIX=1
 export BATCH_SIZE=0
 GC=
@@ -62,7 +62,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage:  evaluate_consensus_error_rate.sh -a <assembly contigs or scaffolds> -r <'Illumina_reads_fastq1 Illumina_reads_fastq'> -t <number of threads> [-n] <optional:do not fix errors that are found>"
+            echo "Usage:  evaluate_consensus_error_rate.sh -a <assembly contigs or scaffolds> -r <'Illumina_reads_fastq1 Illumina_reads_fastq'> -t <number of threads> [-n] <optional:do not fix errors that are found> [-m] <optional: memory per thread to use in samtools sort>"
             echo "Must have bwa, samtools and freebayes available on the PATH"
             exit 0
             ;;
