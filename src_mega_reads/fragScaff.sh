@@ -154,7 +154,7 @@ if [ ! -e $PREFIX.map.success ];then
 rm -f $PREFIX.bamParse.success 
 rm -f $PREFIX.reheader.success
 echo -n "Mapping barcoded reads " && date
-bwa mem -p -t 64 $PREFIX.bwa $PREFIX.readsWithBarcode.ge100.fastq 2>bwasterr | samtools view -bhS /dev/stdin | samtools sort -m64000000000 /dev/stdin $PREFIX.alignSorted && \
+bwa mem -p -t 64 $PREFIX.bwa $PREFIX.readsWithBarcode.ge100.fastq 2>bwasterr | samtools view -bhS /dev/stdin | samtools sort -@ $NUM_THREADS -m 1G /dev/stdin $PREFIX.alignSorted && \
 touch $PREFIX.map.success ||exit
 fi
 
