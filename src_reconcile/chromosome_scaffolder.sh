@@ -143,7 +143,7 @@ fi
 if [ ! -e $PREFIX.coverage.success ];then
   log "Computing read coverage for query contigs" 
   rm -f $PREFIX.break.success
-  awk '{print $1" "$2" "$3"\n"$1" "$2" "$4}' $HYB_POS | grep -v F |grep -v R | sort -nk2 -k3n -S 10% | $MYPATH/compute_coverage.pl > $HYB_POS.coverage && touch $PREFIX.coverage.success
+  awk '{print $1" "$2" "$3"\n"$1" "$2" "$4}' $HYB_POS |  sort -nk2 -k3n -S 20% | $MYPATH/compute_coverage.pl > $HYB_POS.coverage && touch $PREFIX.coverage.success
 fi
 
 if [ ! -e $PREFIX.gaps.success ];then
