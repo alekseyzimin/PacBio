@@ -62,7 +62,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage:  evaluate_consensus_error_rate.sh -a <assembly contigs or scaffolds> -r <'Illumina_reads_fastq1 Illumina_reads_fastq'> -t <number of threads> [-n] <optional:do not fix errors that are found> [-m] <optional: memory per thread to use in samtools sort>"
+            echo "Usage:  polca.sh -a <assembly contigs or scaffolds> -r <'Illumina_reads_fastq1 Illumina_reads_fastq'> -t <number of threads> [-n] <optional:do not fix errors that are found> [-m] <optional: memory per thread to use in samtools sort>"
             echo "Must have bwa, samtools and freebayes available on the PATH"
             exit 0
             ;;
@@ -74,8 +74,9 @@ do
     shift
 done
 
-if [ ! -e $ASM ];then
-echo "assembly file $ASM not found!"
+if [ ! -e $READS ] || [ ! -e $ASM ];then
+echo "Input files not found or not specified!"
+echo "Usage:  polca.sh -a <assembly contigs or scaffolds> -r <'Illumina_reads_fastq1 Illumina_reads_fastq'> -t <number of threads> [-n] <optional:do not fix errors that are found> [-m] <optional: memory per thread to use in samtools sort>"
 exit 1
 fi
 
