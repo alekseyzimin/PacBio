@@ -120,7 +120,7 @@ dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_nomatch.sh src_mega_reads
 		    src_reconcile/introduce_errors_fasta_file.pl \
 		    src_reconcile/compute_coverage.pl  \
 		    src_reconcile/evaluate_splits.pl \
-		    src_reconcile/masurca-polish.sh \
+		    src_reconcile/polca.sh \
 		    src_reconcile/freebayes \
 		    src_reconcile/fix_consensus_from_vcf.pl \ 
 		    src_reconcile/extract_single_best_match_coords_file.pl \
