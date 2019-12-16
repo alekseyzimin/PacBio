@@ -30,6 +30,11 @@ function error_exit {
 }
 
 #parsing arguments
+if [[ $# -eq 0 ]];then
+echo "Usage:  polca.sh -a <assembly contigs or scaffolds> -r <'Illumina_reads_fastq1 Illumina_reads_fastq'> -t <number of threads> [-n] <optional:do not fix errors that are found> [-m] <optional: memory per thread to use in samtools sort>"
+exit 1
+fi
+
 while [[ $# > 0 ]]
 do
     key="$1"
