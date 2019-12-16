@@ -79,7 +79,7 @@ do
     shift
 done
 
-if [ ! -e $READS ] || [ ! -e $ASM ];then
+if [[ ! -e $READS ]] || [[ ! -e $ASM ]];then
 echo "Input files not found or not specified!"
 echo "Usage:  polca.sh -a <assembly contigs or scaffolds> -r <'Illumina_reads_fastq1 Illumina_reads_fastq'> -t <number of threads> [-n] <optional:do not fix errors that are found> [-m] <optional: memory per thread to use in samtools sort>"
 exit 1
