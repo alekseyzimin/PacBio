@@ -197,7 +197,7 @@ else
 fi
 if [ $FIX -gt 0 ];then
 if [ -e ./$BASM.work/$BASM.fix.success ];then
-  cat ./$BASM.work/*.fixed  | ufasta format > $BASM.masurca.tmp && mv $BASM.masurca.tmp $BASM.masurca.fa && touch $BASM.fix.success
+  cat ./$BASM.work/*.fixed  | ufasta format > $BASM.masurca.tmp && mv $BASM.masurca.tmp $BASM.PolcaCorrected.fa && touch $BASM.fix.success
 else
   error_exit "Fixing consensus failed in ./$BASM.work"
 fi
@@ -220,7 +220,7 @@ touch $BASM.report.success
 fi
 cat $BASM.report
 if [ $FIX -gt 0 ];then
-log "Success! Final report is in $BASM.report; polished assembly is in $BASM.masurca.fa"
+log "Success! Final report is in $BASM.report; polished assembly is in $BASM.PolcaCorrected.fa"
 else
 log "Success! Final report is in $BASM.report"
 fi
