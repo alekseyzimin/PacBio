@@ -85,8 +85,12 @@ echo "Usage:  polca.sh -a <assembly contigs or scaffolds> -r <'Illumina_reads_fa
 exit 1
 fi
 
+which bwa || error_exit "bwa not found on the PATH, please install bwa aligner"
+which freebayes || error_exit "freebayes not found in MaSuRCA bin, please check your MaSuRCA install"
+which samtools || error_exit "samtools not found in MaSuRCA bin, please check your MaSuRCA install"
+
 export BASM=`basename $ASM`
-export BWA=`which bwa`
+export BWA=`which bwa` 
 export FREEBAYES=`which freebayes`
 export SAMTOOLS=`which samtools`
 rm -f bwa.err samtools.err
