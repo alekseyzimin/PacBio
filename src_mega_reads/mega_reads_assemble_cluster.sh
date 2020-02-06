@@ -407,12 +407,12 @@ fi
 if [ $ONEPASS -lt 1 ];then
 
     if [ ! -s $COORDS.all_mr.maximal.fa ] || [ -e .rerun ];then
-      extract_unique_mega-reads.pl < $COORDS.txt 1>$COORDS.all_mr.fa.tmp 2>$COORDS.mr_sizes.unsorted.tmp && mv $COORDS.all_mr.fa.tmp $COORDS.all_mr.fa || error_exit "failed to extract mega-reads from pass 1 output file";
-      LC_ALL=C sort -nrk2 -S 50%  $COORDS.mr_sizes.unsorted.tmp > $COORDS.mr_sizes.tmp && rm $COORDS.mr_sizes.unsorted.tmp && \
-	reduce_sr `wc -l $KUNITIGLENGTHS | perl -ane 'print $F[0]'`  $KUNITIGLENGTHS $KMER $COORDS.mr_sizes.tmp -o $COORDS.reduce.tmp && \
-	cat <(awk '{print $1}' $COORDS.reduce.tmp) <(awk '{print $1}'  $COORDS.mr_sizes.tmp) | LC_ALL=C sort -S 50% | uniq -u > $COORDS.maximal_mr.txt && \
-	ufasta extract -f $COORDS.maximal_mr.txt $COORDS.all_mr.fa > $COORDS.all_mr.maximal.fa && \
-	rm $COORDS.mr_sizes.tmp $COORDS.reduce.tmp ||  error_exit "failed to create maximal pass 1 mega-reads ";
+	extract_unique_mega-reads.pl < $COORDS.txt 1>$COORDS.all_mr.fa.tmp 2>$COORDS.mr_sizes.unsorted.tmp && mv $COORDS.all_mr.fa.tmp $COORDS.all_mr.fa || error_exit "failed to extract mega-reads from pass 1 output file";
+	LC_ALL=C sort -nrk2 -S 50%  $COORDS.mr_sizes.unsorted.tmp > $COORDS.mr_sizes.tmp && rm $COORDS.mr_sizes.unsorted.tmp && \
+	    reduce_sr `wc -l $KUNITIGLENGTHS | perl -ane 'print $F[0]'`  $KUNITIGLENGTHS $KMER $COORDS.mr_sizes.tmp -o $COORDS.reduce.tmp && \
+	    cat <(awk '{print $1}' $COORDS.reduce.tmp) <(awk '{print $1}'  $COORDS.mr_sizes.tmp) | LC_ALL=C sort -S 50% | uniq -u > $COORDS.maximal_mr.txt && \
+	    ufasta extract -f $COORDS.maximal_mr.txt $COORDS.all_mr.fa > $COORDS.all_mr.maximal.fa && \
+	    rm $COORDS.mr_sizes.tmp $COORDS.reduce.tmp ||  error_exit "failed to create maximal pass 1 mega-reads ";
 	touch .rerun
 	if  [ ! -s $COORDS.all_mr.maximal.fa ];then
 	    error_exit "failed to create maximal mega-reads from pass 1"
@@ -421,7 +421,7 @@ if [ $ONEPASS -lt 1 ];then
 
 #figure out which long reads corrected into one chunk on the first pass
     if [ ! -s $COORDS.single.txt ] || [ -e .rerun ];then
-      awk 'BEGIN{counter=0}{if($1~ /^>/){if(counter==1){print rn}rn=substr($1,2);counter=0}else{if($8>'$d'*4){counter++}else{counter+=2}}}END{if(counter==1){print rn}}' $COORDS.txt > $COORDS.single.txt.tmp && mv  $COORDS.single.txt.tmp  $COORDS.single.txt || error_exit "failed to extract names of single-chunk mega-reads pass 1";
+	awk 'BEGIN{counter=0}{if($1~ /^>/){if(counter==1){print rn}rn=substr($1,2);counter=0}else{if($8>'$d'*4){counter++}else{counter+=2}}}END{if(counter==1){print rn}}' $COORDS.txt > $COORDS.single.txt.tmp && mv  $COORDS.single.txt.tmp  $COORDS.single.txt || error_exit "failed to extract names of single-chunk mega-reads pass 1";
     fi
 
 #here we compute the number of batches to run for secondary create_mega_reads
@@ -540,7 +540,7 @@ if [ $ONEPASS -lt 1 ];then
 else 
     touch $COORDS.mr.txt
     if [ ! -s $COORDS.single.txt ] || [ -e .rerun ];then
-      grep --text '^>' $COORDS.txt | awk  '{print substr($1,2)}' > $COORDS.single.txt
+	grep --text '^>' $COORDS.txt | awk  '{print substr($1,2)}' > $COORDS.single.txt
     fi
 #awk '{if($1 ~ /^>/ || $8 > '$d'*1) print $0}' $COORDS.txt > $COORDS.mr.txt.tmp && mv $COORDS.mr.txt.tmp $COORDS.mr.txt
 #perl -ane '{if($F[0] =~ /^>/){if($#lines>-1){print $rn,"\n";if($#lines==0){print $lines[0],"\n";}else{foreach $line(@lines){@f=split(/\s+/,$line); print $line,"\n" if($f[7]>'$d');}}}@lines=();$rn=$F[0];}else{push(@lines,join(" ",@F));}}END{print $rn,"\n";if($#lines==0){print $lines[0],"\n";}else{foreach $line(@lines){@f=split(/\s+/,$line); print $line,"\n" if($f[7]>'$d');}}}' $COORDS.txt > $COORDS.mr.txt
@@ -555,8 +555,8 @@ if [ ! -s ${COORDS}.all.txt ] || [ -e .rerun ];then
 fi
 
 if [ $NANOPORE_RNA -gt 0 ];then
-join_mega_reads_trim.onepass.ref.pl <$COORDS.all.txt 1>$COORDS.transcripts.fa 2>$COORDS.transcripts.err
-exit
+    join_mega_reads_trim.onepass.ref.pl <$COORDS.all.txt 1>$COORDS.transcripts.fa 2>$COORDS.transcripts.err
+    exit
 fi
 
 
@@ -571,27 +571,27 @@ if [ ! -e ${COORDS}.1$POSTFIX.unjoined.fa ] || [ ! -e ${COORDS}.1$POSTFIX.to_joi
     ALL_SIZE=$(stat -L -c%s ${COORDS}.all.txt);
     if [ $ALL_SIZE -gt 10000000 ];then
 #use 4 processes
-      ufasta split -i <(add_pb_seq.pl $LONGREADS1 < ${COORDS}.all.txt) \
-        >(join_mega_reads_trim.onepass.nomatch.pl ${COORDS}.1$POSTFIX.allowed  $MAX_GAP 1>$COORDS.1$POSTFIX.fa.tmp.1 2>$COORDS.1$POSTFIX.to_join.fa.tmp.1) \
-        >(join_mega_reads_trim.onepass.nomatch.pl ${COORDS}.1$POSTFIX.allowed  $MAX_GAP 1>$COORDS.1$POSTFIX.fa.tmp.2 2>$COORDS.1$POSTFIX.to_join.fa.tmp.2) \
-        >(join_mega_reads_trim.onepass.nomatch.pl ${COORDS}.1$POSTFIX.allowed  $MAX_GAP 1>$COORDS.1$POSTFIX.fa.tmp.3 2>$COORDS.1$POSTFIX.to_join.fa.tmp.3) \
-        >(join_mega_reads_trim.onepass.nomatch.pl ${COORDS}.1$POSTFIX.allowed  $MAX_GAP 1>$COORDS.1$POSTFIX.fa.tmp.4 2>$COORDS.1$POSTFIX.to_join.fa.tmp.4) && \
-        cat $COORDS.1$POSTFIX.fa.tmp.{1,2,3,4} | awk '{if($1!~/^>/ && $1~/>/){split($1,a,">");print a[1];if(a[2]!="") print ">"a[2];}else{print $0}}' > $COORDS.1$POSTFIX.fa.tmp && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.unjoined.fa && \
-        cat $COORDS.1$POSTFIX.to_join.fa.tmp.{1,2,3,4} > $COORDS.1$POSTFIX.to_join.fa.tmp && mv $COORDS.1$POSTFIX.to_join.fa.tmp $COORDS.1$POSTFIX.to_join.fa 
+	ufasta split -i <(add_pb_seq.pl $LONGREADS1 < ${COORDS}.all.txt) \
+            >(join_mega_reads_trim.onepass.nomatch.pl ${COORDS}.1$POSTFIX.allowed  $MAX_GAP 1>$COORDS.1$POSTFIX.fa.tmp.1 2>$COORDS.1$POSTFIX.to_join.fa.tmp.1) \
+            >(join_mega_reads_trim.onepass.nomatch.pl ${COORDS}.1$POSTFIX.allowed  $MAX_GAP 1>$COORDS.1$POSTFIX.fa.tmp.2 2>$COORDS.1$POSTFIX.to_join.fa.tmp.2) \
+            >(join_mega_reads_trim.onepass.nomatch.pl ${COORDS}.1$POSTFIX.allowed  $MAX_GAP 1>$COORDS.1$POSTFIX.fa.tmp.3 2>$COORDS.1$POSTFIX.to_join.fa.tmp.3) \
+            >(join_mega_reads_trim.onepass.nomatch.pl ${COORDS}.1$POSTFIX.allowed  $MAX_GAP 1>$COORDS.1$POSTFIX.fa.tmp.4 2>$COORDS.1$POSTFIX.to_join.fa.tmp.4) && \
+            cat $COORDS.1$POSTFIX.fa.tmp.{1,2,3,4} | awk '{if($1!~/^>/ && $1~/>/){split($1,a,">");print a[1];if(a[2]!="") print ">"a[2];}else{print $0}}' > $COORDS.1$POSTFIX.fa.tmp && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.unjoined.fa && \
+            cat $COORDS.1$POSTFIX.to_join.fa.tmp.{1,2,3,4} > $COORDS.1$POSTFIX.to_join.fa.tmp && mv $COORDS.1$POSTFIX.to_join.fa.tmp $COORDS.1$POSTFIX.to_join.fa 
         rm $COORDS.1$POSTFIX.fa.tmp.{1,2,3,4} $COORDS.1$POSTFIX.to_join.fa.tmp.{1,2,3,4} || error_exit "mega-reads joining failed"
     else
 #use 1 process
-      add_pb_seq.pl $LONGREADS1 < ${COORDS}.all.txt | join_mega_reads_trim.onepass.nomatch.pl ${COORDS}.1$POSTFIX.allowed  $MAX_GAP 1>$COORDS.1$POSTFIX.fa.tmp 2>$COORDS.1$POSTFIX.to_join.fa.tmp && mv $COORDS.1$POSTFIX.to_join.fa.tmp $COORDS.1$POSTFIX.to_join.fa && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.unjoined.fa || error_exit "mega-reads joining failed"
+	add_pb_seq.pl $LONGREADS1 < ${COORDS}.all.txt | join_mega_reads_trim.onepass.nomatch.pl ${COORDS}.1$POSTFIX.allowed  $MAX_GAP 1>$COORDS.1$POSTFIX.fa.tmp 2>$COORDS.1$POSTFIX.to_join.fa.tmp && mv $COORDS.1$POSTFIX.to_join.fa.tmp $COORDS.1$POSTFIX.to_join.fa && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.unjoined.fa || error_exit "mega-reads joining failed"
     fi
     touch .rerun
 fi
 
 if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
     log "Gap consensus"    
-    #making consensus for large gaps
+#making consensus for large gaps
     mkdir -p ${COORDS}.join_consensus.tmp && \
-	
-    #start subshell execution
+
+#start subshell execution
 
     (cd ${COORDS}.join_consensus.tmp;
 	TOJOIN_BATCHES=$(($(stat -c%s -L ../${COORDS}.1$POSTFIX.to_join.fa)/100000000))
@@ -605,78 +605,82 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
 	for i in $(seq 1 $TOJOIN_BATCHES);do merges_names[$i]="merges.$i.txt";done;
 
 	awk 'BEGIN{flag=1}{if($2>int("'$MAX_GAP'")*.75 && $6==1) {if($3==prev3 && $4==prev4) flag++; else flag=1;  print $5-$2" "$1" "$3" "$4;prev3=$3;prev4=$4}}'  ../${COORDS}.1$POSTFIX.allowed  > qrys.txt && \
-          perl -ane '{$index="$F[2] $F[3]";if(not(defined($hl{$index})) || $ho{$index}>$F[0]){$hl{$index}=join(" ",@F);$ho{$index}=$F[0];}}END{foreach $k(keys %hl){print $hl{$k},"\n";}}' qrys.txt > refs.txt && \
-	  if [ ! -s qrys.all.fa ]; then $MYPATH/ufasta extract -f <(awk '{print $2}' qrys.txt) ../$LONGREADS1 > qrys.all.fa.tmp && mv qrys.all.fa.tmp qrys.all.fa; fi && \
-	  $MYPATH/ufasta extract -v -f <(awk '{print $2}' refs.txt) qrys.all.fa | $MYPATH/ufasta one > qrys.fa && \
-	  $MYPATH/ufasta extract -f <(awk '{print $2}' refs.txt) qrys.all.fa | $MYPATH/ufasta one > refs.fa && \
-	  perl -ane '{
-      $h{$F[1]}="$F[2]_$F[3]";
-      }END{
-      $flag=0;
-      open(FILE,"refs.fa");
-      while($line=<FILE>){
-        if($line=~/^>/){
-          chomp($line);
-          @f=split(/\s+/,$line);
-          if(defined($h{substr($f[0],1)})){
-            $line=<FILE>;
-            chomp($line);
-            $hseq{$h{substr($f[0],1)}}=$line;
-          }
-        }
-      }
-      foreach $name(keys %hseq){
-      print ">$name\n$hseq{$name}\n";
-      }}' refs.txt > refs.renamed.fa && \
-	  rm -f ${ref_names[@]} && $MYPATH/ufasta split -i  refs.renamed.fa ${ref_names[@]} && \
-	  $MYPATH/split_reads_to_join.pl qrys.txt to_blasr ${ref_names[@]} < qrys.fa && \
-	  perl -ane '{if($F[0] =~ /^>/){$rn=$F[0];}else{$seq=$F[0]; $seq=~ tr/a-zA-Z//s; print "$rn\n$F[0]\n" if(length($seq)>length($F[0])*0.1);}}' ../${COORDS}.1$POSTFIX.to_join.fa | $MYPATH/split_reads_to_join.pl qrys.txt to_join ${ref_names[@]} && \
-	  grep '^>' --text ../$COORDS.1$POSTFIX.to_join.fa | perl -ane '{($rn,$coord)=split(/\./,substr($F[0],1));$h{$rn}.=substr($F[0],1)." ";}END{foreach $r(keys %h){@f=split(/\s+/,$h{$r}); for ($i=0;$i<$#f;$i++){print $f[$i]," ",$f[$i+1],"\n"}}}' > valid_join_pairs.txt && \
-	  for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_join.$F.fa;echo "ACGT" >> to_join.$F.fa;done && \
-	  for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_blasr.$F.fa;echo "ACGT" >> to_blasr.$F.fa;done 
+	    perl -ane '{$index="$F[2] $F[3]";if(not(defined($hl{$index})) || $ho{$index}>$F[0]){$hl{$index}=join(" ",@F);$ho{$index}=$F[0];}}END{foreach $k(keys %hl){print $hl{$k},"\n";}}' qrys.txt > refs.txt && \
+	    if [ ! -s qrys.all.fa ]; then $MYPATH/ufasta extract -f <(awk '{print $2}' qrys.txt) ../$LONGREADS1 > qrys.all.fa.tmp && mv qrys.all.fa.tmp qrys.all.fa; fi && \
+	    $MYPATH/ufasta extract -v -f <(awk '{print $2}' refs.txt) qrys.all.fa | $MYPATH/ufasta one > qrys.fa && \
+	    $MYPATH/ufasta extract -f <(awk '{print $2}' refs.txt) qrys.all.fa | $MYPATH/ufasta one > refs.fa && \
+	    if [ -s qrys.fa ] && [ -s refs.fa ];then #if no joins to make
+	    perl -ane '{
+       $h{$F[1]}="$F[2]_$F[3]";
+       }END{
+       $flag=0;
+       open(FILE,"refs.fa");
+       while($line=<FILE>){
+         if($line=~/^>/){
+           chomp($line);
+           @f=split(/\s+/,$line);
+           if(defined($h{substr($f[0],1)})){
+             $line=<FILE>;
+             chomp($line);
+             $hseq{$h{substr($f[0],1)}}=$line;
+           }
+         }
+       }
+       foreach $name(keys %hseq){
+         print ">$name\n$hseq{$name}\n";
+       }}' refs.txt > refs.renamed.fa && \
+           rm -f ${ref_names[@]} && $MYPATH/ufasta split -i  refs.renamed.fa ${ref_names[@]} && \
+           $MYPATH/split_reads_to_join.pl qrys.txt to_blasr ${ref_names[@]} < qrys.fa && \
+           perl -ane '{if($F[0] =~ /^>/){$rn=$F[0];}else{$seq=$F[0]; $seq=~ tr/a-zA-Z//s; print "$rn\n$F[0]\n" if(length($seq)>length($F[0])*0.1);}}' ../${COORDS}.1$POSTFIX.to_join.fa | $MYPATH/split_reads_to_join.pl qrys.txt to_join ${ref_names[@]} && \
+           grep '^>' --text ../$COORDS.1$POSTFIX.to_join.fa | perl -ane '{($rn,$coord)=split(/\./,substr($F[0],1));$h{$rn}.=substr($F[0],1)." ";}END{foreach $r(keys %h){@f=split(/\s+/,$h{$r}); for ($i=0;$i<$#f;$i++){print $f[$i]," ",$f[$i+1],"\n"}}}' > valid_join_pairs.txt && \
+           for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_join.$F.fa;echo "ACGT" >> to_join.$F.fa;done && \
+           for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_blasr.$F.fa;echo "ACGT" >> to_blasr.$F.fa;done 
 
-	echo "#!/bin/bash" > ./do_consensus.sh && \
-	    echo "set -o pipefail" >> ./do_consensus.sh && \
-	    echo "if [ ! -e consensus.\$1.success ];then" >> ./do_consensus.sh && \
-	    echo "$MYPATH/../CA8/Linux-amd64/bin/blasr to_blasr.\$1.fa   ref.\$1.fa  -minMatch 15 -nproc 16 -bestn 10 -m 5 2>blasr.err | sort -k6 -S2% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j 8 -t 0 -c 1 /dev/stdin  2>pbdagcon.err | tee join_consensus.\$1.fasta | $MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t 16 to_join.\$1.fa /dev/stdin | $MYPATH/filter_delta_file_for_qrys.pl qrys.txt | $MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$1 && cat coords.\$1 | $MYPATH/extract_merges_mega-reads.pl join_consensus.\$1.fasta  valid_join_pairs.txt > merges.\$1.txt && touch consensus.\$1.success" >> ./do_consensus.sh && \
-	    echo "fi" >> ./do_consensus.sh && \
-	    chmod 0755 ./do_consensus.sh
+            echo "#!/bin/bash" > ./do_consensus.sh && \
+		echo "set -o pipefail" >> ./do_consensus.sh && \
+		echo "if [ ! -e consensus.\$1.success ];then" >> ./do_consensus.sh && \
+		echo "$MYPATH/../CA8/Linux-amd64/bin/blasr to_blasr.\$1.fa   ref.\$1.fa  -minMatch 15 -nproc 16 -bestn 10 -m 5 2>blasr.err | sort -k6 -S2% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j 8 -t 0 -c 1 /dev/stdin  2>pbdagcon.err | tee join_consensus.\$1.fasta | $MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t 16 to_join.\$1.fa /dev/stdin | $MYPATH/filter_delta_file_for_qrys.pl qrys.txt | $MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$1 && cat coords.\$1 | $MYPATH/extract_merges_mega-reads.pl join_consensus.\$1.fasta  valid_join_pairs.txt > merges.\$1.txt && touch consensus.\$1.success" >> ./do_consensus.sh && \
+		echo "fi" >> ./do_consensus.sh && \
+		chmod 0755 ./do_consensus.sh
 
-	seq 1 $TOJOIN_BATCHES | xargs -P 4 -I % ./do_consensus.sh %    
-    #the above line may fail due to out of memory, etc -- re-running with 2 CPUs
-	seq 1 $TOJOIN_BATCHES | xargs -P 1 -I % ./do_consensus.sh % 
-	
-	cat merges.[0-9]*.txt |perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} if(not(defined($h{$merge}))|| $h{$merge} > $F[1]+$F[4]){$hl{$merge}=join(" ",@F);$h{$merge}=$F[1]+$F[4];}}END{foreach $k(keys %hl){print $hl{$k},"\n"}}' > merges.best.txt && \
-	    $MYPATH/merge_mega-reads.pl < merges.best.txt | \
-	    $MYPATH/create_merged_mega-reads.pl ../${COORDS}.1$POSTFIX.to_join.fa merges.best.txt > ${COORDS}.1$POSTFIX.joined.fa.tmp && \
-	    mv ${COORDS}.1$POSTFIX.joined.fa.tmp  ../${COORDS}.1$POSTFIX.joined.fa && \
-	    cat ${merges_names[@]} > /dev/null && \
-	    touch join_consensus.success)
+            seq 1 $TOJOIN_BATCHES | xargs -P 4 -I % ./do_consensus.sh %    
+#the above line may fail due to out of memory, etc -- re-running with 2 CPUs
+            seq 1 $TOJOIN_BATCHES | xargs -P 1 -I % ./do_consensus.sh % 
 
-    #end subshell execution
+            cat merges.[0-9]*.txt |perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} if(not(defined($h{$merge}))|| $h{$merge} > $F[1]+$F[4]){$hl{$merge}=join(" ",@F);$h{$merge}=$F[1]+$F[4];}}END{foreach $k(keys %hl){print $hl{$k},"\n"}}' > merges.best.txt && \
+		$MYPATH/merge_mega-reads.pl < merges.best.txt | \
+		$MYPATH/create_merged_mega-reads.pl ../${COORDS}.1$POSTFIX.to_join.fa merges.best.txt > ${COORDS}.1$POSTFIX.joined.fa.tmp && \
+		mv ${COORDS}.1$POSTFIX.joined.fa.tmp  ../${COORDS}.1$POSTFIX.joined.fa && \
+		cat ${merges_names[@]} > /dev/null && \
+		touch join_consensus.success
+                else #if no joins to make
+                cp ../${COORDS}.1$POSTFIX.to_join.fa ../${COORDS}.1$POSTFIX.joined.fa.tmp && mv ../${COORDS}.1$POSTFIX.joined.fa.tmp ../${COORDS}.1$POSTFIX.joined.fa && touch join_consensus.success
+                fi)
+
+#end subshell execution
 
     if [ -e ${COORDS}.join_consensus.tmp/join_consensus.success ];then
-	cat ${COORDS}.1$POSTFIX.joined.fa ${COORDS}.1$POSTFIX.unjoined.fa  > ${COORDS}.1$POSTFIX.fa.tmp && \
-          mv ${COORDS}.1$POSTFIX.fa.tmp ${COORDS}.1$POSTFIX.fa && \
-          rm -rf ${COORDS}.join_consensus.tmp 
+        cat ${COORDS}.1$POSTFIX.joined.fa ${COORDS}.1$POSTFIX.unjoined.fa  > ${COORDS}.1$POSTFIX.fa.tmp && \
+            mv ${COORDS}.1$POSTFIX.fa.tmp ${COORDS}.1$POSTFIX.fa && \
+            rm -rf ${COORDS}.join_consensus.tmp 
     else
-	log "Warning! Some or all gap consensus jobs failed, see files in ${COORDS}.join_consensus.tmp, however this is fine and assembly can proceed normally"
-	if [ -s ${COORDS}.1$POSTFIX.joined.fa ];then
+        log "Warning! Some or all gap consensus jobs failed, see files in ${COORDS}.join_consensus.tmp, however this is fine and assembly can proceed normally"
+        if [ -s ${COORDS}.1$POSTFIX.joined.fa ];then
             cat $COORDS.1$POSTFIX.joined.fa $COORDS.1$POSTFIX.unjoined.fa  > $COORDS.1$POSTFIX.fa.tmp && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.fa
-	else
+        else
             cat $COORDS.1$POSTFIX.unjoined.fa $COORDS.1$POSTFIX.to_join.fa  > $COORDS.1$POSTFIX.fa.tmp && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.fa
-	fi
+        fi
     fi
     touch .rerun
     if  [ ! -s $COORDS.1$POSTFIX.fa ];then
-	error_exit "Gap consensus failed"
+        error_exit "Gap consensus failed"
     fi
 fi
 
 if [ $FLYE -gt 0 ];then
     if [ ! -s "flye/scaffolds.fasta" ];then
-      log "Running assembly with Flye"
-      $CA_PATH/flye -t $(($NUM_THREADS/2+1)) --nano-corr $COORDS.1$POSTFIX.fa -g $ESTIMATED_GENOME_SIZE --kmer-size 21 -m 2500 -o flye -i 0 1>flye.log 2>&1
+        log "Running assembly with Flye"
+	$CA_PATH/flye -t $(($NUM_THREADS/2+1)) --nano-corr $COORDS.1$POSTFIX.fa -g $ESTIMATED_GENOME_SIZE --kmer-size 21 -m 2500 -o flye -i 0 1>flye.log 2>&1
     fi
 else
     if [ ! -s $COORDS.1.frg ] || [ ! -s $COORDS.1.mates.frg ] || [ -e .rerun ];then
