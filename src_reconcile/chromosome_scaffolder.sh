@@ -90,7 +90,9 @@ do
             ;;
         -h|--help|-u|--usage)
             echo ""
-            echo "Usage: chromosome_scaffolder.sh -r <reference genome> -q <assembly to be scaffolded with the reference> both MANDATORY"
+            echo "Usage: chromosome_scaffolder.sh"
+            echo "-r <reference genome> MANDATORY"
+            echo "-q <assembly to be scaffolded with the reference> MANDATORY"
             echo "-t <number of threads>" 
             echo "-i <minimum sequence similarity percentage: default 97>"
             echo "-m <merge equence alignments slack: default 100000>"
@@ -100,6 +102,7 @@ do
             echo "-cl <coverage threshold for splitting at misassemblies: default 3>"
             echo "-ch <repeat coverage threshold for splitting at misassemblies: default 30>"
             echo "-M attempt to fill unaligned gaps with reference contigs: defalut off"
+            echo "-h|-u|--help this message"
             echo ""
             exit 0
             ;;
