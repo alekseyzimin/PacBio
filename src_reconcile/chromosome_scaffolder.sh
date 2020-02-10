@@ -14,6 +14,7 @@ IDENTITY=97
 #parameter for merging alignments
 MERGE=100000
 MERGE_SEQ=0
+NO_BRK=0
 
 #low coverage threshold for breaking
 COV_THRESH=3
@@ -70,6 +71,9 @@ do
             REP_COV_THRESH="$2"
             shift
             ;;
+        -nb|--no_breaks)
+            NO_BRK=1
+            ;;
         -m|--merge-slack)
             MERGE="$2"
             shift
@@ -85,7 +89,18 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage: chromosome_scaffolder.sh -r <reference genome> -q <assembly to be scaffolded with the reference> -t <number of threads> -i <minimum sequence similarity percentage> -m <merge polishing sequence alignments slack (advanced)> -v <verbose> -s <reads to align to the assembly to check for misassemblies> -cl <coverage threshold for splitting at misassemblies, default 3> -ch <repeat coverage threshold for splitting at misassemblies, default 30>" 
+            echo ""
+            echo "Usage: chromosome_scaffolder.sh -r <reference genome> -q <assembly to be scaffolded with the reference> both MANDATORY"
+            echo "-t <number of threads>" 
+            echo "-i <minimum sequence similarity percentage: default 97>"
+            echo "-m <merge equence alignments slack: default 100000>"
+            echo "-nb do not align reads to query contigs and do not attempt to break at misassemblies: default off" 
+            echo "-v <verbose>"
+            echo "-s <reads to align to the assembly to check for misassemblies> MANDATORY unless -nb set"
+            echo "-cl <coverage threshold for splitting at misassemblies: default 3>"
+            echo "-ch <repeat coverage threshold for splitting at misassemblies: default 30>"
+            echo "-M attempt to fill unaligned gaps with reference contigs: defalut off"
+            echo ""
             exit 0
             ;;
         *)
@@ -105,9 +120,30 @@ let IDENTITY=$IDENTITY-1
 if [ ! -e $PREFIX.split.success ];then
   log "Splitting query scaffolds into contigs"
   rm -f $PREFIX.blasr.success
+  rm -f gaps.success
   $MYPATH/splitFileAtNs $QRY 1 > $HYB_CTG && rm  scaffNameTranslations.txt genome.asm genome.posmap.ctgscf && \
   touch $PREFIX.split.success
 fi
+
+if [ ! -e $PREFIX.gaps.success ];then
+  log "Computing gap coordinates in the reference"
+  rm -f $PREFIX.scaffold.success
+  $MYPATH/splitFileAtNs $REF 1 > /dev/null && \
+  perl -ane '{$h{substr($F[1],3)}=$F[0]}END{while($line=<STDIN>){chomp($line);@f=split(/\s+/,$line);print "$f[0] $h{$f[1]} ",$f[2]+1," $f[3] $f[4]\n";}}' scaffNameTranslations.txt < genome.posmap.ctgscf | awk 'BEGIN{pg=0}{print $2" "pg" "$3;pg=$4}' > $PREFIX.gap_coordinates.txt.tmp && \
+  mv $PREFIX.gap_coordinates.txt.tmp $PREFIX.gap_coordinates.txt && \
+  rm scaffNameTranslations.txt genome.asm genome.posmap.ctgscf && \
+  touch $PREFIX.gaps.success
+fi
+
+if [ ! -e $PREFIX.noise.success ];then
+  log "Adding noise to reference to align to duplicated regions"
+  rm -f $PREFIX.align1.success
+  rm -f $PREFIX.align2.success
+  $MYPATH/introduce_errors_fasta_file.pl $REF 0.01 1 $REF | $MYPATH/fix_consensus_from_vcf.pl $REF > $REF_CHR.w_noise && touch $PREFIX.noise.success
+fi
+
+#if we need to break
+if [ $NO_BRK -lt 1 ];then
 
 if [ ! -e $PREFIX.blasr.success ];then
   log "Mapping reads to query contigs"
@@ -119,12 +155,12 @@ if [ ! -e $PREFIX.blasr.success ];then
   fi
 fi
 
-if [ ! -e $PREFIX.noise.success ];then
-  log "Adding noise to reference to align to duplicated regions"
-  rm -f $PREFIX.align1.success
-  rm -f $PREFIX.align2.success
-  $MYPATH/introduce_errors_fasta_file.pl $REF 0.01 1 $REF | $MYPATH/fix_consensus_from_vcf.pl $REF > $REF_CHR.w_noise && touch $PREFIX.noise.success
-fi 
+#compute coverage from the posmap file
+if [ ! -e $PREFIX.coverage.success ];then
+  log "Computing read coverage for query contigs"
+  rm -f $PREFIX.break.success
+  awk '{print $1" "$2" "$3"\n"$1" "$2" "$4}' $HYB_POS |  sort -nk2 -k3n -S 20% | $MYPATH/compute_coverage.pl > $HYB_POS.coverage && touch $PREFIX.coverage.success
+fi
 
 if [ ! -e $PREFIX.align1.success ];then
   log "Aligning query contigs to reference scaffolds"
@@ -137,23 +173,6 @@ if [ ! -e $PREFIX.filter1.success ];then
   log "Filtering the alignments" 
   rm -f $PREFIX.merge1.success
   $MYPATH/delta-filter -1 -i $IDENTITY -o 20 $REF_CHR.$HYB_CTG.delta >$REF_CHR.$HYB_CTG.1.delta && touch $PREFIX.filter1.success
-fi
-
-#compute coverage from the posmap file
-if [ ! -e $PREFIX.coverage.success ];then
-  log "Computing read coverage for query contigs" 
-  rm -f $PREFIX.break.success
-  awk '{print $1" "$2" "$3"\n"$1" "$2" "$4}' $HYB_POS |  sort -nk2 -k3n -S 20% | $MYPATH/compute_coverage.pl > $HYB_POS.coverage && touch $PREFIX.coverage.success
-fi
-
-if [ ! -e $PREFIX.gaps.success ];then
-  log "Computing gap coordinates in the reference"
-  rm -f $PREFIX.scaffold.success
-  $MYPATH/splitFileAtNs $REF 1 > /dev/null && \
-  perl -ane '{$h{substr($F[1],3)}=$F[0]}END{while($line=<STDIN>){chomp($line);@f=split(/\s+/,$line);print "$f[0] $h{$f[1]} ",$f[2]+1," $f[3] $f[4]\n";}}' scaffNameTranslations.txt < genome.posmap.ctgscf | awk 'BEGIN{pg=0}{print $2" "pg" "$3;pg=$4}' > $PREFIX.gap_coordinates.txt.tmp && \
-  mv $PREFIX.gap_coordinates.txt.tmp $PREFIX.gap_coordinates.txt && \
-  rm scaffNameTranslations.txt genome.asm genome.posmap.ctgscf && \
-  touch $PREFIX.gaps.success
 fi
 
 if [ ! -e $PREFIX.merge1.success ];then
@@ -177,9 +196,13 @@ if [ ! -e $PREFIX.break.success ];then
   $MYPATH/break_contigs.pl <(grep -v "end" $HYB_POS.coverage.w_breaks.validated |awk '{if($4<=int("'$COV_THRESH'") || ($1="repeat" && $4>=int("'$REP_COV_THRESH'"))) print $0}') < $HYB_CTG > $HYB_CTG.broken && touch $PREFIX.break.success
 fi
 
+else #no_break
+cp $HYB_CTG $HYB_CTG.broken
+fi
+
 #now we re-align the broken contigs to the reference
 if [ ! -e $PREFIX.align2.success ];then
-  log "Re-aligning contigs after splitting"
+  log "Aligning contigs to the reference pass2"
   rm -f $PREFIX.filter2.success
   $MYPATH/nucmer -t $NUM_THREADS -p $REF_CHR.$HYB_CTG.broken -c 200  $REF_CHR.w_noise $HYB_CTG.broken && touch $PREFIX.align2.success
   #$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -k 21 -a -Q $REF $HYB_CTG.broken 2>minimap2.err | $MYPATH/samToDelta > $REF_CHR.$HYB_CTG.broken.delta && touch $PREFIX.align2.success
@@ -195,50 +218,23 @@ fi
 if [ ! -e $PREFIX.scaffold.success ];then
   rm -f $PREFIX.place_extra.success
   log "Final scaffolding"
+  touch $PREFIX.fillseq.fa
+  $MYPATH/show-coords -lcHr $REF_CHR.$HYB_CTG.broken.1.delta | \
+  $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
+  awk '{if($16>25 || $7>2000 ) print $0}' |\
+  awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
+  $MYPATH/extract_single_best_match_coords_file.pl > $PREFIX.best.coords.tmp && mv $PREFIX.best.coords.tmp $PREFIX.best.coords
   if [ $MERGE_SEQ -gt 0 ];then
-    $MYPATH/show-coords -lcHr $REF_CHR.$HYB_CTG.broken.1.delta | \
-    $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
-    awk '{if($16>25 || $7>2000 ) print $0}' |\
-    awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
-    $MYPATH/extract_single_best_match_coords_file.pl  |\
-    $MYPATH/fill_unaligned_gaps.pl $REF 2>$PREFIX.fillseq.fa | perl -ane '{$dir="f"; $dir="r" if($F[3]>$F[4]);print "$F[-2] $F[-1] 1 $F[12] $dir 100 100 $F[12]\n"}' |\
-    $MYPATH/output_reconciled_scaffolds.pl <(cat $PREFIX.fillseq.fa $HYB_CTG.broken) |\
-    ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa && touch $PREFIX.scaffold.success && touch $PREFIX.place_extra.success
+    cat $PREFIX.best.coords $MYPATH/fill_unaligned_gaps.pl $REF 2>$PREFIX.fillseq.fa |\
+    perl -ane '{$dir="f"; $dir="r" if($F[3]>$F[4]);print "$F[-2] $F[-1] 1 $F[12] $dir 100 100 $F[12]\n"}' > $PREFIX.reconciled.txt.tmp && mv $PREFIX.reconciled.txt.tmp $PREFIX.reconciled.txt
   else
-    $MYPATH/show-coords -lcHr $REF_CHR.$HYB_CTG.broken.1.delta | \
-    $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
-    awk '{if($16>25 || $7>2000 ) print $0}' |\
-    awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
-    $MYPATH/extract_single_best_match_coords_file.pl  |\
-    $MYPATH/reconcile_matches.pl $PREFIX.gap_coordinates.txt  > $PREFIX.reconciled.txt && touch $PREFIX.scaffold.success 
+    cat $PREFIX.best.coords | $MYPATH/reconcile_matches.pl $PREFIX.gap_coordinates.txt> $PREFIX.reconciled.txt.tmp && mv $PREFIX.reconciled.txt.tmp $PREFIX.reconciled.txt
   fi
+  cat $PREFIX.reconciled.txt | $MYPATH/output_reconciled_scaffolds.pl <(cat $PREFIX.fillseq.fa $HYB_CTG.broken) |\
+  ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa && touch $PREFIX.scaffold.success 
 fi
 
-#we attempt to place extra contigs that were left unmapped due to repeats
-if [ ! -e $PREFIX.place_extra.success ];then
-  log "Placing extra repeats"
-  $MYPATH/ufasta extract -v -f <(awk '{print $2}' $PREFIX.reconciled.txt) $HYB_CTG.broken > $PREFIX.unplaced.fa && \
-  #$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -k 21 -a -Q $PREFIX.unplaced.fa $REF 2>minimap2.err | $MYPATH/samToDelta > $PREFIX.map_unplaced.delta 
-  if [ -s $PREFIX.unplaced.fa ];then
-    $MYPATH/nucmer -t $NUM_THREADS  --maxmatch --batch 10000000 -b 100 -l 100 -c 100 -p $PREFIX.map_unplaced $PREFIX.unplaced.fa $REF 
-  fi
-  if [ -s $PREFIX.map_unplaced.delta ];then
-    cat $REF_CHR.$HYB_CTG.broken.1.delta <(awk '{if($0 ~ /^>/){print ">"$2" "substr($1,2)" "$4" "$3}else if(NF==7){if($3<$4){print $3" "$4" "$1" "$2" "$6" "$5" "$7}else{print $4" "$3" "$2" "$1" "$6" "$5" "$7}}else{print $0}}' $PREFIX.map_unplaced.delta | $MYPATH/delta-filter -r -o 99 -i $IDENTITY /dev/stdin | $MYPATH/delta-filter -q /dev/stdin | tail -n +3 ) |\
-    $MYPATH/show-coords -lcHr /dev/stdin | \
-    $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
-    awk '{if($16>25 || $7>2000 ) print $0}' |\
-    awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
-    $MYPATH/extract_single_best_match_coords_file.pl  |\
-    $MYPATH/reconcile_matches.pl $PREFIX.gap_coordinates.txt |\
-    $MYPATH/output_reconciled_scaffolds.pl $HYB_CTG.broken|\
-    ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa && touch $PREFIX.place_extra.success
-  else
-    cat $PREFIX.reconciled.txt | $MYPATH/output_reconciled_scaffolds.pl $HYB_CTG.broken|\
-    ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa && touch $PREFIX.place_extra.success
-  fi
-fi
-
-if [ -e $PREFIX.place_extra.success ];then
+if [ -e $PREFIX.scaffold.success ];then
   log "Success! Final scaffold are in $REF_CHR.$HYB_CTG.reconciled.fa"
 fi
 
