@@ -219,10 +219,10 @@ if [ "$LONGREADS" = "$NANOPORE" ];then
     if [ ! -s "ont_${PB_HC}xlongest.fa" ] ;then
 	log "Using ${PB_HC}x of the longest ONT reads" 
 	if [ "$FIRSTCHAR" = ">" ];then
-            zcat -f $LONGREADS |ufasta extract -f <(zcat -f $LONGREADS | ufasta sizes -H | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin | ufasta one > ont_${PB_HC}xlongest.fa.tmp && mv ont_${PB_HC}xlongest.fa.tmp ont_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
+            zcat -f $LONGREADS |ufasta extract -f <(zcat -f $LONGREADS | ufasta sizes -H | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin | ufasta one | awk 'BEGIN{n=0}{if($1 ~/^>/){print $1"_"n;n++}else{print $0}}' > ont_${PB_HC}xlongest.fa.tmp && mv ont_${PB_HC}xlongest.fa.tmp ont_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
         else
 	    if [ "$FIRSTCHAR" = "@" ];then
-		zcat -f $LONGREADS |fastqToFasta.pl |ufasta extract -f <(zcat -f $LONGREADS | fastqToFasta.pl | ufasta sizes -H | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin | ufasta one > ont_${PB_HC}xlongest.fa.tmp && mv ont_${PB_HC}xlongest.fa.tmp ont_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
+		zcat -f $LONGREADS |fastqToFasta.pl |ufasta extract -f <(zcat -f $LONGREADS | fastqToFasta.pl | ufasta sizes -H | LC_ALL=C sort -nrk2 -S50% | perl -ane 'BEGIN{$thresh=int("'$ESTIMATED_GENOME_SIZE'")*int("'${PB_HC}'")*int("'$PLOIDY'");$n=0}{$n+=$F[1];print $F[0],"\n" if($n<$thresh)}') /dev/stdin | ufasta one | awk 'BEGIN{n=0}{if($1 ~/^>/){print $1"_"n;n++}else{print $0}}' > ont_${PB_HC}xlongest.fa.tmp && mv ont_${PB_HC}xlongest.fa.tmp ont_${PB_HC}xlongest.fa || error_exit "failed to extract the best long reads";
 	    else
 		error_exit "Unknown file format $LONGREADS, exiting";
 	    fi
