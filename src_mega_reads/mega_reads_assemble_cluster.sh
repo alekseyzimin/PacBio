@@ -391,12 +391,37 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 	    cat ${lmrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.txt || error_exit "concatenation of mega-read grid output files failed" ) && rm -rf mr_pass1 || error_exit "mega-reads pass 1 on the grid exited, please re-run assemble.sh"
     else #single computer
 	log "Running locally in 1 batch";
-	if numactl --show 1> /dev/null 2>&1;then
-	    numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $LONGREADS1 -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt || error_exit "mega-reads pass 1 failed";
-	else
-	    create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $LONGREADS1 -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt || error_exit "mega-reads pass 1 failed";
-	fi
-    fi
+        #if previous temporary file exists -- run failure, then we continue after deleting the last entry in the $COORDS.txt.tmp; cannot use ufasta because the file may be corrupted/incomplete
+        if [ -s $COORDS.txt.tmp ];then # found failed run, need to be careful below, the file may be corrupted
+          cat -n $COORDS.txt.tmp | grep '>' > $COORDS.txt.headers.tmp && \
+          mv $COORDS.txt.headers.tmp $COORDS.txt.headers && \
+          if [ -s $COORDS.txt.headers ];then
+            head -n `tail -n 1 $COORDS.txt.headers | perl -ane '{print $F[0]-1}'` $COORDS.txt.tmp > $COORDS.txt.done.tmp && \
+            mv $COORDS.txt.done.tmp $COORDS.txt.done
+          else
+            echo "1 >_\n2 >_" > $COORDS.txt.headers
+            touch $COORDS.txt.done
+          fi
+          if numactl --show 1> /dev/null 2>&1;then #if numactl then interleave memory
+            numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p <(ufasta extract -v -f <(head -n -1 $COORDS.txt.headers | awk '{print substr($2,2)}') $LONGREADS1)  -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt 
+          else
+            create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p <(ufasta extract -v -f <(head -n -1 $COORDS.txt.headers | awk '{print substr($2,2)}') $LONGREADS1)  -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt
+          fi
+          rm -f $COORDS.txt.headers
+          if [ -e $COORDS.txt ];then # if success of mega-reads
+            cat $COORDS.txt.done $COORDS.txt > $COORDS.txt.tmp1 && rm $COORDS.txt.done && mv $COORDS.txt.tmp1 $COORDS.txt || error_exit "mega-reads pass 1 failed, likely ran out of disk space" 
+          else #mega-reads failed again
+            cat $COORDS.txt.done $COORDS.txt.tmp > $COORDS.txt.tmp1 && mv $COORDS.txt.tmp1 $COORDS.txt.tmp && rm $COORDS.txt.done
+            error_exit "mega-reads pass 1 failed, please re-generate and re-run assemble.sh to continue"
+          fi
+        else #no failed run
+          if numactl --show 1> /dev/null 2>&1;then #if numactl then interleave memory
+            numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $LONGREADS1 -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt || error_exit "mega-reads pass 1 failed"
+          else
+            create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $LONGREADS1 -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt || error_exit "mega-reads pass 1 failed"
+          fi
+        fi #failed run
+    fi #single computer
     touch .rerun
     if  [ ! -s $COORDS.txt ];then
 	error_exit "mega-reads pass 1 failed"
