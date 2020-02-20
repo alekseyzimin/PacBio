@@ -393,6 +393,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 	log "Running locally in 1 batch";
         #if previous temporary file exists -- run failure, then we continue after deleting the last entry in the $COORDS.txt.tmp; cannot use ufasta because the file may be corrupted/incomplete
         if [ -s $COORDS.txt.tmp ];then # found failed run, need to be careful below, the file may be corrupted
+        log "Found $COORDS.txt.tmp file, attempting to continue from where the previous run left off"
           cat -n $COORDS.txt.tmp | grep '>' > $COORDS.txt.headers.tmp && \
           mv $COORDS.txt.headers.tmp $COORDS.txt.headers && \
           if [ -s $COORDS.txt.headers ];then
