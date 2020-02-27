@@ -669,16 +669,36 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
            for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_join.$F.fa;echo "ACGT" >> to_join.$F.fa;done && \
            for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_blasr.$F.fa;echo "ACGT" >> to_blasr.$F.fa;done 
 
+#try to do gap consensus with blasr; some jobs may fail
             echo "#!/bin/bash" > ./do_consensus.sh && \
 		echo "set -o pipefail" >> ./do_consensus.sh && \
 		echo "if [ ! -e consensus.\$1.success ];then" >> ./do_consensus.sh && \
 		echo "$MYPATH/../CA8/Linux-amd64/bin/blasr to_blasr.\$1.fa   ref.\$1.fa  -minMatch 15 -nproc 16 -bestn 10 -m 5 2>blasr.err | sort -k6 -S2% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j 8 -t 0 -c 1 /dev/stdin  2>pbdagcon.err | tee join_consensus.\$1.fasta | $MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t 16 to_join.\$1.fa /dev/stdin | $MYPATH/filter_delta_file_for_qrys.pl qrys.txt | $MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$1 && cat coords.\$1 | $MYPATH/extract_merges_mega-reads.pl join_consensus.\$1.fasta  valid_join_pairs.txt > merges.\$1.txt && touch consensus.\$1.success" >> ./do_consensus.sh && \
-		echo "fi" >> ./do_consensus.sh && \
+                echo "fi" >> ./do_consensus.sh && \
 		chmod 0755 ./do_consensus.sh
 
-            seq 1 $TOJOIN_BATCHES | xargs -P 4 -I % ./do_consensus.sh %    
-#the above line may fail due to out of memory, etc -- re-running with 2 CPUs
-            seq 1 $TOJOIN_BATCHES | xargs -P 1 -I % ./do_consensus.sh % 
+            seq 1 $TOJOIN_BATCHES | xargs -P 4 -I % ./do_consensus.sh %
+
+#re-do the failed jobs with flye -- more reliable but less sensisitive
+            echo "#!/bin/bash" > ./do_consensus.sh && \
+                echo "set -o pipefail" >> ./do_consensus.sh && \
+                echo "if [ ! -e consensus.\$1.success ];then" >> ./do_consensus.sh && \
+                echo "$MYPATH/../Flye/bin/flye --polish-target ref.\$1.fa --iterations 1 --pacbio-raw to_blasr.\$1.fa --out-dir \$1.polish.tmp --threads \$2 2>flye.\$1.err && \\" >> ./do_consensus.sh && \
+                echo "ufasta one \$1.polish.tmp/polished_1.fasta | \\" >> ./do_consensus.sh && \
+                echo "awk '{if(\$1 ~ /^>/) header=\$1; else print header\"/0_\"length(\$1)\"\\n\"\$1}' | tee join_consensus.\$1.fasta | \\" >> ./do_consensus.sh && \
+                echo "$MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t \$2 to_join.\$1.fa /dev/stdin | \\" >> ./do_consensus.sh && \
+                echo "$MYPATH/filter_delta_file_for_qrys.pl qrys.txt | \\" >> ./do_consensus.sh && \
+                echo "$MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$1 && cat coords.\$1 | \\" >> ./do_consensus.sh && \
+                echo "$MYPATH/extract_merges_mega-reads.pl join_consensus.\$1.fasta  valid_join_pairs.txt > merges.\$1.txt && touch consensus.\$1.success" >> ./do_consensus.sh && \
+                echo "fi" >> ./do_consensus.sh && \
+                chmod 0755 ./do_consensus.sh
+ 
+
+            if [ $TOJOIN_BATCHES -le 1 ];then #use all CPUs for one batch
+              ./do_consensus.sh 1 $NUM_THREADS
+            else #do 4 batches at a time for efficiency
+              seq 1 $TOJOIN_BATCHES | xargs -P 4 -I % ./do_consensus.sh % $(($NUM_THREADS/4+1))
+            fi
 
             cat merges.[0-9]*.txt |perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} if(not(defined($h{$merge}))|| $h{$merge} > $F[1]+$F[4]){$hl{$merge}=join(" ",@F);$h{$merge}=$F[1]+$F[4];}}END{foreach $k(keys %hl){print $hl{$k},"\n"}}' > merges.best.txt && \
 		$MYPATH/merge_mega-reads.pl < merges.best.txt | \
