@@ -675,7 +675,7 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
 		echo "if [ ! -e consensus.\$1.success ];then" >> ./do_consensus.sh && \
 		echo "$MYPATH/../CA8/Linux-amd64/bin/blasr to_blasr.\$1.fa   ref.\$1.fa  -minMatch 15 -nproc 16 -bestn 10 -m 5 2>blasr.err | \\" >> ./do_consensus.sh && \
                 echo "sort -k6 -S2% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j 8 -t 0 -c 1 /dev/stdin  2>pbdagcon.err > join_consensus.\$1.fasta && \\" >> ./do_consensus.sh && \
-                echo "$MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t 16 to_join.\$1.fa join_consensus.\$1.fasta | \\" >> ./do_consensus.sh && \
+                echo "$MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t 16 to_join.\$1.fa join_consensus.\$1.fasta 2>/dev/null | \\" >> ./do_consensus.sh && \
                 echo "$MYPATH/filter_delta_file_for_qrys.pl qrys.txt | \\" >> ./do_consensus.sh && \
                 echo "$MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$1 && cat coords.\$1 | \\" >> ./do_consensus.sh && \
                 echo "$MYPATH/extract_merges_mega-reads.pl join_consensus.\$1.fasta  valid_join_pairs.txt > merges.\$1.txt && touch consensus.\$1.success" >> ./do_consensus.sh && \
@@ -691,7 +691,7 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
                 echo "$MYPATH/../Flye/bin/flye --polish-target ref.\$1.fa --iterations 1 --pacbio-raw to_blasr.\$1.fa --out-dir \$1.polish.tmp --threads \$2 2>flye.\$1.err && \\" >> ./do_consensus.sh && \
                 echo "ufasta one \$1.polish.tmp/polished_1.fasta | \\" >> ./do_consensus.sh && \
                 echo "awk '{if(\$1 ~ /^>/) header=\$1; else print header\"/0_\"length(\$1)\"\\n\"\$1}' | tee join_consensus.\$1.fasta | \\" >> ./do_consensus.sh && \
-                echo "$MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t \$2 to_join.\$1.fa /dev/stdin | \\" >> ./do_consensus.sh && \
+                echo "$MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t \$2 to_join.\$1.fa /dev/stdin 2>/dev/null | \\" >> ./do_consensus.sh && \
                 echo "$MYPATH/filter_delta_file_for_qrys.pl qrys.txt | \\" >> ./do_consensus.sh && \
                 echo "$MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$1 && cat coords.\$1 | \\" >> ./do_consensus.sh && \
                 echo "$MYPATH/extract_merges_mega-reads.pl join_consensus.\$1.fasta  valid_join_pairs.txt > merges.\$1.txt && touch consensus.\$1.success" >> ./do_consensus.sh && \
