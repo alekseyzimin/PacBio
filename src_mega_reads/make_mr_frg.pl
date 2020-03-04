@@ -55,9 +55,11 @@ while($line1=<STDIN>)
       print STDOUT "pla:0\n";
       print STDOUT "loc:0\n";
       print STDOUT "src:\n.\n";
-      print STDOUT "seq:\n$sequence1\n.\n";
-      $sequence1 =~ tr/ACGTNacgtn/XXXXXDDDDD/;# create fake quality scores
-        print STDOUT "qlt:\n$sequence1\n.\n";
+      $sequence2=$sequence1;
+      $sequence2 =~ tr/Nn/Aa/;# replace Ns with As
+      print STDOUT "seq:\n$sequence2\n.\n";
+      $sequence1 =~ tr/ACGTNacgtn/XXXXDLLLLD/;# create fake quality scores
+      print STDOUT "qlt:\n$sequence1\n.\n";
       print STDOUT "hps:\n.\n";
       print STDOUT "clv:$clr1,$clr2\n";
       print STDOUT "clr:$clr1,$clr2\n";
