@@ -263,7 +263,7 @@ fi
 
 
 #first we re-create k-unitigs and super reads with smaller K
-if [ ! -e superReadSequences.named.fasta ];then
+if [ ! -s superReadSequences.named.fasta ] || [ ! -s guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta ];then
     log "Reducing super-read k-mer size"
     awk 'BEGIN{n=0}{if($1~/^>/){}else{print ">sr"n"\n"$0;n+=2;}}' $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > superReadSequences.fasta.in.tmp && mv  superReadSequences.fasta.in.tmp  superReadSequences.fasta.in || error_exit "failed to create superReadSequences.fasta.in"
     create_k_unitigs_large_k -q 1 -c $(($KMER-1)) -t $NUM_THREADS -m $KMER -n $(($ESTIMATED_GENOME_SIZE*2)) -l $KMER -f `perl -e 'print 1/'$KMER'/1e5'` $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta.all  | grep --text -v '^>' | perl -ane '{$seq=$F[0]; $F[0]=~tr/ACTGactg/TGACtgac/;$revseq=reverse($F[0]); $h{($seq ge $revseq)?$seq:$revseq}=1;}END{$n=0;foreach $k(keys %h){print ">",$n++," length:",length($k),"\n$k\n"}}' > guillaumeKUnitigsAtLeast32bases_all.fasta.tmp && mv guillaumeKUnitigsAtLeast32bases_all.fasta.tmp guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta || error_exit "failed to create k-unitigs for small k super reads";
