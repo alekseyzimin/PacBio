@@ -214,7 +214,7 @@ fi
 if [ ! -e $PREFIX.filter2.success ];then
   log "Filtering the alignments"
   rm -f $PREFIX.scaffold.success
-  $MYPATH/delta-filter -r -o 99 -i $IDENTITY $REF_CHR.$HYB_CTG.broken.delta | $MYPATH/delta-filter -q /dev/stdin > $REF_CHR.$HYB_CTG.broken.1.delta && touch $PREFIX.filter2.success
+  $MYPATH/delta-filter -r -o 49 -i $IDENTITY $REF_CHR.$HYB_CTG.broken.delta | $MYPATH/delta-filter -q /dev/stdin > $REF_CHR.$HYB_CTG.broken.1.delta && touch $PREFIX.filter2.success
 fi
 
 #now we merge/rebuild chromosomes
@@ -225,8 +225,8 @@ if [ ! -e $PREFIX.scaffold.success ];then
   $MYPATH/show-coords -lcHr $REF_CHR.$HYB_CTG.broken.1.delta | \
   $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
   awk '{if($16>25 || $7>2000 ) print $0}' |\
-  awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
-  $MYPATH/extract_single_best_match_coords_file.pl | awk '{if($16>10 || $15>50) print $0}' >  $PREFIX.best.coords.tmp && mv $PREFIX.best.coords.tmp $PREFIX.best.coords
+  awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>=last_end) {print $0; last_end=$2}}' | \
+  $MYPATH/extract_single_best_match_coords_file.pl >  $PREFIX.best.coords.tmp && mv $PREFIX.best.coords.tmp $PREFIX.best.coords
   if [ $MERGE_SEQ -gt 0 ];then
     cat $PREFIX.best.coords | $MYPATH/fill_unaligned_gaps.pl $REF 2>$PREFIX.fillseq.fa |\
     perl -ane '{$dir="f"; $dir="r" if($F[3]>$F[4]);print "$F[-2] $F[-1] 1 $F[12] $dir 100 100 $F[12]\n"}' > $PREFIX.reconciled.txt.tmp && mv $PREFIX.reconciled.txt.tmp $PREFIX.reconciled.txt
