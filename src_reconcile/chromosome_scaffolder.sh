@@ -15,6 +15,7 @@ IDENTITY=97
 MERGE=100000
 MERGE_SEQ=0
 NO_BRK=0
+BLASR_PARAM="-minMatch 15"
 
 #low coverage threshold for breaking
 COV_THRESH=3
@@ -74,6 +75,9 @@ do
         -nb|--no_breaks)
             NO_BRK=1
             ;;
+        -hf|--pacbio-hifi)
+            BLASR_PARAM="-advanceExactMatches 10 -minMatch 19"
+            ;;
         -m|--merge-slack)
             MERGE="$2"
             shift
@@ -99,6 +103,7 @@ do
             echo "-nb do not align reads to query contigs and do not attempt to break at misassemblies: default off" 
             echo "-v <verbose>"
             echo "-s <reads to align to the assembly to check for misassemblies> MANDATORY unless -nb set"
+            echo "-hf Use Pacbio HIFI reads -- speeds up the alignment"
             echo "-cl <coverage threshold for splitting at misassemblies: default 3>"
             echo "-ch <repeat coverage threshold for splitting at misassemblies: default 30>"
             echo "-M attempt to fill unaligned gaps with reference contigs: defalut off"
@@ -152,7 +157,7 @@ if [ ! -e $PREFIX.blasr.success ];then
   log "Mapping reads to query contigs"
   rm -f $PREFIX.coverage.success
   if [[ $READS = *.fa ]] || [[ $READS = *.fasta ]] || [[ $READS = *.fastq ]];then
-  $MYPATH/../CA8/Linux-amd64/bin/blasr -minMatch 15 -nproc $NUM_THREADS -bestn 1 $READS $HYB_CTG | awk '{if(($11-$10)/$12>0.75){if($4==0) print $1" "substr($2,4)" "$7" "$8" f"; else print  $1" "substr($2,4)" "$9-$8" "$9-$7" r"}}' $1 | sort -nk2 -k3n -S 10% > $HYB_POS && touch $PREFIX.blasr.success
+  $MYPATH/../CA8/Linux-amd64/bin/blasr $BLASR_PARAM -nproc $NUM_THREADS -bestn 1 $READS $HYB_CTG | awk '{if(($11-$10)/$12>0.75){if($4==0) print $1" "substr($2,4)" "$7" "$8" f"; else print  $1" "substr($2,4)" "$9-$8" "$9-$7" r"}}' $1 | sort -nk2 -k3n -S 10% > $HYB_POS && touch $PREFIX.blasr.success
   else
   error_exit "Wrong type/extension for the $READS file, must be .fa, .fasta or .fastq"
   fi
