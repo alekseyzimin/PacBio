@@ -15,7 +15,8 @@ IDENTITY=97
 MERGE=100000
 MERGE_SEQ=0
 NO_BRK=0
-BLASR_PARAM="-minMatch 15"
+MINIMAP_PARAM="-x map-pb"
+SAMTOOLSMEM="1G"
 
 #low coverage threshold for breaking
 COV_THRESH=3
@@ -76,7 +77,7 @@ do
             NO_BRK=1
             ;;
         -hf|--pacbio-hifi)
-            BLASR_PARAM="-advanceExactMatches 10 -minMatch 19"
+            MINIMAP_PARAM="-x asm10"
             ;;
         -m|--merge-slack)
             MERGE="$2"
@@ -84,6 +85,10 @@ do
             ;;
         -M|--merge-sequences)
             MERGE_SEQ=1
+            ;;
+        -sm|--samtools-memory)
+            SAMTOOLSMEM="$2"
+            shift
             ;;
         -r|--reference)
             REF="$2"
@@ -103,6 +108,7 @@ do
             echo "-nb do not align reads to query contigs and do not attempt to break at misassemblies: default off" 
             echo "-v <verbose>"
             echo "-s <reads to align to the assembly to check for misassemblies> MANDATORY unless -nb set"
+            echo "-sm <samtools memory to use while sorting, need to have at least this much* number of threads PHYSICAL RAM: default 1G>"
             echo "-hf Use Pacbio HIFI reads -- speeds up the alignment"
             echo "-cl <coverage threshold for splitting at misassemblies: default 3>"
             echo "-ch <repeat coverage threshold for splitting at misassemblies: default 30>"
@@ -127,7 +133,7 @@ let IDENTITY=$IDENTITY-1
 
 if [ ! -e $PREFIX.split.success ];then
   log "Splitting query scaffolds into contigs"
-  rm -f $PREFIX.blasr.success
+  rm -f $PREFIX.readalign.success
   rm -f gaps.success
   $MYPATH/splitFileAtNs $QRY 1 > $HYB_CTG && rm  scaffNameTranslations.txt genome.asm genome.posmap.ctgscf && \
   touch $PREFIX.split.success
@@ -153,11 +159,12 @@ fi
 #if we need to break
 if [ $NO_BRK -lt 1 ];then
 
-if [ ! -e $PREFIX.blasr.success ];then
+if [ ! -e $PREFIX.readalign.success ];then
   log "Mapping reads to query contigs"
   rm -f $PREFIX.coverage.success
   if [[ $READS = *.fa ]] || [[ $READS = *.fasta ]] || [[ $READS = *.fastq ]];then
-  $MYPATH/../CA8/Linux-amd64/bin/blasr $BLASR_PARAM -nproc $NUM_THREADS -bestn 1 $READS $HYB_CTG | awk '{if(($11-$10)/$12>0.75){if($4==0) print $1" "substr($2,4)" "$7" "$8" f"; else print  $1" "substr($2,4)" "$9-$8" "$9-$7" r"}}' $1 | sort -nk2 -k3n -S 10% > $HYB_POS && touch $PREFIX.blasr.success
+  #$MYPATH/../CA8/Linux-amd64/bin/blasr $BLASR_PARAM -nproc $NUM_THREADS -bestn 1 $READS $HYB_CTG | awk '{if(($11-$10)/$12>0.75){if($4==0) print $1" "substr($2,4)" "$7" "$8" f"; else print  $1" "substr($2,4)" "$9-$8" "$9-$7" r"}}' $1 | sort -nk2 -k3n -S 10% > $HYB_POS && touch $PREFIX.readalign.success
+  $MYPATH/../Flye/bin/flye-minimap2 $MINIMAP_PARAM -t $NUM_THREADS -N 1 -a $HYB_CTG $READS 1>$PREFIX.sam.tmp 2>minimap.err && mv $PREFIX.sam.tmp $PREFIX.sam && touch $PREFIX.readalign.success
   else
   error_exit "Wrong type/extension for the $READS file, must be .fa, .fasta or .fastq"
   fi
@@ -167,7 +174,7 @@ fi
 if [ ! -e $PREFIX.coverage.success ];then
   log "Computing read coverage for query contigs"
   rm -f $PREFIX.break.success
-  awk '{print $1" "$2" "$3"\n"$1" "$2" "$4}' $HYB_POS |  sort -nk2 -k3n -S 20% | $MYPATH/compute_coverage.pl > $HYB_POS.coverage && touch $PREFIX.coverage.success
+  $MYPATH/samToDelta < $PREFIX.sam | $MYPATH/show-coords -lcH /dev/stdin|awk '{print $NF" "substr($(NF-1),4)" "$1"\n"$NF" "substr($(NF-1),4)" "$2}' |  sort -nk2 -k3n -S 20% |$MYPATH/compute_coverage.pl > $HYB_POS.coverage.tmp && mv $HYB_POS.coverage.tmp $HYB_POS.coverage && touch $PREFIX.coverage.success
 fi
 
 if [ ! -e $PREFIX.align1.success ];then
