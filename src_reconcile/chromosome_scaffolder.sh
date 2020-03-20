@@ -132,10 +132,10 @@ PREFIX=$REF_CHR.$HYB_CTG
 let IDENTITY=$IDENTITY-1
 
 if [ ! -e $PREFIX.split.success ];then
-  log "Splitting query scaffolds into contigs"
+  log "Splitting query scaffolds into contigs at big gaps"
   rm -f $PREFIX.readalign.success
   rm -f gaps.success
-  $MYPATH/splitFileAtNs $QRY 1 > $HYB_CTG && rm  scaffNameTranslations.txt genome.asm genome.posmap.ctgscf && \
+  $MYPATH/splitFileAtNs $QRY 10000 > $HYB_CTG && rm  scaffNameTranslations.txt genome.asm genome.posmap.ctgscf && \
   touch $PREFIX.split.success
 fi
 
@@ -174,7 +174,7 @@ fi
 if [ ! -e $PREFIX.coverage.success ];then
   log "Computing read coverage for query contigs"
   rm -f $PREFIX.break.success
-  $MYPATH/samToDelta < $PREFIX.sam | $MYPATH/show-coords -lcH /dev/stdin|awk '{print $NF" "substr($(NF-1),4)" "$1"\n"$NF" "substr($(NF-1),4)" "$2}' |  sort -nk2 -k3n -S 20% |$MYPATH/compute_coverage.pl > $HYB_POS.coverage.tmp && mv $HYB_POS.coverage.tmp $HYB_POS.coverage && touch $PREFIX.coverage.success
+  awk '{if($0 ~ /^@/) print $0; else if($5>=20) print $0}' $PREFIX.sam | $MYPATH/samToDelta | $MYPATH/show-coords -lcH /dev/stdin|awk '{print $NF" "substr($(NF-1),4)" "$1"\n"$NF" "substr($(NF-1),4)" "$2}' |  sort -nk2 -k3n -S 20% |$MYPATH/compute_coverage.pl > $HYB_POS.coverage.tmp && mv $HYB_POS.coverage.tmp $HYB_POS.coverage && touch $PREFIX.coverage.success
 fi
 
 if [ ! -e $PREFIX.align1.success ];then
