@@ -23,7 +23,7 @@ if(not($seq eq "")){
 
 my $prevref;
 my $prevend;
-my $mingap=1000; #minimum gap to be filled
+my $mingap=20000; #minimum gap to be filled
 my $gapnum=0;
 my $gapbeg=0;
 while($line=<STDIN>){

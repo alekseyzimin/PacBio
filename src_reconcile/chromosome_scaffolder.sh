@@ -212,7 +212,7 @@ if [ ! -e $PREFIX.break.success ];then
 fi
 
 else #no_break
-cp $HYB_CTG $HYB_CTG.broken
+ln -s $HYB_CTG $HYB_CTG.broken
 fi
 
 #now we re-align the broken contigs to the reference
