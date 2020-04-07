@@ -212,7 +212,7 @@ if [ ! -e $PREFIX.break.success ];then
 fi
 
 else #no_break
-ln -s $HYB_CTG $HYB_CTG.broken
+ln -sf $HYB_CTG $HYB_CTG.broken
 fi
 
 #now we re-align the broken contigs to the reference
@@ -226,7 +226,7 @@ fi
 if [ ! -e $PREFIX.filter2.success ];then
   log "Filtering the alignments"
   rm -f $PREFIX.scaffold.success
-  $MYPATH/delta-filter -r -o 49 -i $IDENTITY $REF_CHR.$HYB_CTG.broken.delta | $MYPATH/delta-filter -q /dev/stdin > $REF_CHR.$HYB_CTG.broken.1.delta && touch $PREFIX.filter2.success
+  $MYPATH/delta-filter -r -o 50  $REF_CHR.$HYB_CTG.broken.delta | $MYPATH/delta-filter -q /dev/stdin > $REF_CHR.$HYB_CTG.broken.1.delta && touch $PREFIX.filter2.success
 fi
 
 #now we merge/rebuild chromosomes
@@ -234,9 +234,9 @@ if [ ! -e $PREFIX.scaffold.success ];then
   rm -f $PREFIX.place_extra.success
   log "Final scaffolding"
   touch $PREFIX.fillseq.fa
-  $MYPATH/show-coords -lcHr $REF_CHR.$HYB_CTG.broken.1.delta | \
+  $MYPATH/show-coords -lcHr -I $IDENTITY $REF_CHR.$HYB_CTG.broken.1.delta | \
   $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
-  awk '{if($16>25 || $7>2000 ) print $0}' |\
+  awk '{if($15>25 || $16>25 ) print $0}' |\
   awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>=last_end) {print $0; last_end=$2}}' | \
   $MYPATH/extract_single_best_match_coords_file.pl >  $PREFIX.best.coords.tmp && mv $PREFIX.best.coords.tmp $PREFIX.best.coords
   if [ $MERGE_SEQ -gt 0 ];then

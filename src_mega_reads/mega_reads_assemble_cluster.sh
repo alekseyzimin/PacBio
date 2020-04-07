@@ -461,7 +461,7 @@ if [ $ONEPASS -lt 1 ];then
     SBATCHES=$(($(($(($(stat -c%s -L $COORDS.all_mr.maximal.fa)/100000))*$(($(stat -c%s -L $LONGREADS1)/200000))))/$PBATCH_SIZE));
 
 #if fits into 128Gb of RAM, prefer to run on one computer
-    if [ $(stat -c%s -L $COORDS.all_mr.maximal.fa) -lt 25000000000 ];then
+    if [ $(stat -c%s -L $COORDS.all_mr.maximal.fa) -lt 50000000000 ];then
 	SBATCHES=1
     fi
 #if there is one batch then we do not use SGE
