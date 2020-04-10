@@ -693,11 +693,11 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
                 if [ $USE_GRID -eq 1 ]; then
 		  echo "$MYPATH/../CA8/Linux-amd64/bin/blasr to_blasr.\$TASK_ID.fa   ref.\$TASK_ID.fa  -minMatch 15 -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \\" >> ./do_consensus.sh && \
                   echo "sort -k6 -S2% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j $NUM_THREADS -t 0 -c 1 /dev/stdin  2>pbdagcon.err | awk -F 'N' '{if(\$1 == \"\") print \"ACGT\"; else print \$1}' > join_consensus.\$TASK_ID.fasta && \\" >> ./do_consensus.sh
-                  echo "$MYPATH/nucmer --delta /dev/stdout --batch 100000 -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.\$TASK_ID.fa join_consensus.\$TASK_ID.fasta 2>/dev/null | \\" >> ./do_consensus.sh
+                  echo "$MYPATH/nucmer --delta /dev/stdout --batch 10000 -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.\$TASK_ID.fa join_consensus.\$TASK_ID.fasta 2>/dev/null | \\" >> ./do_consensus.sh
                 else
                   echo "$MYPATH/../CA8/Linux-amd64/bin/blasr to_blasr.\$TASK_ID.fa   ref.\$TASK_ID.fa  -minMatch 15 -nproc 16 -bestn 10 -m 5 2>blasr.err | \\" >> ./do_consensus.sh 
                   echo "sort -k6 -S2% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j 8 -t 0 -c 1 /dev/stdin  2>pbdagcon.err | awk -F 'N' '{if(\$1 == \"\") print \"ACGT\"; else print \$1}' > join_consensus.\$TASK_ID.fasta && \\" >> ./do_consensus.sh
-                  echo "$MYPATH/nucmer --delta /dev/stdout --batch 100000 -l 17 -c 51 -L 200 -t 16 to_join.\$TASK_ID.fa join_consensus.\$TASK_ID.fasta 2>/dev/null | \\" >> ./do_consensus.sh
+                  echo "$MYPATH/nucmer --delta /dev/stdout --batch 10000 -l 17 -c 51 -L 200 -t 16 to_join.\$TASK_ID.fa join_consensus.\$TASK_ID.fasta 2>/dev/null | \\" >> ./do_consensus.sh
                 fi
                 echo "$MYPATH/filter_delta_file_for_qrys.pl qrys.txt | \\" >> ./do_consensus.sh && \
                 echo "$MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$TASK_ID && cat coords.\$TASK_ID | \\" >> ./do_consensus.sh && \
@@ -732,7 +732,7 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
                 echo "$MYPATH/../Flye/bin/flye --polish-target ref.\$1.fa --iterations 1 --pacbio-raw to_blasr.\$1.fa --out-dir \$1.polish.tmp --threads \$2 2>flye.\$1.err && \\" >> ./do_consensus.sh && \
                 echo "ufasta one \$1.polish.tmp/polished_1.fasta | \\" >> ./do_consensus.sh && \
                 echo "awk '{if(\$1 ~ /^>/) header=\$1; else print header\"/0_\"length(\$1)\"\\n\"\$1}' | tee join_consensus.\$1.fasta | \\" >> ./do_consensus.sh && \
-                echo "$MYPATH/nucmer --delta /dev/stdout --batch 100000 -l 17 -c 51 -L 200 -t \$2 to_join.\$1.fa /dev/stdin 2>/dev/null | \\" >> ./do_consensus.sh && \
+                echo "$MYPATH/nucmer --delta /dev/stdout --batch 10000 -l 17 -c 51 -L 200 -t \$2 to_join.\$1.fa /dev/stdin 2>/dev/null | \\" >> ./do_consensus.sh && \
                 echo "$MYPATH/filter_delta_file_for_qrys.pl qrys.txt | \\" >> ./do_consensus.sh && \
                 echo "$MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$1 && cat coords.\$1 | \\" >> ./do_consensus.sh && \
                 echo "$MYPATH/extract_merges_mega-reads.pl join_consensus.\$1.fasta  valid_join_pairs.txt > merges.\$1.txt && touch consensus.\$1.success" >> ./do_consensus.sh && \
@@ -975,7 +975,7 @@ cgwPreserveConsensus=1" > runCA.spec
 	  sort -k6 -S10% | \
 	  $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j $NUM_THREADS -t 0 -c 1 /dev/stdin  2>pbdagcon.err | \
 	  tee join_consensus.fasta | \
-	  $MYPATH/nucmer --delta /dev/stdout -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.scf.fa /dev/stdin | \
+	  $MYPATH/nucmer --delta /dev/stdout --batch 10000 -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.scf.fa /dev/stdin | \
 	  $MYPATH/show-coords -lcHq /dev/stdin > scf_join.coords && \
 	  perl -ane '{($scf1)=split(/\./,$F[-1]);($scf2)=split(/\./,$F[-2]); print if($scf1 eq $scf2);}' scf_join.coords | \
 	  $MYPATH/extract_merges_mega-reads.pl join_consensus.fasta  valid_join_pairs.txt > merges.txt && \
