@@ -678,17 +678,17 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
 #try to do gap consensus with blasr; some jobs may fail
             echo "#!/bin/bash" > ./do_consensus.sh
 		echo "set -o pipefail" >> ./do_consensus.sh
-                if [ $USE_GRID -eq 1]; then
+                if [ $USE_GRID -eq 1 ]; then
                   if [ $GRID_ENGINE = "SGE" ];then
-                    echo "TASK_ID=$SGE_TASK_ID"
+                    echo "TASK_ID=\$SGE_TASK_ID"  >> ./do_consensus.sh
                   else
-                    echo "TASK_ID=$SLURM_ARRAY_TASK_ID"
+                    echo "TASK_ID=\$SLURM_ARRAY_TASK_ID" >> ./do_consensus.sh
                   fi
                 else
-                  echo "TASK_ID=$1"
+                  echo "TASK_ID=\$1" >> ./do_consensus.sh
                 fi
 		echo "if [ ! -e consensus.\$TASK_ID.success ];then" >> ./do_consensus.sh
-                if [ $USE_GRID -eq 1]; then
+                if [ $USE_GRID -eq 1 ]; then
 		  echo "$MYPATH/../CA8/Linux-amd64/bin/blasr to_blasr.\$TASK_ID.fa   ref.\$TASK_ID.fa  -minMatch 15 -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \\" >> ./do_consensus.sh && \
                   echo "sort -k6 -S2% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j $NUM_THREADS -t 0 -c 1 /dev/stdin  2>pbdagcon.err | awk -F 'N' '{if(\$1 == \"\") print \"ACGT\"; else print \$1}' > join_consensus.\$TASK_ID.fasta && \\" >> ./do_consensus.sh
                   echo "$MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.\$TASK_ID.fa join_consensus.\$TASK_ID.fasta 2>/dev/null | \\" >> ./do_consensus.sh
@@ -703,7 +703,7 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
                 echo "fi" >> ./do_consensus.sh && \
 		chmod 0755 ./do_consensus.sh
 
-                if [ $USE_GRID -eq 1]; then
+                if [ $USE_GRID -eq 1 ]; then
                   if [ $GRID_ENGINE = "SGE" ];then
                     qsub -q $QUEUE -cwd -j y -sync y -N "join_mega_reads"  -t 1-$TOJOIN_BATCHES do_consensus.sh 1> cqsub2.out 2>&1 || error_exit "join consensus failed on the grid"  
                   else
@@ -758,8 +758,8 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
 
     if [ -e ${COORDS}.join_consensus.tmp/join_consensus.success ];then
         cat ${COORDS}.1$POSTFIX.joined.fa ${COORDS}.1$POSTFIX.unjoined.fa  > ${COORDS}.1$POSTFIX.fa.tmp && \
-            mv ${COORDS}.1$POSTFIX.fa.tmp ${COORDS}.1$POSTFIX.fa && \
-            rm -rf ${COORDS}.join_consensus.tmp 
+            mv ${COORDS}.1$POSTFIX.fa.tmp ${COORDS}.1$POSTFIX.fa 
+            #rm -rf ${COORDS}.join_consensus.tmp 
     else
         log "Warning! Some or all gap consensus jobs failed, see files in ${COORDS}.join_consensus.tmp, however this is fine and assembly can proceed normally"
         if [ -s ${COORDS}.1$POSTFIX.joined.fa ];then
