@@ -6,6 +6,7 @@
 set -o pipefail
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
+export MYPATH
 ESTIMATED_GENOME_SIZE=0
 #minimum 50
 MAX_GAP=1000
@@ -19,7 +20,7 @@ KMER=41
 PBATCH_SIZE=2000000000
 GRID_ENGINE="SGE"
 QUEUE=""
-USE_SGE=0
+USE_GRID=0
 PACBIO=""
 NANOPORE=""
 NANOPORE_RNA=0
@@ -104,11 +105,11 @@ do
 	    ESTIMATED_GENOME_SIZE="$2"
 	    shift
 	    ;;
-	-G|--use-Grid)
-	    USE_SGE="$2"
+	-G|--use-grid)
+	    USE_GRID="$2"
             shift
 	    ;;
-        -E|--Grid-engine)
+        -E|--grid-engine)
             GRID_ENGINE="$2"
             shift
             ;;
@@ -317,7 +318,7 @@ for i in $(seq 1 $PBATCHES);do lmrOut[$i]="mr.batch$i.txt";done;
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
     log "Mega-reads pass 1"
 
-    if [ $PBATCHES -ge 2 ] && [ $USE_SGE -eq 1 ];then
+    if [ $PBATCHES -ge 2 ] && [ $USE_GRID -eq 1 ];then
 	log "Running on the grid in $PBATCHES batches";
 	if [ "$QUEUE" = "" ];then
 	    error_exit "Queue for the grid is undefined, must specify which queue to submit jobs to"
@@ -478,7 +479,7 @@ if [ $ONEPASS -lt 1 ];then
     if [ ! -s $COORDS.mr.txt ] || [ -e .rerun ];then
 	log "Mega-reads pass 2"
 
-	if [ $SBATCHES -ge 2 ] && [ $USE_SGE -eq 1 ];then
+	if [ $SBATCHES -ge 2 ] && [ $USE_GRID -eq 1 ];then
 	    log "Running on the grid in $SBATCHES batches";
 	    if [ "$QUEUE" = "" ];then
 		error_exit "Queue for the grid is undefined, must specify which queue to submit jobs to"
@@ -530,7 +531,7 @@ if [ $ONEPASS -lt 1 ];then
 			echo " "
 			echo "To submit SLURM jobs, please run"
 			echo " "
-			echo "sbatch -D `pwd` -J jf_aligner -a 1-$SBATCHES -n $NUM_THREADS -p $QUEUE -N 1 mr_pass2/jf_aligner.sh"
+			echo "(cd mr_pass2 && sbatch -D `pwd` -J jf_aligner -a 1-$SBATCHES -n $NUM_THREADS -p $QUEUE -N 1 jf_aligner.sh);"
 			echo " "
 			echo "Please re-run assemble.sh when all jobs finish. If you get this message again, it means that some jobs failed, simply re-submit again using the above command."
 			echo " "
@@ -669,18 +670,52 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
            for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_join.$F.fa;echo "ACGT" >> to_join.$F.fa;done && \
            for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_blasr.$F.fa;echo "ACGT" >> to_blasr.$F.fa;done 
 
+#gap consensus on the grid, if set
 #try to do gap consensus with blasr; some jobs may fail
-            echo "#!/bin/bash" > ./do_consensus.sh && \
-		echo "set -o pipefail" >> ./do_consensus.sh && \
-		echo "if [ ! -e consensus.\$1.success ];then" >> ./do_consensus.sh && \
-		echo "$MYPATH/../CA8/Linux-amd64/bin/blasr to_blasr.\$1.fa   ref.\$1.fa  -minMatch 15 -nproc 16 -bestn 10 -m 5 2>blasr.err | \\" >> ./do_consensus.sh && \
-                echo "sort -k6 -S2% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j 8 -t 0 -c 1 /dev/stdin  2>pbdagcon.err | awk -F 'N' '{if(\$1 == \"\") print \"ACGT\"; else print \$1}' > join_consensus.\$1.fasta && \\" >> ./do_consensus.sh && \
-                echo "$MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t 16 to_join.\$1.fa join_consensus.\$1.fasta 2>/dev/null | \\" >> ./do_consensus.sh && \
+            echo "#!/bin/bash" > ./do_consensus.sh
+		echo "set -o pipefail" >> ./do_consensus.sh
+                if [ $USE_GRID -eq 1]; then
+                  if [ $GRID_ENGINE = "SGE" ];then
+                    echo "TASK_ID=$SGE_TASK_ID"
+                  else
+                    echo "TASK_ID=$SLURM_ARRAY_TASK_ID"
+                  fi
+                else
+                  echo "TASK_ID=$1"
+                fi
+		echo "if [ ! -e consensus.\$TASK_ID.success ];then" >> ./do_consensus.sh
+                if [ $USE_GRID -eq 1]; then
+		  echo "$MYPATH/../CA8/Linux-amd64/bin/blasr to_blasr.\$TASK_ID.fa   ref.\$TASK_ID.fa  -minMatch 15 -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \\" >> ./do_consensus.sh && \
+                  echo "sort -k6 -S2% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j $NUM_THREADS -t 0 -c 1 /dev/stdin  2>pbdagcon.err | awk -F 'N' '{if(\$1 == \"\") print \"ACGT\"; else print \$1}' > join_consensus.\$TASK_ID.fasta && \\" >> ./do_consensus.sh
+                  echo "$MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.\$TASK_ID.fa join_consensus.\$TASK_ID.fasta 2>/dev/null | \\" >> ./do_consensus.sh
+                else
+                  echo "$MYPATH/../CA8/Linux-amd64/bin/blasr to_blasr.\$TASK_ID.fa   ref.\$TASK_ID.fa  -minMatch 15 -nproc 16 -bestn 10 -m 5 2>blasr.err | \\" >> ./do_consensus.sh 
+                  echo "sort -k6 -S2% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j 8 -t 0 -c 1 /dev/stdin  2>pbdagcon.err | awk -F 'N' '{if(\$1 == \"\") print \"ACGT\"; else print \$1}' > join_consensus.\$TASK_ID.fasta && \\" >> ./do_consensus.sh
+                  echo "$MYPATH/nucmer --delta /dev/stdout --maxmatch -l 17 -c 51 -L 200 -t 16 to_join.\$TASK_ID.fa join_consensus.\$TASK_ID.fasta 2>/dev/null | \\" >> ./do_consensus.sh
+                fi
                 echo "$MYPATH/filter_delta_file_for_qrys.pl qrys.txt | \\" >> ./do_consensus.sh && \
-                echo "$MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$1 && cat coords.\$1 | \\" >> ./do_consensus.sh && \
-                echo "$MYPATH/extract_merges_mega-reads.pl join_consensus.\$1.fasta  valid_join_pairs.txt > merges.\$1.txt && touch consensus.\$1.success" >> ./do_consensus.sh && \
+                echo "$MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$TASK_ID && cat coords.\$TASK_ID | \\" >> ./do_consensus.sh && \
+                echo "$MYPATH/extract_merges_mega-reads.pl join_consensus.\$TASK_ID.fasta  valid_join_pairs.txt > merges.\$TASK_ID.txt && touch consensus.\$TASK_ID.success" >> ./do_consensus.sh && \
                 echo "fi" >> ./do_consensus.sh && \
 		chmod 0755 ./do_consensus.sh
+
+                if [ $USE_GRID -eq 1]; then
+                  if [ $GRID_ENGINE = "SGE" ];then
+                    qsub -q $QUEUE -cwd -j y -sync y -N "join_mega_reads"  -t 1-$TOJOIN_BATCHES do_consensus.sh 1> cqsub2.out 2>&1 || error_exit "join consensus failed on the grid"  
+                  else
+                        echo " "
+                        echo "To submit SLURM jobs, please run"
+                        echo " "
+                        echo "(cd ${COORDS}.join_consensus.tmp && sbatch -D `pwd` -J join_mega_reads -a 1-$TOJOIN_BATCHES -n $NUM_THREADS -p $QUEUE -N 1 do_consensus.sh);"
+                        echo " "
+                        echo "Please re-run assemble.sh when all jobs finish. If you get this message again, it means that some jobs failed, simply re-submit again using the above command."
+                        echo " "
+                        exit 1  
+
+                  fi
+                else
+                  seq 1 $TOJOIN_BATCHES | xargs -P 4 -I % ./do_consensus.sh %
+                fi
 
             seq 1 $TOJOIN_BATCHES | xargs -P 4 -I % ./do_consensus.sh %
 
@@ -786,14 +821,14 @@ else
 
     log "Coverage threshold for splitting unitigs is $TCOVERAGE minimum ovl $OVLMIN"
     let NUM_THREADSd4=$(($NUM_THREADS/4+1))
-    if [ $USE_SGE -ge 1 ];then
+    if [ $USE_GRID -ge 1 ];then
 	OVL_THREADS=4
     else
 	OVL_THREADS=2
     fi
 
     echo "batOptions=$batOptions
-useGrid=$USE_SGE
+useGrid=$USE_GRID
 gridEngine=$GRID_ENGINE
 obtMerSize=$OVL_MER
 ovlMerSize=$OVL_MER
