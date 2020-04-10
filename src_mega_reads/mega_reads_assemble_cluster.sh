@@ -701,6 +701,7 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
                 echo "$MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$TASK_ID && cat coords.\$TASK_ID | \\" >> ./do_consensus.sh && \
                 echo "$MYPATH/extract_merges_mega-reads.pl join_consensus.\$TASK_ID.fasta  valid_join_pairs.txt > merges.\$TASK_ID.txt && touch consensus.\$TASK_ID.success" >> ./do_consensus.sh && \
                 echo "fi" >> ./do_consensus.sh && \
+                echo "exit 0" >> ./do_consensus.sh && \
 		chmod 0755 ./do_consensus.sh
 
                 if [ $USE_GRID -eq 1 ]; then
@@ -735,6 +736,7 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
                 echo "$MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$1 && cat coords.\$1 | \\" >> ./do_consensus.sh && \
                 echo "$MYPATH/extract_merges_mega-reads.pl join_consensus.\$1.fasta  valid_join_pairs.txt > merges.\$1.txt && touch consensus.\$1.success" >> ./do_consensus.sh && \
                 echo "fi" >> ./do_consensus.sh && \
+                echo "exit 0" >> ./do_consensus.sh && \
                 chmod 0755 ./do_consensus.sh
  
 
