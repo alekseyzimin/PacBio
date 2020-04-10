@@ -670,6 +670,10 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
            for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_join.$F.fa;echo "ACGT" >> to_join.$F.fa;done && \
            for F in $(seq 1 $TOJOIN_BATCHES);do echo ">_0" >> to_blasr.$F.fa;echo "ACGT" >> to_blasr.$F.fa;done 
 
+
+#only try blasr/pbdagcon for one pass
+           if [ ! -e pass_one ];then
+            touch pass_one
 #gap consensus on the grid, if set
 #try to do gap consensus with blasr; some jobs may fail
             echo "#!/bin/bash" > ./do_consensus.sh
@@ -715,9 +719,9 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
                   fi
                 else
                   seq 1 $TOJOIN_BATCHES | xargs -P 4 -I % ./do_consensus.sh %
-                fi
+                fi #use_grid
 
-            seq 1 $TOJOIN_BATCHES | xargs -P 4 -I % ./do_consensus.sh %
+            fi #pass one
 
 #re-do the failed jobs with flye -- more reliable but less sensisitive
             echo "#!/bin/bash" > ./do_consensus.sh && \
