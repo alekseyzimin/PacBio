@@ -79,10 +79,13 @@ REFN=`basename $REF`
 QRYN=`basename $QRY`
 DELTAFILE=$REFN.$QRYN
 
+#rename sequences to avoid collisions
+awk '{if($1 ~ /^>/) print $1"_QRY"; else print $1}' $QRY > $QRYN
+
 #nucmer
 if [ ! -e polish_align.success ];then
 log "Initial alignment"
-nucmer -t $NUM_THREADS -p  $DELTAFILE -c 100 $REF $QRY && touch polish_align.success && rm -f filter.success || exit
+nucmer -t $NUM_THREADS -p  $DELTAFILE -c 100 $REF $QRYN && touch polish_align.success && rm -f filter.success || exit
 fi
 
 #delta-filter
@@ -97,8 +100,8 @@ if [ ! -e polish_add_not_aligning.success ];then
 log "Adding missing sequences that did not align to the assembly"
 #add the sequences that did not align and longer than 1000 bp
 show-coords -lcH -I $SIMILARITY_RATE $DELTAFILE.q.delta| perl -ane '{$palign{$F[-1]}+=$F[-4];}END{foreach $k(keys %palign){print $k,"\n" if($palign{$k}>50)}}' > aligned_sequences.txt
-ufasta sizes -H $QRY | awk '{if($2<1000) print $1}' > short_sequences.txt
-ufasta extract -v -f <(cat aligned_sequences.txt short_sequences.txt) $QRY > $REFN.$QRYN.extra.fa && \
+ufasta sizes -H $QRYN | awk '{if($2<1000) print $1}' > short_sequences.txt
+ufasta extract -v -f <(cat aligned_sequences.txt short_sequences.txt) $QRYN > $REFN.$QRYN.extra.fa && \
 cat $REF $REFN.$QRYN.extra.fa > $REFN.$QRYN.all.fa && \
 rm $REFN.$QRYN.extra.fa && \
 touch polish_add_not_aligning.success && \
@@ -108,10 +111,10 @@ fi
 if [ ! -e polish_replace_consensus.success ];then
 log "Polishing consensus"
 if [ $MERGE -gt 0 ];then
-show-coords -lcHr -I $SIMILARITY_RATE -L 100 $DELTAFILE.1.delta |  merge_matches_and_tile_coords_file.pl $MERGE | reconcile_consensus.pl $REFN.$QRYN.all.fa $QRY > $REFN.$QRYN.all.polished.fa && \
+show-coords -lcHr -I $SIMILARITY_RATE -L 100 $DELTAFILE.1.delta |  merge_matches_and_tile_coords_file.pl $MERGE | reconcile_consensus.pl $REFN.$QRYN.all.fa $QRYN > $REFN.$QRYN.all.polished.fa && \
 touch polish_replace_consensus.success && rm -f polish_self_map.success || exit
 else
-show-coords -lcHr -I $SIMILARITY_RATE -L 100 $DELTAFILE.1.delta |  reconcile_consensus.pl $REFN.$QRYN.all.fa $QRY > $REFN.$QRYN.all.polished.fa && \
+show-coords -lcHr -I $SIMILARITY_RATE -L 100 $DELTAFILE.1.delta |  reconcile_consensus.pl $REFN.$QRYN.all.fa $QRYN > $REFN.$QRYN.all.polished.fa && \
 touch polish_replace_consensus.success && rm -f polish_self_map.success || exit
 fi
 fi
