@@ -163,6 +163,10 @@ else
 fi
 export PATH=$MYPATH:$CA_PATH:$PATH
 
+if [ ! -s $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta ];then
+  error_exit "super reads file not found or size zero, you can try deleting $MASURCA_ASSEMBLY_WORK1_PATH folder and re-generating assemble.sh, also check if guillaumeKUnitigsAtLeast32bases_all.fasta is not empty";
+fi
+
 ################setting parameters#########################
 JF_SIZE=$(stat -L -c%s $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta);
 if [ $ESTIMATED_GENOME_SIZE -lt 1 ];then 
