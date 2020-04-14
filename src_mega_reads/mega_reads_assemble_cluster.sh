@@ -173,7 +173,7 @@ if [ $ESTIMATED_GENOME_SIZE -lt 1 ];then
     error_exit "Estimated Genome Size is invalid or missing";
 fi
 if [ -s PLOIDY.txt ];then
-    PLOIDY=`head -n 1 PLOIDY.txt`
+    PLOIDY=`head -n 1 PLOIDY.txt| awk '{if($1<=1) print "1"; else if($1>=2) print "2"; else print "1"}'`
 else
     PLOIDY=$(($JF_SIZE/$ESTIMATED_GENOME_SIZE/2))
 fi
