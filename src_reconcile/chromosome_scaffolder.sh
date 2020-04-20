@@ -153,7 +153,7 @@ if [ ! -e $PREFIX.noise.success ];then
   log "Adding noise to reference to align to duplicated regions"
   rm -f $PREFIX.align1.success
   rm -f $PREFIX.align2.success
-  $MYPATH/introduce_errors_fasta_file.pl $REF 0.01 1 $REF | $MYPATH/fix_consensus_from_vcf.pl $REF > $REF_CHR.w_noise && touch $PREFIX.noise.success
+  $MYPATH/introduce_errors_fasta_file.pl $REF 0.01 1 | $MYPATH/fix_consensus_from_vcf.pl $REF > $REF_CHR.w_noise && touch $PREFIX.noise.success
 fi
 
 #if we need to break
