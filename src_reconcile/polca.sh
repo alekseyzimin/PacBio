@@ -167,7 +167,7 @@ mkdir -p $BASM.work
 
   echo "#!/bin/bash" > commands.sh
   echo "if [ ! -e \$1.vc.success ];then" >> commands.sh
-  echo "  $FREEBAYES -C 3 -R 0 -p 1 -F 0.2 -E 0 -b <($SAMTOOLS view -h ../$BASM.alignSorted.bam \`head -n 1 \$1.listnames\` 2>>\$1.samtools.err |$SAMTOOLS view -S -b /dev/stdin 2>>\$1.samtools.err)  -v \$1.vcf -f $ASMPATH/$BASM && touch \$1.vc.success" >> commands.sh 
+  echo "  $SAMTOOLS view -h ../$BASM.alignSorted.bam \`head -n 1 \$1.listnames\` 2>>\$1.samtools.err |$SAMTOOLS view -Sbu /dev/stdin 2>>\$1.samtools.err | $FREEBAYES -m 0 -C 3 -R 0 -p 1 -F 0.2 -E 0 -c -v \$1.vcf -f $ASMPATH/$BASM && touch \$1.vc.success" >> commands.sh 
   echo 'fi' >> commands.sh
   echo "if [ $FIX -gt 0 ];then" >> commands.sh
   echo "  if [ ! -e \$1.fix.success ] && [ -e \$1.vc.success ];then" >> commands.sh
