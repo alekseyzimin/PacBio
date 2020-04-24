@@ -56,7 +56,7 @@ if(not($f[0] eq $ctg)){
 my @ff=split(/:/,$f[9]);
 #print "$f[9]\n";
 my $sum_alleles=$ff[3]+$ff[5];
-if($ff[3]<=1 && $ff[5]>=$min_alt_obs || $ff[5]/$sum_alleles>0.75){
+if($ff[3]<=1 && $ff[5]>=$min_alt_obs || $ff[5]/$sum_alleles>0.65){
   push(@fixes,$f[4]);
   push(@originals,$f[3]);
   push(@offsets,$f[1]);
