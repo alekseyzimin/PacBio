@@ -161,7 +161,7 @@ if [ ! -e $BASM.vc.success ];then
   fi
 fi
 
-if [ -e $BASM.vc.success ];then
+if [ ! -e $BASM.fix.success ];then
   if [ $FIX -gt 0 ];then #fixing in parallel from $BASM.vcf 
   mkdir -p $BASM.fix
   ufasta sizes -H $ASM |sort -S 10% -k2 |awk '{print $1}' > $BASM.names
