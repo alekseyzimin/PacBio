@@ -175,15 +175,22 @@ if [ ! -e $BASM.fix.success ];then
     fi
     echo "Processing $BATCH_SIZE scaffold(s) per batch"
     BATCH=1
+    INDEX=1
+    rm -f $BATCH.names
     for f in $(cat ../$BASM.names);do
-      rm -f $BATCH.names
-      for l in $(seq 1 $BATCH_SIZE);do
-        echo $f >> $BATCH.names
-      done
-      let BATCH=$BATCH+1
+      echo $f >> $BATCH.names
+      let INDEX=$INDEX+1
+      if [ $INDEX -gt $BATCH_SIZE ];then 
+        INDEX=1
+        let BATCH=$BATCH+1
+        rm -f $BATCH.names
+      fi
     done
-    let BATCH=$BATCH-1
     
+    if [ $INDEX -lt 2 ];then
+      let BATCH=$BATCH-1
+    fi
+
     echo "#!/bin/bash" > commands.sh
     echo "if [ ! -e \$1.fix.success ];then" >> commands.sh
     echo "    $MYPATH/fix_consensus_from_vcf.pl <($MYPATH/ufasta extract -f \$1.names $ASMPATH/$BASM) < ../$BASM.vcf > \$1.fixed.tmp && mv \$1.fixed.tmp \$1.fixed && touch \$1.fix.success"  >> commands.sh
