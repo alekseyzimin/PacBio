@@ -24,6 +24,7 @@ if(not($seq eq "")){
 my $prevref;
 my $prevend;
 my $mingap=20000; #minimum gap to be filled
+my $maxgap=10000000; #maxumum gap to be filled
 my $gapnum=0;
 my $gapbeg=0;
 while($line=<STDIN>){
@@ -34,7 +35,7 @@ if($f[3]<$f[4]){
 }else{
   $gapbeg=$f[0]-($f[12]-$f[3]);
 }
-if($f[-2] eq $prevref && $gapbeg-$prevend>$mingap){#we found a fillable gap
+if($f[-2] eq $prevref && $gapbeg-$prevend>$mingap && $gapbeg-$prevend<$maxgap){#we found a fillable gap
   my $filllen=$gapbeg-$prevend-1;
   die("reference $f[-2] not found") if(not(defined($rseq{$f[-2]})));
   print STDERR ">fill$gapnum\n",lc(substr($rseq{$f[-2]},$prevend,$filllen)),"\n";
