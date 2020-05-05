@@ -35,10 +35,13 @@ if($f[3]<$f[4]){
 }else{
   $gapbeg=$f[0]-($f[12]-$f[3]);
 }
-if($f[-2] eq $prevref && $gapbeg-$prevend>$mingap && $gapbeg-$prevend<$maxgap){#we found a fillable gap
-  my $filllen=$gapbeg-$prevend-1;
+my $filllen=$gapbeg-$prevend-1;
+my $fillseq=lc(substr($rseq{$f[-2]},$prevend,$filllen));
+$fillseq=~s/n//g;
+if($f[-2] eq $prevref && $filllen>$mingap && length($fillseq)<$maxgap){#we found a fillable gap
+  $fillseq=lc(substr($rseq{$f[-2]},$prevend,$filllen));
   die("reference $f[-2] not found") if(not(defined($rseq{$f[-2]})));
-  print STDERR ">fill$gapnum\n",lc(substr($rseq{$f[-2]},$prevend,$filllen)),"\n";
+  print STDERR ">fill$gapnum\n$fillseq\n";
   print $prevend+1," ",$gapbeg-1," | 1 $filllen | $filllen $filllen | 100.0 | $f[11] $filllen | .1 100.0 | $f[-2] fill$gapnum\n";
   $gapnum++;
 }
