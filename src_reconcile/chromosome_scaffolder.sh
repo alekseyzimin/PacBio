@@ -86,10 +86,6 @@ do
         -M|--merge-sequences)
             MERGE_SEQ=1
             ;;
-        -sm|--samtools-memory)
-            SAMTOOLSMEM="$2"
-            shift
-            ;;
         -r|--reference)
             REF="$2"
             shift
@@ -108,7 +104,6 @@ do
             echo "-nb do not align reads to query contigs and do not attempt to break at misassemblies: default off" 
             echo "-v <verbose>"
             echo "-s <reads to align to the assembly to check for misassemblies> MANDATORY unless -nb set"
-            echo "-sm <samtools memory to use while sorting, need to have at least this much* number of threads PHYSICAL RAM: default 1G>"
             echo "-hf Use Pacbio HIFI reads -- speeds up the alignment"
             echo "-cl <coverage threshold for splitting at misassemblies: default 3>"
             echo "-ch <repeat coverage threshold for splitting at misassemblies: default 30>"
