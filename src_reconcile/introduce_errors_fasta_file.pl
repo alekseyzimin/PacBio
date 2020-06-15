@@ -38,12 +38,12 @@ for($i=2*$max_indel;$i<length($seq)-2*$max_indel;$i++){
       if(rand(1)<0.5){#error is deletion
         $size=int(rand($max_indel-1))+1;
         $sub="A";
-        print "$ctg\t",$i,"\t.\t",substr($seq,$i,$size),"\t$sub\t*\t*\t*\t*\t1:1:1:0:0:10:10:0\n";
+        print "$ctg\t",$i+1,"\t.\t",substr($seq,$i,$size),"\t$sub\t*\t*\t*\t*\t1:1:1:0:0:10:10:0\n";
       }else{
         #error is insertion
         $size=int(rand($max_indel-1))+1;
         $sub="A"x$size;
-        print "$ctg\t",$i,"\t.\t",substr($seq,$i,1),"\t$sub\t*\t*\t*\t*\t1:1:1:0:0:10:10:0\n";
+        print "$ctg\t",$i+1,"\t.\t",substr($seq,$i,1),"\t$sub\t*\t*\t*\t*\t1:1:1:0:0:10:10:0\n";
       }
     $i+=$size+1;
     }
