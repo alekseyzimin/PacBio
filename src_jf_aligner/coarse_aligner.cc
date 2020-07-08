@@ -88,9 +88,10 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
   memset(counts, '\0', sizeof(counts));
   uint32_t flag=0;
   while(parser.next()) { // Process each k-mer
-    //here we take every other k-mer
-    flag=1-flag;
-    if(flag==0) continue;
+    //here we take every other k-mer -- this is faster to do it here for small genomes but not so
+    //much for the big ones;  we instead do it in the later loop
+    //flag=1-flag;
+    //if(flag==0) continue;
 
     //if(parser.mer<0>().m.is_homopolymer()) continue;
     if(is_ssr(parser.mer<0>().m,2)) continue;
@@ -118,13 +119,13 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
       break;
   }
   //std::cerr << threshold <<'\n';
-  //uint32_t flag=0;
+  
   for(auto& info : lists_info) {
     if(info.size > threshold)
       continue;
     //here we take every other k-mer
-    //flag=1-flag;
-    //if(flag==0) continue;
+    flag=1-flag;
+    if(flag==0) continue;
     for(auto& it = info.list; it != end; ++it) { // For each instance of the k-mer in a super read
       mer_lists& ml = frags_pos[it->frag->fwd.name.c_str()];
       ml.frag       = it->frag;
