@@ -182,7 +182,7 @@ fi
 if [ ! -e $PREFIX.filter1.success ];then
   log "Filtering the alignments" 
   rm -f $PREFIX.merge1.success
-  $MYPATH/delta-filter -1 -i $IDENTITY -o 20 $REF_CHR.$HYB_CTG.delta >$REF_CHR.$HYB_CTG.1.delta && touch $PREFIX.filter1.success
+  $MYPATH/delta-filter -1 -i $IDENTITY $REF_CHR.$HYB_CTG.delta >$REF_CHR.$HYB_CTG.1.delta && touch $PREFIX.filter1.success
 fi
 
 if [ ! -e $PREFIX.merge1.success ];then
@@ -221,7 +221,7 @@ fi
 if [ ! -e $PREFIX.filter2.success ];then
   log "Filtering the alignments"
   rm -f $PREFIX.scaffold.success
-  $MYPATH/delta-filter -r -o 50  $REF_CHR.$HYB_CTG.broken.delta | $MYPATH/delta-filter -q /dev/stdin > $REF_CHR.$HYB_CTG.broken.1.delta && touch $PREFIX.filter2.success
+  $MYPATH/delta-filter -r  $REF_CHR.$HYB_CTG.broken.delta | $MYPATH/delta-filter -q /dev/stdin > $REF_CHR.$HYB_CTG.broken.1.delta && touch $PREFIX.filter2.success
 fi
 
 #now we merge/rebuild chromosomes

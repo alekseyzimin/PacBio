@@ -43,7 +43,7 @@ fi
 if [ ! -e $ASM_DIR/filter_map.success ];then
 rm -f $ASM_DIR/overlap_filter.success
 awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $ASM_DIR/asm_to_asm.delta > $ASM_DIR/asm_to_asm.noself.delta &&  \
-delta-filter -q -o 20 -i $HAP_SIM_RATE $ASM_DIR/asm_to_asm.noself.delta > $ASM_DIR/asm_to_asm.noself.fdelta && \
+delta-filter -q -i $HAP_SIM_RATE $ASM_DIR/asm_to_asm.noself.delta > $ASM_DIR/asm_to_asm.noself.fdelta && \
 show-coords -lcHr $ASM_DIR/asm_to_asm.noself.fdelta | awk '{if($12>$13) print $0}' |merge_matches_and_tile_coords_file.pl $MERGE_LEN | perl -ane '{$cov{$F[-1]}+=$F[15] if($F[15]>=10);}END{foreach $k(keys %cov){print $k,"\n" if($cov{$k}>90);}}' > $ASM_DIR/duplicates.txt && \
 awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $ASM_DIR/asm_to_asm.delta| show-coords -lcH -I $HAP_SIM_RATE  /dev/stdin | awk '{if($12>$13 && $16>90) print $NF}' >> $ASM_DIR/duplicates.txt && \
 cat $ASM_DIR/singletons.txt >> $ASM_DIR/duplicates.txt && \
