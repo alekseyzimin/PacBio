@@ -126,14 +126,6 @@ HYB_POS=$HYB_CTG.posmap
 PREFIX=$REF_CHR.$HYB_CTG
 let IDENTITY=$IDENTITY-1
 
-if [ ! -e $PREFIX.split.success ];then
-  log "Splitting query scaffolds into contigs at big gaps"
-  rm -f $PREFIX.readalign.success
-  rm -f gaps.success
-  $MYPATH/splitFileAtNs $QRY 10000 > $HYB_CTG && rm  scaffNameTranslations.txt genome.asm genome.posmap.ctgscf && \
-  touch $PREFIX.split.success
-fi
-
 if [ ! -e $PREFIX.gaps.success ];then
   log "Computing gap coordinates in the reference"
   rm -f $PREFIX.scaffold.success
@@ -143,6 +135,14 @@ if [ ! -e $PREFIX.gaps.success ];then
   rm scaffNameTranslations.txt genome.asm genome.posmap.ctgscf && \
   touch $PREFIX.gaps.success
 fi
+
+if [ ! -e $PREFIX.split.success ];then
+  log "Splitting query scaffolds into contigs at >99bp gaps"
+  rm -f $PREFIX.readalign.success
+  $MYPATH/splitFileAtNs $QRY 99 > $HYB_CTG && rm  genome.asm genome.posmap.ctgscf && \
+  touch $PREFIX.split.success
+fi
+
 
 if [ ! -e $PREFIX.noise.success ];then
   log "Adding noise to reference to align to duplicated regions"
