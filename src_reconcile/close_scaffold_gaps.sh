@@ -59,7 +59,17 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage: merge_scaffolds.sh -r <sequences to be merged> -q <sequence to merge with> -t <number of threads> "
+            echo "Usage: merge_scaffolds.sh <options>"
+            echo "-r <sequences to be merged> MANDATORY"
+            echo "-q <sequence to merge with> MANDATORY"
+            echo "-t <number of threads> default:1"
+            echo "-i <identity%> default:98"
+            echo "-m <minimum match length on the two sides of the gap> default:1000"
+            echo "-o <max overhang> default:5000"
+            echo "-G <maximum gap> default:50000"
+            echo "-g <minimum gap> default:1000"
+            echo "-v verbose"
+            echo "-h|--help|-u|--usage this message"
             exit 0
             ;;
         *)

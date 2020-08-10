@@ -89,7 +89,7 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
   uint32_t flag=0;
   while(parser.next()) { // Process each k-mer
     //here we take every other k-mer -- this is faster to do it here for small genomes but not so
-    //much for the big ones;  we instead do it in the later loop
+    //much for the big ones;  we instead do it in the later loop, because this also influences the threshold for dropping k-mers
     //flag=1-flag;
     //if(flag==0) continue;
 
