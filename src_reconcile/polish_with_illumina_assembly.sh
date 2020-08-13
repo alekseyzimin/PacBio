@@ -76,7 +76,7 @@ error_exit "polishing sequence $QRY does not exist or size zero"
 fi
 
 REFN=`basename $REF`
-QRYN=`basename $QRY`
+QRYN=`basename $QRY.renamed`
 DELTAFILE=$REFN.$QRYN
 
 #rename sequences to avoid collisions
