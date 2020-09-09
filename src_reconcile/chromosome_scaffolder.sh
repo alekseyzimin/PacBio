@@ -240,8 +240,11 @@ if [ ! -e $PREFIX.scaffold.success ];then
   else
     cat $PREFIX.best.coords | $MYPATH/reconcile_matches.pl $PREFIX.gap_coordinates.txt> $PREFIX.reconciled.txt.tmp && mv $PREFIX.reconciled.txt.tmp $PREFIX.reconciled.txt
   fi
-  cat $PREFIX.reconciled.txt | $MYPATH/output_reconciled_scaffolds.pl <(cat $PREFIX.fillseq.fa $HYB_CTG.broken) |\
-  ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa && touch $PREFIX.scaffold.success 
+  cat $PREFIX.reconciled.txt | $MYPATH/output_reconciled_scaffolds.pl <(cat $PREFIX.fillseq.fa $HYB_CTG.broken) > $REF_CHR.$HYB_CTG.reconciled.fa.tmp && mv $REF_CHR.$HYB_CTG.reconciled.fa.tmp $REF_CHR.$HYB_CTG.reconciled.fa
+  $MYPATH/splitScaffoldsAtNs.sh $REF_CHR.$HYB_CTG.reconciled.fa 1 > $REF_CHR.$HYB_CTG.reconciled.split.fa.tmp && mv $REF_CHR.$HYB_CTG.reconciled.split.fa.tmp $REF_CHR.$HYB_CTG.reconciled.split.fa
+  $MYPATH/ufasta sizes -H $REF_CHR.$HYB_CTG.reconciled.split.fa | $MYPATH/sizesToScaff.pl |awk '{if($NF>100) print $0}' > $PREFIX.reconciled2.txt.tmp && mv $PREFIX.reconciled2.txt.tmp $PREFIX.reconciled2.txt 
+  cat $PREFIX.reconciled2.txt | $MYPATH/output_reconciled_scaffolds.pl $REF_CHR.$HYB_CTG.reconciled.split.fa | \
+  $MYPATH/ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa && touch $PREFIX.scaffold.success 
 fi
 
 if [ -e $PREFIX.scaffold.success ];then
