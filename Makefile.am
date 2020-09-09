@@ -136,7 +136,7 @@ dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_nomatch.sh src_mega_reads
 		    src_mega_reads/blast_self_alignment_filter.pl src_mega_reads/fasta_make_Nbase_bed.pl \
 		    src_mega_reads/create_merged_mega-reads.pl src_mega_reads/extract_merges_mega-reads.pl \
 		    src_mega_reads/merge_mega-reads.pl src_mega_reads/split_reads_to_join.pl src_mega_reads/filter_delta_file_for_qrys.pl \
-		    src_mega_reads/process_scaffold_gaps.pl src_mega_reads/splitScaffoldsAtNs.pl \
+		    src_mega_reads/process_scaffold_gaps.pl src_mega_reads/splitScaffoldsAtNs.pl src_reconcile/splitScaffoldsAtNs.sh \
 		    src_trio/classify_reads.pl src_trio/resolve_trio.sh src_mega_reads/extract_unique_mega-reads.pl
 
 
