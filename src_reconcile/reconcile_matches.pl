@@ -135,8 +135,11 @@ sub output_coords{
 
   $gap_a=$gap_a/$tol_factor if($sg_a);
   $gap_b=$gap_b/$tol_factor if($sg_b);
+  #restrict min and max gap size
   $gap_a=100 if($gap_a<100);
   $gap_b=100 if($gap_b<100);
+  $gap_a=10000 if($gap_a>10000);
+  $gap_b=10000 if($gap_b>10000);
 
   print "$scf $ctg $start $end $dir ",int($gap_b)," ",int($gap_a)," $len\n";
 }
