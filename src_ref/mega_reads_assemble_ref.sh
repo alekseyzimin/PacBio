@@ -305,5 +305,5 @@ fi
 
 if [ -e final_assembly.success ];then
 log "Final output sequences are in flye.$COORDS/scaffolds.fasta"
-ufasta n50 -a flye.$COORDS/scaffolds.fasta
+ufasta n50 -a flye.$COORDS/assembly.fasta
 fi
