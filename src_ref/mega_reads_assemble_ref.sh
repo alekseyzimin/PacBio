@@ -301,9 +301,16 @@ log "Final assembly"
 cat $COORDS.1.contigs.fa CA.contigs.fa > $COORDS.subassemblies.fa && \
 $FLYE_PATH/flye -t $NUM_THREADS -i 0 --subassemblies $COORDS.subassemblies.fa  --kmer-size 25 -g $ESTIMATED_GENOME_SIZE -m 250 -o flye.$COORDS 1>flye.$COORDS.log 2>&1 && \
 touch final_assembly.success || error_exit "Final assembly failure, see flye.$COORDS.log"
+rm -f final_scaffold.success
 fi
 
-if [ -e final_assembly.success ];then
-log "Final output sequences are in flye.$COORDS/scaffolds.fasta"
-ufasta n50 -a flye.$COORDS/assembly.fasta
+if [ ! -e final_scaffold.success ];then
+log "Final scaffolding"
+mkdir -p scaffold.$COORDS
+(cd scaffold.$COORDS && \
+$MYPATH/chromosome_scaffolder.sh -q ../flye.$COORDS/assembly.fasta  -r $REF -nb && \
+touch final_scaffold.success )
+$REFN=`basename $REF`
+log "Final output sequences are in scaffold.$COORDS/$REFN.assembly.fasta.split.reconciled.fa"
+ufasta n50 -a scaffold.$COORDS/$REFN.assembly.fasta.split.reconciled.fa
 fi
