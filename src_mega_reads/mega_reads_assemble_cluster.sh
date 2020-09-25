@@ -781,7 +781,7 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
 fi
 
 if [ $FLYE -gt 0 ];then
-    if [ ! -s "flye/scaffolds.fasta" ];then
+    if [ ! -s "flye/assembly.fasta" ];then
         log "Running assembly with Flye"
 	$CA_PATH/flye -t $NUM_THREADS --nano-corr $COORDS.1$POSTFIX.fa -g $ESTIMATED_GENOME_SIZE --kmer-size 21 -m 2500 -o flye -i 0 1>flye.log 2>&1
     fi

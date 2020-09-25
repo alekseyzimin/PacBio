@@ -290,7 +290,7 @@ rm -f final_assembly.success
 log "Polishing reference contigs"
 mkdir -p reconcile
 (cd reconcile && polish_with_illumina_assembly.sh -r ../$COORDS.1.fa -q ../CA.contigs.fa -t $NUM_THREADS -m 10000 1> /dev/null && \
-splitScaffoldsAtNs.pl < $COORDS.1.fa.CA.contigs.fa.all.polished.deduplicated.fa > ../$COORDS.1.contigs.fa.tmp && mv ../$COORDS.1.contigs.fa.tmp ../$COORDS.1.contigs.fa ) && \
+splitScaffoldsAtNs.pl < $COORDS.1.fa.CA.contigs.fa.renamed.all.polished.deduplicated.fa > ../$COORDS.1.contigs.fa.tmp && mv ../$COORDS.1.contigs.fa.tmp ../$COORDS.1.contigs.fa ) && \
 touch reconcile.success || error_exit "reconcile failed"
 rm -f final_assembly.success
 fi
@@ -301,16 +301,12 @@ log "Final assembly"
 cat $COORDS.1.contigs.fa CA.contigs.fa > $COORDS.subassemblies.fa && \
 $FLYE_PATH/flye -t $NUM_THREADS -i 0 --subassemblies $COORDS.subassemblies.fa  --kmer-size 25 -g $ESTIMATED_GENOME_SIZE -m 250 -o flye.$COORDS 1>flye.$COORDS.log 2>&1 && \
 touch final_assembly.success || error_exit "Final assembly failure, see flye.$COORDS.log"
-rm -f final_scaffold.success
 fi
 
-if [ ! -e final_scaffold.success ];then
-log "Final scaffolding"
-mkdir -p scaffold.$COORDS
-(cd scaffold.$COORDS && \
-$MYPATH/chromosome_scaffolder.sh -q ../flye.$COORDS/assembly.fasta  -r $REF -nb && \
-touch final_scaffold.success )
-$REFN=`basename $REF`
-log "Final output sequences are in scaffold.$COORDS/$REFN.assembly.fasta.split.reconciled.fa"
-ufasta n50 -a scaffold.$COORDS/$REFN.assembly.fasta.split.reconciled.fa
+if [ -e final_assembly.success ];then
+log "Success! Final output sequences are in flye.$COORDS/assembly.fasta" && \
+ufasta n50 -a flye.$COORDS/assembly.fasta
 fi
+
+
+
