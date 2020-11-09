@@ -7,14 +7,10 @@ set -o pipefail
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export MYPATH
-ESTIMATED_GENOME_SIZE=0
-#minimum 50
 MER=15
-B=17
-d=0.029
+B=15
+d=0.03
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
-KMER=41
-#this is the batch size for grid execution
 ASSEMBLY=""
 GC=
 RC=
@@ -56,7 +52,11 @@ do
 	    MER="$2"
 	    shift
 	    ;;
-	-B|--alignment_threshold)
+        -l|--l_mer)
+            KMER="$2"
+            shift
+            ;;
+        -B|--alignment_threshold)
 	    B="$2"
 	    shift
 	    ;;
@@ -92,36 +92,26 @@ fi
 
 ################setting parameters#########################
 JF_SIZE=$(stat -L -c%s $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta);
-if [ $ESTIMATED_GENOME_SIZE -lt 1 ];then 
-    error_exit "Estimated Genome Size is invalid or missing";
-fi
 COORDS=mr.$KMER.$MER.$B.$d
 log "Running mega-reads polishing on $ASSEMBLY"
 log "Using mer size $MER for mapping, B=$B, d=$d"
-log "Estimated Genome Size $ESTIMATED_GENOME_SIZE"
 log "Estimated Ploidy $PLOIDY"
 log "Using $NUM_THREADS threads"
 log "Output prefix $COORDS"
-
+log "Using kmer size $KMER for k-unitigs"
 rm -f .rerun
 ###############removing redundant subreads or reducing the coverage by picking the longest reads##############################
 if [ ! -s $ASSEMBLY ];then
         error_exit "$ASSEMBLY file is missing or size zero!"
 fi
 
-#first we re-create k-unitigs and super reads with smaller K
-if [ ! -s superReadSequences.named.fasta ] || [ ! -s guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta ];then
-    log "Reducing super-read k-mer size"
-    awk 'BEGIN{n=0}{if($1~/^>/){}else{print ">sr"n"\n"$0;n+=2;}}' $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > superReadSequences.fasta.in.tmp && mv  superReadSequences.fasta.in.tmp  superReadSequences.fasta.in || error_exit "failed to create superReadSequences.fasta.in"
-    create_k_unitigs_large_k -q 1 -c $(($KMER-1)) -t $NUM_THREADS -m $KMER -n $(($ESTIMATED_GENOME_SIZE*2)) -l $KMER -f `perl -e 'print 1/'$KMER'/1e5'` $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta.all  | grep --text -v '^>' | perl -ane '{$seq=$F[0]; $F[0]=~tr/ACTGactg/TGACtgac/;$revseq=reverse($F[0]); $h{($seq ge $revseq)?$seq:$revseq}=1;}END{$n=0;foreach $k(keys %h){print ">",$n++," length:",length($k),"\n$k\n"}}' > guillaumeKUnitigsAtLeast32bases_all.fasta.tmp && mv guillaumeKUnitigsAtLeast32bases_all.fasta.tmp guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta || error_exit "failed to create k-unitigs for small k super reads";
-    rm -rf work1_mr
-    echo "sr 500 50" >>  meanAndStdevByPrefix.pe.txt && createSuperReadsForDirectory.perl -minreadsinsuperread 1 -l $KMER -mean-and-stdev-by-prefix-file meanAndStdevByPrefix.pe.txt -kunitigsfile guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta -t $NUM_THREADS -mikedebug work1_mr superReadSequences.fasta.in 1> super1.err 2>&1
-    if [ ! -e "work1_mr/superReadSequences.fasta.all" ];then
-        error_exit "failed to create super-reads with reduced k-mer size, see super1.err"
-    fi
-    perl -ane 'push(@names,$F[0]);
+SUPERREADS=superReadSequences.named.fasta
+KUNITIGS=$MASURCA_ASSEMBLY_WORK1_PATH/../guillaumeKUnitigsAtLeast32bases_all.fasta
+
+if [ ! -e $COORDS.namedSuperReads.polish.success ];then
+perl -ane 'push(@names,$F[0]);
 END{
-  open(FILE,"'work1_mr/superReadSequences.fasta.all'");
+  open(FILE,"'$MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta'");
   while($line=<FILE>){
     if($line=~/^>/){
       chomp($line);
@@ -130,34 +120,27 @@ END{
       print $line;
     }
   }
-}' < work1_mr/superReadNames.txt > superReadSequences.named.fasta.tmp && mv superReadSequences.named.fasta.tmp superReadSequences.named.fasta || error_exit "failed to create named super-reads file";
-    rm superReadSequences.fasta.in
-rm -f mega-reads.success
+}' < $MASURCA_ASSEMBLY_WORK1_PATH/superReadNames.txt > superReadSequences.named.fasta.tmp && mv superReadSequences.named.fasta.tmp superReadSequences.named.fasta && touch $COORDS.namedSuperReads.polish.success  || error_exit "failed to create named super-reads file";
+rm -f $COORDS.mega-reads.polish.success
 fi
 
-SUPERREADS=superReadSequences.named.fasta
-if [ ! -s superReadSequences.named.fasta ];then
-    error_exit "Error creating named super-reads file ";
-fi
-
-KUNITIGS=guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta
 if [ ! -s $KUNITIGS ];then
-    error_exit "K-unitigs file $KUNITIGS not found!";
+    error_exit "K-unitigs file $KUNITIGS empty or not found!";
 fi
 
-if [ ! -e mega-reads.success ];then
+if [ ! -e $COORDS.mega-reads.polish.success ];then
 log "Creating mega-reads"
-$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $ASSEMBLY 1> $COORDS.txt.tmp 2>create_mega_reads.err && mv $COORDS.txt.tmp $COORDS.txt && touch mega-reads.success   || error_exit "mega-reads failed, see create_mega_reads.err"
-rm -f polish.success
+$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $ASSEMBLY -o $COORDS.txt.tmp 2>create_mega_reads.err && mv $COORDS.txt.tmp $COORDS.txt && touch $COORDS.mega-reads.polish.success  || error_exit "mega-reads failed, see create_mega_reads.err"
+rm -f $COORDS.polish.polish.success
 fi
 
-if [ ! -e polish.success ];then
+if [ ! -e $COORDS.polish.polish.success ];then
 log "Realignment and polishing"
 awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.txt | add_pb_seq.pl $ASSEMBLY | refine_alignments.pl $COORDS > $COORDS.delta.tmp && mv $COORDS.delta.tmp $COORDS.delta && \
-show-coords -lcHr  $COORDS.delta| reconcile_consensus.pl $ASSEMBLY t.$COORDS.maximal_mr.fa > $COORDS.polished.fa.tmp && mv $COORDS.polished.fa.tmp $COORDS.polished.fa && touch polish.success || error_exit "polishing failed, please check input files and available disk space"
+show-coords -lcHr  $COORDS.delta| reconcile_consensus.pl $ASSEMBLY t.$COORDS.maximal_mr.fa > $COORDS.polished.fa.tmp && mv $COORDS.polished.fa.tmp $COORDS.polished.fa && touch $COORDS.polish.polish.success || error_exit "polishing failed, please check input files and available disk space"
 fi
 
-if [ -e polish.success ];then
+if [ -e $COORDS.polish.polish.success ];then
 log "Success! Polished assembly is in $COORDS.polished.fa"
 ufasta n50 -a $COORDS.polished.fa
 fi
