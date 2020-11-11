@@ -11,8 +11,8 @@ CA_PATH="$MYPATH/../CA8/Linux-amd64/bin";
 ESTIMATED_GENOME_SIZE=0
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 MER=17
-B=20
-d=0.05
+B=13
+d=0.03
 KMER=41
 GC=
 RC=
@@ -285,20 +285,20 @@ PID2=$!
 wait $PID1 $PID2
 
 #reconcile the reference "scaffolds" with the Illumina assembly
-if [ ! -e reconcile.success ];then
-rm -f final_assembly.success
-log "Polishing reference contigs"
-mkdir -p reconcile
-(cd reconcile && polish_with_illumina_assembly.sh -r ../$COORDS.1.fa -q ../CA.contigs.fa -t $NUM_THREADS -m 10000 1> /dev/null && \
-splitScaffoldsAtNs.pl < $COORDS.1.fa.CA.contigs.fa.renamed.all.polished.deduplicated.fa > ../$COORDS.1.contigs.fa.tmp && mv ../$COORDS.1.contigs.fa.tmp ../$COORDS.1.contigs.fa ) && \
-touch reconcile.success || error_exit "reconcile failed"
-rm -f final_assembly.success
-fi
+#if [ ! -e reconcile.success ];then
+#rm -f final_assembly.success
+#log "Polishing reference contigs"
+#mkdir -p $COORDS.reconcile
+#(cd $COORDS.reconcile && polish_with_illumina_assembly.sh -r ../$COORDS.1.fa -q ../CA.contigs.fa -t $NUM_THREADS -m 10000 1> /dev/null && \
+#splitScaffoldsAtNs.pl < $COORDS.1.fa.CA.contigs.fa.renamed.all.polished.deduplicated.fa > ../$COORDS.1.contigs.fa.tmp && mv ../$COORDS.1.contigs.fa.tmp ../$COORDS.1.contigs.fa ) && \
+#touch reconcile.success || error_exit "reconcile failed"
+#rm -f final_assembly.success
+#fi
 
 #final assembly with Flye
 if [ ! -e final_assembly.success ];then
 log "Final assembly"
-cat $COORDS.1.contigs.fa CA.contigs.fa > $COORDS.subassemblies.fa && \
+cat $COORDS.1.fa CA.contigs.fa > $COORDS.subassemblies.fa && \
 $FLYE_PATH/flye -t $NUM_THREADS -i 0 --subassemblies $COORDS.subassemblies.fa  --kmer-size 25 -g $ESTIMATED_GENOME_SIZE -m 250 -o flye.$COORDS 1>flye.$COORDS.log 2>&1 && \
 touch final_assembly.success || error_exit "Final assembly failure, see flye.$COORDS.log"
 fi
