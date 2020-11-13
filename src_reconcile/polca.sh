@@ -17,6 +17,14 @@ if tty -s < /dev/fd/1 2> /dev/null; then
     NC='\e[0m'
 fi
 
+trap abort 1 2 15
+function abort {
+log "Aborted"
+kill 0
+exit 1
+}
+
+
 log () {
     dddd=$(date)
     echo -e "${GC}[$dddd]${NC} $@"

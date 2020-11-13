@@ -28,11 +28,16 @@ log () {
   echo -e "${GC}[$dddd]${NC} $@"
 }
 
-
+trap abort 1 2 15
+function abort {
+log "Aborted"
+kill 0 
+exit 1
+}
 
 function error_exit {
   echo "$1" >&2
-    exit "${2:-1}"
+  exit "${2:-1}"
 }
 
 
@@ -156,7 +161,7 @@ REF_SPLIT="reference.split.fa"
 if [ ! -e prepare.success ];then
 rm -f mega-reads.success
 log "Preparing reference"
-perl -ane '{
+perl -ane 'BEGIN{$chunk_size=10000000;}{
   if($F[0]=~/^>/){
     if(length($seq)>0){
       @f=split(/(N{1,})/,uc($seq)); 
@@ -165,11 +170,15 @@ perl -ane '{
         if(not($c=~/^N/) && length($c)>0){
           $start=$n;
           $end=$n+length($c)-1;
-          for(my $i=0;$i<length($c);$i+=10000000){
+          for(my $i=0;$i<length($c);$i+=$chunk_size){
             if($i>0 && length($c)-$i<10000){
               print ">$rn:$start-$end:$i\n",substr($c,length($c)-10000,10000),"\n";
             }else{
-              print ">$rn:$start-$end:$i\n",substr($c,$i,10000000),"\n"; 
+              if($i>0){
+                print ">$rn:$start-$end:$i\n",substr($c,$i-10000,$chunk_size),"\n";
+              }else{
+                print ">$rn:$start-$end:$i\n",substr($c,0,$chunk_size),"\n";
+              }
             }
           }
         }
@@ -192,7 +201,11 @@ perl -ane '{
         if($i>0 && length($c)-$i<10000){
           print ">$rn:$start-$end:$i\n",substr($c,length($c)-10000,10000),"\n";
         }else{
-          print ">$rn:$start-$end:$i\n",substr($c,$i,10000000),"\n"; 
+          if($i>0){
+            print ">$rn:$start-$end:$i\n",substr($c,$i-10000,$chunk_size),"\n"; 
+          }else{
+            print ">$rn:$start-$end:$i\n",substr($c,0,$chunk_size),"\n";
+          }
         }
       }
     }
@@ -298,7 +311,7 @@ wait $PID1 $PID2
 #final assembly with Flye
 if [ ! -e final_assembly.success ];then
 log "Final assembly"
-cat $COORDS.1.fa CA.contigs.fa > $COORDS.subassemblies.fa && \
+cat $COORDS.1.fa CA.contigs.fa > $COORDS.subassemblies.fa.tmp && mv $COORDS.subassemblies.fa.tmp $COORDS.subassemblies.fa && \
 $FLYE_PATH/flye -t $NUM_THREADS -i 0 --subassemblies $COORDS.subassemblies.fa  --kmer-size 25 -g $ESTIMATED_GENOME_SIZE -m 250 -o flye.$COORDS 1>flye.$COORDS.log 2>&1 && \
 touch final_assembly.success || error_exit "Final assembly failure, see flye.$COORDS.log"
 fi
