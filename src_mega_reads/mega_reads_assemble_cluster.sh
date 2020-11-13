@@ -46,6 +46,13 @@ log () {
     echo -e "${GC}[$dddd]${NC} $@"
 }
 
+trap abort 1 2 15
+function abort {
+log "Aborted"
+kill 0
+exit 1
+}
+
 
 function error_exit {
     dddd=$(date)
