@@ -312,13 +312,22 @@ wait $PID1 $PID2
 #final assembly with Flye
 if [ ! -e final_assembly.success ];then
 log "Final assembly"
+rm -f polish.success
 cat $COORDS.1.fa CA.contigs.fa > $COORDS.subassemblies.fa.tmp && mv $COORDS.subassemblies.fa.tmp $COORDS.subassemblies.fa && \
 $FLYE_PATH/flye -t $NUM_THREADS -i 0 --subassemblies $COORDS.subassemblies.fa  --kmer-size 25 -g $ESTIMATED_GENOME_SIZE -m 250 -o flye.$COORDS 1>flye.$COORDS.log 2>&1 && \
 touch final_assembly.success || error_exit "Final assembly failure, see flye.$COORDS.log"
 fi
 
-if [ -e final_assembly.success ];then
-ufasta extract -n <(ufasta sizes -H flye.$COORDS/assembly.fasta | awk '{if($2>=1000) print $1}') flye.$COORDS/assembly.fasta > final_assembly.fasta.tmp && mv final_assembly.fasta.tmp final_assembly.fasta && \
+if [ ! -e polish.success ];then
+log "Polishing assembly"
+(mkdir -p polish.$COORDS && \
+cd polish.$COORDS && \
+polca.sh -a ../flye.$COORDS/assembly.fasta -r ../pe.cor.fa -t $NUM_THREADS -m 1G && \
+cd ..) && touch polish.success || error_exit "Polishing assembly failure, see files in polish.$COORDS/"
+fi
+
+if [ -e polish.success ];then
+ufasta extract -n <(ufasta sizes -H polish.$COORDS/assembly.fasta.PolcaCorrected.fa | awk '{if($2>=1000) print $1}') polish.$COORDS/assembly.fasta.PolcaCorrected.fa > final_assembly.fasta.tmp && mv final_assembly.fasta.tmp final_assembly.fasta && touch polish.success || error_exit "Polishing assembly failure, see files in polish.$COORDS/"
 log "Success! Final output sequences are in final_assembly.fasta" && \
 ufasta n50 -a final_assembly.fasta
 fi
