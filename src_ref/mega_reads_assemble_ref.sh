@@ -318,8 +318,9 @@ touch final_assembly.success || error_exit "Final assembly failure, see flye.$CO
 fi
 
 if [ -e final_assembly.success ];then
-log "Success! Final output sequences are in flye.$COORDS/assembly.fasta" && \
-ufasta n50 -a flye.$COORDS/assembly.fasta
+ufasta extract -n <(ufasta sizes -H flye.$COORDS/assembly.fasta | awk '{if($2>=1000) print $1}') flye.$COORDS/assembly.fasta > final_assembly.fasta.tmp && mv final_assembly.fasta.tmp final_assembly.fasta && \
+log "Success! Final output sequences are in final_assembly.fasta" && \
+ufasta n50 -a final_assembly.fasta
 fi
 
 
