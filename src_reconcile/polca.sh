@@ -146,7 +146,7 @@ if [ ! -e $BASM.vc.success ];then
     rm -f $BASM.vc.success $BASM.fix.success
     echo "#!/bin/bash" > commands.sh
     echo "if [ ! -e \$1.vc.success ];then" >> commands.sh
-    echo "awk \'{if(\$1=\'\$1\') print \$2\" \"\$3\" \"\$4}\' ../$BASM.batches > batch.\$1"
+    echo "awk '{if(\$1='\$1') print \$2\" \"\$3\" \"\$4}' ../$BASM.batches > batch.\$1" >> commands.sh
     echo "  $FREEBAYES -t batch.\$1 -m 0 --min-coverage 3 -R 0 -p 1 -F 0.2 -E 0 -b ../$BASM.alignSorted.bam -v \$1.vcf -f $ASMPATH/$BASM && touch \$1.vc.success" >> commands.sh 
     echo 'fi' >> commands.sh
     chmod 0755 commands.sh
