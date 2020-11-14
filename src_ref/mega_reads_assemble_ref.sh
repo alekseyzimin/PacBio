@@ -175,11 +175,7 @@ perl -ane 'BEGIN{$chunk_size=10000000;}{
             if($i>0 && length($c)-$i<10000){
               print ">$rn:$start-$end:$i\n",substr($c,length($c)-10000,10000),"\n";
             }else{
-              if($i>0){
-                print ">$rn:$start-$end:$i\n",substr($c,$i-10000,$chunk_size),"\n";
-              }else{
-                print ">$rn:$start-$end:$i\n",substr($c,0,$chunk_size),"\n";
-              }
+              print ">$rn:$start-$end:$i\n",substr($c,$i,$chunk_size),"\n";
             }
           }
         }
@@ -202,11 +198,7 @@ perl -ane 'BEGIN{$chunk_size=10000000;}{
         if($i>0 && length($c)-$i<10000){
           print ">$rn:$start-$end:$i\n",substr($c,length($c)-10000,10000),"\n";
         }else{
-          if($i>0){
-            print ">$rn:$start-$end:$i\n",substr($c,$i-10000,$chunk_size),"\n"; 
-          }else{
-            print ">$rn:$start-$end:$i\n",substr($c,0,$chunk_size),"\n";
-          }
+          print ">$rn:$start-$end:$i\n",substr($c,$i,$chunk_size),"\n"; 
         }
       }
     }

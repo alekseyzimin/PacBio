@@ -138,15 +138,16 @@ if [ ! -e $BASM.vc.success ];then
   rm -f  $BASM.report.success $BASM.fix.success
   log "Calling variants in $BASM"
   mkdir -p $BASM.vc
-  ufasta sizes -H $ASM | awk 'BEGIN{bs='$BATCH_SIZE'}{for(n=0;n<$2;n+=bs){max=n+bs;if(max>$2) max=$2;print $1":"n"-"max}}' > $BASM.batches
-  export BATCHES=`wc -l $BASM.batches | awk '{print $1}'`
+  ufasta sizes -H $ASM | awk 'BEGIN{bs='$BATCH_SIZE';bi=0;btot=0;}{if($2>bs){bi++;for(n=0;n<$2;n+=bs){max=n+bs;if(max>$2) max=$2;print bi" "$1" "n" "max;bi++;}btot=0}else{if(btot+$2>bs){bi++;btot=$2}else{btot+=$2}print bi" "$1" 0 "$2}}' > $BASM.batches
+  export BATCHES=`awk '{print $1}' $BASM.batches|uniq|wc -l |awk '{print $1}'`
 #begin subshell execution
   (
     cd $BASM.vc
     rm -f $BASM.vc.success $BASM.fix.success
     echo "#!/bin/bash" > commands.sh
     echo "if [ ! -e \$1.vc.success ];then" >> commands.sh
-    echo "  $FREEBAYES -r \`head -n +\$1 ../$BASM.batches |tail -n 1\` -m 0 --min-coverage 3 -R 0 -p 1 -F 0.2 -E 0 -b ../$BASM.alignSorted.bam -v \$1.vcf -f $ASMPATH/$BASM && touch \$1.vc.success" >> commands.sh 
+    echo "awk \'{if(\$1=\'\$1\') print \$2\" \"\$3\" \"\$4}\' ../$BASM.batches > batch.\$1"
+    echo "  $FREEBAYES -t batch.\$1 -m 0 --min-coverage 3 -R 0 -p 1 -F 0.2 -E 0 -b ../$BASM.alignSorted.bam -v \$1.vcf -f $ASMPATH/$BASM && touch \$1.vc.success" >> commands.sh 
     echo 'fi' >> commands.sh
     chmod 0755 commands.sh
     seq 1 $BATCHES |xargs -P $NUM_THREADS -I % ./commands.sh % 
