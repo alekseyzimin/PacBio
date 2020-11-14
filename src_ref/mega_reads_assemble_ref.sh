@@ -162,7 +162,7 @@ REF_SPLIT="reference.split.fa"
 if [ ! -e prepare.success ];then
 rm -f mega-reads.success
 log "Preparing reference"
-perl -ane 'BEGIN{$chunk_size=10000000;}{
+perl -ane 'BEGIN{$chunk_size=25000000;}{
   if($F[0]=~/^>/){
     if(length($seq)>0){
       @f=split(/(N{1,})/,uc($seq)); 
@@ -214,7 +214,7 @@ JF_SIZE=$(stat -c%s $KUNITIGS);
 ( if [ ! -e mega-reads.success ];then
 rm -f reconcile.success
 rm -f join.success
-log "Mega-reads pass 1"
+log "Building synteny-reads"
 if numactl --show 1> /dev/null 2>&1;then
 numactl --interleave=all create_mega_reads -s $JF_SIZE -O 1.1 -e 5 -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 3000 -d $d  -r $SUPERREADS  -p $REF_SPLIT -o $COORDS.txt.tmp && mv $COORDS.txt.tmp $COORDS.txt && touch mega-reads.success || error_exit "Create_mega_reads failed"
 else
@@ -314,7 +314,7 @@ if [ ! -e polish.success ];then
 log "Polishing assembly"
 (mkdir -p polish.$COORDS && \
 cd polish.$COORDS && \
-polca.sh -a ../flye.$COORDS/assembly.fasta -r ../pe.cor.fa -t $NUM_THREADS -m 1G && \
+polca.sh -a ../flye.$COORDS/assembly.fasta -r ../work1/superReadSequences.fasta.all -t $NUM_THREADS -m 1G && \
 cd ..) && touch polish.success || error_exit "Polishing assembly failure, see files in polish.$COORDS/"
 fi
 
