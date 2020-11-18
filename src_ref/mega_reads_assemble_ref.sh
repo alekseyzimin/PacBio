@@ -284,7 +284,7 @@ touch ${CA}/recompute_astat.success
 fi
 
 $CA_PATH/runCA -s runCA.spec -p genome -d $CA $SR_FRG $OTHER_FRG 1>> $CA.log 2>&1
-cat $CA/9-terminator/genome.{ctg,deg}.fasta > CA.contigs.fa.tmp && mv CA.contigs.fa.tmp CA.contigs.fa && touch CA.success
+ln -s $CA/9-terminator/genome.ctg.fasta CA.contigs.fa && touch CA.success
 fi ) &
 PID2=$!
 
