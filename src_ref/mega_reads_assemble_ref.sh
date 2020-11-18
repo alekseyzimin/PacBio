@@ -300,7 +300,7 @@ touch final_assembly.success || error_exit "Final assembly failure, see flye.$CO
 fi
 
 if [ -e final_assembly.success ];then
-ufasta extract -f <(ufasta sizes -H ../flye.$COORDS/assembly.fasta | awk '{if($2>=1000) print $1}') ../flye.$COORDS/assembly.fasta > final_assembly.fasta.tmp && \
+ufasta extract -f <(ufasta sizes -H flye.$COORDS/assembly.fasta | awk '{if($2>=1000) print $1}') flye.$COORDS/assembly.fasta > final_assembly.fasta.tmp && \
 mv final_assembly.fasta.tmp final_assembly.fasta && \
 ufasta n50 -a final_assembly.fasta
 fi
