@@ -88,12 +88,14 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
   memset(counts, '\0', sizeof(counts));
   uint32_t flag=0;
   while(parser.next()) { // Process each k-mer
-    //here we take every other k-mer in the long read to reduce the number of calls to psa.find_pos_size
+
+    //skip if k-mer is low complexity 2-simple sequence repeat (e.g. either AAAAAAAAAAAAAAA or ATATATATATATATATA)
+    if(is_ssr(parser.mer<0>().m,2)) continue;
+    //if(parser.mer<0>().m.is_homopolymer()) continue;
+    //we take every other k-mer in the long read to reduce the number of calls to psa.find_pos_size
     flag=1-flag;
     if(flag==0) continue;
 
-    //if(parser.mer<0>().m.is_homopolymer()) continue;
-    if(is_ssr(parser.mer<0>().m,2)) continue;
     const bool is_canonical = parser.mer<0>().is_canonical();
     auto list = is_canonical
       ? psa.find_pos_size(parser.mer<0>().m, parser.mer<0>().rm)
@@ -120,9 +122,6 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
   for(auto& info : lists_info) {
     if(info.size > threshold)
       continue;
-    //here we take every other k-mer
-    //flag=1-flag;
-    //if(flag==0) continue;
     for(auto& it = info.list; it != end; ++it) { // For each instance of the k-mer in a super read
       mer_lists& ml = frags_pos[it->frag->fwd.name.c_str()];
       ml.frag       = it->frag;
