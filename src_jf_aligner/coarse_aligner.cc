@@ -93,7 +93,7 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
     if(is_ssr(parser.mer<0>().m,2)) continue;
     //if(parser.mer<0>().m.is_homopolymer()) continue;
     //we take every other k-mer in the long read to reduce the number of calls to psa.find_pos_size if the k-ner size is 16 or smaller
-    if(parser.mer<0>().m.len<17){
+    if(parser.mer<0>().len<17){
       flag=1-flag;
       if(flag==0) continue;
     }
