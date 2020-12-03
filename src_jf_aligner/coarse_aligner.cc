@@ -92,9 +92,11 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
     //skip if k-mer is low complexity 2-simple sequence repeat (e.g. either AAAAAAAAAAAAAAA or ATATATATATATATATA)
     if(is_ssr(parser.mer<0>().m,2)) continue;
     //if(parser.mer<0>().m.is_homopolymer()) continue;
-    //we take every other k-mer in the long read to reduce the number of calls to psa.find_pos_size
-    flag=1-flag;
-    if(flag==0) continue;
+    //we take every other k-mer in the long read to reduce the number of calls to psa.find_pos_size if the k-ner size is 16 or smaller
+    if(parser.mer<0>().m.len<17){
+      flag=1-flag;
+      if(flag==0) continue;
+    }
 
     const bool is_canonical = parser.mer<0>().is_canonical();
     auto list = is_canonical
