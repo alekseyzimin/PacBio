@@ -5,7 +5,7 @@ use warnings;
 #first we load the long reads
 my $kmer=19;
 $kmer=$ARGV[0] if(defined($ARGV[0]));
-my $min_density=0.2;
+my $min_density=0.0;
 $min_density=$ARGV[1] if(defined($ARGV[1]));
 my $DEBUG=0;
 my %seq=();
