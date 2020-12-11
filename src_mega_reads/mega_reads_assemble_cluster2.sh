@@ -26,7 +26,7 @@ NANOPORE=""
 NANOPORE_RNA=0
 ONEPASS=0
 OVLMIN_DEFAULT=250
-FLYE=0
+FLYE_ASSEMBLY=0
 POSTFIX=""
 MIN_PROPORTION="0.25"
 MIN_RADIUS="400"
@@ -131,7 +131,7 @@ do
 	    shift
 	    ;;
         -F|--Flye)
-            FLYE=1;
+            FLYE_ASSEMBLY=1;
             ;;
 	-v|--verbose)
 	    set -x
@@ -149,7 +149,7 @@ do
 done
 
 ###############checking arguments#########################
-if [ $FLYE -gt 0 ];then
+if [ $FLYE_ASSEMBLY -gt 0 ];then
     log "Using Flye from $CA_PATH"
     if [ ! -e $CA_PATH/flye ];then
 	error_exit "flye not found at $CA_PATH!";
@@ -181,10 +181,17 @@ else
 fi
 if [ $PLOIDY -lt 1 ];then PLOIDY=1; fi
 if [ $PLOIDY -gt 2 ];then PLOIDY=2; fi
+echo $PLOIDY > PLOIDY.txt
+
 COORDS=mr.$KMER.$MER.$B.$d
+FLYE=flye.${COORDS}
 CA=CA.${COORDS}
 echo $CA > CA_dir.txt
-echo $PLOIDY > PLOIDY.txt
+if [ $FLYE_ASSEMBLY -lt 1 ];then
+echo $CA > CA_dir.txt
+else
+echo $FLYE > FLYE_dir.txt
+fi
 
 log "Running mega-reads correction/assembly"
 log "Using mer size $MER for mapping, B=$B, d=$d"
@@ -623,11 +630,10 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
     fi
 fi
 
-if [ $FLYE -gt 0 ];then
-    if [ ! -s "flye.$COORDS/assembly.fasta" ];then
+if [ $FLYE_ASSEMBLY -gt 0 ];then
+    if [ ! -s "$FLYE/assembly.fasta" ];then
         log "Running assembly with Flye"
-        echo flye.${COORDS} > FLYE_dir.txt
-	$CA_PATH/flye -t $NUM_THREADS --nano-corr $COORDS.1$POSTFIX.fa -g $ESTIMATED_GENOME_SIZE --kmer-size 21 -m 2500 -o flye.${COORDS} -i 0 1>flye.log 2>&1
+	$CA_PATH/flye -t $NUM_THREADS --nano-corr $COORDS.1$POSTFIX.fa -g $ESTIMATED_GENOME_SIZE --kmer-size 21 -m 2500 -o $FLYE -i 0 1>flye.log 2>&1
     fi
 else
     if [ ! -s $COORDS.1.frg ] || [ ! -s $COORDS.1.mates.frg ] || [ -e .rerun ];then
