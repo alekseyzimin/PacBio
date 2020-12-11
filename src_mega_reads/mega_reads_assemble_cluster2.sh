@@ -220,12 +220,12 @@ if [ $LR_COVERAGE -gt $PB_HC ];then
     OVLMIN_DEFAULT=499
 fi
 
-
 SUPERREADS=superReadSequences.named.fasta
 KUNITIGS=guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta
 #here we assume that pe.cor.fa exists
-LONGREADS1=long_reads.$PB_HC.fa
-if [ -s $LONGREADS1 ];then
+LONGREADS1=longest_reads.${PB_HC}x.fa
+if [ ! -s $LONGREADS1 ];then
+  log "Pre-correction and initial filtering of the long reads"
 #here we do the initial pre-correction of the long reads and pick the best ones to use for the remaining steps
   PKMER=19
   PKUNITIGS=k_unitigs.l20.fa
@@ -235,17 +235,19 @@ if [ -s $LONGREADS1 ];then
   if [ ! -s $COORDS.pcorrected.fa ];then
     rm -f $COORDS.pcorrected.*.fa
     echo "#!/bin/bash" > correct_with_k_unitigs.sh
-    echo "numactl --interleave=all $MYPATH/create_mega_reads -s \$(($ESTIMATED_GENOME_SIZE*2)) -m $PKMER --psa-min 13 --stretch-cap 10000 -k $PKMER -u $PKUNITIGS -t $NUM_THREADS -B 1 --max-count 5000 -d 0.01 -r <(awk '{if(\$1 ~ /^>/) print \$1\"F\"; else print \$1}'  $PKUNITIGS)  -p <(awk 'BEGIN{rn=0;}{if(\$1 ~ /^>/){print \">\"rn;rn++;}else{print \$1}}' $LONGREADS) -L $KMER -o /dev/stdout |\\" >> correct_with_k_unitigs.sh
+    echo "numactl --interleave=all $MYPATH/create_mega_reads -s \$(($ESTIMATED_GENOME_SIZE*2)) -m $PKMER --psa-min 13 --stretch-cap 10000 -k $PKMER -u $PKUNITIGS -t $NUM_THREADS -B 1 --max-count 5000 -d 0.01 -r <(awk '{if(\$1 ~ /^>/) print \$1\"F\"; else print \$1}'  $PKUNITIGS)  -p <(awk 'BEGIN{rn=0;}{if(\$1 ~ /^>/){print \">\"rn;rn++;}else{print \$1}}' $LONGREADS) -L $PKMER -o /dev/stdout |\\" >> correct_with_k_unitigs.sh
     echo "$MYPATH/add_pb_seq.pl <(awk 'BEGIN{rn=0;}{if(\$1 ~ /^>/){print \">\"rn;rn++;}else{print \$1}}' $LONGREADS) |\\" >> correct_with_k_unitigs.sh
-    echo "ufasta split -i /dev/stdin \\" >> correct_with_k_unitigs.sh
+    echo "$MYPATH/ufasta split -i /dev/stdin \\" >> correct_with_k_unitigs.sh
     for i in $(seq 1 $(($NUM_THREADS/16+2)));do
-      echo ">(./correct_with_k_unitigs_fast.pl $PKMER 1>$COORDS.pcorrected.$i.fa 2>/dev/null) \\" >> correct_with_k_unitigs.sh
+      echo ">($MYPATH/correct_with_k_unitigs_fast.pl $PKMER 1>$COORDS.pcorrected.$i.fa 2>/dev/null) \\" >> correct_with_k_unitigs.sh
     done
     echo "&& cat $COORDS.pcorrected.*.fa | awk '{if(\$1!~/^>/ && \$1~/>/){split(\$1,a,\">\");print a[1];if(a[2]!=\"\") print \">\"a[2];}else{print \$0}}'  > $COORDS.pcorrected.fa.tmp && mv $COORDS.pcorrected.fa.tmp $COORDS.pcorrected.fa && rm -f $COORDS.pcorrected.*.fa" >> correct_with_k_unitigs.sh
     chmod 0755 correct_with_k_unitigs.sh && ./correct_with_k_unitigs.sh
   fi
-  if [ ! -s $COORDS.pcorrected.fa ];then
-    ufasta extract -f <(paste <(ufasta sizes -H  $COORDS.pcorrected.fa) <(tr -d acgt < $COORDS.pcorrected.fa |ufasta sizes -H ) | sort -nrk4 -S 10% | awk '{n+=$2;if(n<int('$ESTIMATED_GENOME_SIZE')*int('$PB_HC')) print $1}' ) $COORDS.pcorrected.fa > $LONGREADS1.tmp && mv $LONGREADS1.tmp $LONGREADS1
+  if [ -s $COORDS.pcorrected.fa ];then
+    $MYPATH/ufasta extract -f <(paste <($MYPATH/ufasta sizes -H  $COORDS.pcorrected.fa) <(tr -d acgt < $COORDS.pcorrected.fa |$MYPATH/ufasta sizes -H ) | \
+    sort -nrk4 -S 10% | awk '{n+=$2;if(n<int('$ESTIMATED_GENOME_SIZE')*int('$PB_HC')) print $1}' ) $COORDS.pcorrected.fa > $LONGREADS1.tmp && \
+    mv $LONGREADS1.tmp $LONGREADS1 && rm $COORDS.pcorrected.fa correct_with_k_unitigs.sh 
   fi
   if [ ! -s $LONGREADS1 ];then
     error_exit "Failed to pre-correct $LONGREADS file, please check your data!"
@@ -303,7 +305,7 @@ for i in $(seq 1 $PBATCHES);do larr[$i]="lr.batch$i";done;
 for i in $(seq 1 $PBATCHES);do lmrOut[$i]="mr.batch$i.txt";done;
 
 if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
-    log "Mega-reads pass 1"
+    log "Computing mega-reads"
 
     if [ $PBATCHES -ge 2 ] && [ $USE_GRID -eq 1 ];then
 	log "Running on the grid in $PBATCHES batches";
@@ -440,7 +442,6 @@ if [ $NANOPORE_RNA -gt 0 ];then
     join_mega_reads_trim.onepass.ref.pl <$COORDS.all.txt 1>$COORDS.transcripts.fa 2>$COORDS.transcripts.err
     exit
 fi
-
 
 if [ ! -s ${COORDS}.1$POSTFIX.allowed ] || [ -e .rerun ];then
     log "Computing allowed merges"
