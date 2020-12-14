@@ -244,7 +244,7 @@ if [ ! -s $LONGREADS1 ];then
     echo "$MYPATH/add_pb_seq.pl <(awk 'BEGIN{rn=0;}{if(\$1 ~ /^>/){print \">\"rn;rn++;}else{print \$1}}' $LONGREADS) |\\" >> correct_with_k_unitigs.sh
     echo "$MYPATH/ufasta split -i /dev/stdin \\" >> correct_with_k_unitigs.sh
     for i in $(seq 1 $(($NUM_THREADS/16+2)));do
-      echo ">($MYPATH/correct_with_k_unitigs_fast.pl $PKMER 0.1 1>$COORDS.pcorrected.$i.fa 2>/dev/null) \\" >> correct_with_k_unitigs.sh
+      echo ">($MYPATH/correct_with_k_unitigs_fast.pl $PKMER 0.0 1>$COORDS.pcorrected.$i.fa 2>/dev/null) \\" >> correct_with_k_unitigs.sh
     done
     echo "&& cat $COORDS.pcorrected.*.fa | awk '{if(\$1!~/^>/ && \$1~/>/){split(\$1,a,\">\");print a[1];if(a[2]!=\"\") print \">\"a[2];}else{print \$0}}'  > $COORDS.pcorrected.fa.tmp && mv $COORDS.pcorrected.fa.tmp $COORDS.pcorrected.fa && rm -f $COORDS.pcorrected.*.fa" >> correct_with_k_unitigs.sh
     chmod 0755 correct_with_k_unitigs.sh && ./correct_with_k_unitigs.sh
