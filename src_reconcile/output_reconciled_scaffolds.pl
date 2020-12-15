@@ -41,7 +41,7 @@ $seq.=($f[4] eq "f") ? substr($sequence{$f[1]},$f[2]-$offset,$f[3]-$f[2]+1) : re
 $output{$f[1]}=1;
 $gap=$f[6];
 }
-print ">$name.R\n$seq\n";
+print ">$name\n$seq\n";
 
 foreach $k(keys %output){
 print ">$k\n$sequence{$k}\n" if(not($output{$k}) && length($sequence{$k})>1000);

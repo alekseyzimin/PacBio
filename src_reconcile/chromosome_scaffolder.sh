@@ -17,6 +17,7 @@ MERGE_SEQ=0
 NO_BRK=0
 MINIMAP_PARAM="-x map-pb"
 SAMTOOLSMEM="1G"
+NOISE=1
 
 #low coverage threshold for breaking
 COV_THRESH=3
@@ -51,6 +52,10 @@ do
     case $key in
         -t|--threads)
             NUM_THREADS="$2"
+            shift
+            ;;
+        -n|--noise)
+            NOISE="$2"
             shift
             ;;
         -s|--sequenced_reads)
@@ -143,12 +148,15 @@ if [ ! -e $PREFIX.split.success ];then
   touch $PREFIX.split.success
 fi
 
-
-if [ ! -e $PREFIX.noise.success ];then
-  log "Adding noise to reference to align to duplicated regions"
-  rm -f $PREFIX.align1.success
-  rm -f $PREFIX.align2.success
-  $MYPATH/introduce_errors_fasta_file.pl $REF 0.01 1 | $MYPATH/fix_consensus_from_vcf.pl $REF > $REF_CHR.w_noise && touch $PREFIX.noise.success
+if [ $NOISE -gt 0 ];then
+  if [ ! -e $PREFIX.noise.success ];then
+    log "Adding noise to reference to align to duplicated regions"
+    rm -f $PREFIX.align1.success
+    rm -f $PREFIX.align2.success
+    $MYPATH/introduce_errors_fasta_file.pl $REF 0.01 1 | $MYPATH/fix_consensus_from_vcf.pl $REF > $REF_CHR.w_noise && touch $PREFIX.noise.success
+  fi
+else
+  ln -s $REF $REF_CHR.w_noise
 fi
 
 #if we need to break
