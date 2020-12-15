@@ -235,11 +235,7 @@ if [ ! -s $LONGREADS1 ];then
   PKMER=19
   PKUNITIGS=k_unitigs.l20.fa
   if [ ! -s $PKUNITIGS ];then
-    if [ $ESTIMATED_GENOME_SIZE -le 4000000000 ];then
-      create_k_unitigs_large_k2 -c $(($PKMER-1)) -t $NUM_THREADS -m $PKMER -n $(($ESTIMATED_GENOME_SIZE*2)) -l $(($PKMER+1)) pe.cor.fa  | grep --text -v '^>' | perl -ane '{$seq=$F[0]; $F[0]=~tr/ACTGactg/TGACtgac/;$revseq=reverse($F[0]); $h{($seq ge $revseq)?$seq:$revseq}=1;}END{$n=0;foreach $k(keys %h){print ">",$n++," length:",length($k),"\n$k\n"}}' > $PKUNITIGS.tmp && mv $PKUNITIGS.tmp $PKUNITIGS
-    else
-      create_k_unitigs_large_k -c $(($PKMER-1)) -t $NUM_THREADS -m $PKMER -n $(($ESTIMATED_GENOME_SIZE*2)) -l $(($PKMER+1)) -f `perl -e 'print 1/'$PKMER'/1e5'` pe.cor.fa  | grep --text -v '^>' | perl -ane '{$seq=$F[0]; $F[0]=~tr/ACTGactg/TGACtgac/;$revseq=reverse($F[0]); $h{($seq ge $revseq)?$seq:$revseq}=1;}END{$n=0;foreach $k(keys %h){print ">",$n++," length:",length($k),"\n$k\n"}}' > $PKUNITIGS.tmp && mv $PKUNITIGS.tmp $PKUNITIGS
-    fi
+    create_k_unitigs_large_k2 -c $(($PKMER-1)) -t $NUM_THREADS -m $PKMER -n $(($ESTIMATED_GENOME_SIZE*2)) -l $(($PKMER+1)) pe.cor.fa  | grep --text -v '^>' | perl -ane '{$seq=$F[0]; $F[0]=~tr/ACTGactg/TGACtgac/;$revseq=reverse($F[0]); $h{($seq ge $revseq)?$seq:$revseq}=1;}END{$n=0;foreach $k(keys %h){print ">",$n++," length:",length($k),"\n$k\n"}}' > $PKUNITIGS.tmp && mv $PKUNITIGS.tmp $PKUNITIGS
   fi
   if [ ! -s $COORDS.pcorrected.fa ];then
     rm -f $COORDS.pcorrected.*.fa
