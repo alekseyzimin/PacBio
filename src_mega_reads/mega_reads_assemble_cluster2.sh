@@ -240,7 +240,7 @@ if [ ! -s $LONGREADS1 ];then
   if [ ! -s $COORDS.pcorrected.fa ];then
     rm -f $COORDS.pcorrected.*.fa
     echo "#!/bin/bash" > correct_with_k_unitigs.sh
-    echo "numactl --interleave=all $MYPATH/create_mega_reads -s \$(($ESTIMATED_GENOME_SIZE*2)) -m $PKMER --psa-min 13 --stretch-cap 10000 -k $PKMER -u $PKUNITIGS -t $NUM_THREADS -B 1 --max-count 5000 -d 0.01 -r <(awk '{if(\$1 ~ /^>/) print \$1\"F\"; else print \$1}'  $PKUNITIGS)  -p <(awk 'BEGIN{rn=0;}{if(\$1 ~ /^>/){print \">\"rn;rn++;}else{print \$1}}' $LONGREADS) -L $PKMER -o /dev/stdout 2>create_mega-reads.err |\\" >> correct_with_k_unitigs.sh
+    echo "numactl --interleave=all $MYPATH/create_mega_reads -s \$(($ESTIMATED_GENOME_SIZE*2)) -m $PKMER --psa-min 12 --stretch-cap 10000 -k $PKMER -u $PKUNITIGS -t $NUM_THREADS -B 1 --max-count 5000 -d 0.01 -r <(awk '{if(\$1 ~ /^>/) print \$1\"F\"; else print \$1}'  $PKUNITIGS)  -p <(awk 'BEGIN{rn=0;}{if(\$1 ~ /^>/){print \">\"rn;rn++;}else{print \$1}}' $LONGREADS) -L $PKMER -o /dev/stdout 2>create_mega-reads.err |\\" >> correct_with_k_unitigs.sh
     echo "$MYPATH/add_pb_seq.pl <(awk 'BEGIN{rn=0;}{if(\$1 ~ /^>/){print \">\"rn;rn++;}else{print \$1}}' $LONGREADS) |\\" >> correct_with_k_unitigs.sh
     echo "$MYPATH/ufasta split -i /dev/stdin \\" >> correct_with_k_unitigs.sh
     for i in $(seq 1 $(($NUM_THREADS/16+2)));do
@@ -332,14 +332,22 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
             if [ $GRID_ENGINE = "SGE" ];then
 		echo "#!/bin/sh" > create_mega_reads.sh && \
 		    echo "if [ ! -e mr.batch\$SGE_TASK_ID.success ];then" >> create_mega_reads.sh && \
-		    echo "$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SGE_TASK_ID -o mr.batch\$SGE_TASK_ID.tmp && mv mr.batch\$SGE_TASK_ID.tmp mr.batch\$SGE_TASK_ID.txt && touch mr.batch\$SGE_TASK_ID.success" >> create_mega_reads.sh && \
+                    echo "if numactl --show 1> /dev/null 2>&1;then" >> create_mega_reads.sh && \
+		    echo "numactl --interleave=all $MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 11  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SGE_TASK_ID -o mr.batch\$SGE_TASK_ID.tmp && mv mr.batch\$SGE_TASK_ID.tmp mr.batch\$SGE_TASK_ID.txt && touch mr.batch\$SGE_TASK_ID.success" >> create_mega_reads.sh && \
+                    echo "else" >> create_mega_reads.sh && \
+                    echo "$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 11  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SGE_TASK_ID -o mr.batch\$SGE_TASK_ID.tmp && mv mr.batch\$SGE_TASK_ID.tmp mr.batch\$SGE_TASK_ID.txt && touch mr.batch\$SGE_TASK_ID.success" >> create_mega_reads.sh && \
+                    echo "fi"  >> create_mega_reads.sh
 		    echo "else" >> create_mega_reads.sh && \
 		    echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> create_mega_reads.sh && \
 		    echo "fi"  >> create_mega_reads.sh && chmod 0755 create_mega_reads.sh
             else
 		echo "#!/bin/sh" > create_mega_reads.sh && \
 		    echo "if [ ! -e mr.batch\$SLURM_ARRAY_TASK_ID.success ];then" >> create_mega_reads.sh && \
-		    echo "$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SLURM_ARRAY_TASK_ID -o mr.batch\$SLURM_ARRAY_TASK_ID.tmp && mv mr.batch\$SLURM_ARRAY_TASK_ID.tmp mr.batch\$SLURM_ARRAY_TASK_ID.txt && touch mr.batch\$SLURM_ARRAY_TASK_ID.success" >> create_mega_reads.sh && \
+                    echo "if numactl --show 1> /dev/null 2>&1;then" >> create_mega_reads.sh && \
+                    echo "numactl --interleave=all $MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 11  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SLURM_ARRAY_TASK_ID -o mr.batch\$SLURM_ARRAY_TASK_ID.tmp && mv mr.batch\$SLURM_ARRAY_TASK_ID.tmp mr.batch\$SLURM_ARRAY_TASK_ID.txt && touch mr.batch\$SLURM_ARRAY_TASK_ID.success" >> create_mega_reads.sh && \
+                    echo "else" >> create_mega_reads.sh && \
+		    echo "$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 11  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SLURM_ARRAY_TASK_ID -o mr.batch\$SLURM_ARRAY_TASK_ID.tmp && mv mr.batch\$SLURM_ARRAY_TASK_ID.tmp mr.batch\$SLURM_ARRAY_TASK_ID.txt && touch mr.batch\$SLURM_ARRAY_TASK_ID.success" >> create_mega_reads.sh && \
+                    echo "fi"  >> create_mega_reads.sh
 		    echo "else" >> create_mega_reads.sh && \
 		    echo "echo \"job \$SLURM_ARRAY_TASK_ID previously completed successfully\"" >> create_mega_reads.sh && \
 		    echo "fi"  >> create_mega_reads.sh && chmod 0755 create_mega_reads.sh
@@ -406,9 +414,9 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
             touch $COORDS.txt.done
           fi
           if numactl --show 1> /dev/null 2>&1;then #if numactl then interleave memory
-            numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p <(ufasta extract -v -f <(head -n -1 $COORDS.txt.headers | awk '{print substr($2,2)}') $LONGREADS1)  -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt 
+            numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p <(ufasta extract -v -f <(head -n -1 $COORDS.txt.headers | awk '{print substr($2,2)}') $LONGREADS1)  -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt 
           else
-            create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p <(ufasta extract -v -f <(head -n -1 $COORDS.txt.headers | awk '{print substr($2,2)}') $LONGREADS1)  -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt
+            create_mega_reads -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p <(ufasta extract -v -f <(head -n -1 $COORDS.txt.headers | awk '{print substr($2,2)}') $LONGREADS1)  -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt
           fi
           rm -f $COORDS.txt.headers
           if [ -e $COORDS.txt ];then # if success of mega-reads
@@ -419,9 +427,9 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
           fi
         else #no failed run
           if numactl --show 1> /dev/null 2>&1;then #if numactl then interleave memory
-            numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $LONGREADS1 -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt || error_exit "mega-reads pass 1 failed"
+            numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $LONGREADS1 -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt || error_exit "mega-reads pass 1 failed"
           else
-            create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $LONGREADS1 -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt || error_exit "mega-reads pass 1 failed"
+            create_mega_reads -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $LONGREADS1 -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt || error_exit "mega-reads pass 1 failed"
           fi
         fi #failed run
     fi #single computer
