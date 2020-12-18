@@ -17,7 +17,7 @@ NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 PB_HC=30
 KMER=41
 #this is the batch size for grid execution
-PBATCH_SIZE=2000000000
+PBATCH_SIZE=5000000000
 GRID_ENGINE="SGE"
 QUEUE=""
 USE_GRID=0
