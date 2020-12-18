@@ -366,7 +366,9 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
             if [ ${#failArr[@]} -ge 1 ];then
 		if [ $GRID_ENGINE = "SGE" ];then
 		    log "submitting SGE create_mega_reads jobs to the grid"
-		    qsub -q $QUEUE -cwd -j y -sync y -N "create_mega_reads"  -t 1-$PBATCHES create_mega_reads.sh 1> mqsub2.out 2>&1 || error_exit "create_mega_reads failed on the grid"
+		    qsub -q $QUEUE -cwd -j y -sync y -N "create_mega_reads"  -t 1-$PBATCHES create_mega_reads.sh 1> mqsub2.out 2>&1
+                    #we submit the jobs the second time to re-run (hopefully successfully) any jobs that may hav failed
+                    qsub -q $QUEUE -cwd -j y -sync y -N "create_mega_reads"  -t 1-$PBATCHES create_mega_reads.sh 1> mqsub2.out 2>&1 || error_exit "create_mega_reads failed on the grid"
 		else
 		    echo " "
 		    echo "To submit SLURM jobs, please run"
