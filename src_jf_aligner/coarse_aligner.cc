@@ -86,7 +86,7 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
   uint32_t counts[max_mer_count + 1];
 
   memset(counts, '\0', sizeof(counts));
-  uint32_t flag=0;
+  uint32_t flag=1;
   while(parser.next()) { // Process each k-mer
 
     //skip if k-mer is low complexity 2-simple sequence repeat (e.g. either AAAAAAAAAAAAAAA or ATATATATATATATATA)
@@ -95,9 +95,12 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
     //we take every other k-mer in the long read to reduce the number of calls to psa.find_pos_size if the k-mer size is 16 or smaller
     if(parser.mer<0>().len <= 17){
       flag=1-flag;
-      if(flag==0) continue;
+      if(flag==1){ 
+        //flag=0;
+        continue;//skip the k-mer if we found a valid k-mer
+      }
     }
-
+    
     const bool is_canonical = parser.mer<0>().is_canonical();
     auto list = is_canonical
       ? psa.find_pos_size(parser.mer<0>().m, parser.mer<0>().rm)
@@ -108,6 +111,7 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
     }
     ++counts[std::min(max_mer_count, (int)list.second)];
     lists_info.push_back({list.first, list.second, is_canonical, parser.offset<0>()});
+    //flag=1;//if found a valid k-mer, skip the next k-mer
   }
 
   uint32_t sum        = 0;

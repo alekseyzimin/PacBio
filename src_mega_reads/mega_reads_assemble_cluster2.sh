@@ -680,7 +680,7 @@ else
 	TCOVERAGE=$COVERAGE;
     fi
 
-    OVLREFSIZE=`ls $SR_FRG $COORDS.1.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | perl -ane '$n+=$F[0];END{if(int($n/750)<50000){print "50000";}else{print int($n/750)}}'`
+    OVLREFSIZE=`ls $SR_FRG $COORDS.1.frg $OTHER_FRG 2>/dev/null | xargs stat -c%s | perl -ane '$n+=$F[0];END{if(int($n/200)<50000){print "50000";}else{print int($n/200)}}'`
 
     rm -f .rerun
     rm -f $CA.log
