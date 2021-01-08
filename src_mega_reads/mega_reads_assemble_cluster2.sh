@@ -11,7 +11,7 @@ ESTIMATED_GENOME_SIZE=0
 #minimum 50
 MAX_GAP=1000
 MER=17
-B=20
+B=15
 d=0.02
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 PB_HC=30
