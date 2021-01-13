@@ -8,8 +8,8 @@ NUM_THREADS=1
 MIN_MATCH=1000
 IDENTITY=98
 OVERHANG=5000
-MINGAP=1000
-MAXGAP=50000
+MINGAP=-100
+MAXGAP=100000
 
 function error_exit {
     echo "$1" >&2
@@ -66,8 +66,8 @@ do
             echo "-i <identity%> default:98"
             echo "-m <minimum match length on the two sides of the gap> default:1000"
             echo "-o <max overhang> default:5000"
-            echo "-G <maximum gap> default:50000"
-            echo "-g <minimum gap> default:1000"
+            echo "-G <maximum gap> default:100000"
+            echo "-g <minimum gap> default:-100"
             echo "-v verbose"
             echo "-h|--help|-u|--usage this message"
             exit 0
@@ -108,7 +108,7 @@ fi
 
 #delta-filter
 if [ ! -e scaffold_merge.filter.success ];then
-parallel_delta-filter.sh $DELTAFILE "-1 -l 200" 9 && mv $DELTAFILE.fdelta $DELTAFILE.r.delta && \
+delta-filter -1 -l $MIN_MATCH $DELTAFILE.delta > $DELTAFILE.fdelta && mv $DELTAFILE.fdelta $DELTAFILE.r.delta && \
 touch scaffold_merge.filter.success && rm -f  scaffold_merge.merge.success || exit
 fi
 
