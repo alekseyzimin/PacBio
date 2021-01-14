@@ -202,7 +202,7 @@ if [ ! -e $BASM.fix.success ];then
 
     echo "#!/bin/bash" > commands.sh
     echo "if [ ! -e \$1.fix.success ];then" >> commands.sh
-    echo "    $MYPATH/fix_consensus_from_vcf.pl <($MYPATH/ufasta extract -f \$1.names $ASMPATH/$BASM) < ../$BASM.vcf > \$1.fixed.tmp && mv \$1.fixed.tmp \$1.fixed && touch \$1.fix.success"  >> commands.sh
+    echo "    $MYPATH/fix_consensus_from_vcf.pl <($MYPATH/ufasta extract -f \$1.names $ASMPATH/$BASM) < ../$BASM.vcf 1>\$1.fixed.tmp 2>$1.fixed.err && mv \$1.fixed.tmp \$1.fixed && touch \$1.fix.success"  >> commands.sh
     echo "fi" >> commands.sh
     chmod 0755 commands.sh && \
     seq 1 $BATCH |xargs -P $NUM_THREADS -I % ./commands.sh %

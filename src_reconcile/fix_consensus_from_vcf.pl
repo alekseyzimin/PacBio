@@ -41,7 +41,7 @@ if(not($f[0] eq $ctg)){
       #first we check if the sequence at given offset matches the original variant
       my $original_seq=substr($oldseq,$offsets[$i]-1,length($originals[$i]));
       #print "$i $ctg $offsets[$i] $originals[$i] $original_seq $fixes[$i]\n";
-      die("sequence does not match the original $ctg $original_seq $originals[$i] $offsets[$i]") if(($original_seq =~ /a|c|g|t|n|A|C|G|T|N/) && not(uc($originals[$i]) eq uc($original_seq)));
+      print STDERR "WARNING! sequence does not match the original $ctg $original_seq $originals[$i] $offsets[$i]\n" if(($original_seq =~ /a|c|g|t|n|A|C|G|T|N/) && not(uc($originals[$i]) eq uc($original_seq)));
       #then substitute
       substr($oldseq,$offsets[$i]-1,length($originals[$i]),$fixes[$i]);
       }
