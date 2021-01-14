@@ -25,7 +25,7 @@ chomp($line);
 @f=split(/\s+/,$line);
 $gap=$gap<$f[5] ? $gap : $f[5];
 if(not($f[0] eq $name)){
-  print ">$name.R\n$seq\n" if(not($name eq ""));
+  print ">$name\n$seq\n" if(not($name eq ""));
   $name=$f[0];
   $seq="";
 }else{
