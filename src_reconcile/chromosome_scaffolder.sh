@@ -153,7 +153,7 @@ if [ $NOISE -gt 0 ];then
     log "Adding noise to reference to align to duplicated regions"
     rm -f $PREFIX.align1.success
     rm -f $PREFIX.align2.success
-    $MYPATH/introduce_errors_fasta_file.pl $REF 0.01 1 | $MYPATH/fix_consensus_from_vcf.pl $REF > $REF_CHR.w_noise && touch $PREFIX.noise.success
+    $MYPATH/introduce_errors_fasta_file.pl $REF 0.004 1 | $MYPATH/fix_consensus_from_vcf.pl $REF > $REF_CHR.w_noise && touch $PREFIX.noise.success
   fi
 else
   ln -s $REF $REF_CHR.w_noise
@@ -229,7 +229,7 @@ fi
 if [ ! -e $PREFIX.filter2.success ];then
   log "Filtering the alignments"
   rm -f $PREFIX.scaffold.success
-  $MYPATH/delta-filter -r  $REF_CHR.$HYB_CTG.broken.delta | $MYPATH/delta-filter -q /dev/stdin > $REF_CHR.$HYB_CTG.broken.1.delta && touch $PREFIX.filter2.success
+  $MYPATH/delta-filter -r -i $IDENTITY  $REF_CHR.$HYB_CTG.broken.delta | $MYPATH/delta-filter -q /dev/stdin > $REF_CHR.$HYB_CTG.broken.1.delta && touch $PREFIX.filter2.success
 fi
 
 #now we merge/rebuild chromosomes
