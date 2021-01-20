@@ -142,9 +142,9 @@ if [ ! -e $PREFIX.gaps.success ];then
 fi
 
 if [ ! -e $PREFIX.split.success ];then
-  log "Splitting query scaffolds into contigs at >1bp gaps"
+  log "Splitting query scaffolds at >100000bp gaps"
   rm -f $PREFIX.readalign.success
-  $MYPATH/splitFileAtNs $QRY 1 > $HYB_CTG && rm  genome.asm genome.posmap.ctgscf && \
+  $MYPATH/splitFileAtNs $QRY 100000 > $HYB_CTG && rm  genome.asm genome.posmap.ctgscf && \
   touch $PREFIX.split.success
 fi
 
