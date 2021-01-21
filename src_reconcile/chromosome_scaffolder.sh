@@ -196,9 +196,9 @@ if [ ! -e $PREFIX.break.success ];then
   log "Splitting query contigs at suspect locations"
   rm -f $PREFIX.align2.success
   #first we figure out the coverage -- take the mode
-  REP_COV_THRESH=`awk '{print $4}'  $HYB_POS.coverage | sort -n -S 10% |uniq -c| sort -nrk1 |head -n 1 | awk '{print int($2/.8)}'`
-  COV_THRESH=$(($REP_COV_THRESH/15+1))
-  log "Using computed low coverage threshold $COV_THRESH and repeat coverage threshold $REP_COV_THRESH"
+  let REP_COV_THRESH=`awk '{print $4}'  $HYB_POS.coverage | sort -n -S 10% |uniq -c| sort -nrk1 |head -n 1 | awk '{print int($2/.69)}'`
+  let COV_THRESH=$(($REP_COV_THRESH/15+1))
+  log "Using computed low coverage threshold $COV_THRESH and repeat coverage threshold $REP_COV_THRESH" 
   awk '{if($4<$5) print $4" "$5" "($4+$5)/2" "$NF" "$13; else print $5" "$4" "($4+$5)/2" "$NF" "$13;}' $REF_CHR.$HYB_CTG.1.coords| \
   sort -k4 -k1n -S 10% | \
   uniq -D -f 3 | \
