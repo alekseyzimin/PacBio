@@ -70,14 +70,6 @@ do
             IDENTITY="$2"
             shift
             ;;
-        -cl|--low_coverage_threshold)
-            COV_THRESH="$2"
-            shift
-            ;;
-        -ch|--repeat_threshold)
-            REP_COV_THRESH="$2"
-            shift
-            ;;
         -nb|--no_breaks)
             NO_BRK=1
             ;;
@@ -110,8 +102,6 @@ do
             echo "-v <verbose>"
             echo "-s <reads to align to the assembly to check for misassemblies> MANDATORY unless -nb set"
             echo "-hf Use Pacbio HIFI reads -- speeds up the alignment"
-            echo "-cl <coverage threshold for splitting at misassemblies: default 3>"
-            echo "-ch <repeat coverage threshold for splitting at misassemblies: default 30>"
             echo "-M attempt to fill unaligned gaps with reference contigs: defalut off"
             echo "-h|-u|--help this message"
             echo ""
@@ -205,6 +195,10 @@ fi
 if [ ! -e $PREFIX.break.success ];then
   log "Splitting query contigs at suspect locations"
   rm -f $PREFIX.align2.success
+  #first we figure out the coverage -- take the mode
+  REP_COV_THRESH=`awk '{print $4}'  $HYB_POS.coverage | sort -n -S 10% |uniq -c| sort -nrk1 |head -n 1 | awk '{print int($2/.8)}'`
+  COV_THRESH=$(($REP_COV_THRESH/15+1))
+  log "Using computed low coverage threshold $COV_THRESH and repeat coverage threshold $REP_COV_THRESH"
   awk '{if($4<$5) print $4" "$5" "($4+$5)/2" "$NF" "$13; else print $5" "$4" "($4+$5)/2" "$NF" "$13;}' $REF_CHR.$HYB_CTG.1.coords| \
   sort -k4 -k1n -S 10% | \
   uniq -D -f 3 | \
