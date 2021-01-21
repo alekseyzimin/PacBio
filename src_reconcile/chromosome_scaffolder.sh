@@ -206,7 +206,7 @@ if [ ! -e $PREFIX.break.success ];then
   rm -f $PREFIX.align2.success
   #first we figure out the coverage -- take the mode
   let AUTO_REP_COV_THRESH=`awk '{print $4}'  $HYB_POS.coverage | sort -n -S 10% |uniq -c| sort -nrk1 |head -n 1 | awk '{print int($2/.69)}'`
-  if [ $REP_COV_THRESH -lt 0 ]then
+  if [ $REP_COV_THRESH -lt 0 ];then
     let REP_COV_THRESH=$AUTO_REP_COV_THRESH
   fi
   if [ $COV_THRESH -lt 0 ];then
