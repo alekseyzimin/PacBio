@@ -239,7 +239,7 @@ if [ ! -e $PREFIX.scaffold.success ];then
   touch $PREFIX.fillseq.fa
   $MYPATH/show-coords -lcHr -I $IDENTITY $REF_CHR.$HYB_CTG.broken.1.delta | \
   $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
-  awk '{if($15>25 || $16>25 ) print $0}' |\
+  awk '{if($15>25 || $16>25 || $8>25000) print $0}' |\
   awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>=last_end) {print $0; last_end=$2}}' | \
   $MYPATH/extract_single_best_match_coords_file.pl >  $PREFIX.best.coords.tmp && mv $PREFIX.best.coords.tmp $PREFIX.best.coords
   if [ $MERGE_SEQ -gt 0 ];then
