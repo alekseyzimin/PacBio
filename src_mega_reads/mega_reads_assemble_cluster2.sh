@@ -572,7 +572,7 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
 
                 if [ $USE_GRID -eq 1 ]; then
                   if [ $GRID_ENGINE = "SGE" ];then
-                    qsub -q $QUEUE -cwd -j y -sync y -N "join_mega_reads"  -t 1-$TOJOIN_BATCHES do_consensus.sh 1> cqsub2.out 2>&1 || error_exit "join consensus failed on the grid"  
+                    qsub -cwd -j y -sync y -N "join_mega_reads"  -t 1-$TOJOIN_BATCHES do_consensus.sh 1> cqsub2.out 2>&1 || error_exit "join consensus failed on the grid"  
                   else
                         echo " "
                         echo "To submit SLURM jobs, please run"
