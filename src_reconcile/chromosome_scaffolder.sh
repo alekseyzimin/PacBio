@@ -254,7 +254,8 @@ if [ ! -e $PREFIX.scaffold.success ];then
     cat $PREFIX.best.coords | $MYPATH/fill_unaligned_gaps.pl $REF 2>$PREFIX.fillseq.fa |\
     perl -ane '{$dir="f"; $dir="r" if($F[3]>$F[4]);print "$F[-2] $F[-1] 1 $F[12] $dir 100 100 $F[12]\n"}' > $PREFIX.reconciled.txt.tmp && mv $PREFIX.reconciled.txt.tmp $PREFIX.reconciled.txt
   else
-    cat $PREFIX.best.coords | $MYPATH/reconcile_matches.pl $PREFIX.gap_coordinates.txt> $PREFIX.reconciled.txt.tmp && mv $PREFIX.reconciled.txt.tmp $PREFIX.reconciled.txt
+    cat $PREFIX.best.coords | $MYPATH/reconcile_matches.pl $PREFIX.gap_coordinates.txt> $PREFIX.reconciled.txt.tmp && mv $PREFIX.reconciled.txt.tmp $PREFIX.reconciled.txt && \
+    rm -f $PREFIX.fillseq.fa && touch $PREFIX.fillseq.fa
   fi
   cat $PREFIX.reconciled.txt | $MYPATH/output_reconciled_scaffolds.pl <(cat $PREFIX.fillseq.fa $HYB_CTG.broken) > $REF_CHR.$HYB_CTG.reconciled.fa.tmp && mv $REF_CHR.$HYB_CTG.reconciled.fa.tmp $REF_CHR.$HYB_CTG.reconciled.fa
   $MYPATH/splitScaffoldsAtNs.sh $REF_CHR.$HYB_CTG.reconciled.fa 1 > $REF_CHR.$HYB_CTG.reconciled.split.fa.tmp && mv $REF_CHR.$HYB_CTG.reconciled.split.fa.tmp $REF_CHR.$HYB_CTG.reconciled.split.fa
