@@ -4,7 +4,8 @@ NUM=$2;
 perl -ane '{
 if($F[0]=~/^>/){
   if(length($seq)>0){
-      @f=split(/(N{'$NUM',})/,uc($seq)); 
+      $seq=~s/n/N/g;
+      @f=split(/(N{'$NUM',})/,$seq); 
       my $n=1;
       foreach $c(@f){
         if(not($c=~/^N/) && length($c)>0){
@@ -21,7 +22,8 @@ if($F[0]=~/^>/){
   $seq.=$F[0];
 }
 }END{
-  @f=split(/(N{'$NUM',})/,uc($seq));
+  $seq=~s/n/N/g;
+  @f=split(/(N{'$NUM',})/,$seq);
   my $n=1;
   foreach $c(@f){
     if(not($c=~/^N/) && length($c)>0){
