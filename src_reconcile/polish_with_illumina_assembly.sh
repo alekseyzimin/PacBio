@@ -99,7 +99,7 @@ fi
 if [ ! -e polish_add_not_aligning.success ];then
 log "Adding missing sequences that did not align to the assembly"
 #add the sequences that did not align and longer than 1000 bp
-show-coords -lcH -I $SIMILARITY_RATE $DELTAFILE.q.delta| perl -ane '{$palign{$F[-1]}+=$F[-4];}END{foreach $k(keys %palign){print $k,"\n" if($palign{$k}>50)}}' > aligned_sequences.txt
+show-coords -lcH -I $SIMILARITY_RATE $DELTAFILE.q.delta| perl -ane '{$palign{$F[-1]}+=$F[-4];}END{foreach $k(keys %palign){print $k,"\n" if($palign{$k}>25)}}' > aligned_sequences.txt
 ufasta sizes -H $QRYN | awk '{if($2<1000) print $1}' > short_sequences.txt
 ufasta extract -v -f <(cat aligned_sequences.txt short_sequences.txt) $QRYN > $REFN.$QRYN.extra.fa && \
 cat $REF $REFN.$QRYN.extra.fa > $REFN.$QRYN.all.fa && \
