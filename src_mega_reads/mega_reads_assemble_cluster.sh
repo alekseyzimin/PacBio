@@ -15,7 +15,7 @@ B=17
 d=0.029
 NUM_THREADS=`cat /proc/cpuinfo |grep ^processor |wc -l`
 PB_HC=30
-KMER=41
+KMER=0
 #this is the batch size for grid execution
 PBATCH_SIZE=2000000000
 GRID_ENGINE="SGE"
@@ -26,7 +26,6 @@ NANOPORE=""
 NANOPORE_RNA=0
 ONEPASS=0
 OVLMIN_DEFAULT=250
-FLYE=0
 POSTFIX=""
 #MIN_PROPORTION="0.15"
 #MIN_RADIUS="15"
@@ -75,8 +74,8 @@ do
 	    NUM_THREADS="$2"
 	    shift
 	    ;;
-	-M|--alignment_mer)
-	    MER="$2"
+	-k|--kunitig_mer)
+	    KMER="$2"
 	    shift
 	    ;;
 	-B|--alignment_threshold)
@@ -154,20 +153,6 @@ do
 done
 
 ###############checking arguments#########################
-if [ $FLYE -gt 0 ];then
-    log "Using Flye from $CA_PATH"
-    if [ ! -e $CA_PATH/flye ];then
-	error_exit "flye not found at $CA_PATH!";
-    fi
-#    POSTFIX=".flye"
-#    MIN_PROPORTION="0.25"
-#    MIN_RADIUS="400"
-else
-    log "Using CABOG from $CA_PATH"
-    if [ ! -e $CA_PATH/runCA ];then
-	error_exit "runCA not found at $CA_PATH!";
-    fi
-fi
 export PATH=$MYPATH:$CA_PATH:$PATH
 
 if [ ! -s $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta ];then
@@ -179,27 +164,14 @@ JF_SIZE=$(stat -L -c%s $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta);
 if [ $ESTIMATED_GENOME_SIZE -lt 1 ];then 
     error_exit "Estimated Genome Size is invalid or missing";
 fi
-if [ -s PLOIDY.txt ];then
-    PLOIDY=`head -n 1 PLOIDY.txt| awk '{if($1<=1) print "1"; else if($1>=2) print "2"; else print "1"}'`
-else
-    PLOIDY=$(($JF_SIZE/$ESTIMATED_GENOME_SIZE/2))
-fi
-if [ $PLOIDY -lt 1 ];then PLOIDY=1; fi
-if [ $PLOIDY -gt 2 ];then PLOIDY=2; fi
 COORDS=mr.$KMER.$MER.$B.$d
-CA=CA.${COORDS}
-echo $CA > CA_dir.txt
-echo $PLOIDY > PLOIDY.txt
 
 log "Running mega-reads correction/assembly"
-log "Using mer size $MER for mapping, B=$B, d=$d"
-log "Estimated Genome Size $ESTIMATED_GENOME_SIZE"
-log "Estimated Ploidy $PLOIDY"
+log "Using mer size $MER for mapping, $KMER for k-unitigs, B=$B, d=$d"
 log "Using $NUM_THREADS threads"
 log "Output prefix $COORDS"
 
 rm -f .rerun
-###############removing redundant subreads or reducing the coverage by picking the longest reads##############################
 
 if [ "$PACBIO" = "" ];then
     if [ "$NANOPORE" = "" ];then
@@ -215,11 +187,14 @@ if [ ! -e $LONGREADS ];then
     error_exit "Long reads reads file $LONGREADS not found!";
 fi
 
-
-zcat -f $LONGREADS | $MYPATH/fastqTofasta.pl > $LONGREADS1.tmp && mv $LONGREADS1.tmp $LONGREADS1
 LONGREADS1="long_reads.fa";
+if [ ! -s $LONGREADS1 ];then
+  zcat -f $LONGREADS | $MYPATH/fastqToFasta.pl > $LONGREADS1.tmp && mv $LONGREADS1.tmp $LONGREADS1
+fi
+
 SUPERREADS=superReadSequences.named.fasta
 KUNITIGS=$MASURCA_ASSEMBLY_WORK1_PATH/../guillaumeKUnitigsAtLeast32bases_all.fasta
+if [ ! -s $SUPERREADS ];then
 perl -ane 'push(@names,$F[0]);
 END{
   open(FILE,"'$MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta.all'");
@@ -232,6 +207,7 @@ END{
     }
   }
 }' < $MASURCA_ASSEMBLY_WORK1_PATH/superReadNames.txt > $SUPERREADS.tmp && mv $SUPERREADS.tmp $SUPERREADS || error_exit "failed to create named super-reads file";
+fi
 
 if [ ! -s $SUPERREADS ];then
     error_exit "Error creating named super-reads file ";
@@ -281,14 +257,14 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
             if [ $GRID_ENGINE = "SGE" ];then
 		echo "#!/bin/sh" > create_mega_reads.sh && \
 		    echo "if [ ! -e mr.batch\$SGE_TASK_ID.success ];then" >> create_mega_reads.sh && \
-		    echo "$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SGE_TASK_ID -o mr.batch\$SGE_TASK_ID.tmp && mv mr.batch\$SGE_TASK_ID.tmp mr.batch\$SGE_TASK_ID.txt && touch mr.batch\$SGE_TASK_ID.success" >> create_mega_reads.sh && \
+		    echo "$MYPATH/create_mega_reads -L 50 -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SGE_TASK_ID -o mr.batch\$SGE_TASK_ID.tmp && mv mr.batch\$SGE_TASK_ID.tmp mr.batch\$SGE_TASK_ID.txt && touch mr.batch\$SGE_TASK_ID.success" >> create_mega_reads.sh && \
 		    echo "else" >> create_mega_reads.sh && \
 		    echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> create_mega_reads.sh && \
 		    echo "fi"  >> create_mega_reads.sh && chmod 0755 create_mega_reads.sh
             else
 		echo "#!/bin/sh" > create_mega_reads.sh && \
 		    echo "if [ ! -e mr.batch\$SLURM_ARRAY_TASK_ID.success ];then" >> create_mega_reads.sh && \
-		    echo "$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SLURM_ARRAY_TASK_ID -o mr.batch\$SLURM_ARRAY_TASK_ID.tmp && mv mr.batch\$SLURM_ARRAY_TASK_ID.tmp mr.batch\$SLURM_ARRAY_TASK_ID.txt && touch mr.batch\$SLURM_ARRAY_TASK_ID.success" >> create_mega_reads.sh && \
+		    echo "$MYPATH/create_mega_reads -L 50 -s $JF_SIZE -m $MER --psa-min 12  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SLURM_ARRAY_TASK_ID -o mr.batch\$SLURM_ARRAY_TASK_ID.tmp && mv mr.batch\$SLURM_ARRAY_TASK_ID.tmp mr.batch\$SLURM_ARRAY_TASK_ID.txt && touch mr.batch\$SLURM_ARRAY_TASK_ID.success" >> create_mega_reads.sh && \
 		    echo "else" >> create_mega_reads.sh && \
 		    echo "echo \"job \$SLURM_ARRAY_TASK_ID previously completed successfully\"" >> create_mega_reads.sh && \
 		    echo "fi"  >> create_mega_reads.sh && chmod 0755 create_mega_reads.sh
@@ -355,9 +331,9 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
             touch $COORDS.txt.done
           fi
           if numactl --show 1> /dev/null 2>&1;then #if numactl then interleave memory
-            numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p <(ufasta extract -v -f <(head -n -1 $COORDS.txt.headers | awk '{print substr($2,2)}') $LONGREADS1)  -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt 
+            numactl --interleave=all create_mega_reads -L 50 -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p <(ufasta extract -v -f <(head -n -1 $COORDS.txt.headers | awk '{print substr($2,2)}') $LONGREADS1)  -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt 
           else
-            create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p <(ufasta extract -v -f <(head -n -1 $COORDS.txt.headers | awk '{print substr($2,2)}') $LONGREADS1)  -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt
+            create_mega_reads -L 50 -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p <(ufasta extract -v -f <(head -n -1 $COORDS.txt.headers | awk '{print substr($2,2)}') $LONGREADS1)  -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt
           fi
           rm -f $COORDS.txt.headers
           if [ -e $COORDS.txt ];then # if success of mega-reads
@@ -368,9 +344,9 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
           fi
         else #no failed run
           if numactl --show 1> /dev/null 2>&1;then #if numactl then interleave memory
-            numactl --interleave=all create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $LONGREADS1 -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt || error_exit "mega-reads pass 1 failed"
+            numactl --interleave=all create_mega_reads -L 50 -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $LONGREADS1 -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt || error_exit "mega-reads pass 1 failed"
           else
-            create_mega_reads -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $LONGREADS1 -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt || error_exit "mega-reads pass 1 failed"
+            create_mega_reads -L 50 -s $JF_SIZE -m $MER --psa-min 13  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p $LONGREADS1 -o $COORDS.txt.tmp 1>create_mega-reads.err 2>&1 && mv $COORDS.txt.tmp $COORDS.txt || error_exit "mega-reads pass 1 failed"
           fi
         fi #failed run
     fi #single computer
@@ -388,13 +364,13 @@ fi
 if [ ! -s ${COORDS}.all.txt ] || [ -e .rerun ];then
     log "Refining alignments"
     NUM_LONGREADS_READS_PER_BATCH=`grep --text '^>'  $LONGREADS1 | wc -l | awk '{bs=int($1/1024);if(bs<1000){bs=1000};if(bs>100000){bs=100000};}END{print bs}'` 
-    cat <(ufasta extract -f $COORDS.single.txt $COORDS.txt) <(ufasta extract -v -f $COORDS.single.txt $COORDS.mr.txt)| awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' | add_pb_seq.pl $LONGREADS1 | split_matches_file.pl $NUM_LONGREADS_READS_PER_BATCH .matches && ls .matches.* | xargs -P $NUM_THREADS -I % refine.sh $COORDS % $KMER && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp 
+    awk '{if($0~/^>/){pb=substr($1,2);print $0} else { print $3" "$4" "$5" "$6" "$10" "pb" "$11" "$9}}' $COORDS.txt | add_pb_seq.pl $LONGREADS1 | split_matches_file.pl $NUM_LONGREADS_READS_PER_BATCH .matches && ls .matches.* | xargs -P $NUM_THREADS -I % refine.sh $COORDS % $KMER && cat $COORDS.matches*.all.txt.tmp > $COORDS.all.txt && rm .matches.* && rm $COORDS.matches*.all.txt.tmp 
     touch .rerun
 fi
 
 #for now we just exit here
 join_mega_reads_trim.onepass.ref.pl <$COORDS.all.txt 1>$COORDS.transcripts.fa 2>$COORDS.transcripts.err
-
+exit
 
 
 
