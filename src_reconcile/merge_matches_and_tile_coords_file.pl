@@ -5,9 +5,14 @@ my $match_qry_beg = 0;
 my $match_qry_end = 0;
 my @output_matches = ();
 my $max_gap_diff =500;
+my $max_gap_allowed=10000000;
 if(defined($ARGV[0])){
 $max_gap_diff=$ARGV[0];
 }
+if(defined($ARGV[1])){
+$max_gap_allowed=$ARGV[1];
+}
+
 
 my %ctg_lines=();
 my $scf="";
@@ -51,15 +56,27 @@ my $groupNotEmpty = 0;
 #assumes matches for one contig at a time
 foreach my $line (@_) {
     @currentFlds = split(/\s+/,$line); 
+    #adust if contained
+    if($currentFlds[3] < $currentFlds[4] && $prevFlds[3] < $prevFlds[4]){
+      if($currentFlds[3] > $prevFlds[3] && $currentFlds[4] < $prevFlds[4]){
+        $currentFlds[3]=$prevFlds[3];
+        $currentFlds[4]=$prevFlds[4];
+      }
+    }elsif($currentFlds[3] > $currentFlds[4] && $prevFlds[3] > $prevFlds[4]){
+      if($currentFlds[3] < $prevFlds[3] && $currentFlds[4] > $prevFlds[4]){
+        $currentFlds[3]=$prevFlds[3];
+        $currentFlds[4]=$prevFlds[4];
+      }
+    }
     $currentMidpoint = ($currentFlds[3]+$currentFlds[4]) / 2;
     if($keepMatchLine == 1){#we check the next match
       $local_direction = &reportDirectionBasedOnOrderedCoords (@currentFlds[3..4]);
       $keepMatchLine = 0;
       if ($local_direction == $match_direction){
-        if (($prevFlds[3] < $prevFlds[4]) && ($prevMidpoint < $currentMidpoint)) { 
-          $keepMatchLine = 1 if(abs(($currentFlds[0]-$prevFlds[1])-($currentFlds[3]-$prevFlds[4])) <= $max_gap_diff);
-        }elsif (($prevFlds[3] >= $prevFlds[4]) && ($prevMidpoint >= $currentMidpoint)) { 
-          $keepMatchLine = 1 if(abs(($currentFlds[0]-$prevFlds[1])-($prevFlds[4]-$currentFlds[3])) <= $max_gap_diff);
+        if (($prevFlds[3] < $prevFlds[4]) && ($prevMidpoint <= $currentMidpoint)) { 
+          $keepMatchLine = 1 if(abs(($currentFlds[0]-$prevFlds[1])-($currentFlds[3]-$prevFlds[4])) <= $max_gap_diff && $currentFlds[3] - $prevFlds[4] < $max_gap_allowed);
+        }elsif (($prevFlds[3] > $prevFlds[4]) && ($prevMidpoint >= $currentMidpoint)) { 
+          $keepMatchLine = 1 if(abs(($currentFlds[0]-$prevFlds[1])-($prevFlds[4]-$currentFlds[3])) <= $max_gap_diff && $prevFlds[4] - $currentFlds[3] < $max_gap_allowed);
         }
       }
     }
