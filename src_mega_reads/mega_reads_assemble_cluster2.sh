@@ -193,6 +193,12 @@ else
 echo $FLYE > FLYE_dir.txt
 fi
 
+#we need to increase MER for very large genomes 
+if [ $ESTIMATED_GENOME_SIZE -gt 10000000000 ];then
+MER=18
+B=12
+fi 
+
 log "Running mega-reads correction/assembly"
 log "Using mer size $MER for mapping, B=$B, d=$d"
 log "Estimated Genome Size $ESTIMATED_GENOME_SIZE"
