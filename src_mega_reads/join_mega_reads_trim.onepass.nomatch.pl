@@ -6,6 +6,10 @@
 #
 #this code produces joined mega-reads
 #
+use FindBin qw($Bin);
+use lib "$Bin/../lib/perl";
+use mummer;
+
 my $allowed_gaps=$ARGV[0];
 my $max_gap=$ARGV[1];
 my $min_len_output=500;
@@ -80,7 +84,7 @@ sub process_sorted_lines{
     my $seq_len=0;
     my $sum_chunk_size=0;
     my $num_chunks=0;
-    my $min_match=25;
+    my $min_match=21;
 
     for(my $i=0;$i<=$#args;$i++){
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
@@ -145,25 +149,50 @@ sub process_sorted_lines{
             }else{#overlapping
 		# we now allowing this globally $join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads
 		my $ind=-1;
-		my %ind=();
-                my $offset=-1;
+                #my $ind1=-1;
+		#my %ind=();
+                my $offset=-1;#for a very small overlap
                 $join_allowed=abs($join_allowed);
 
 		if($last_coord-$bgn > $min_match){ #it is possible to check for overlap
-		    for(my $j=0;$j<10;$j++){
-                    	my $ttt=index($outread,substr($seq,$j,$min_match),length($outread)-($last_coord-$bgn)*$fudge_factor);
-		        $ind{$ttt-$j}++ if($ttt>-1);
-		    }
-		    my $max_ind=-1;
-		    foreach my $ttt (keys %ind){
-			if($ind{$ttt}>$max_ind){$max_ind=$ind{$ttt};$ind=$ttt;}
-		    }
-                    if($ind>-1){
+                  my $slack=int(($last_coord-$bgn)*0.05)+10;
+                  my @args=@_;
+                  my $o=mummer::Options->new;
+                  $o->minmatch(17);
+                  $o->mincluster(17);
+                  $o->forward();
+                  my $overlap=$last_coord-$bgn+$slack;
+                  my $ind2=length($outread)-$overlap+$slack-1;#default implied overlap
+                  #print "DEBUG: overlap $overlap\n>outread\n$outread\n>seq\n$seq\n";
+                  #print "DEBUG:\n>o\n",substr($outread,length($outread)-$overlap),"\n>s\n",substr($seq,0,$overlap),"\n";
+                  my $a = mummer::align_sequences(substr($outread,length($outread)-$overlap),substr($seq,0,$overlap), $o);
+                  if(scalar(@$a)>0){
+                    #print $$a[0]{sA}," ",$$a[0]{eA}," ",$$a[0]{sB}," ",$$a[0]{eB}," $$a[0]{Errors} $$a[0]{SimErrors} $$a[0]{NonAlphas}\n";
+                    $seq=substr($seq,$$a[0]{sB}-1);
+                    $ind=length($outread)-$overlap+$$a[0]{sA}-1;
+                  }
+                  #this is deprecated, replaced by nucmer code above
+                  #for(my $j=0;$j<10;$j++){
+                  #  my $ttt=index($outread,substr($seq,$j,$min_match),length($outread)-($last_coord-$bgn)*$fudge_factor);
+                  #  $ind{$ttt-$j}++ if($ttt>-1);
+                  #}
+                  #my $max_ind=-1;
+                  #foreach my $ttt (keys %ind){
+                  #  if($ind{$ttt}>$max_ind){$max_ind=$ind{$ttt};$ind1=$ttt;}
+                  #}
+                  #print "DEBUG: ind $ind ind2 $ind2 overlsp $overlap\n";
+
+                  if($ind==-1){
+                    if($overlap<50){#small overlap, probably repeat, nucmer did not find it
+                      $ind=$ind2;
                       $join_allowed=1;
                     }else{
                       $join_allowed=0;
                     }
-		}elsif($last_coord-$bgn>=5 ||$join_allowed==1){#we allow the join or join was previously allowed for rejoining the broken read
+                  }else{
+                    $join_allowed=1;
+                  }
+                }elsif($last_coord-$bgn>=5 ||$join_allowed==1){#we allow the join or join was previously allowed for rejoining the broken read
                     $offset=$last_coord-$bgn+1;
                     $join_allowed=1;
 		}
@@ -173,6 +202,7 @@ sub process_sorted_lines{
 			$outread=substr($outread,0,length($outread)-$offset).$seq;
 		    }elsif($ind>-1){
 			$outread=substr($outread,0,$ind).$seq;
+                        #print "DEBUG: $outread\n";
 		    }else{
                         #we should never get here
                         die("error in joining $offset $ind $pb $name $join_allowed");

@@ -271,7 +271,7 @@ if [ ! -s $SUPERREADS ] || [ ! -s $KUNITIGS ];then
     awk 'BEGIN{n=0}{if($1~/^>/){}else{print ">sr"n"\n"$0;n+=2;}}' $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > superReadSequences.fasta.in.tmp && mv  superReadSequences.fasta.in.tmp  superReadSequences.fasta.in || error_exit "failed to create superReadSequences.fasta.in"
     create_k_unitigs_large_k -q 1 -c $(($KMER-1)) -t $NUM_THREADS -m $KMER -n $(($ESTIMATED_GENOME_SIZE*2)) -l $KMER -f `perl -e 'print 1/'$KMER'/1e5'` $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta  | grep --text -v '^>' | perl -ane '{$seq=$F[0]; $F[0]=~tr/ACTGactg/TGACtgac/;$revseq=reverse($F[0]); $h{($seq ge $revseq)?$seq:$revseq}=1;}END{$n=0;foreach $k(keys %h){print ">",$n++," length:",length($k),"\n$k\n"}}' > $KUNITIGS.tmp && mv $KUNITIGS.tmp $KUNITIGS || error_exit "failed to create k-unitigs for small k super reads";
     rm -rf work1_mr
-    echo "sr 500 50" >>  meanAndStdevByPrefix.pe.txt && createSuperReadsForDirectory.perl -minreadsinsuperread 1 -l $KMER -mean-and-stdev-by-prefix-file meanAndStdevByPrefix.pe.txt -kunitigsfile $KUNITIGS -t $NUM_THREADS -mikedebug work1_mr superReadSequences.fasta.in 1> super1.err 2>&1
+    echo "sr 500 50" >>  meanAndStdevByPrefix.pe.txt && createSuperReadsForDirectory.perl --stopAfter createFastaSuperReadSequences -minreadsinsuperread 1 -l $KMER -mean-and-stdev-by-prefix-file meanAndStdevByPrefix.pe.txt -kunitigsfile $KUNITIGS -t $NUM_THREADS -mikedebug work1_mr superReadSequences.fasta.in 1> super1.err 2>&1
     if [ ! -e "work1_mr/superReadSequences.fasta.all" ];then
 	error_exit "failed to create super-reads with reduced k-mer size, see super1.err"
     fi
