@@ -161,12 +161,23 @@ sub process_sorted_lines{
               #print "DEBUG: overlap $overlap slack $slack join_allowed $join_allowed\n";
               #print "DEBUG:\n>o\n",substr($outread,length($outread)-$overlap),"\n>s\n",substr($seq,0,$overlap),"\n";
               my $a = mummer::align_sequences(substr($outread,length($outread)-$overlap),substr($seq,0,$overlap), $o);
-              if(scalar(@$a)>0){
-                #print $$a[0]{sA}," ",$$a[0]{eA}," ",$$a[0]{sB}," ",$$a[0]{eB}," $$a[0]{Errors} $$a[0]{SimErrors} $$a[0]{NonAlphas}\n";
-                $seq=substr($seq,$$a[0]{sB}-1);
-                $ind=length($outread)-$overlap+$$a[0]{sA}-1;
+              my $min_dev=10000000;
+              my $min_ind=-1;
+              for(my $k=0;$k<scalar(@$a);$k++){
+                $ind=length($outread)-$overlap+$$a[$k]{sA}-$$a[$k]{sB};
+                if(abs($ind2-$ind)<$min_dev){
+                  $min_dev=abs($ind2-$ind);
+                  $min_ind=$k;
+                }
+                #print $$a[$k]{sA}," ",$$a[$k]{eA}," ",$$a[$k]{sB}," ",$$a[$k]{eB}," $$a[$k]{Errors} $$a[$k]{SimErrors} $$a[$k]{NonAlphas} $k $min_dev\n";
               }
-              #print "DEBUG ind $ind ind2 $ind2\n";
+              #now we found the alignment that is the closest to $ind2
+              if($min_ind>-1){
+                $seq=substr($seq,$$a[$min_ind]{sB}-1);
+                $ind=length($outread)-$overlap+$$a[$min_ind]{sA}-1;
+              }
+
+              #print "DEBUG ind $ind ind2 $ind2 min_dev $min_dev\n";
               if($ind==-1){
                 if($overlap<50 && $join_allowed){#small overlap, probably repeat, nucmer did not find it, join is allowed
                   $ind=$ind2;
