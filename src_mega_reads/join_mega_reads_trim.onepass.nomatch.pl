@@ -84,7 +84,7 @@ sub process_sorted_lines{
     my $seq_len=0;
     my $sum_chunk_size=0;
     my $num_chunks=0;
-    my $min_match=17;
+    my $min_match=25;
 
     for(my $i=0;$i<=$#args;$i++){
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
@@ -149,56 +149,44 @@ sub process_sorted_lines{
             }else{#overlapping
 # we now allowing this globally $join_allowed=1 if($last_mr eq $name); #allow rejoining broken megareads
               my $ind=-1;
+              my $offset=-1;
               $join_allowed=abs($join_allowed);
-              my $slack=int(($last_coord-$bgn)*0.05)+$min_match;
-              my @args=@_;
-              my $o=mummer::Options->new;
-              $o->minmatch($min_match);
-              $o->mincluster($min_match);
-              $o->forward();
+              my $slack=int(($last_coord-$bgn)*0.05)+10;
               my $overlap=$last_coord-$bgn+$slack;
               my $ind2=length($outread)-$overlap+$slack-1;#default implied overlap
-              #print "DEBUG: overlap $overlap slack $slack join_allowed $join_allowed\n";
-              #print "DEBUG:\n>o\n",substr($outread,length($outread)-$overlap),"\n>s\n",substr($seq,0,$overlap),"\n";
-              my $a = mummer::align_sequences(substr($outread,length($outread)-$overlap),substr($seq,0,$overlap), $o);
-              my $min_dev=10000000;
-              my $min_ind=-1;
-              for(my $k=0;$k<scalar(@$a);$k++){
-                $ind=length($outread)-$overlap+$$a[$k]{sA}-$$a[$k]{sB};
-                if(abs($ind2-$ind)<$min_dev){
-                  $min_dev=abs($ind2-$ind);
-                  $min_ind=$k;
-                }
-                #print $$a[$k]{sA}," ",$$a[$k]{eA}," ",$$a[$k]{sB}," ",$$a[$k]{eB}," $$a[$k]{Errors} $$a[$k]{SimErrors} $$a[$k]{NonAlphas} $k $min_dev\n";
-              }
-              #now we found the alignment that is the closest to $ind2
-              if($min_ind>-1){
-                $seq=substr($seq,$$a[$min_ind]{sB}-1);
-                $ind=length($outread)-$overlap+$$a[$min_ind]{sA}-1;
-              }
 
-              #print "DEBUG ind $ind ind2 $ind2 min_dev $min_dev\n";
-              if($ind==-1){
-                if($overlap<50 && $join_allowed){#small overlap, probably repeat, nucmer did not find it, join is allowed
+                if($last_coord-$bgn > $min_match){ #it is possible to check for overlap
+                  my $o=mummer::Options->new;
+                  $o->minmatch(19);
+                  $o->mincluster(19);
+                  $o->forward();
+#print "DEBUG: overlap $overlap slack $slack join_allowed $join_allowed\n";
+#print "DEBUG:\n>o\n",substr($outread,length($outread)-$overlap),"\n>s\n",substr($seq,0,$overlap),"\n";
+                  my $a = mummer::align_sequences(substr($outread,length($outread)-$overlap),substr($seq,0,$overlap), $o);
+                  my $min_dev=10000000;
+                  my $min_ind=-1;
+                  for(my $k=0;$k<scalar(@$a);$k++){
+                    $ind=length($outread)-$overlap+$$a[$k]{sA}-$$a[$k]{sB};
+                    if(abs($ind2-$ind)<$min_dev){
+                      $min_dev=abs($ind2-$ind);
+                      $min_ind=$k;
+                    }
+#print $$a[$k]{sA}," ",$$a[$k]{eA}," ",$$a[$k]{sB}," ",$$a[$k]{eB}," $$a[$k]{Errors} $$a[$k]{SimErrors} $$a[$k]{NonAlphas} $k $min_dev\n";
+                  }
+#now we found the alignment that is the closest to $ind2
+                  if($min_ind>-1){
+                    $seq=substr($seq,$$a[$min_ind]{sB}-1);
+                    $ind=length($outread)-$overlap+$$a[$min_ind]{sA}-1;
+                  }
+
+                }elsif($last_coord-$bgn>=5 ||$join_allowed==1){#we allow the join or join was previously allowed for rejoining the broken read
                   $ind=$ind2;
-                  $join_allowed=1;
-                }else{
-                  $join_allowed=0;
                 }
-              }else{
-                $join_allowed=1;
-              }
 
-              if($join_allowed==1){#here if allowed means that either the overlap was too short or match was found
-                if($ind>-1){
-                  $outread=substr($outread,0,$ind).$seq;
-                  #print "DEBUG: $outread\n";
-                }else{
-#we should never get here
-                  die("error in joining $offset $ind $pb $name $join_allowed");
-                }
+              if($ind>-1){
+                $outread=substr($outread,0,$ind).$seq;
               }else{
-                $outread.="N".$seq;
+                $outread.="N".$seq; 
               }
             }
         }
@@ -210,7 +198,7 @@ sub process_sorted_lines{
 }
 
 sub reverse_complement{
-    my $str=$_[0];
+  my $str=$_[0];
     $str =~ tr/acgtACGTNn/tgcaTGCANn/;
     $str = reverse ($str);
     return ($str);
