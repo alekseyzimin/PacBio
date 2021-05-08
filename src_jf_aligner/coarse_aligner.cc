@@ -92,7 +92,7 @@ void fetch_super_reads(const sequence_psa& psa, parse_sequence& parser,
     //skip if k-mer is low complexity 2-simple sequence repeat (e.g. either AAAAAAAAAAAAAAA or ATATATATATATATATA)
     if(is_ssr(parser.mer<0>().m,2)) continue;
     //if(parser.mer<0>().m.is_homopolymer()) continue;
-    //we take every other k-mer in the long read to reduce the number of calls to psa.find_pos_size if the k-mer size is 16 or smaller
+    //we take every other k-mer in the long read to reduce the number of calls to psa.find_pos_size if the k-mer size is 17 or smaller
     if(parser.mer<0>().len <= 17){
       flag=1-flag;
       if(flag==1){ 
