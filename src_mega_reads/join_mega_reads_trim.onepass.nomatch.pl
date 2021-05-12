@@ -84,7 +84,7 @@ sub process_sorted_lines{
     my $seq_len=0;
     my $sum_chunk_size=0;
     my $num_chunks=0;
-    my $min_match=25;
+    my $min_match=21;
 
     for(my $i=0;$i<=$#args;$i++){
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
@@ -154,14 +154,15 @@ sub process_sorted_lines{
               my $slack=int(($last_coord-$bgn)*0.05)+10;
               my $overlap=$last_coord-$bgn+$slack;
               my $ind2=length($outread)-$overlap+$slack-1;#default implied overlap
+#print "DEBUG: overlap $overlap slack $slack join_allowed $join_allowed\n";
+#print "DEBUG: $bgn,$end,$mbgn,$mend,$mlen,$pb\n>o\n",substr($outread,length($outread)-$overlap),"\n>s\n",substr($seq,0,$overlap),"\n";
 
                 if($last_coord-$bgn > $min_match){ #it is possible to check for overlap
                   my $o=mummer::Options->new;
                   $o->minmatch(19);
                   $o->mincluster(19);
                   $o->forward();
-#print "DEBUG: overlap $overlap slack $slack join_allowed $join_allowed\n";
-#print "DEBUG:\n>o\n",substr($outread,length($outread)-$overlap),"\n>s\n",substr($seq,0,$overlap),"\n";
+#print "DEBUG: looking for an alignment:\n";
                   my $a = mummer::align_sequences(substr($outread,length($outread)-$overlap),substr($seq,0,$overlap), $o);
                   my $min_dev=10000000;
                   my $min_ind=-1;
@@ -181,10 +182,13 @@ sub process_sorted_lines{
 
                 }elsif($last_coord-$bgn>=5 ||$join_allowed==1){#we allow the join or join was previously allowed for rejoining the broken read
                   $ind=$ind2;
+#print "DEBUG: catchall $ind2\n";
                 }
-
+#print "DEBUG: final ind $ind ind2 $ind2\n";
               if($ind>-1){
                 $outread=substr($outread,0,$ind).$seq;
+                my $ttt= $ind-200>0 ? $ind-200 : 0;               
+#print "DEBUG: join region $pb $ttt $ind ",substr($outread,$ttt),"\n";
               }else{
                 $outread.="N".$seq; 
               }
