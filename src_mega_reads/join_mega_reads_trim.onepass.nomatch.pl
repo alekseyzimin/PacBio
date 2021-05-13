@@ -84,7 +84,7 @@ sub process_sorted_lines{
     my $seq_len=0;
     my $sum_chunk_size=0;
     my $num_chunks=0;
-    my $min_match=21;
+    my $min_match=23;
 
     for(my $i=0;$i<=$#args;$i++){
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};

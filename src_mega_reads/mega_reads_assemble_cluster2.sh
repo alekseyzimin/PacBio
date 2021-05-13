@@ -481,8 +481,8 @@ if [ ! -e ${COORDS}.1$POSTFIX.unjoined.fa ] || [ ! -e ${COORDS}.1$POSTFIX.to_joi
             >($MYPATH/join_mega_reads_trim.onepass.nomatch.pl ${COORDS}.1$POSTFIX.allowed  $MAX_GAP 1>$COORDS.1$POSTFIX.fa.tmp.3 2>$COORDS.1$POSTFIX.to_join.fa.tmp.3) \
             >($MYPATH/join_mega_reads_trim.onepass.nomatch.pl ${COORDS}.1$POSTFIX.allowed  $MAX_GAP 1>$COORDS.1$POSTFIX.fa.tmp.4 2>$COORDS.1$POSTFIX.to_join.fa.tmp.4) && \
             cat $COORDS.1$POSTFIX.fa.tmp.{1,2,3,4} | awk '{if($1!~/^>/ && $1~/>/){split($1,a,">");print a[1];if(a[2]!="") print ">"a[2];}else{print $0}}' > $COORDS.1$POSTFIX.fa.tmp && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.unjoined.fa && \
-            cat $COORDS.1$POSTFIX.to_join.fa.tmp.{1,2,3,4} > $COORDS.1$POSTFIX.to_join.fa.tmp && mv $COORDS.1$POSTFIX.to_join.fa.tmp $COORDS.1$POSTFIX.to_join.fa 
-        rm $COORDS.1$POSTFIX.fa.tmp.{1,2,3,4} $COORDS.1$POSTFIX.to_join.fa.tmp.{1,2,3,4} || error_exit "mega-reads joining failed"
+            cat $COORDS.1$POSTFIX.to_join.fa.tmp.{1,2,3,4} > $COORDS.1$POSTFIX.to_join.fa.tmp && mv $COORDS.1$POSTFIX.to_join.fa.tmp $COORDS.1$POSTFIX.to_join.fa && \
+            rm $COORDS.1$POSTFIX.fa.tmp.{1,2,3,4} $COORDS.1$POSTFIX.to_join.fa.tmp.{1,2,3,4} || error_exit "mega-reads joining failed"
     else
 #use 1 process
 	$MYPATH/add_pb_seq.pl $LONGREADS1 < ${COORDS}.all.txt | $MYPATH/join_mega_reads_trim.onepass.nomatch.pl ${COORDS}.1$POSTFIX.allowed  $MAX_GAP 1>$COORDS.1$POSTFIX.fa.tmp 2>$COORDS.1$POSTFIX.to_join.fa.tmp && mv $COORDS.1$POSTFIX.to_join.fa.tmp $COORDS.1$POSTFIX.to_join.fa && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.unjoined.fa || error_exit "mega-reads joining failed"
