@@ -40,33 +40,36 @@ for($i=0;$i<=$#lines;$i++){
       $j=$#lines;
       next;
     }
-    my $sum_overhangs=0;
+    my $oh1=0;
+    my $oh2=0;
     my $success=0;
 #print "DEBUG considering $i $j\n$lines[$i]\n$lines[$j]\n\n";
     if($f1[3]<$f1[4]){
       if($f2[3]<$f2[4]){
 #forward forward merge ---->     ------>
         $gap=$f2[3]-$f1[4];
-        if($f1[1]>$f1[11]-$slack && $f2[0]<$slack && $gap<$maxgap && $gap>$mingap){
-          $sum_overhangs=$f1[11]-$f1[1]+$f2[0]-1;
+        $oh1=$f1[11]-$f1[1];
+        $oh2=$f2[0]-1;
+        if($oh1<$slack && $oh2<$slack && $gap<$maxgap && $gap>$mingap){
           $success=1;
           if($f1[-2] lt $f2[-2]){
-            print "$f1[-2] F $f2[-2] F $gap ";
+            print "$f1[-2] $oh1 F $f2[-2] $oh2 F $gap ";
           }else{
-            print "$f2[-2] R $f1[-2] R $gap ";
+            print "$f2[-2] $oh2 R $f1[-2] $oh1 R $gap ";
           }
 #last;
         }
       }else{
 #forward reverse merge ---->     <------
         $gap=$f2[4]-$f1[4];
-        if($f1[1]>$f1[11]-$slack && $f2[1]>$f2[11]-$slack && $gap<$maxgap  && $gap>$mingap){
-          $sum_overhangs=$f1[11]-$f1[1]+$f2[11]-$f2[1];
+        $oh1=$f1[11]-$f1[1];
+        $oh2=$f2[11]-$f2[1];
+        if($oh1<$slack && $oh2<$slack && $gap<$maxgap && $gap>$mingap){
           $success=1;
           if($f1[-2] lt $f2[-2]){
-            print "$f1[-2] F $f2[-2] R $gap ";
+            print "$f1[-2] $oh1 F $f2[-2] $oh2 R $gap ";
           }else{
-            print "$f2[-2] F $f1[-2] R $gap ";
+            print "$f2[-2] $oh2 F $f1[-2] $oh1 R $gap ";
           }
 #last;
         }
@@ -75,26 +78,28 @@ for($i=0;$i<=$#lines;$i++){
       if($f2[3]<$f2[4]){
 #reverse forward merge <-----     ------>
         $gap=$f2[3]-$f1[3];
-        if($f1[0]<$slack && $f2[0]<$slack && $gap<$maxgap  && $gap>$mingap){
-          $sum_overhangs=$f1[0]-1+$f2[0]-1;
+        $oh1=$f1[0]-1;
+        $oh2=$f2[0]-1;
+        if($oh1<$slack && $oh2<$slack && $gap<$maxgap && $gap>$mingap){
           $success=1;
           if($f1[-2] lt $f2[-2]){
-            print "$f1[-2] R $f2[-2] F $gap ";
+            print "$f1[-2] $oh1 R $f2[-2] $oh2 F $gap ";
           }else{
-            print "$f2[-2] R $f1[-2] F $gap ";
+            print "$f2[-2] $oh2 R $f1[-2] $oh1 F $gap ";
           }
 #last;
         }
       }else{
 #reverse reverse merge <-----     <------
         $gap=$f2[4]-$f1[3];
-        if($f1[0]<$slack && $f2[1]>$f2[11]-$slack && $gap<$maxgap  && $gap>$mingap){
-          $sum_overhangs=$f1[0]-1+$f2[11]-$f2[1];
+        $oh1=$f1[0]-1;
+        $oh2=$f2[11]-$f2[1];
+        if($oh1<$slack && $oh2<$slack && $gap<$maxgap && $gap>$mingap){
           $success=1;
           if($f1[-2] lt $f2[-2]){
-            print "$f1[-2] R $f2[-2] R $gap ";
+            print "$f1[-2] $oh1 R $f2[-2] $oh1 R $gap ";
           }else{
-            print "$f2[-2] F $f1[-2] F $gap ";
+            print "$f2[-2] $oh2 F $f1[-2] $oh2 F $gap ";
           }
             
 #last;

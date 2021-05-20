@@ -11,7 +11,7 @@ my %ctg_used;
 #read in the graph
 while($line=<STDIN>){
     chomp($line);
-    my($ctg1,$dir1,$ctg2,$dir2,$gap)=split(/\s+/,$line);
+    my($ctg1,$oh1,$dir1,$ctg2,$oh2,$dir2,$gap)=split(/\s+/,$line);
     next if($gap>$max_gap);
     if($dir1 eq "F"){
         $edge_fwd{$ctg1}= defined($edge_fwd{$ctg1}) ? -1 : "$ctg2 $dir2 $gap";	
