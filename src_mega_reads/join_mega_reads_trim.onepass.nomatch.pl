@@ -180,7 +180,7 @@ sub process_sorted_lines{
                     $ind=length($outread)-$overlap+$$a[$min_ind]{sA}-1;
                   }
 
-                }elsif($last_coord-$bgn>=5 ||$join_allowed==1){#we allow the join or join was previously allowed for rejoining the broken read
+                }elsif($join_allowed==1){#we allow the join or join was previously allowed for rejoining the broken read
                   $ind=$ind2;
 #print "DEBUG: catchall $ind2\n";
                 }
