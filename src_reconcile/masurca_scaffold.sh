@@ -66,7 +66,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage: merge_contigs.sh -r <sequences to be merged> -q <sequence to merge with> -t <number of threads> -m <minimum matching length, default:1000> -i <matching identity, default:98>"
+            echo "Usage: masurca_scaffold.sh -r <sequences to be merged> -q <sequence to merge with> -t <number of threads> -m <minimum matching length, default:5000> -o <maximum overhang, default:1000>"
             exit 0
             ;;
         *)
@@ -90,14 +90,13 @@ QRYN=`basename $QRY`
 DELTAFILE=$REFN.$QRYN
 
 #minimap
-log "Aligning the scaffolding sequences to the contigs"
 if [ ! -e scaffold_align.success ];then
-$MYPATH/../FLye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REF $QRY 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
+log "Aligning the scaffolding sequences to the contigs"
+$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REF $QRY 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
 fi
 
-#filter
-log "Filtering alignments"
 if [ ! -e scaffold_filter.success ];then
+log "Filtering alignments"
 awk '{if($4-$3>int("'$MIN_MATCH'") && ($8<int("'$OVERHANG'") || $7-$9<int("'$OVERHANG'")) && $12>=60) print $0}' $REFN.$QRYN.paf | \
 sort -k1,1 -k3,3n -S 10% | \
 awk 'BEGIN{r="";c=""}{if($1!=r){print $0" "$1;r=$1;c=$6}else if($6!=c){print $0" "$1;c=$6}}' | \
@@ -106,15 +105,15 @@ awk '{if($5=="+"){print $8+1" "$9+1" | "$3+1" "$4+1" | "$11" "$4-$3" | 100 | "$7
 touch scaffold_filter.success && rm -f  scaffold_links.success 
 fi
 
-log "Creating scaffold links"
 if [ ! -e scaffold_links.success ];then
+log "Creating scaffold links"
 cat  $REFN.$QRYN.coords |$MYPATH/extract_merges.pl <(ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY) | \
 awk '{print $7" "$8" "$2" "$5" "$2+$5" "$1" "$3" "$4" "$6}' | sort -k6,9 -k5,5n -S 10% | uniq -f 5 | awk '{print $6" "$3" "$7" "$8" "$4" "$9" "$1" "$2}'  > $REFN.$QRYN.links.txt.tmp && mv  $REFN.$QRYN.links.txt.tmp  $REFN.$QRYN.links.txt || error_exit "creating scaffold links failed"
 touch scaffold_links.success && rm -f  scaffold_graph.success
 fi
 
-log "Creating scaffold graph and building scaffolds"
 if [ ! -e scaffold_graph.success ];then
+log "Creating scaffold graph and building scaffolds"
 cat $REFN.$QRYN.links.txt | $MYPATH/merge_contigs.pl | $MYPATH/create_merged_sequences.pl $REF  $REFN.$QRYN.links.txt > $REFN.$QRYN.scaffolds.fa.tmp && mv $REFN.$QRYN.scaffolds.fa.tmp $REFN.$QRYN.scaffolds.fa || error_exit "walking the scaffold graph failed"
 fi
 
