@@ -114,7 +114,10 @@ fi
 
 if [ ! -e scaffold_graph.success ];then
 log "Creating scaffold graph and building scaffolds"
-cat $REFN.$QRYN.links.txt | $MYPATH/merge_contigs.pl | $MYPATH/create_merged_sequences.pl $REF  $REFN.$QRYN.links.txt > $REFN.$QRYN.scaffolds.fa.tmp && mv $REFN.$QRYN.scaffolds.fa.tmp $REFN.$QRYN.scaffolds.fa || error_exit "walking the scaffold graph failed"
+$MYPATH/merge_contigs.pl <$REFN.$QRYN.links.txt 2>$REFN.$QRYN.bubbles.txt | \
+$MYPATH/create_merged_sequences.pl $REF  $REFN.$QRYN.links.txt | \
+ufasta extract -v -f $REFN.$QRYN.bubbles.txt > $REFN.$QRYN.scaffolds.fa.tmp && \
+mv $REFN.$QRYN.scaffolds.fa.tmp $REFN.$QRYN.scaffolds.fa || error_exit "walking the scaffold graph failed"
 fi
 
 log "Output sequences in $REFN.$QRYN.scaffolds.fa"
