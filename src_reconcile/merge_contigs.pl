@@ -8,6 +8,22 @@ my %edge_fwd;
 my %edge_rev;
 my %ctg_used;
 my @links;
+my $contigs=$ARGV[0];# we need contig sizes for bubble popping
+
+open(FILE,$ARGV[0]);
+my $len=-1;
+while($line=<FILE>){
+  chomp($line);
+  if($line=~/^>/){
+    my @f=split(/\s+/,$line);
+    $len{$ctg}=$len if($len>-1);
+    $ctg=substr($f[0],1);
+    $len=0;
+  }else{
+    $len+=length($line);
+  }
+}
+$len{$ctg}=$len if($len>-1);
 
 #read in the graph
 while($line=<STDIN>){
@@ -136,10 +152,17 @@ foreach $c(keys %edge_fwd_b){
 foreach $k(keys %bubble){
   my @f=split(/\s+/,$bubble{$k});
   if($#f>0){
+    my $bctg;
 #pop the bubble
-    print STDERR "$f[1]\n";
+    if($len{$f[0]}>$len{$f[1]}){
+      print STDERR "$f[1]\n";
+      $bctg=$f[0];
+    }else{
+      print STDERR "$f[0]\n";
+      $bctg=$f[1];
+    }
     #print "bubble $k $bubble{$k}\n";
-    my($ctg1,$dir1,$gap1,$ctg2,$dir2,$gap2)=split(/\s+/,$bubbleinfo{$f[0]});
+    my($ctg1,$dir1,$gap1,$ctg2,$dir2,$gap2)=split(/\s+/,$bubbleinfo{$bctg});
 #now we record the four additional edges for each bubble
     #print "$ctg1,$dir1,$gap1,$ctg2,$dir2,$gap2\n";
     if($ctg1 =~ /^path/){
@@ -164,19 +187,19 @@ foreach $k(keys %bubble){
         $dir2=($fff[-1] eq "F") ? "R" : "F";
       }
     }
-    #print "recover $f[0] $ctg1,$dir1,$gap1,$ctg2,$dir2,$gap2\n";
-    $edge_rev{$f[0]}="$ctg1 $dir1 $gap1 ";
-    $edge_fwd{$f[0]}="$ctg2 $dir2 $gap2 ";
+    #print "recover $bctg $ctg1,$dir1,$gap1,$ctg2,$dir2,$gap2\n";
+    $edge_rev{$bctg}="$ctg1 $dir1 $gap1 ";
+    $edge_fwd{$bctg}="$ctg2 $dir2 $gap2 ";
 #reciprocals
     if($dir2 eq "F"){
-      $edge_rev{$ctg2}="$f[0] F $gap2 ";
+      $edge_rev{$ctg2}="$bctg F $gap2 ";
     }else{
-      $edge_fwd{$ctg2}="$f[0] R $gap2 ";
+      $edge_fwd{$ctg2}="$bctg R $gap2 ";
     }
     if($dir1 eq "F"){
-      $edge_fwd{$ctg1}="$f[0] F $gap1 ";
+      $edge_fwd{$ctg1}="$bctg F $gap1 ";
     }else{
-      $edge_rev{$ctg1}="$f[0] R $gap1 ";
+      $edge_rev{$ctg1}="$bctg R $gap1 ";
     }
   }
 }
