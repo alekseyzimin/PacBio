@@ -851,9 +851,9 @@ cgwPreserveConsensus=1" > runCA.spec
 	  perl -ane '{($scf1)=split(/\./,$F[-1]);($scf2)=split(/\./,$F[-2]); print if($scf1 eq $scf2);}' scf_join.coords | \
 	  $MYPATH/extract_merges_mega-reads.pl join_consensus.fasta  valid_join_pairs.txt > merges.txt && \
 	  perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} if(not(defined($h{$merge}))|| $h{$merge} > $F[1]+$F[4]){$hl{$merge}=join(" ",@F);$h{$merge}=$F[1]+$F[4];}}END{foreach $k(keys %hl){print $hl{$k},"\n"}}' merges.txt > merges.best.txt && \
-	  cat <($MYPATH/ufasta extract -v -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) genome.scf.split.fa) <($MYPATH/merge_mega-reads.pl < merges.best.txt | $MYPATH/create_merged_mega-reads.pl to_join.scf.fa  merges.best.txt) | recover_scaffolds.pl > genome.scf.joined.fa.tmp && mv genome.scf.joined.fa.tmp genome.scf.fasta && touch gapclose.success && \
-          $MYPATH/masurca_scaffold.sh -r genome.scf.fasta -q $LONGREADS -t $NUM_THREADS && \
-          mv genome.scf.fasta genome.scf.fasta.bak && mv genome.scf.fasta.scaffolds.fa genome.scf.fasta
+	  cat <($MYPATH/ufasta extract -v -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) genome.scf.split.fa) <($MYPATH/merge_mega-reads.pl < merges.best.txt | $MYPATH/create_merged_mega-reads.pl to_join.scf.fa  merges.best.txt) | recover_scaffolds.pl > genome.scf.joined.fa.tmp && mv genome.scf.joined.fa.tmp genome.scf.joined.fa && \
+          $MYPATH/masurca_scaffold.sh -r genome.scf.joined.fa -q $LONGREADS -t $NUM_THREADS && \
+          mv genome.scf.joined.fa.scaffolds.fa genome.scf.fasta && touch gapclose.success
 	)
     fi
 fi #if flye
