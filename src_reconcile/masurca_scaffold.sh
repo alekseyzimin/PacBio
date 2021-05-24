@@ -120,5 +120,5 @@ ufasta extract -v -f $REFN.$QRYN.bubbles.txt > $REFN.$QRYN.scaffolds.fa.tmp && \
 mv $REFN.$QRYN.scaffolds.fa.tmp $REFN.$QRYN.scaffolds.fa || error_exit "walking the scaffold graph failed"
 fi
 
-log "Output sequences in $REFN.$QRYN.scaffolds.fa"
-ufasta n50 -a $REFN.$QRYN.scaffolds.fa
+log "Output scaffold equences in $REFN.scaffolds.fa"
+ufasta n50 -a $REFN.scaffolds.fa

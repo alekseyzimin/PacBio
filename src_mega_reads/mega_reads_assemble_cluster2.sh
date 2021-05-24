@@ -562,11 +562,11 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
 		echo "if [ ! -e consensus.\$TASK_ID.success ];then" >> ./do_consensus.sh
                 if [ $USE_GRID -eq 1 ]; then
 		  echo "$MYPATH/../CA8/Linux-amd64/bin/blasr to_blasr.\$TASK_ID.fa   ref.\$TASK_ID.fa  -minMatch 15 -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \\" >> ./do_consensus.sh && \
-                  echo "sort -k6 -S2% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j $NUM_THREADS -t 0 -c 1 /dev/stdin  2>pbdagcon.err | awk -F 'N' '{if(\$1 == \"\") print \"ACGT\"; else print \$1}' > join_consensus.\$TASK_ID.fasta && \\" >> ./do_consensus.sh
+                  echo "sort -k6 -S5% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j $NUM_THREADS -t 0 -c 1 /dev/stdin  2>pbdagcon.err | awk -F 'N' '{if(\$1 == \"\") print \"ACGT\"; else print \$1}' > join_consensus.\$TASK_ID.fasta && \\" >> ./do_consensus.sh
                   echo "$MYPATH/nucmer --delta /dev/stdout --batch 10000 -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.\$TASK_ID.fa join_consensus.\$TASK_ID.fasta 2>/dev/null | \\" >> ./do_consensus.sh
                 else
                   echo "$MYPATH/../CA8/Linux-amd64/bin/blasr to_blasr.\$TASK_ID.fa   ref.\$TASK_ID.fa  -minMatch 15 -nproc 16 -bestn 10 -m 5 2>blasr.err | \\" >> ./do_consensus.sh 
-                  echo "sort -k6 -S2% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j 8 -t 0 -c 1 /dev/stdin  2>pbdagcon.err | awk -F 'N' '{if(\$1 == \"\") print \"ACGT\"; else print \$1}' > join_consensus.\$TASK_ID.fasta && \\" >> ./do_consensus.sh
+                  echo "sort -k6 -S5% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j 8 -t 0 -c 1 /dev/stdin  2>pbdagcon.err | awk -F 'N' '{if(\$1 == \"\") print \"ACGT\"; else print \$1}' > join_consensus.\$TASK_ID.fasta && \\" >> ./do_consensus.sh
                   echo "$MYPATH/nucmer --delta /dev/stdout --batch 10000 -l 17 -c 51 -L 200 -t 16 to_join.\$TASK_ID.fa join_consensus.\$TASK_ID.fasta 2>/dev/null | \\" >> ./do_consensus.sh
                 fi
                 echo "$MYPATH/filter_delta_file_for_qrys.pl qrys.txt | \\" >> ./do_consensus.sh && \
@@ -649,7 +649,8 @@ fi
 if [ $FLYE_ASSEMBLY -gt 0 ];then
     if [ ! -s "$FLYE/assembly.fasta" ];then
         log "Running assembly with Flye"
-	$CA_PATH/flye -t $NUM_THREADS --nano-corr $COORDS.1$POSTFIX.fa -g $ESTIMATED_GENOME_SIZE --kmer-size 21 -m 2500 -o $FLYE -i 0 1>flye.log 2>&1
+	$CA_PATH/flye -t $NUM_THREADS --nano-corr $COORDS.1$POSTFIX.fa -g $ESTIMATED_GENOME_SIZE --kmer-size 21 -m 2500 -o $FLYE -i 0 1>flye.log 2>&1 && \
+        (cd $FLYE && $MYPATH/masurca_scaffold.sh -r $FLYE/assembly.fasta -q $LONGREADS -t $NUM_THREADS && mv assembly.fasta.scaffolds.fa assembly.scaffolds.fasta)
     fi
 else
     if [ ! -s $COORDS.1.frg ] || [ ! -s $COORDS.1.mates.frg ] || [ -e .rerun ];then
@@ -822,24 +823,24 @@ cgwPreserveConsensus=1" > runCA.spec
 	    $MYPATH/ufasta extract -f <(awk '{print $1;}' read_scaffold.txt) ../../$LONGREADS1 > qrys.all.fa && \
 	    $MYPATH/ufasta extract -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > refs.fa && \
 	    perl -ane '{
-      $h{$F[0]}=$F[1];
-      }END{
-      $flag=0;
-      open(FILE,"refs.fa");
-      while($line=<FILE>){
-        if($line=~/^>/){
-          chomp($line);
-          @f=split(/\s+/,$line);
-          if(defined($h{substr($f[0],1)})){
-            $line=<FILE>;
-            chomp($line);
-            $hseq{$h{substr($f[0],1)}}=$line;
-          }
-        }
-      }
-      foreach $name(keys %hseq){
-      print ">$name\n$hseq{$name}\n";
-      }}' read_scaffold.txt > refs.renamed.fa && \
+              $h{$F[0]}=$F[1];
+            }END{
+              $flag=0;
+              open(FILE,"refs.fa");
+              while($line=<FILE>){
+                if($line=~/^>/){
+                  chomp($line);
+                  @f=split(/\s+/,$line);
+                  if(defined($h{substr($f[0],1)})){
+                    $line=<FILE>;
+                    chomp($line);
+                    $hseq{$h{substr($f[0],1)}}=$line;
+                  }
+                }
+              }
+          foreach $name(keys %hseq){
+            print ">$name\n$hseq{$name}\n";
+          }}' read_scaffold.txt > refs.renamed.fa && \
 	  $MYPATH/ufasta extract -v -f <(awk '{if($2 != ps) print $1; ps=$2}' read_scaffold.txt) qrys.all.fa > qrys.fa && \
 	  $MYPATH/../CA8/Linux-amd64/bin/blasr qrys.fa  refs.renamed.fa  -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \
 	  sort -k6 -S10% | \
@@ -850,7 +851,11 @@ cgwPreserveConsensus=1" > runCA.spec
 	  perl -ane '{($scf1)=split(/\./,$F[-1]);($scf2)=split(/\./,$F[-2]); print if($scf1 eq $scf2);}' scf_join.coords | \
 	  $MYPATH/extract_merges_mega-reads.pl join_consensus.fasta  valid_join_pairs.txt > merges.txt && \
 	  perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} if(not(defined($h{$merge}))|| $h{$merge} > $F[1]+$F[4]){$hl{$merge}=join(" ",@F);$h{$merge}=$F[1]+$F[4];}}END{foreach $k(keys %hl){print $hl{$k},"\n"}}' merges.txt > merges.best.txt && \
-	  cat <($MYPATH/ufasta extract -v -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) genome.scf.split.fa) <($MYPATH/merge_mega-reads.pl < merges.best.txt | $MYPATH/create_merged_mega-reads.pl to_join.scf.fa  merges.best.txt) | recover_scaffolds.pl > genome.scf.joined.fa.tmp && mv genome.scf.joined.fa.tmp genome.scf.fasta && touch gapclose.success 
+	  cat <($MYPATH/ufasta extract -v -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) genome.scf.split.fa) <($MYPATH/merge_mega-reads.pl < merges.best.txt | $MYPATH/create_merged_mega-reads.pl to_join.scf.fa  merges.best.txt) | recover_scaffolds.pl > genome.scf.joined.fa.tmp && mv genome.scf.joined.fa.tmp genome.scf.fasta && touch gapclose.success && \
+          $MYPATH/masurca_scaffold.sh -r genome.scf.fasta -q $LONGREADS -t $NUM_THREADS && \
+          mv genome.scf.fasta genome.scf.fasta.bak && mv genome.scf.fasta.scaffolds.fa genome.scf.fasta
 	)
     fi
 fi #if flye
+#scaffolding with the long reads
+

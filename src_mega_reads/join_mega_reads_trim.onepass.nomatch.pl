@@ -84,7 +84,7 @@ sub process_sorted_lines{
     my $seq_len=0;
     my $sum_chunk_size=0;
     my $num_chunks=0;
-    my $min_match=26; #best empirical value
+    my $min_match=31; #best empirical value
 
     for(my $i=0;$i<=$#args;$i++){
         ($bgn,$end,$mbgn,$mend,$mlen,$pb,$mseq,$name)=@{$args[$i]};
@@ -180,7 +180,7 @@ sub process_sorted_lines{
                     $ind=length($outread)-$overlap+$$a[$min_ind]{sA}-1;
                   }
 
-                }elsif($join_allowed==1){#we allow the join or join was previously allowed for rejoining the broken read
+                }else{#we allow the join or join was previously allowed for rejoining the broken read
                   $ind=$ind2;
 #print "DEBUG: catchall $ind2\n";
                 }
