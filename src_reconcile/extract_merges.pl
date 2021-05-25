@@ -19,7 +19,7 @@ while($line=<FILE>){
 my $prevline="";
 my $slack=1000;
 my $maxgap=100000;
-my $mingap=-10000;
+my $mingap=-5000;
 while($line=<STDIN>){
   chomp($line);
   $line=~s/^\s+//;

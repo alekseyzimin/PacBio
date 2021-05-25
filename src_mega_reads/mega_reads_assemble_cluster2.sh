@@ -649,9 +649,9 @@ fi
 if [ $FLYE_ASSEMBLY -gt 0 ];then
     if [ ! -s "$FLYE/assembly.fasta" ];then
         log "Running assembly with Flye"
-	$CA_PATH/flye -t $NUM_THREADS --nano-corr $COORDS.1$POSTFIX.fa -g $ESTIMATED_GENOME_SIZE --kmer-size 21 -m 2500 -o $FLYE -i 0 1>flye.log 2>&1 && \
-        (cd $FLYE && $MYPATH/masurca_scaffold.sh -r $FLYE/assembly.fasta -q $LONGREADS -t $NUM_THREADS && mv assembly.fasta.scaffolds.fa assembly.scaffolds.fasta)
+	$CA_PATH/flye -t $NUM_THREADS --nano-corr $COORDS.1$POSTFIX.fa -g $ESTIMATED_GENOME_SIZE --kmer-size 21 -m 2500 -o $FLYE -i 0 1>flye.log 2>&1
     fi
+    (cd $FLYE && $MYPATH/masurca_scaffold.sh -r assembly.fasta -q $LONGREADS -t $NUM_THREADS && mv assembly.fasta.scaffolds.fa assembly.scaffolds.fasta);
 else
     if [ ! -s $COORDS.1.frg ] || [ ! -s $COORDS.1.mates.frg ] || [ -e .rerun ];then
 	log "Generating assembly input files"
