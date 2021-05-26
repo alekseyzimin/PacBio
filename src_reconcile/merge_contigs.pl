@@ -31,6 +31,7 @@ $len{$ctg}=$len if($len>-1);
 while($line=<STDIN>){
     chomp($line);
     my($ctg1,$oh1,$dir1,$ctg2,$oh2,$dir2,$gap)=split(/\s+/,$line);
+    #next if($gap<-10000 || $gap> 10000);
     push(@links, $line);#save the links
 }
 
@@ -39,11 +40,11 @@ walk_graph();
 #pop bubbles
 pop_bubbles();
 #re-walk the graph
-do{
-  $num_bubbles=keys %bubbleinfo;
+while($num_bubbles < keys %bubbleinfo){
   walk_graph();
   pop_bubbles();
-}while($num_bubbles < keys %bubbleinfo);
+  $num_bubbles=keys %bubbleinfo;
+}
 
 #output the final paths
 foreach $p(@paths){
