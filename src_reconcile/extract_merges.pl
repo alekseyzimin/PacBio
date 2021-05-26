@@ -18,7 +18,7 @@ while($line=<FILE>){
 #first we read in all the matches into an array
 my $prevline="";
 my $slack=1000;
-my $maxgap=100000;
+my $maxgap=10000;
 my $mingap=-10000;
 while($line=<STDIN>){
   chomp($line);
