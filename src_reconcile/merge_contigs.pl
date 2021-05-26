@@ -3,7 +3,6 @@
 #c1 dir c2 dir gap
 #and then produces strings of merged contigs
 #
-my $max_gap=100000;
 my $num_bubbles=0;
 my %edge_fwd=();
 my %edge_rev=();
@@ -32,7 +31,6 @@ $len{$ctg}=$len if($len>-1);
 while($line=<STDIN>){
     chomp($line);
     my($ctg1,$oh1,$dir1,$ctg2,$oh2,$dir2,$gap)=split(/\s+/,$line);
-    next if($gap>$max_gap);
     push(@links, $line);#save the links
 }
 
