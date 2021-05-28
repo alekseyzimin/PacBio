@@ -42,48 +42,63 @@ while($line=<FILE>){
 #now read in the merges file
 while($line=<STDIN>){
     chomp($line);
+    my $outlen=0,$sumlen=0;
     #print "DEBUG $line\n";
     my @f=split(/\s+/,$line);
     print ">",join("_",@f),"\n";
-    #print STDERR ">",join("_",@f),"\n";
 #output first contig
     $oh2=$oh1{"$f[0]$f[1]$f[3]$f[4]"};
-    #print "$f[0] $oh2 $f[1] ";
     $len=length($seq{$f[0]});
+    $sumlen+=$len;
+    #print "DEBUG $f[0] $len $oh2\n";
     if($f[1] eq "R"){
 	print substr(reverse_complement($seq{$f[0]}),0,$len-$oh2);
+        #print "\nDEBUG ",length(substr(reverse_complement($seq{$f[0]}),0,$len-$oh2)),"\n";
+        $outlen+=length(substr(reverse_complement($seq{$f[0]}),0,$len-$oh2));
     }else{
 	print substr($seq{$f[0]},0,$len-$oh2);
+        #print "\nDEBUG ",length(substr($seq{$f[0]},0,$len-$oh2)),"\n";
+        $outlen+=length(substr($seq{$f[0]},0,$len-$oh2));
     }
     $output{$f[0]}=1;
 #now the same for the rest we first output the previous gap (or trim) and then the contig
     for($i=3;$i<$#f;$i+=3){
-    #print "\nDEBUG $i\n";
       $oh1=$oh2{"$f[$i-3]$f[$i-2]$f[$i]$f[$i+1]"};
+      $oh1=0 if($oh1<0);
       $oh2=0; 
       $oh2=$oh1{"$f[$i]$f[$i+1]$f[$i+3]$f[$i+4]"} if($i+4<=$#f);
       $len=length($seq{$f[$i]});
+      $sumlen+=$len;
+      #print "\nDEBUG $i $f[$i] ",$f[$i-1]," $len $oh1 $oh2\n";
 	if($f[$i-1]>0){
             die("gap $f[$i-3]$f[$i-2]$f[$i]$f[$i+1] not found") if(not(defined($gseq{"$f[$i-3]$f[$i-2]$f[$i]$f[$i+1]"})));
             die("sequence $f[$i] not found") if(not(defined($seq{$f[$i]})));
-            #print $gseq{"$f[$i-3]$f[$i-2]$f[$i]$f[$i+1]"};
-            #print "gap $oh1 $f[$i] $oh2 $f[$i+1] ";
+            print $gseq{"$f[$i-3]$f[$i-2]$f[$i]$f[$i+1]"};
+            #print "\nDEBUG gap len ",length($gseq{"$f[$i-3]$f[$i-2]$f[$i]$f[$i+1]"})," $oh1 $f[$i] $oh2 $f[$i+1]\n";
 	    if($f[$i+1] eq "R"){
 		print substr(reverse_complement($seq{$f[$i]}),$oh1,$len-$oh1-$oh2);
+                #print "\nDEBUG ",length(substr(reverse_complement($seq{$f[$i]}),$oh1,$len-$oh1-$oh2)),"\n";
+                $outlen+=length(substr(reverse_complement($seq{$f[$i]}),$oh1,$len-$oh1-$oh2));
 	    }else{
 		print substr($seq{$f[$i]},$oh1,$len-$oh1-$oh2);
+                #print "\nDEBUG ",length(substr($seq{$f[$i]},$oh1,$len-$oh1-$oh2)),"\n";
+                $outlen+=length(substr($seq{$f[$i]},$oh1,$len-$oh1-$oh2));
 	    }
 	}else{#negative gap
-            #print "nogap $oh1 $f[$i] $oh2 $f[$i+1] ";
+            #print "\nDEBUG negative gap len ",$f[$i-1]," $oh1 $f[$i] $oh2 $f[$i+1]\n";
 	    if($f[$i+1] eq "R"){
 		print substr(substr(reverse_complement($seq{$f[$i]}),$oh1,$len-$oh1-$oh2),-$f[$i-1]);
+                #print "\nDEBUG ",length(substr(substr(reverse_complement($seq{$f[$i]}),$oh1,$len-$oh1-$oh2),-$f[$i-1])),"\n";
+                $outlen+=length(substr(substr(reverse_complement($seq{$f[$i]}),$oh1,$len-$oh1-$oh2),-$f[$i-1]));
 	    }else{
-              #print "DEBUG negative gap $i $f[$i-1]\n";
 		print substr(substr($seq{$f[$i]},$oh1,$len-$oh1-$oh2),-$f[$i-1]);
+                #print "\nDEBUG ",length(substr(substr($seq{$f[$i]},$oh1,$len-$oh1-$oh2),-$f[$i-1])),"\n";
+                $outlen+=length(substr(substr($seq{$f[$i]},$oh1,$len-$oh1-$oh2),-$f[$i-1]));
 	    }
 	}
 	$output{$f[$i]}=1;
     }
+    #print "DEBUG output $outlen $sumlen\n";
     print "\n";
 }
 
