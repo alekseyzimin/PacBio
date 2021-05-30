@@ -109,15 +109,15 @@ if [ ! -e scaffold_links.success ];then
 log "Creating scaffold links"
 cat  $REFN.$QRYN.coords |$MYPATH/extract_merges.pl <(ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY) | \
 awk '{print $7" "$8" "$2" "$5" "$2+$5" "$1" "$3" "$4" "$6}' | sort -k6,9 -k5,5n -S 10% | uniq -f 5 | awk '{print $6" "$3" "$7" "$8" "$4" "$9" "$1" "$2}'  > $REFN.$QRYN.links.txt.tmp && mv  $REFN.$QRYN.links.txt.tmp  $REFN.$QRYN.links.txt || error_exit "creating scaffold links failed"
-touch scaffold_links.success && rm -f  scaffold_graph.success
+touch scaffold_links.success 
 fi
 
-if [ ! -e scaffold_graph.success ];then
+if [ -e scaffold_links.success ];then
 log "Creating scaffold graph and building scaffolds"
 $MYPATH/merge_contigs.pl $REF <$REFN.$QRYN.links.txt 2>$REFN.$QRYN.bubbles.txt | \
 $MYPATH/create_merged_sequences.pl $REF  $REFN.$QRYN.links.txt | \
 ufasta extract -v -f $REFN.$QRYN.bubbles.txt > $REFN.$QRYN.scaffolds.fa.tmp && \
-mv $REFN.$QRYN.scaffolds.fa.tmp $REFN.scaffolds.fa && touch scaffold_graph.success || error_exit "walking the scaffold graph failed"
+mv $REFN.$QRYN.scaffolds.fa.tmp $REFN.scaffolds.fa || error_exit "walking the scaffold graph failed"
 fi
 
 log "Output scaffold sequences in $REFN.scaffolds.fa"
