@@ -30,16 +30,17 @@ while($line=<STDIN>){
 #now we go through the array and collect the possible merges
 #
 #
-for($i=0;$i<=$#lines;$i++){
+for($i=0;$i<$#lines;$i++){
   @f1=split(/\s+/,$lines[$i]);
-  for($j=$i+1;$j<=$#lines;$j++){ 
+  #for($j=$i+1;$j<=$#lines;$j++){ 
+  $j=$i+1;
 #print "DEBUG $i $j\n$lines[$i]\n$lines[$j]\n\n"; 
     @f2=split(/\s+/,$lines[$j]);
     next if($f1[-2] eq $f2[-2]);
-    if(not($f1[-1] eq $f2[-1])){
-      $j=$#lines;
-      next;
-    }
+    #if(not($f1[-1] eq $f2[-1])){
+    #  $j=$#lines;
+    #  next;
+    #}
     my $oh1=0;
     my $oh2=0;
     my $success=0;
@@ -57,7 +58,6 @@ for($i=0;$i<=$#lines;$i++){
           }else{
             print "$f2[-2] $oh2 R $f1[-2] $oh1 R $gap ";
           }
-#last;
         }
       }else{
 #forward reverse merge ---->     <------
@@ -71,7 +71,6 @@ for($i=0;$i<=$#lines;$i++){
           }else{
             print "$f2[-2] $oh2 F $f1[-2] $oh1 R $gap ";
           }
-#last;
         }
       }
     }else{
@@ -87,7 +86,6 @@ for($i=0;$i<=$#lines;$i++){
           }else{
             print "$f2[-2] $oh2 R $f1[-2] $oh1 F $gap ";
           }
-#last;
         }
       }else{
 #reverse reverse merge <-----     <------
@@ -101,8 +99,6 @@ for($i=0;$i<=$#lines;$i++){
           }else{
             print "$f2[-2] $oh2 F $f1[-2] $oh2 F $gap ";
           }
-            
-#last;
         } 
       }
     }
@@ -119,8 +115,8 @@ for($i=0;$i<=$#lines;$i++){
       print " $sum_overhangs\n";
       $success=0;
     }
-  }
-}
+  #}#$j loop
+}#$i loop
 
 sub reverse_complement{
   my $str=$_[0];
