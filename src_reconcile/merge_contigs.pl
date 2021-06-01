@@ -139,19 +139,19 @@ sub walk_graph{
     push (@pathlinks,$line);
     my($ctg1,$oh1,$dir1,$ctg2,$oh2,$dir2,$gap)=split(/\s+/,$line);
     if($dir1 eq "F"){
-      $edge_fwd{$ctg1}= defined($edge_fwd{$ctg1}) ? -1 : "$ctg2 $dir2 $gap";
+      $edge_fwd{$ctg1}.="$ctg2 $dir2 $gap ";
       if($dir2 eq "F"){
-        $edge_rev{$ctg2}=defined($edge_rev{$ctg2}) ? -1 : "$ctg1 F $gap";
+        $edge_rev{$ctg2}.="$ctg1 F $gap ";
       }else{
-        $edge_fwd{$ctg2}=defined($edge_fwd{$ctg2}) ? -1 : "$ctg1 R $gap";
+        $edge_fwd{$ctg2}.="$ctg1 R $gap ";
       }
     }else{
       my $tdir=($dir2 eq "F") ? "R" : "F";
-      $edge_rev{$ctg1}=defined($edge_rev{$ctg1}) ? -1 : "$ctg2 $tdir $gap";
+      $edge_rev{$ctg1}.="$ctg2 $tdir $gap ";
       if($dir2 eq "F"){
-        $edge_rev{$ctg2}=defined($edge_rev{$ctg2}) ? -1 : "$ctg1 R $gap";
+        $edge_rev{$ctg2}.="$ctg1 R $gap ";
       }else{
-        $edge_fwd{$ctg2}=defined($edge_fwd{$ctg2}) ? -1 : "$ctg1 F $gap";
+        $edge_fwd{$ctg2}.="$ctg1 F $gap ";
       }
     }
   }
@@ -160,11 +160,13 @@ sub walk_graph{
 #now we delete all hash entries with -1
   my @temp=keys %edge_fwd;
   foreach my $e(@temp){
-    delete $edge_fwd{$e} if($edge_fwd{$e}==-1);
+    my @f=split(/\s+/,$edge_fwd{$e});
+    delete $edge_fwd{$e} if($#f>2);
   }
   my @temp=keys %edge_rev;
   foreach my $e(@temp){
-    delete $edge_rev{$e} if($edge_rev{$e}==-1);
+    my @f=split(/\s+/,$edge_rev{$e});
+    delete $edge_rev{$e} if($#f>2);
   }
 #and delete all non-reciprocal edges
   my @temp=keys %edge_fwd;
