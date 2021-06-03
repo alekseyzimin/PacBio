@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 #this code identifies repetitive contigs by coverage and multiple links
 #coords on stdin
-my $cov_thresh=5;
+my $cov_thresh=4;
 my $coords=$ARGV[0];
 open(FILE,$coords);
 #first compute coverage
