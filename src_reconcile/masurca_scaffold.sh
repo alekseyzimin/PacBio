@@ -115,10 +115,7 @@ if [ ! -e find_repeats.success ];then
 log "Identifying repeat contigs and filtering links"
 $MYPATH/find_repeats.pl $REFN.$QRYN.coords $REFN.$QRYN.links.txt >$REFN.repeats.txt && \
 perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \
-$MYPATH/extract_merges.pl <(ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY)  > $REFN.$QRYN.uniq.links.counts.txt.tmp && mv  $REFN.$QRYN.uniq.links.counts.txt.tmp  $REFN.$QRYN.uniq.links.counts.txt || error_exit "creating unique scaffold links failed"
-#here we remove conflicting links if the conflict count is 1
-sort -nrk1,1 -S 10% $REFN.$QRYN.uniq.links.counts.txt | \
-perl -ane 'if(not(defined($h{$F[1].$F[4]}))){$h{$F[1].$F[4]}=$F[0];print join(" ",@F[1..$#F]),"\n";}elsif($F[0]>1 || $h{$F[1].$F[4]}==1){print  join(" ",@F[1..$#F]),"\n";}' > $REFN.$QRYN.uniq.links.txt.tmp && mv $REFN.$QRYN.uniq.links.txt.tmp $REFN.$QRYN.uniq.links.txt || error_exit "creating unique scaffold links failed"
+$MYPATH/extract_merges.pl <(ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY)  > $REFN.$QRYN.uniq.links.txt.tmp && mv  $REFN.$QRYN.uniq.links.txt.tmp  $REFN.$QRYN.uniq.links.txt || error_exit "creating unique scaffold links failed"
 touch find_repeats.success
 fi
 
