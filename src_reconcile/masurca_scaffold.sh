@@ -135,7 +135,7 @@ fi
 
 if [ -e find_repeats.success ];then
 log "Creating scaffold graph and building scaffolds"
-$MYPATH/merge_contigs.pl $REF <$REFN.$QRYN.uniq.links.txt 2>$REFN.$QRYN.bubbles.txt | \
+$MYPATH/merge_contigs.pl $REF < $REFN.$QRYN.uniq.links.txt 2>$REFN.$QRYN.bubbles.txt | \
 $MYPATH/insert_repeats.pl $REFN.repeats.txt |\
 $MYPATH/create_merged_sequences.pl $REF  <(cat $REFN.$QRYN.uniq.links.txt $REFN.$QRYN.links.txt |sort -S 10% |uniq) | \
 ufasta extract -v -f $REFN.$QRYN.bubbles.txt > $REFN.$QRYN.scaffolds.fa.tmp && \

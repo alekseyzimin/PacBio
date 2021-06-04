@@ -31,7 +31,6 @@ $len{$ctg}=$len if($len>-1);
 while($line=<STDIN>){
     chomp($line);
     my($ctg1,$oh1,$dir1,$ctg2,$oh2,$dir2,$gap)=split(/\s+/,$line);
-    #next if($gap<-10000 || $gap> 10000);
     push(@links, $line);#save the links
 }
 
