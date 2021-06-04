@@ -5,6 +5,7 @@
 
 #open(FILE,"delta-filter -q -i 98 $ARGV[0] | show-coords -lcHq -L 1000 /dev/stdin |"); 
 
+my $output_prefix="patches";
 open(FILE,$ARGV[0]);#file with query contigs
 while($line=<FILE>){
   chomp($line);
@@ -15,11 +16,13 @@ while($line=<FILE>){
     $qseq{$qn}.=$line;
   }
 }
+
 #first we read in all the matches into an array
 my $prevline="";
 my $slack=1000;
 my $maxgap=200000;
 my $mingap=-10000;
+my %oh1=(),%oh2=(),%gap=(),%gapseq=();
 while($line=<STDIN>){
   chomp($line);
   $line=~s/^\s+//;
@@ -39,8 +42,9 @@ for($i=0;$i<$#lines;$i++){
     next if(not($f1[-1] eq $f2[-1]));
     my $oh1=0;
     my $oh2=0;
-    my $success=0;
     my $gstart=1;
+    my $dir1="F";
+    my $dir2="F";
 #print "DEBUG considering $i $j\n$lines[$i]\n$lines[$j]\n\n";
     if($f1[3]<$f1[4]){
       $gstart=$f1[4];
@@ -49,27 +53,15 @@ for($i=0;$i<$#lines;$i++){
         $gap=$f2[3]-$f1[4]+1;
         $oh1=$f1[11]-$f1[1];
         $oh2=$f2[0]-1;
-        if($oh1<$slack && $oh2<$slack && $gap<$maxgap && $gap>$mingap){
-          $success=1;
-          if($f1[-2] lt $f2[-2]){
-            print "$f1[-2] $oh1 F $f2[-2] $oh2 F $gap ",;
-          }else{
-            print "$f2[-2] $oh2 R $f1[-2] $oh1 R $gap ";
-          }
-        }
+        $dir1="F";
+        $dir2="F";
       }else{
 #forward reverse merge ---->     <------
         $gap=$f2[4]-$f1[4]+1;
         $oh1=$f1[11]-$f1[1];
         $oh2=$f2[11]-$f2[1];
-        if($oh1<$slack && $oh2<$slack && $gap<$maxgap && $gap>$mingap){
-          $success=1;
-          if($f1[-2] lt $f2[-2]){
-            print "$f1[-2] $oh1 F $f2[-2] $oh2 R $gap ";
-          }else{
-            print "$f2[-2] $oh2 F $f1[-2] $oh1 R $gap ";
-          }
-        }
+        $dir1="F";
+        $dir2="R";
       }
     }else{
       $gstart=$f1[3];
@@ -78,45 +70,84 @@ for($i=0;$i<$#lines;$i++){
         $gap=$f2[3]-$f1[3]+1;
         $oh1=$f1[0]-1;
         $oh2=$f2[0]-1;
-        if($oh1<$slack && $oh2<$slack && $gap<$maxgap && $gap>$mingap){
-          $success=1;
-          if($f1[-2] lt $f2[-2]){
-            print "$f1[-2] $oh1 R $f2[-2] $oh2 F $gap ";
-          }else{
-            print "$f2[-2] $oh2 R $f1[-2] $oh1 F $gap ";
-          }
-        }
+        $dir1="R";
+        $dir2="F";
       }else{
 #reverse reverse merge <-----     <------
         $gap=$f2[4]-$f1[3]+1;
         $oh1=$f1[0]-1;
         $oh2=$f2[11]-$f2[1];
-        if($oh1<$slack && $oh2<$slack && $gap<$maxgap && $gap>$mingap){
-          $success=1;
-          if($f1[-2] lt $f2[-2]){
-            print "$f1[-2] $oh1 R $f2[-2] $oh1 R $gap ";
-          }else{
-            print "$f2[-2] $oh2 F $f1[-2] $oh2 F $gap ";
-          }
+        $dir1="R";
+        $dir2="R";
         } 
-      }
     }
-    if($success){
-      if($gap>0){
+    if($oh1<$slack && $oh2<$slack && $gap<$maxgap && $gap>$mingap){
         $gstart=1 if($gstart<1);
         if($f1[-2] lt $f2[-2]){
-          print lc(substr($qseq{$f1[-1]},$gstart-1,$gap));
+          $joinline="$f1[-2]:$dir1:$f2[-2]:$dir2";
+          #print "DEBUG $joinline $oh1 $oh2 $gap\n";
+          if(not(defined($oh1{$joinline})) || $oh1{$joinline} + $oh2{$joinline} > $oh1+$oh2){
+            $gseq{$joinline}="n";
+            $gseq{$joinline}=lc(substr($qseq{$f1[-1]},$gstart-1,$gap)) if($gap>0);
+            $oh1{$joinline}=$oh1;
+            $oh2{$joinline}=$oh2;
+            $gap{$joinline}=$gap;
+          }
+          $paircount{"$f1[-2] $f2[-2]"}++;
         }else{
-          print reverse_complement(lc(substr($qseq{$f1[-1]},$gstart-1,$gap)));
+          $dir1= $dir1 eq "F" ? "R" : "F";
+          $dir2= $dir2 eq "F" ? "R" : "F";
+          $joinline="$f2[-2]:$dir2:$f1[-2]:$dir1";
+          #print "DEBUG $joinline $oh1 $oh2 $gap\n";
+          if(not(defined($oh1{$joinline})) || $oh1{$joinline} + $oh2{$joinline} > $oh1+$oh2){
+            $gseq{$joinline}="n";
+            $gseq{$joinline}=reverse_complement(lc(substr($qseq{$f1[-1]},$gstart-1,$gap))) if($gap>0);
+            $oh1{$joinline}=$oh2;
+            $oh2{$joinline}=$oh1;
+            $gap{$joinline}=$gap;
+          }
+          $paircount{"$f2[-2] $f1[-2]"}++;
         }
-      }else{
-        print "n";
-      }
-      print " $sum_overhangs\n";
-      $success=0;
+      $joincount{$joinline}++;
+      $rseq{$joinline}.=$qseq{$f1[-1]}." ";
     }
-  #}#$j loop
 }#$i loop
+
+#now we have all information in the hashes, let's output the bundles
+#the longest read is the seq, the rest used to polish
+open(REF,">patches.ref.fa");
+open(READS,">patches.reads.fa");
+open(RAW,">patches.raw.fa");
+foreach $k (keys %rseq){
+@seq=split(/\s+/,$rseq{$k});
+my $max_len=0;
+my $max_i=0;
+for($i=0;$i<=$#seq;$i++){
+  if(length($seq[$i])>$max_len){
+    $max_i=$i;
+    $max_len=length($seq[$i]);
+  }
+}
+if(not(defined($output{$seq[$max_i]}))){
+  if($#seq>0){#more than one sequence for a gap
+    print REF ">$k\n$seq[$max_i]\n";
+    for($i=0;$i<=$#seq;$i++){
+      print READS ">$k:$i\n$seq[$i]\n" if(not($i==$max_i));
+    }
+  }else{#only one
+    print RAW ">$k\n$seq[$max_i]\n";
+  }
+  $output{$seq[$max_i]}=1;
+}
+}
+
+#output the links
+foreach $k (keys %joincount){
+  my @f=split(/:/,$k);
+  if($paircount{"$f[0] $f[2]"} == $joincount{$k} || $joincount{$k}>1){
+    print "$f[0] $oh1{$k} $f[1] $f[2] $oh2{$k} $f[3] $gap{$k} $gseq{$k}\n";
+  }
+}
 
 sub reverse_complement{
   my $str=$_[0];

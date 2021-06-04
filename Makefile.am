@@ -124,7 +124,7 @@ dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_cluster.sh src_mega_reads
 		    src_reconcile/freebayes \
 		    src_reconcile/find_repeats.pl \
 		    src_reconcile/insert_repeats.pl \
-		    src_reconcile/fix_consensus_from_vcf.pl \ 
+		    src_reconcile/fix_consensus_from_vcf.pl \
 		    src_reconcile/extract_single_best_match_coords_file.pl \
 		    src_reconcile/chromosome_scaffolder.sh \
 		    src_reconcile/break_contigs.pl src_reconcile/merge_sequences_simple.pl \
