@@ -110,11 +110,10 @@ log "Creating scaffold links"
 cat  $REFN.$QRYN.coords |$MYPATH/extract_merges.pl <(ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY )  > $REFN.$QRYN.links.txt.tmp && \
 mv $REFN.$QRYN.links.txt.tmp $REFN.$QRYN.links.txt && \
 $MYPATH/../Flye/bin/flye --polish-target patches.ref.fa --iterations 1 --nano-raw patches.reads.fa --threads $NUM_THREADS --out-dir $REFN.$QRYN.polish.tmp 1>polish.err 2>&1 && \
-cat <(ufasta one $REFN.$QRYN.polish.tmp/polished_1.fasta) patches.raw.fa > $REFN.$QRYN.patches.fa.tmp && \
-mv $REFN.$QRYN.patches.fa.tmp $REFN.$QRYN.patches.fa && \
+cat <(ufasta one $REFN.$QRYN.polish.tmp/polished_1.fasta) patches.raw.fa > $REFN.$QRYN.patches.fa.tmp && mv $REFN.$QRYN.patches.fa.tmp $REFN.$QRYN.patches.fa && \
+rm -rf $REFN.$QRYN.polish.tmp && \
 rm -f patches.ref.fa patches.reads.fa patches.raw.fa && \
-touch scaffold_links.success && \
-rm -f scaffold_align_patches.success || error_exit "links consensus failed"
+touch scaffold_links.success && rm -f scaffold_align_patches.success || error_exit "links consensus failed"
 fi
 
 if [ ! -e scaffold_align_patches.success ];then
