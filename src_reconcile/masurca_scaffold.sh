@@ -91,7 +91,7 @@ DELTAFILE=$REFN.$QRYN
 
 #minimap
 if [ ! -e scaffold_align.success ];then
-log "Aligning the scaffolding sequences to the contigs"
+log "Aligning the reads to the contigs"
 $MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REF $QRY 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
 fi
 
@@ -107,23 +107,36 @@ fi
 
 if [ ! -e scaffold_links.success ];then
 log "Creating scaffold links"
-cat  $REFN.$QRYN.coords |$MYPATH/extract_merges.pl <(ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY) > $REFN.$QRYN.links.txt.tmp && mv $REFN.$QRYN.links.txt.tmp $REFN.$QRYN.links.txt || error_exit "creating scaffold links failed"
-touch scaffold_links.success && rm -f find_repeats.success
+cat  $REFN.$QRYN.coords |$MYPATH/extract_merges.pl <(ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY )  > $REFN.$QRYN.links.txt.tmp && \
+mv $REFN.$QRYN.links.txt.tmp $REFN.$QRYN.links.txt && \
+$MYPATH/../Flye/bin/flye --polish-target patches.ref.fa --iterations 1 --nano-raw patches.reads.fa --threads $NUM_THREADS --out-dir $REFN.$QRYN.polish.tmp 1>polish.err 2>&1 && \
+cat <(ufasta one $REFN.$QRYN.polish.tmp/polished_1.fasta) patches.raw.fa > $REFN.$QRYN.patches.fa.tmp && \
+mv $REFN.$QRYN.patches.fa.tmp $REFN.$QRYN.patches.fa && \
+rm -f patches.ref.fa patches.reads.fa patches.raw.fa && \
+touch scaffold_links.success && \
+rm -f scaffold_align_patches.success || error_exit "links consensus failed"
 fi
 
-if [ ! -e find_repeats.success ];then
-log "Identifying repeat contigs and filtering links"
-$MYPATH/find_repeats.pl $REFN.$QRYN.coords $REFN.$QRYN.links.txt >$REFN.repeats.txt && \
-perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \
-$MYPATH/extract_merges.pl <(ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY)  > $REFN.$QRYN.uniq.links.txt.tmp && mv  $REFN.$QRYN.uniq.links.txt.tmp  $REFN.$QRYN.uniq.links.txt || error_exit "creating unique scaffold links failed"
-touch find_repeats.success
+if [ ! -e scaffold_align_patches.success ];then
+log "Aligning the scaffolding sequences to the contigs"
+$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REF $REFN.$QRYN.patches.fa 2>minimap.err | \
+awk '{if($4-$3>int("'$MIN_MATCH'") && ($8<int("'$OVERHANG'") || $7-$9<int("'$OVERHANG'")) && $12>=60) print $0}' |\
+sort -k1,1 -k3,3n -S 10% | \
+awk 'BEGIN{r="";c=""}{if($1!=r){print $0" "$1;r=$1;c=$6}else if($6!=c){print $0" "$1;c=$6}}' | \
+uniq -D -f 18 | \
+awk '{if($5=="+"){print $8+1" "$9" | "$3+1" "$4" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}else{print $8+1" "$9" | "$4" "$3+1" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}}' > $REFN.$QRYN.patches.coords.tmp && mv $REFN.$QRYN.patches.coords.tmp $REFN.$QRYN.patches.coords && \
+touch scaffold_align_patches.success || error_exit "minimap2 patches failed"
 fi
 
-if [ -e find_repeats.success ];then
+if [ -e scaffold_align_patches.success ];then
 log "Creating scaffold graph and building scaffolds"
-$MYPATH/merge_contigs.pl $REF < $REFN.$QRYN.uniq.links.txt 2>$REFN.$QRYN.bubbles.txt | \
+cat $REFN.$QRYN.patches.coords | $MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa > $REFN.$QRYN.patches.links.txt.tmp && mv $REFN.$QRYN.patches.links.txt.tmp $REFN.$QRYN.patches.links.txt && \
+$MYPATH/find_repeats.pl $REFN.$QRYN.coords $REFN.$QRYN.patches.links.txt >$REFN.repeats.txt.tmp && mv $REFN.repeats.txt.tmp $REFN.repeats.txt && \
+perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.patches.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \
+$MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa > $REFN.$QRYN.patches.uniq.links.txt.tmp && mv $REFN.$QRYN.patches.uniq.links.txt.tmp $REFN.$QRYN.patches.uniq.links.txt && \
+$MYPATH/merge_contigs.pl $REF < $REFN.$QRYN.patches.uniq.links.txt 2>$REFN.$QRYN.bubbles.txt | \
 $MYPATH/insert_repeats.pl $REFN.repeats.txt |\
-$MYPATH/create_merged_sequences.pl $REF  <(cat $REFN.$QRYN.uniq.links.txt $REFN.$QRYN.links.txt |sort -S 10% |uniq) | \
+$MYPATH/create_merged_sequences.pl $REF  <(cat $REFN.$QRYN.patches.uniq.links.txt $REFN.$QRYN.patches.links.txt |sort -S 10% |uniq) | \
 ufasta extract -v -f $REFN.$QRYN.bubbles.txt > $REFN.$QRYN.scaffolds.fa.tmp && \
 mv $REFN.$QRYN.scaffolds.fa.tmp $REFN.scaffolds.fa || error_exit "walking the scaffold graph failed"
 fi
