@@ -102,17 +102,35 @@ sort -k1,1 -k3,3n -S 10% | \
 awk 'BEGIN{r="";c=""}{if($1!=r){print $0" "$1;r=$1;c=$6}else if($6!=c){print $0" "$1;c=$6}}' | \
 uniq -D -f 18 | \
 awk '{if($5=="+"){print $8+1" "$9" | "$3+1" "$4" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}else{print $8+1" "$9" | "$4" "$3+1" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}}' > $REFN.$QRYN.coords.tmp && mv $REFN.$QRYN.coords.tmp $REFN.$QRYN.coords || error_exit "filtering alignments failed" 
-touch scaffold_filter.success && rm -f  scaffold_links.success 
+touch scaffold_filter.success && rm -f  scaffold_reads.success 
+fi
+
+if [ ! -e scaffold_reads.success ];then
+log "Extracting reads for the patches"
+ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY > $REFN.$QRYN.reads.fa.tmp && mv $REFN.$QRYN.reads.fa.tmp $REFN.$QRYN.reads.fa && \
+touch scaffold_reads.success && rm -f  scaffold_links.success || error_exit "failed in extracting the reads for scaffolding"
 fi
 
 if [ ! -e scaffold_links.success ];then
+#this is a bit tricky
+#we first find all links to identify repeats by both coverage and linking criteria
+#then we exclude the repeats and re-compute the links to create input for consensus patches
+#the reasoning is that we do not want to create extra patches for repetitive junctions
+#we now create do_consensus.sh and extract_merges.pl will see it and will use it do the consensus for the patches, do not forgrt to delete it
 log "Creating scaffold links"
-cat  $REFN.$QRYN.coords |$MYPATH/extract_merges.pl <(ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY )  > $REFN.$QRYN.links.txt.tmp && \
-mv $REFN.$QRYN.links.txt.tmp $REFN.$QRYN.links.txt && \
-$MYPATH/../Flye/bin/flye --polish-target patches.ref.fa --iterations 1 --nano-raw patches.reads.fa --threads $NUM_THREADS --out-dir $REFN.$QRYN.polish.tmp 1>polish.err 2>&1 && \
-cat <(ufasta one $REFN.$QRYN.polish.tmp/polished_1.fasta) patches.raw.fa > $REFN.$QRYN.patches.fa.tmp && mv $REFN.$QRYN.patches.fa.tmp $REFN.$QRYN.patches.fa && \
-rm -rf $REFN.$QRYN.polish.tmp && \
-rm -f patches.ref.fa patches.reads.fa patches.raw.fa && \
+rm -f do_consensus.sh && \
+cat  $REFN.$QRYN.coords |$MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa  > $REFN.$QRYN.links.txt.tmp && mv $REFN.$QRYN.links.txt.tmp $REFN.$QRYN.links.txt && \
+$MYPATH/find_repeats.pl $REFN.$QRYN.coords $REFN.$QRYN.links.txt >$REFN.repeats.txt.tmp && mv $REFN.repeats.txt.tmp $REFN.repeats.txt && \
+rm -f patches.polished.fa && \
+echo "#!/bin/bash" > do_consensus.sh && \
+echo "rm -rf polish.tmp" >> do_consensus.sh && \
+echo "$MYPATH/../Flye/bin/flye --polish-target patches.ref.fa --iterations 1 --nano-raw patches.reads.fa --threads $NUM_THREADS --out-dir polish.tmp 1>polish.err 2>&1 && $MYPATH/ufasta one polish.tmp/polished_1.fasta >> patches.polished.fa"  >> do_consensus.sh && \
+chmod 0755 do_consensus.sh && \
+perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \
+$MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa  >/dev/null && \
+rm -f do_consensus.sh && \
+cat patches.polished.fa patches.raw.fa > $REFN.$QRYN.patches.fa.tmp && mv $REFN.$QRYN.patches.fa.tmp $REFN.$QRYN.patches.fa && \
+rm -f patches.ref.fa patches.reads.fa patches.raw.fa polish.tmp && \
 touch scaffold_links.success && rm -f scaffold_align_patches.success || error_exit "links consensus failed"
 fi
 
@@ -129,6 +147,7 @@ fi
 
 if [ -e scaffold_align_patches.success ];then
 log "Creating scaffold graph and building scaffolds"
+rm -f do_consensus.sh && \
 cat $REFN.$QRYN.patches.coords | $MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa > $REFN.$QRYN.patches.links.txt.tmp && mv $REFN.$QRYN.patches.links.txt.tmp $REFN.$QRYN.patches.links.txt && \
 $MYPATH/find_repeats.pl $REFN.$QRYN.coords $REFN.$QRYN.patches.links.txt >$REFN.repeats.txt.tmp && mv $REFN.repeats.txt.tmp $REFN.repeats.txt && \
 perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.patches.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \

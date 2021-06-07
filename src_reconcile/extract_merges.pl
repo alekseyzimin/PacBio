@@ -3,8 +3,6 @@
 #this code extracts possible contig merges from a nucmer alignment: the reference sequences are merged with query sequence intput is a delta file 
 #ASSUMES show-coords -q output, that is sorted by query coord!!!!!!
 
-#open(FILE,"delta-filter -q -i 98 $ARGV[0] | show-coords -lcHq -L 1000 /dev/stdin |"); 
-
 my $output_prefix="patches";
 open(FILE,$ARGV[0]);#file with query contigs
 while($line=<FILE>){
@@ -115,30 +113,53 @@ for($i=0;$i<$#lines;$i++){
 
 #now we have all information in the hashes, let's output the bundles
 #the longest read is the seq, the rest used to polish
-open(REF,">patches.ref.fa");
-open(READS,">patches.reads.fa");
-open(RAW,">patches.raw.fa");
-foreach $k (keys %rseq){
-@seq=split(/\s+/,$rseq{$k});
-my $max_len=0;
-my $max_i=0;
-for($i=0;$i<=$#seq;$i++){
-  if(length($seq[$i])>$max_len){
-    $max_i=$i;
-    $max_len=length($seq[$i]);
-  }
-}
-if(not(defined($output{$seq[$max_i]}))){
-  if($#seq>0){#more than one sequence for a gap
-    print REF ">$k\n$seq[$max_i]\n";
-    for($i=0;$i<=$#seq;$i++){
-      print READS ">$k:$i\n$seq[$i]\n" if(not($i==$max_i));
+#we output the reads and run the consensus for each patch separately
+foreach my $k (keys %rseq){
+  my @seq=split(/\s+/,$rseq{$k});
+  my $max_len=0;
+  my $max_i=0;
+  for($i=0;$i<=$#seq;$i++){
+    if(length($seq[$i])>$max_len){
+      $max_i=$i;
+      $max_len=length($seq[$i]);
     }
-  }else{#only one
-    print RAW ">$k\n$seq[$max_i]\n";
   }
-  $output{$seq[$max_i]}=1;
+  $seqs{$seq[$max_i]}=1;
+  for($i=0;$i<=$#seq;$i++){
+    $seqs{$seq[$max_i]}.=" ".$seq[$i] unless($i==$max_i);
+  }
 }
+#flatten the seqs and run consensus
+#do_consensus.sh must exist!
+
+if(-e "do_consensus.sh"){
+  open(RAW,">patches.raw.fa");
+  my $index=0;
+  foreach my $seq(keys %seqs){
+    $index++;
+    my @seq=split(/\s+/,$seqs{$seq});
+    if($#seq==0){#no polishing seq -- put into raw
+      print RAW ">$index\n$seq\n";
+    }else{
+      open(REF,">patches.ref.fa");
+      open(READS,">patches.reads.fa");
+      print REF ">$index\n$seq\n";
+      #uniq the consensus reads
+      my %uniqh=();
+      for(my $i=1;$i<=$#seq;$i++){
+        $uniqh{$seq[$i]}=1;
+      }
+      my $index_r=0;
+      foreach my $k(keys %uniqh){
+        print READS ">r$index_r\n$k\n";
+        $index_r++;
+      }
+      close(REF);
+      close(READS);
+#run consensus
+      system("./do_consensus.sh");
+    }
+  }
 }
 
 #output the links

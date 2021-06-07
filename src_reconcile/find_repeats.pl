@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 #this code identifies repetitive contigs by coverage and multiple links
 #coords on stdin
-my $cov_thresh=4;
+my $cov_thresh=2;
 my $coords=$ARGV[0];
 open(FILE,$coords);
 #first compute coverage
@@ -40,6 +40,6 @@ foreach $c(keys %edge_fwd){
   if(defined($edge_rev{$c})){
     my @f1=split(/\s+/,$edge_fwd{$c});
     my @f2=split(/\s+/,$edge_rev{$c});
-    print "$c rev $edge_rev{$c}\n$c fwd $edge_fwd{$c}\n" if($cov{$c}/$len{$c}>$cov_thresh && $#f1>2 && $#f2>2);
+    print "$c rev $edge_rev{$c}\n$c fwd $edge_fwd{$c}\n" if($cov{$c}/$len{$c}>=$cov_thresh && $#f1>2 && $#f2>2);
   }
 }
