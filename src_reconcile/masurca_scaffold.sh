@@ -107,7 +107,7 @@ fi
 
 if [ ! -e scaffold_reads.success ];then
 log "Extracting reads for the patches"
-ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY > $REFN.$QRYN.reads.fa.tmp && mv $REFN.$QRYN.reads.fa.tmp $REFN.$QRYN.reads.fa && \
+$MYPATH/ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY > $REFN.$QRYN.reads.fa.tmp && mv $REFN.$QRYN.reads.fa.tmp $REFN.$QRYN.reads.fa && \
 touch scaffold_reads.success && rm -f  scaffold_links.success || error_exit "failed in extracting the reads for scaffolding"
 fi
 
@@ -130,7 +130,7 @@ perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.coords'");while($line=<FILE>)
 $MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa  >/dev/null && \
 rm -f do_consensus.sh && \
 cat patches.polished.fa patches.raw.fa > $REFN.$QRYN.patches.fa.tmp && mv $REFN.$QRYN.patches.fa.tmp $REFN.$QRYN.patches.fa && \
-rm -f patches.ref.fa patches.reads.fa patches.raw.fa polish.tmp && \
+rm -rf patches.ref.fa patches.reads.fa patches.raw.fa polish.tmp && \
 touch scaffold_links.success && rm -f scaffold_align_patches.success || error_exit "links consensus failed"
 fi
 
@@ -155,7 +155,7 @@ $MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa > $REFN.$QRYN.patches.uniq.link
 $MYPATH/merge_contigs.pl $REF < $REFN.$QRYN.patches.uniq.links.txt 2>$REFN.$QRYN.bubbles.txt | \
 $MYPATH/insert_repeats.pl $REFN.repeats.txt |\
 $MYPATH/create_merged_sequences.pl $REF  <(cat $REFN.$QRYN.patches.uniq.links.txt $REFN.$QRYN.patches.links.txt |sort -S 10% |uniq) | \
-ufasta extract -v -f $REFN.$QRYN.bubbles.txt > $REFN.$QRYN.scaffolds.fa.tmp && \
+$MYPATH/ufasta extract -v -f $REFN.$QRYN.bubbles.txt > $REFN.$QRYN.scaffolds.fa.tmp && \
 mv $REFN.$QRYN.scaffolds.fa.tmp $REFN.scaffolds.fa || error_exit "walking the scaffold graph failed"
 fi
 
