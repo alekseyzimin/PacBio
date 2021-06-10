@@ -107,51 +107,55 @@ for($i=0;$i<$#lines;$i++){
           $paircount{"$f2[-2] $f1[-2]"}++;
         }
       $joincount{$joinline}++;
-      $rseq{$joinline}.=$qseq{$f1[-1]}." ";
+      $rnames{$joinline}.=$f1[-1]." ";
     }
 }#$i loop
 
 #now we have all information in the hashes, let's output the bundles
 #the longest read is the seq, the rest used to polish
 #we output the reads and run the consensus for each patch separately
-foreach my $k (keys %rseq){
-  my @seq=split(/\s+/,$rseq{$k});
+foreach my $k (keys %rnames){
+  my @names=split(/\s+/,$rnames{$k});
   my $max_len=0;
   my $max_i=0;
-  for($i=0;$i<=$#seq;$i++){
-    if(length($seq[$i])>$max_len){
+  for($i=0;$i<=$#names;$i++){
+    if(length($qseq{$names[$i]})>$max_len){
       $max_i=$i;
-      $max_len=length($seq[$i]);
+      $max_len=length($qseq{$names[$i]});
     }
   }
-  $seqs{$seq[$max_i]}=1;
-  for($i=0;$i<=$#seq;$i++){
-    $seqs{$seq[$max_i]}.=" ".$seq[$i] unless($i==$max_i);
+#here we found the longest joining sequence -- it will be our reference for the consensus
+#note that it may be present more than once
+#here we collect all non-redundant read names into %jnames hash
+#and associate them with the longest read
+#%jnames will be a single entry of 1 if there is only one read in @names
+  my %output=();
+  $jnames{$names[$max_i]}=1;
+  $output{$names[$max_i]}=1;
+  foreach my $n(@names){
+    if(not(defined($output{$n}))){
+      $jnames{$names[$max_i]}.=" ".$n;
+      $output{$n}=1;
+    }
   }
 }
-#flatten the seqs and run consensus
+#output the seqs and run consensus
 #do_consensus.sh must exist!
 
 if(-e "do_consensus.sh"){
   open(RAW,">patches.raw.fa");
   my $index=0;
-  foreach my $seq(keys %seqs){
+  foreach my $name(keys %jnames){
     $index++;
-    my @seq=split(/\s+/,$seqs{$seq});
-    if($#seq==0){#no polishing seq -- put into raw
-      print RAW ">$index\n$seq\n";
+    my @names=split(/\s+/,$jnames{$name});
+    if($#names==0){#no polishing seq -- put into raw
+      print RAW ">$index\n$qseq{$name}\n";
     }else{
       open(REF,">patches.ref.fa");
       open(READS,">patches.reads.fa");
-      print REF ">$index\n$seq\n";
-      #uniq the consensus reads
-      my %uniqh=();
-      for(my $i=1;$i<=$#seq;$i++){
-        $uniqh{$seq[$i]}=1;
-      }
-      my $index_r=0;
-      foreach my $k(keys %uniqh){
-        print READS ">r$index_r\n$k\n";
+      print REF ">$index\n$qseq{$name}\n";
+      for(my $i=1;$i<=$#names;$i++){
+        print READS ">r$index_r\n$qseq{$names[$i]}\n";
         $index_r++;
       }
       close(REF);
