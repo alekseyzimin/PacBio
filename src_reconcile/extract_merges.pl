@@ -144,19 +144,16 @@ foreach my $k (keys %rnames){
 
 if(-e "do_consensus.sh"){
   open(RAW,">patches.raw.fa");
-  my $index=0;
   foreach my $name(keys %jnames){
-    $index++;
     my @names=split(/\s+/,$jnames{$name});
     if($#names==0){#no polishing seq -- put into raw
-      print RAW ">$index\n$qseq{$name}\n";
+      print RAW ">$name\n$qseq{$name}\n";
     }else{
       open(REF,">patches.ref.fa");
       open(READS,">patches.reads.fa");
-      print REF ">$index\n$qseq{$name}\n";
+      print REF ">$name\n$qseq{$name}\n";
       for(my $i=1;$i<=$#names;$i++){
-        print READS ">r$index_r\n$qseq{$names[$i]}\n";
-        $index_r++;
+        print READS ">$names[$i]\n$qseq{$names[$i]}\n";
       }
       close(REF);
       close(READS);
