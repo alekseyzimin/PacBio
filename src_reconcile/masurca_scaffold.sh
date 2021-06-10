@@ -97,7 +97,7 @@ fi
 
 if [ ! -e scaffold_filter.success ];then
 log "Filtering alignments"
-awk '{if($4-$3>int("'$MIN_MATCH'") && ($8<int("'$OVERHANG'") || $7-$9<int("'$OVERHANG'")) && $12>=60) print $0}' $REFN.$QRYN.paf | \
+awk '{max_overhang=0.1*$7;if(max_overhang>int("'$OVERHANG'")) max_overhang=int("'$OVERHANG'"); if($4-$3>int("'$MIN_MATCH'") && ($8<max_overhang || $7-$9<max_overhang) && $12>=60) print $0}' $REFN.$QRYN.paf | \
 sort -k1,1 -k3,3n -S 10% | \
 awk 'BEGIN{r="";c=""}{if($1!=r){print $0" "$1;r=$1;c=$6}else if($6!=c){print $0" "$1;c=$6}}' | \
 uniq -D -f 18 | \
