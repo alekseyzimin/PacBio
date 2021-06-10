@@ -118,7 +118,7 @@ foreach my $k (keys %rnames){
   my @names=split(/\s+/,$rnames{$k});
   my $max_len=0;
   my $max_i=0;
-  for($i=0;$i<=$#names;$i++){
+  for(my $i=0;$i<=$#names;$i++){
     if(length($qseq{$names[$i]})>$max_len){
       $max_i=$i;
       $max_len=length($qseq{$names[$i]});
@@ -128,9 +128,10 @@ foreach my $k (keys %rnames){
 #note that it may be present more than once
 #here we collect all non-redundant read names into %jnames hash
 #and associate them with the longest read
+#these can be done over multiple gaps, that is the same longest read can accumulate other reads from the other gaps
 #%jnames will be a single entry of 1 if there is only one read in @names
   my %output=();
-  $jnames{$names[$max_i]}=1;
+  $jnames{$names[$max_i]}=1 if(not(defined($jnames{$names[$max_i]})));
   $output{$names[$max_i]}=1;
   foreach my $n(@names){
     if(not(defined($output{$n}))){
@@ -152,8 +153,13 @@ if(-e "do_consensus.sh"){
       open(REF,">patches.ref.fa");
       open(READS,">patches.reads.fa");
       print REF ">$name\n$qseq{$name}\n";
+#need uniq to avoid outputting duplicates
+      my %output=();
       for(my $i=1;$i<=$#names;$i++){
-        print READS ">$names[$i]\n$qseq{$names[$i]}\n";
+        if(not(defined($output{$names[$i]}))){
+          print READS ">$names[$i]\n$qseq{$names[$i]}\n";
+          $output{$names[$i]}=1;
+        }
       }
       close(REF);
       close(READS);
