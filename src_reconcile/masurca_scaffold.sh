@@ -66,7 +66,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage: masurca_scaffold.sh -r <sequences to be merged> -q <sequence to merge with> -t <number of threads> -m <minimum matching length, default:5000> -o <maximum overhang, default:1000>"
+            echo "Usage: masurca_scaffold.sh -r <contigs or scaffolds in fasta format> -q <long reads or another assembly used to scaffold in fasta format> -t <number of threads> -m <minimum matching length, default:5000> -o <maximum overhang, default:1000>"
             exit 0
             ;;
         *)
