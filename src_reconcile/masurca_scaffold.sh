@@ -132,6 +132,7 @@ chmod 0755 do_consensus.sh && \
 perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \
 $MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa  >/dev/null && \
 rm -f do_consensus.sh && \
+touch patches.polished.fa && \
 cat patches.polished.fa patches.raw.fa > $REFN.$QRYN.patches.fa.tmp && mv $REFN.$QRYN.patches.fa.tmp $REFN.$QRYN.patches.fa && \
 rm -rf patches.ref.fa patches.reads.fa patches.raw.fa polish.tmp && \
 touch scaffold_links.success && rm -f scaffold_align_patches.success || error_exit "links consensus failed"
