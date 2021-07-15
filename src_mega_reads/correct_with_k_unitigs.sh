@@ -10,6 +10,11 @@ export LONGREADS1=""
 export PKUNITIGS=k_unitigs.l20.fa
 export COVERAGE=1000
 export COORDS="pCorrect"
+export ESTIMATED_GENOME_SIZE=0
+export LONGREADS="in.fa"
+export LONGREADS1="out.fa"
+export ILLUMINA="illumina.fa"
+USAGE="Usage:  correct_with_k_unitigs.sh -k <k-unitig k-mer, default:19> -e <estimated genome size, MANDATORY> -t <number of threads, default:4> -l <input long reads file name, default:in.fa> -i <illumina reads file name, default illumina.fa> -o <output long reads file name, default:out.fa>"
 GC=
 RC=
 NC=
@@ -39,8 +44,8 @@ function error_exit {
 
 #parsing arguments
 if [[ $# -eq 0 ]];then
-echo "Usage:  correct_with_k_unitigs.sh -k <k-unitig k-mer> -e <estimated genome size> -t <number of threads> -l <input long reads file name> -i <illumina reads file name> -o <output long reads file name>"
-exit 1
+echo $USAGE
+exit 0
 fi
 
 while [[ $# > 0 ]]
@@ -79,7 +84,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage:  correct_with_k_unitigs.sh -k <k-unitig k-mer> -e <estimated genome size> -t <number of threads> -l <input long reads file name> -o <output long reads file name>"
+            echo $USAGE
             exit 0
             ;;
         *)
@@ -90,6 +95,24 @@ do
     shift
 done
 
+#check arguments
+if [ $ESTIMATED_GENOME_SIZE -lt 1 ];then
+  echo $USAGE
+  error_exit "Must specify estimated genome size that is greater than zero"
+fi
+
+if [ ! -s $LONGREADS ];then
+  echo $USAGE
+  error_exit "Input file of long reads $LONGREADS does not exist or size zero"
+fi
+
+if [ ! -s $ILLUMINA ];then
+  echo $USAGE
+  error_exit "Input file of illumina reads $ILLUMINA does not exist or size zero"
+fi
+
+export PKUNITIGS=k_unitigs.l$(($PKMER+1)).fa
+
 if [ ! -s $PKUNITIGS ];then
   log "Creating k-unitigs for k=$PKMER"
   $MYPATH/create_k_unitigs_large_k2 -c $(($PKMER-1)) -t $NUM_THREADS -m $PKMER -n $(($ESTIMATED_GENOME_SIZE*2)) -l $(($PKMER+1)) $ILLUMINA  | \
@@ -97,6 +120,7 @@ if [ ! -s $PKUNITIGS ];then
   perl -ane '{$seq=$F[0]; $F[0]=~tr/ACTGactg/TGACtgacc/;$revseq=reverse($F[0]); $h{($seq ge $revseq)?$seq:$revseq}=1;}END{$n=0;foreach $k(keys %h){print ">",$n++," length:",length($k),"\n$k\n"}}' > $PKUNITIGS.tmp && \
   mv $PKUNITIGS.tmp $PKUNITIGS
 fi
+
 if [ ! -s $COORDS.pcorrected.fa ];then
   log "Pre-correcting long reads"
   rm -f $COORDS.pcorrected.*.fa
@@ -107,14 +131,16 @@ if [ ! -s $COORDS.pcorrected.fa ];then
   for i in $(seq 1 $(($NUM_THREADS/16+2)));do
     echo ">($MYPATH/correct_with_k_unitigs_fast.pl $PKMER 0.0 1>$COORDS.pcorrected.$i.fa 2>/dev/null) \\" >> correct_with_k_unitigs.sh
   done
-  echo "&& cat $COORDS.pcorrected.*.fa | awk '{if(\$1!~/^>/ && \$1~/>/){split(\$1,a,\">\");print a[1];if(a[2]!=\"\") print \">\"a[2];}else{print \$0}}'  > $COORDS.pcorrected.fa.tmp && mv $COORDS.pcorrected.ff
-a.tmp $COORDS.pcorrected.fa && rm -f $COORDS.pcorrected.*.fa" >> correct_with_k_unitigs.sh
+  echo "&& cat $COORDS.pcorrected.*.fa | awk '{if(\$1!~/^>/ && \$1~/>/){split(\$1,a,\">\");print a[1];if(a[2]!=\"\") print \">\"a[2];}else{print \$0}}'  > $COORDS.pcorrected.fa.tmp && mv $COORDS.pcorrected.fa.tmp $COORDS.pcorrected.fa && rm -f $COORDS.pcorrected.*.fa" >> correct_with_k_unitigs.sh
   chmod 0755 correct_with_k_unitigs.sh && ./correct_with_k_unitigs.sh
 fi
 
 if [ -s $COORDS.pcorrected.fa ];then
   $MYPATH/ufasta extract -f <(paste <($MYPATH/ufasta sizes -H  $COORDS.pcorrected.fa) <(tr -d acgt < $COORDS.pcorrected.fa |$MYPATH/ufasta sizes -H ) | \
   sort -nrk4 -S 10% | awk '{n+=$2;if(n<int('$ESTIMATED_GENOME_SIZE')*int('$COVERAGE')) print $1}' ) $COORDS.pcorrected.fa > $LONGREADS1.tmp && \
-  mv $LONGREADS1.tmp $LONGREADS1 && rm $COORDS.pcorrected.fa correct_with_k_unitigs.sh
+  mv $LONGREADS1.tmp $LONGREADS1 && \
+  rm -f $COORDS.pcorrected.fa correct_with_k_unitigs.sh $PKUNITIGS
+else
+  error_exit "Failed to pre-correct long reads, please check your input files $LONGREADS and $ILLUMINA and the other parameters"
 fi
 log "Pre-corrected reads are in $LONGREADS1"
