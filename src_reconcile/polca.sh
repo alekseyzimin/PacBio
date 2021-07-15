@@ -1,5 +1,4 @@
 #!/bin/bash
-
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:$PATH;
@@ -24,12 +23,10 @@ kill 0
 exit 1
 }
 
-
 log () {
     dddd=$(date)
     echo -e "${GC}[$dddd]${NC} $@"
 }
-
 
 function error_exit {
     dddd=$(date)

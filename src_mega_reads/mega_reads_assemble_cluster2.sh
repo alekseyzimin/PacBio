@@ -238,28 +238,7 @@ LONGREADS1=longest_reads.${PB_HC}x.fa
 if [ ! -s $LONGREADS1 ];then
   log "Pre-correction and initial filtering of the long reads"
 #here we do the initial pre-correction of the long reads and pick the best ones to use for the remaining steps
-  PKMER=19
-  PKUNITIGS=k_unitigs.l20.fa
-  if [ ! -s $PKUNITIGS ];then
-    create_k_unitigs_large_k2 -c $(($PKMER-1)) -t $NUM_THREADS -m $PKMER -n $(($ESTIMATED_GENOME_SIZE*2)) -l $(($PKMER+1)) pe.cor.fa  | grep --text -v '^>' | perl -ane '{$seq=$F[0]; $F[0]=~tr/ACTGactg/TGACtgac/;$revseq=reverse($F[0]); $h{($seq ge $revseq)?$seq:$revseq}=1;}END{$n=0;foreach $k(keys %h){print ">",$n++," length:",length($k),"\n$k\n"}}' > $PKUNITIGS.tmp && mv $PKUNITIGS.tmp $PKUNITIGS
-  fi
-  if [ ! -s $COORDS.pcorrected.fa ];then
-    rm -f $COORDS.pcorrected.*.fa
-    echo "#!/bin/bash" > correct_with_k_unitigs.sh
-    echo "numactl --interleave=all $MYPATH/create_mega_reads -s \$(($ESTIMATED_GENOME_SIZE*2)) -m $PKMER --psa-min 12 --stretch-cap 10000 -k $PKMER -u $PKUNITIGS -t $NUM_THREADS -B 1 --max-count 5000 -d 0.01 -r <(awk '{if(\$1 ~ /^>/) print \$1\"F\"; else print \$1}'  $PKUNITIGS)  -p <(zcat -f $LONGREADS | $MYPATH/fastqToFasta.pl | awk 'BEGIN{rn=0;}{if(\$1 ~ /^>/){print \">\"rn;rn++;}else{print \$1}}') -L $PKMER -o /dev/stdout 2>create_mega-reads.err |\\" >> correct_with_k_unitigs.sh
-    echo "$MYPATH/add_pb_seq.pl <(zcat -f $LONGREADS | $MYPATH/fastqToFasta.pl | awk 'BEGIN{rn=0;}{if(\$1 ~ /^>/){print \">\"rn;rn++;}else{print \$1}}') |\\" >> correct_with_k_unitigs.sh
-    echo "$MYPATH/ufasta split -i /dev/stdin \\" >> correct_with_k_unitigs.sh
-    for i in $(seq 1 $(($NUM_THREADS/16+2)));do
-      echo ">($MYPATH/correct_with_k_unitigs_fast.pl $PKMER 0.0 1>$COORDS.pcorrected.$i.fa 2>/dev/null) \\" >> correct_with_k_unitigs.sh
-    done
-    echo "&& cat $COORDS.pcorrected.*.fa | awk '{if(\$1!~/^>/ && \$1~/>/){split(\$1,a,\">\");print a[1];if(a[2]!=\"\") print \">\"a[2];}else{print \$0}}'  > $COORDS.pcorrected.fa.tmp && mv $COORDS.pcorrected.fa.tmp $COORDS.pcorrected.fa && rm -f $COORDS.pcorrected.*.fa" >> correct_with_k_unitigs.sh
-    chmod 0755 correct_with_k_unitigs.sh && ./correct_with_k_unitigs.sh
-  fi
-  if [ -s $COORDS.pcorrected.fa ];then
-    $MYPATH/ufasta extract -f <(paste <($MYPATH/ufasta sizes -H  $COORDS.pcorrected.fa) <(tr -d acgt < $COORDS.pcorrected.fa |$MYPATH/ufasta sizes -H ) | \
-    sort -nrk4 -S 10% | awk '{n+=$2;if(n<int('$ESTIMATED_GENOME_SIZE')*int('$PB_HC')) print $1}' ) $COORDS.pcorrected.fa > $LONGREADS1.tmp && \
-    mv $LONGREADS1.tmp $LONGREADS1 && rm $COORDS.pcorrected.fa correct_with_k_unitigs.sh 
-  fi
+  correct_with_k_unitigs.sh -k 19  -t $NUM_THREADS -e $ESTIMATED_GENOME_SIZE -i pe.cor.fa -l $LONGREADS -o $LONGREADS1
   if [ ! -s $LONGREADS1 ];then
     error_exit "Failed to pre-correct $LONGREADS file, please check your data!"
   fi
