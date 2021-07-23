@@ -11,6 +11,7 @@ my @links=(),@pathlinks=();
 my $contigs=$ARGV[0];# we need contig sizes for bubble popping
 my @edge_fwd_b=(),@edge_rev_b=(),%bubble=(),%bubbleinfo=();
 my %path_beg=(), %path_end=(),@paths=(),%ctg_used=();
+my $max_tip=10000;
 
 open(FILE,$ARGV[0]);
 my $len=-1;
@@ -52,6 +53,8 @@ foreach $p(@paths){
 foreach $c(keys %bubbleinfo){
   print STDERR "$c\n";
 }
+
+#this sub prines tips -- short contigs that do not continue but create a fork
 
 #this sub pops bubbles
 sub pop_bubbles{
@@ -155,17 +158,61 @@ sub walk_graph{
     }
   }
 #the idea is to first detect and collapse all linear paths
-#so we delete all branches
-#now we delete all hash entries with -1
+#so we delete all branches if they do not branch to a tip, otherwise we delete the tip
   my @temp=keys %edge_fwd;
   foreach my $e(@temp){
     my @f=split(/\s+/,$edge_fwd{$e});
-    delete $edge_fwd{$e} if($#f>2);
+    if($#f>2){#more than one edge, check for tips
+      my %tips=();
+      for($i=0;$i<$#f;$i+=3){
+        @ff=split(/\s+/,$edge_fwd{$f[$i]});
+        @fr=split(/\s+/,$edge_rev{$f[$i]});
+        if(($#ff==2 && $#fr<2 || $#ff<2 && $#fr==2) && $len{$f[$i]}<$max_tip){#found a tip
+          $tips{$i}=1;
+        }
+      }
+      my $newedges="";
+      my $num_newedges=0;
+      for($i=0;$i<$#f;$i+=3){
+        if(not(defined($tips{$i}))){
+          $newedges.="$f[$i] ".$f[$i+1]." ".$f[$i+2]." ";
+          $num_newedges++;
+        }
+      }
+      if($num_newedges==1){
+        $edge_fwd{$e}=$newedges;
+      }else{
+        delete $edge_fwd{$e};
+      }
+    }
   }
   my @temp=keys %edge_rev;
   foreach my $e(@temp){
     my @f=split(/\s+/,$edge_rev{$e});
-    delete $edge_rev{$e} if($#f>2);
+
+    if($#f>2){#more than one edge, check for tips
+      my %tips=();
+      for($i=0;$i<$#f;$i+=3){
+        @ff=split(/\s+/,$edge_fwd{$f[$i]});
+        @fr=split(/\s+/,$edge_rev{$f[$i]});
+        if(($#ff==2 && $#fr<2 || $#ff<2 && $#fr==2) && $len{$f[$i]}<$max_tip){#found a tip
+          $tips{$i}=1;
+        }
+      }
+      my $newedges="";
+      my $num_newedges=0;   
+      for($i=0;$i<$#f;$i+=3){
+        if(not(defined($tips{$i}))){
+          $newedges.="$f[$i] ".$f[$i+1]." ".$f[$i+2]." ";
+          $num_newedges++;
+        }
+      }
+      if($num_newedges==1){
+        $edge_rev{$e}=$newedges;
+      }else{
+        delete $edge_rev{$e};
+      }
+    }
   }
 #and delete all non-reciprocal edges
   my @temp=keys %edge_fwd;
