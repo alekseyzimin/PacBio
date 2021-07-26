@@ -167,7 +167,9 @@ sub walk_graph{
       for($i=0;$i<$#f;$i+=3){
         @ff=split(/\s+/,$edge_fwd{$f[$i]});
         @fr=split(/\s+/,$edge_rev{$f[$i]});
-        if(($#ff==2 && $#fr<2 || $#ff<2 && $#fr==2) && $len{$f[$i]}<$max_tip){#found a tip
+        if((($#ff==2 && $#fr<2) || ($#ff<2 && $#fr==2)) && $len{$f[$i]}<$max_tip){#found a tip
+          delete $edge_fwd{$f[$i]} if($#ff==2 && $#fr<2);
+          delete $edge_rev{$f[$i]} if($#ff<2 && $#fr==2);
           $tips{$i}=1;
         }
       }
@@ -195,7 +197,9 @@ sub walk_graph{
       for($i=0;$i<$#f;$i+=3){
         @ff=split(/\s+/,$edge_fwd{$f[$i]});
         @fr=split(/\s+/,$edge_rev{$f[$i]});
-        if(($#ff==2 && $#fr<2 || $#ff<2 && $#fr==2) && $len{$f[$i]}<$max_tip){#found a tip
+        if((($#ff==2 && $#fr<2) || ($#ff<2 && $#fr==2)) && $len{$f[$i]}<$max_tip){#found a tip
+          delete $edge_fwd{$f[$i]} if($#ff==2 && $#fr<2);
+          delete $edge_rev{$f[$i]} if($#ff<2 && $#fr==2);
           $tips{$i}=1;
         }
       }
