@@ -8,12 +8,25 @@ open(FILE,$ARGV[0]);#file with query contigs
 while($line=<FILE>){
   chomp($line);
   if($line =~ /^>/){
-    @f=split(/\s+/,$line);
+    my @f=split(/\s+/,$line);
     $qn=substr($f[0],1);
   }else{
     $qseq{$qn}.=$line;
   }
 }
+
+my $only_allowed=0;
+my %allowed_merges=();
+if(defined($ARGV[1])){
+open(FILE,$ARGV[1]);
+while($line=<FILE>){
+  chomp($line);
+  my @f=split(/\s+/,$line);
+  $allowed_merges{"$f[0] $f[1]"}=1 if($#f==1);
+}
+}
+
+
 
 #first we read in all the matches into an array
 my $prevline="";
@@ -37,6 +50,9 @@ for($i=0;$i<$#lines;$i++){
 #print "DEBUG $i $j\n$lines[$i]\n$lines[$j]\n\n"; 
     @f2=split(/\s+/,$lines[$j]);
     next if($f1[-2] eq $f2[-2]);
+    if($only_allowed){
+      next if(not(defined($allowed{"$f1[-2] $f2[-2]"})) && not(defined($allowed{"$f2[-2] $f1[-2]"})));
+    }
     next if(not($f1[-1] eq $f2[-1]));
     my $oh1=0;
     my $oh2=0;
