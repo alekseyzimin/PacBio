@@ -9,7 +9,7 @@ while($line=<STDIN>){
     $ctgName=substr($line,1);
     my @f=split(/\./,$ctgName);
     $scf=$f[0];
-    $scf=join(".",@f[0..($#f-1)]) if($#f>1);
+    #$scf=join(".",@f[0..($#f-1)]) if($#f>1);
     my @ff=split(/:/,$f[-1]);
     $chunk=$ff[0];   
     $scfChunks{$scf}.="$chunk ";
@@ -25,7 +25,7 @@ if($#f==0){#only one chunk
   print ">$scf\n";
   print $ctgSeq{$scf.".".$f[0]},"\n";
 }else{
-  my @sorted_chunks=sort by_chunk(@f);
+  my @sorted_chunks=sort {$a <=> $b} @f;
   print ">$scf\n";
   print $ctgSeq{$scf.".".$sorted_chunks[0]};
     for($i=1;$i<=$#sorted_chunks;$i++){
@@ -36,8 +36,3 @@ if($#f==0){#only one chunk
   }
 }
 
-sub by_chunk{
-  my @f1=split(/:/,$a);
-  my @f2=split(/:/,$b);
-  return($f1[0]<=>$f2[0]);
-}
