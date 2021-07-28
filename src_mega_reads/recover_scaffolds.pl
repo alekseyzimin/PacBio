@@ -3,6 +3,7 @@
 my $ctgName="";
 my $scf="";
 my $chunk="";
+my $flip=0;
 while($line=<STDIN>){
   chomp($line);
   if($line=~/^>/){
@@ -10,10 +11,20 @@ while($line=<STDIN>){
     my @f=split(/\./,$ctgName);
     $scf=$f[0];
     #$scf=join(".",@f[0..($#f-1)]) if($#f>1);
+    if($#f>1){#joined chunk, need to find orientation
+      my @fb=split(/:/,$f[1]);
+      my @fe=split(/:/,$f[-1]);
+      $flip=1 if($fb[0]>$fe[0]);
+    }
     my @ff=split(/:/,$f[-1]);
     $chunk=$ff[0];   
     $scfChunks{$scf}.="$chunk ";
   }else{
+    if($flip){
+      $line=reverse($line);
+      $line=~tr/acgtACGT/tgcaTGCA/;
+      $flip=0;
+    }
     $ctgSeq{$scf.".".$chunk}=$line;
   }
 }
