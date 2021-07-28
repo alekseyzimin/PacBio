@@ -6,60 +6,42 @@ Copyright University of Maryland 2015
 
 void overlap_graph::traverse(const std::vector<int>& sort_array, const align_pb::coords_info_type& coords,
                              std::vector<node_info>& nodes, std::ostream* dot) const {
-  double best_overlap_score;
-  size_t best_overlap_index;
   for(size_t i = 0; i != sort_array.size(); ++i) {
     const size_t it_i     = sort_array[i];
     auto&        node_i   = nodes[it_i];
     const auto&  coords_i = coords[it_i];
 
     if(node_i.imp_e >= coords_i.rl) continue; // Hanging off 3' end of PacBio read: no overlap
-    best_overlap_score=1000000;
-    best_overlap_index=-1;
-    for(size_t j = i + 1; j != sort_array.size(); ++j) {//here we are looking for all plausible overlapsi and pick the best one
+    for(size_t j = i + 1; j != sort_array.size(); ++j) {
       const size_t it_j     = sort_array[j];
       auto&        node_j   = nodes[it_j];
       const auto&  coords_j = coords[it_j];
 
       if(node_j.imp_s <= 1) continue; // Hanging off 5' end of PacBio read: no overlap
-      if(node_i.imp_e > node_j.imp_e + k_len) continue;//not advancing -- not interested
+      if(node_i.imp_e > node_j.imp_e + 31) continue;//not advancing -- not interested
       const double position_len = node_i.imp_e - node_j.imp_s;
-      double error = nb_errors * (coords_i.avg_err + coords_j.avg_err);
-      if(position_len * overlap_play + error < k_len) continue; // maximum implied overlap is less than a k-mer length
+      double error1 = (coords_i.avg_err + coords_j.avg_err);
+      double error = nb_errors * error1;
+      if(position_len * overlap_play + error < k_len) break; //stop checking since maximum implied overlap is less than a k-mer length
       const int nb_u_overlap = coords_i.name_u->unitigs.overlap(coords_j.name_u->unitigs);
       if(!nb_u_overlap) continue; // No overlap according to unitig names
-      if(coords_i.name_u->unitigs == coords_j.name_u->unitigs) continue;
+      if(coords_i.name_u->unitigs == coords_j.name_u->unitigs) continue;//the same super-read
       int u_overlap_len  = 0;
-      for(int u = 0; u < nb_u_overlap; ++u)
-        u_overlap_len    += unitigs_lengths[coords_j.name_u->unitigs.unitig_id(u)];
-
-      u_overlap_len -= (nb_u_overlap - 1) * (k_len - 1);
-      if(u_overlap_len > overlap_play * position_len + error || position_len > overlap_play * ( u_overlap_len + error ))
-        continue; // Overlap lengths (position, unitigs) do not agree
-      
-      //if we get here, we found an overlap
-      //record its index and its score which is the absolute difference between u_overlap_len and position_len
-      if(abs(position_len-u_overlap_len)<best_overlap_score){
-        best_overlap_score=abs(position_len-u_overlap_len);
-        best_overlap_index=j;
-      }
-   }
-   //now if we found an overlap that is the best, its index will be in best_overlap_index
-   if(best_overlap_index>-1){
-      const size_t it_j     = sort_array[best_overlap_index];
-      auto&        node_j   = nodes[it_j];
-      const auto&  coords_j = coords[it_j];
-      // We have an overlap between nodes i and j
-      node_i.end_node    = false;
-      node_j.start_node  = false;
-      node_i.component  |= node_j.component;
       int common_overlap = 0;
-      const int nb_u_overlap = coords_i.name_u->unitigs.overlap(coords_j.name_u->unitigs);
       for(int u = 0; u < nb_u_overlap; ++u) {
+        u_overlap_len    += unitigs_lengths[coords_j.name_u->unitigs.unitig_id(u)];
         common_overlap   += maximize_bases ? coords_j.bases_info[2 * u] : coords_j.kmers_info[2 * u];
         if(u > 0)
           common_overlap -= maximize_bases ? coords_j.bases_info[2 * u - 1] : coords_j.kmers_info[2 * u - 1];
       }
+      u_overlap_len -= (nb_u_overlap - 1) * (k_len - 1);
+      if(u_overlap_len > overlap_play * position_len + error1 || position_len > overlap_play * ( u_overlap_len + error ))
+        continue; // Overlap lengths (position, unitigs) do not agree
+
+      // We have an overlap between nodes i and j
+      node_i.end_node    = false;
+      node_j.start_node  = false;
+      node_i.component  |= node_j.component;
 
       // Update longest path
       int nlpath = node_i.lpath + (maximize_bases ? coords_j.sr_cover : coords_j.nb_mers) - common_overlap;
