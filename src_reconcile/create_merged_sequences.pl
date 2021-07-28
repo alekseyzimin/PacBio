@@ -45,7 +45,7 @@ while($line=<STDIN>){
     my $outlen=0,$sumlen=0;
     #print "DEBUG $line\n";
     my @f=split(/\s+/,$line);
-    print ">",join("_",@f),"\n";
+    print ">",join(":",@f),"\n";
 #output first contig
     $oh2=$oh1{"$f[0]$f[1]$f[3]$f[4]"};
     $len=length($seq{$f[0]});

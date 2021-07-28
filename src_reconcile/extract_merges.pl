@@ -18,11 +18,12 @@ while($line=<FILE>){
 my $only_allowed=0;
 my %allowed_merges=();
 if(defined($ARGV[1])){
+$only_allowed=1;
 open(FILE,$ARGV[1]);
 while($line=<FILE>){
   chomp($line);
   my @f=split(/\s+/,$line);
-  $allowed_merges{"$f[0] $f[1]"}=1 if($#f==1);
+  $allowed{"$f[0] $f[1]"}=1 if($#f==1);
 }
 }
 
