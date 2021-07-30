@@ -19,7 +19,7 @@ KMER=41
 #this is the batch size for grid execution
 PBATCH_SIZE=5000000000
 GRID_ENGINE="SGE"
-QUEUE=""
+QUEUE="all.q"
 USE_GRID=0
 PACBIO=""
 NANOPORE=""
@@ -27,6 +27,7 @@ NANOPORE_RNA=0
 ONEPASS=0
 OVLMIN_DEFAULT=250
 FLYE_ASSEMBLY=0
+MASURCA_ASSEMBLY_WORK1_PATH="work1"
 POSTFIX=""
 MIN_PROPORTION="0.25"
 MIN_RADIUS="400"
@@ -60,6 +61,36 @@ function error_exit {
     exit "${2:-1}" 
 }
 
+USAGE="Usage: 
+mega_reads_assemble_cluster2.sh <arguments>
+arguments:
+
+MANDATORY
+-k int      MANDATORY k-mer size used to construct k-unitigs
+-a string   MANDATORY path to the contig assembler bin folder
+-e int      MANDATORY estimated genome size
+
+-p string   input PacBio reads 
+or 
+-n string   input Nanopore reads
+
+OPTIONAL, have defaults
+-m string   path to MaSuRCA run work1 folder default:work1
+-u string   k-unitigs file name default:guillaumeKUnitigsAtLeast32bases_all.fasta
+-t int      number of threads default:number of CPUs
+-M int      k-mer size for alignments to long reads default:17
+-B double   alignment threshold % bases default:15.0
+-D double   density of k-mers default:0.02
+-C int      max coverage of PacBio/nanopore reads to use default:25
+-G bool     whether to use the grid 0 is no | 1 is yes default:0
+-E string   grid engine SGE or SLURM default:SGE
+-Pb int     batch size in number of bases for grid execution default:5000000000
+-q string   grid queue to use default:all.q
+-F          use Flye assembler for building contigs default:not set
+-o string   other FRG file to include in assembly, ignored if -F is set
+-v          verbose default:not set
+-h|-u       this message
+" 
 
 #parsing arguments
 while [[ $# > 0 ]]
@@ -147,7 +178,7 @@ do
 	    set -x
 	    ;;    
 	-h|--help|-u|--usage)
-	    echo "Usage: mega_reads_assemble.sh -m <path to MaSuRCA run work1 folder contents> -p <pacbio reads fasta> -a <path to the location of runCA in wgs-8.2 instalation>"
+	    echo "$USAGE"
 	    exit 0
 	    ;;
 	*)
@@ -159,14 +190,12 @@ do
 done
 
 ###############checking arguments#########################
+echo "flye $FLYE_ASSEMBLY"
 if [ $FLYE_ASSEMBLY -gt 0 ];then
     log "Using Flye from $CA_PATH"
     if [ ! -e $CA_PATH/flye ];then
 	error_exit "flye not found at $CA_PATH!";
     fi
-#    POSTFIX=".flye"
-#    MIN_PROPORTION="0.25"
-#    MIN_RADIUS="400"
 else
     log "Using CABOG from $CA_PATH"
     if [ ! -e $CA_PATH/runCA ];then
@@ -177,6 +206,18 @@ export PATH=$MYPATH:$CA_PATH:$PATH
 
 if [ ! -s $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta ];then
   error_exit "super reads file not found or size zero, you can try deleting $MASURCA_ASSEMBLY_WORK1_PATH folder and re-generating assemble.sh, also check if guillaumeKUnitigsAtLeast32bases_all.fasta is not empty";
+fi
+
+if [ ! -s $KUNITIGS ];then
+  error_exit "k-unitigs file $KUNITIGS not found or size zero (-u)"
+fi
+
+if [ $KMER -lt 4 ];then
+  error_exit "improper value for k-unitig k-mer (-k)"
+fi
+
+if [ $MER -lt 4 ];then
+  error_exit "improper value for alignment mer (-M)"
 fi
 
 ################setting parameters#########################
