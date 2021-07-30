@@ -52,7 +52,7 @@ do
 	    MER="$2"
 	    shift
 	    ;;
-        -l|--l_mer)
+        -k|--k_mer)
             KMER="$2"
             shift
             ;;

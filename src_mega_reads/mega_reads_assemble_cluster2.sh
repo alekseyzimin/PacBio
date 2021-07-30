@@ -30,6 +30,8 @@ FLYE_ASSEMBLY=0
 POSTFIX=""
 MIN_PROPORTION="0.25"
 MIN_RADIUS="400"
+SUPERREADS=superReadSequences.named.fasta
+KUNITIGS=guillaumeKUnitigsAtLeast32bases_all.fasta
 GC=
 RC=
 NC=
@@ -73,6 +75,10 @@ do
 	    NUM_THREADS="$2"
 	    shift
 	    ;;
+        -k|--kunitig_mer)
+            KMER="$2"
+            shift
+            ;;
 	-M|--alignment_mer)
 	    MER="$2"
 	    shift
@@ -235,8 +241,6 @@ if [ $LR_COVERAGE -gt $PB_HC ];then
     OVLMIN_DEFAULT=499
 fi
 
-SUPERREADS=superReadSequences.named.fasta
-#here we assume that pe.cor.fa exists
 LONGREADS1=longest_reads.${PB_HC}x.fa
 if [ ! -s $LONGREADS1 ];then
 #here we do the initial pre-correction of the long reads and pick the best ones to use for the remaining steps
@@ -267,7 +271,7 @@ if [ ! -s $SUPERREADS ];then
 fi
 
 if [ ! -s $KUNITIGS ];then
-    error_exit "K-unitigs file $KUNITIGS not found; check your inputs;
+    error_exit "K-unitigs file $KUNITIGS not found; check your inputs"
 fi
 
 KUNITIGLENGTHS=$MASURCA_ASSEMBLY_WORK1_PATH/kUnitigLengths.txt
