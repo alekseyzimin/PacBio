@@ -35,7 +35,7 @@ void overlap_graph::traverse(const std::vector<int>& sort_array, const align_pb:
           common_overlap -= maximize_bases ? coords_j.bases_info[2 * u - 1] : coords_j.kmers_info[2 * u - 1];
       }
       u_overlap_len -= (nb_u_overlap - 1) * (k_len - 1);
-      if(u_overlap_len > overlap_play * position_len + error1 || position_len > overlap_play * ( u_overlap_len + error ))
+      if(u_overlap_len > overlap_play * position_len + error || position_len > overlap_play * ( u_overlap_len + error ))
         continue; // Overlap lengths (position, unitigs) do not agree
 
       // We have an overlap between nodes i and j

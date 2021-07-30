@@ -118,6 +118,10 @@ do
             GRID_ENGINE="$2"
             shift
             ;;
+        -u|--kunitigs)
+            KUNTIGS="$2"
+            shift
+            ;;
         -Pb|--pbatch-size)
             PBATCH_SIZE="$2"
             shift
@@ -232,7 +236,6 @@ if [ $LR_COVERAGE -gt $PB_HC ];then
 fi
 
 SUPERREADS=superReadSequences.named.fasta
-KUNITIGS=guillaumeKUnitigsAtLeast32bases_all.$KMER.fasta
 #here we assume that pe.cor.fa exists
 LONGREADS1=longest_reads.${PB_HC}x.fa
 if [ ! -s $LONGREADS1 ];then
@@ -244,18 +247,10 @@ if [ ! -s $LONGREADS1 ];then
 fi
 
 #first we re-create k-unitigs and super reads with smaller K
-if [ ! -s $SUPERREADS ] || [ ! -s $KUNITIGS ];then
-    log "Reducing super-read k-mer size"
-    awk 'BEGIN{n=0}{if($1~/^>/){}else{print ">sr"n"\n"$0;n+=2;}}' $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta > superReadSequences.fasta.in.tmp && mv  superReadSequences.fasta.in.tmp  superReadSequences.fasta.in || error_exit "failed to create superReadSequences.fasta.in"
-    $MYPATH/create_k_unitigs_large_k -q 1 -c $(($KMER-1)) -t $NUM_THREADS -m $KMER -n $(($ESTIMATED_GENOME_SIZE*2)) -l $KMER -f `perl -e 'print 1/'$KMER'/1e5'` $MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta  | grep --text -v '^>' | perl -ane '{$seq=$F[0]; $F[0]=~tr/ACTGactg/TGACtgac/;$revseq=reverse($F[0]); $h{($seq ge $revseq)?$seq:$revseq}=1;}END{$n=0;foreach $k(keys %h){print ">",$n++," length:",length($k),"\n$k\n"}}' > $KUNITIGS.tmp && mv $KUNITIGS.tmp $KUNITIGS || error_exit "failed to create k-unitigs for small k super reads";
-    rm -rf work1_mr
-    echo "sr 500 50" >>  meanAndStdevByPrefix.pe.txt && $MYPATH/createSuperReadsForDirectory.perl --stopAfter createFastaSuperReadSequences -minreadsinsuperread 1 -l $KMER -mean-and-stdev-by-prefix-file meanAndStdevByPrefix.pe.txt -kunitigsfile $KUNITIGS -t $NUM_THREADS -mikedebug work1_mr superReadSequences.fasta.in 1> super1.err 2>&1
-    if [ ! -e "work1_mr/superReadSequences.fasta.all" ];then
-	error_exit "failed to create super-reads with reduced k-mer size, see super1.err"
-    fi
+if [ ! -s $SUPERREADS ];then
     perl -ane 'push(@names,$F[0]);
 END{
-  open(FILE,"'work1_mr/superReadSequences.fasta.all'");
+  open(FILE,"'$MASURCA_ASSEMBLY_WORK1_PATH/superReadSequences.fasta'");
   while($line=<FILE>){
     if($line=~/^>/){
       chomp($line);
@@ -264,8 +259,7 @@ END{
       print $line;
     }
   }
-}' < work1_mr/superReadNames.txt > $SUPERREADS.tmp && mv $SUPERREADS.tmp $SUPERREADS || error_exit "failed to create named super-reads file";
-    rm superReadSequences.fasta.in
+}' < $MASURCA_ASSEMBLY_WORK1_PATH/superReadNames.txt > $SUPERREADS.tmp && mv $SUPERREADS.tmp $SUPERREADS || error_exit "failed to create named super-reads file";
 fi
 
 if [ ! -s $SUPERREADS ];then
@@ -273,10 +267,10 @@ if [ ! -s $SUPERREADS ];then
 fi
 
 if [ ! -s $KUNITIGS ];then
-    error_exit "K-unitigs file $KUNITIGS not found; failed to create named super-reads file";
+    error_exit "K-unitigs file $KUNITIGS not found; check your inputs;
 fi
 
-KUNITIGLENGTHS=work1_mr/kUnitigLengths.txt
+KUNITIGLENGTHS=$MASURCA_ASSEMBLY_WORK1_PATH/kUnitigLengths.txt
 if [ ! -s $KUNITIGLENGTHS ];then
     error_exit "K-unitig lengths file $KUNITIGLENGTHS not found!";
 fi
