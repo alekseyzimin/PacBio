@@ -5,17 +5,34 @@ MYPATH="`( cd \"$MYPATH\" && pwd )`"
 export PATH=$MYPATH:$PATH;
 set -o pipefail
 NUM_THREADS=1
-MIN_MATCH=1000
-IDENTITY=98
-OVERHANG=5000
-MINGAP=-100
-MAXGAP=100000
+MIN_MATCH=2500
+OVERHANG=1000
+GC=
+RC=
+NC=
+if tty -s < /dev/fd/1 2> /dev/null; then
+    GC='\e[0;32m'
+    RC='\e[0;31m'
+    NC='\e[0m'
+fi
 
-function error_exit {
-    echo "$1" >&2
-    exit "${2:-1}"
+trap abort 1 2 15
+function abort {
+log "Aborted"
+kill 0
+exit 1
 }
 
+log () {
+    dddd=$(date)
+    echo -e "${GC}[$dddd]${NC} $@"
+}
+
+function error_exit {
+    dddd=$(date)
+    echo -e "${RC}[$dddd]${NC} $1" >&2
+    exit "${2:-1}"
+}
 
 #parsing arguments
 while [[ $# > 0 ]]
@@ -47,27 +64,17 @@ do
             OVERHANG="$2"
             shift
             ;;
-        -G|--maxgap)
-            MAXGAP="$2"
-            shift
-            ;;
-        -g|--mingap)
-            MINGAP=$((-1*$2))
-            shift
-            ;;
         -v|--verbose)
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage: merge_scaffolds.sh <options>"
-            echo "-r <sequences to be merged> MANDATORY"
-            echo "-q <sequence to merge with> MANDATORY"
+            echo "Usage: close_scaffold_gaps.sh <options>"
+            echo "-r <scaffolds to gapclose> MANDATORY"
+            echo "-q <gapclosing sequences, can be long reads> MANDATORY"
             echo "-t <number of threads> default:1"
             echo "-i <identity%> default:98"
-            echo "-m <minimum match length on the two sides of the gap> default:1000"
-            echo "-o <max overhang> default:5000"
-            echo "-G <maximum gap> default:100000"
-            echo "-g <minimum gap> default:-100"
+            echo "-m <minimum match length on the two sides of the gap> default:2500"
+            echo "-o <max overhang> default:1000"
             echo "-v verbose"
             echo "-h|--help|-u|--usage this message"
             exit 0
@@ -90,38 +97,21 @@ fi
 
 REFN=`basename $REF`
 QRYN=`basename $QRY`
-DELTAFILE=$REFN.$QRYN
 
 #split
 if [ ! -e "scaffold_merge.split.success" ];then
+log "Splitting scaffolds into contigs"
 $MYPATH/splitScaffoldsAtNs.pl  < $REF | ufasta one > $REFN.split && \
-grep '^>' --text $REFN.split | perl -ane '{($rn,$coord)=split(/\./,substr($F[0],1));$h{$rn}.=substr($F[0],1)." ";}END{foreach $r(keys %h){@f=split(/\s+/,$h{$r}); for ($i=0;$i<$#f;$i++){print $f[$i]," ",$f[$i+1],"\n"}}}' > valid_join_pairs.txt && \
-touch scaffold_merge.split.success && rm -rf scaffold_merge.align.success
+grep '^>' --text $REFN.split | perl -ane '{($rn,$coord)=split(/\./,substr($F[0],1));$h{$rn}.=substr($F[0],1)." ";}END{foreach $r(keys %h){@f=split(/\s+/,$h{$r}); for ($i=0;$i<$#f;$i++){print $f[$i]," ",$f[$i+1],"\n"}}}' > $REFN.valid_join_pairs.txt && \
+touch scaffold_merge.split.success && rm -rf scaffold_merge.scaffold.success
 fi
 
-#nucmer
-if [ ! -e scaffold_merge.align.success ];then
-nucmer -t $NUM_THREADS -p  $DELTAFILE -l 31 -c 200 $REFN.split $QRY && \
-touch scaffold_merge.align.success && \
-rm -f scaffold_merge.filter.success || exit
-fi
-
-#delta-filter
-if [ ! -e scaffold_merge.filter.success ];then
-delta-filter -1 -l $MIN_MATCH $DELTAFILE.delta > $DELTAFILE.fdelta && mv $DELTAFILE.fdelta $DELTAFILE.r.delta && \
-touch scaffold_merge.filter.success && rm -f  scaffold_merge.merge.success || exit
-fi
-
-#perform merge
-if [ ! -e scaffold_merge.merge.success ];then
-$MYPATH/show-coords -lcHq -I $IDENTITY $DELTAFILE.r.delta | $MYPATH/extract_merges_mega-reads.pl $QRY  valid_join_pairs.txt $OVERHANG $MINGAP $MAXGAP > merges.txt && \
-perl -ane '{if($F[2] eq "F"){$merge="$F[0] $F[3]";}else{$merge="$F[3] $F[0]";} if(not(defined($h{$merge}))|| $h{$merge} > $F[1]+$F[4]){$hl{$merge}=join(" ",@F);$h{$merge}=$F[1]+$F[4];}}END{foreach $k(keys %hl){print $hl{$k},"\n"}}' merges.txt > merges.best.txt && \
-cat \
-<($MYPATH/ufasta extract -v -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) $REFN.split) \
-<($MYPATH/merge_mega-reads.pl < merges.best.txt | $MYPATH/create_merged_mega-reads.pl <($MYPATH/ufasta extract -f <(awk '{print $1"\n"$2;}' valid_join_pairs.txt) $REFN.split) merges.best.txt) | \
-$MYPATH/recover_scaffolds.pl |ufasta format > $REFN.split.joined.tmp && \
+if [ ! -e "scaffold_merge.scaffold.success" ];then
+log "Closing gaps"
+$MYPATH/masurca_scaffold.sh -r $REFN.split -q $QRY -t $NUM_THREADS -o $OVERHANG -m $MIN_MATCH -a $REFN.valid_join_pairs.txt && \
+$MYPATH/recover_scaffolds.pl < REFN.split.scaffolds.fa |ufasta format > $REFN.split.joined.tmp && \
 mv $REFN.split.joined.tmp $REFN.split.joined.fa && \
-touch scaffold_merge.merge.success
+touch scaffold_merge.scaffold.success
 fi
 
-echo "Output sequences in $REFN.split.joined.fa"
+log "Output sequences in $REFN.split.joined.fa"
