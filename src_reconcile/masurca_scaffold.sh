@@ -158,7 +158,7 @@ if [ -e scaffold_align_patches.success ];then
 log "Creating scaffold graph and building scaffolds"
 rm -f do_consensus.sh && \
 cat $REFN.$QRYN.patches.coords | $MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa $ALLOWED > $REFN.$QRYN.patches.links.txt.tmp && mv $REFN.$QRYN.patches.links.txt.tmp $REFN.$QRYN.patches.links.txt && \
-$MYPATH/find_repeats.pl $REFN.$QRYN.coords $REFN.$QRYN.patches.links.txt >$REFN.repeats.txt.tmp && mv $REFN.repeats.txt.tmp $REFN.repeats.txt && \
+$MYPATH/find_repeats.pl $REFN.$QRYN.patches.coords $REFN.$QRYN.patches.links.txt >$REFN.repeats.txt.tmp && mv $REFN.repeats.txt.tmp $REFN.repeats.txt && \
 perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.patches.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \
 $MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa $ALLOWED > $REFN.$QRYN.patches.uniq.links.txt.tmp && mv $REFN.$QRYN.patches.uniq.links.txt.tmp $REFN.$QRYN.patches.uniq.links.txt && \
 $MYPATH/merge_contigs.pl $REF < $REFN.$QRYN.patches.uniq.links.txt 2>$REFN.$QRYN.bubbles.txt | \
