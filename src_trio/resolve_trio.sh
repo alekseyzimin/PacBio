@@ -26,14 +26,14 @@ fi
 
 if [ ! -e classify.success ];then
 cat $JF_P1 $JF_P2 > /dev/null
-ufasta split -i $MEGAREADS >(./classify_reads.pl $JF_P1 $JF_P2 > $PID.1.txt) \
->(./classify_reads.pl $JF_P1 $JF_P2 > $PID.2.txt) \
->(./classify_reads.pl $JF_P1 $JF_P2 > $PID.3.txt) \
->(./classify_reads.pl $JF_P1 $JF_P2 > $PID.4.txt) \
->(./classify_reads.pl $JF_P1 $JF_P2 > $PID.5.txt) \
->(./classify_reads.pl $JF_P1 $JF_P2 > $PID.6.txt) \
->(./classify_reads.pl $JF_P1 $JF_P2 > $PID.7.txt) \
->(./classify_reads.pl $JF_P1 $JF_P2 > $PID.8.txt) && \
+ufasta split -i $MEGAREADS >($MYPATH/classify_reads.pl $JF_P1 $JF_P2 > $PID.1.txt) \
+>($MYPATH/classify_reads.pl $JF_P1 $JF_P2 > $PID.2.txt) \
+>($MYPATH/classify_reads.pl $JF_P1 $JF_P2 > $PID.3.txt) \
+>($MYPATH/classify_reads.pl $JF_P1 $JF_P2 > $PID.4.txt) \
+>($MYPATH/classify_reads.pl $JF_P1 $JF_P2 > $PID.5.txt) \
+>($MYPATH/classify_reads.pl $JF_P1 $JF_P2 > $PID.6.txt) \
+>($MYPATH/classify_reads.pl $JF_P1 $JF_P2 > $PID.7.txt) \
+>($MYPATH/classify_reads.pl $JF_P1 $JF_P2 > $PID.8.txt) && \
 cat $PID.{1,2,3,4,5,6,7,8}.txt > $PID.counts.txt && \
 rm $PID.{1,2,3,4,5,6,7,8}.txt && \
 touch classify.success
