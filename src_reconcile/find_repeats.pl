@@ -40,6 +40,6 @@ foreach $c(keys %edge_fwd){
   if(defined($edge_rev{$c})){
     my @f1=split(/\s+/,$edge_fwd{$c});
     my @f2=split(/\s+/,$edge_rev{$c});
-    print "$c rev $edge_rev{$c}\n$c fwd $edge_fwd{$c}\n" if($cov{$c}/$len{$c}>=$cov_thresh && $#f1>2 && $#f2>2);
+    print "$c rev $edge_rev{$c}\n$c fwd $edge_fwd{$c}\n" if($cov{$c}/($len{$c}+1)>=$cov_thresh && $#f1>2 && $#f2>2);#+1 avoids /0 error
   }
 }
