@@ -147,8 +147,7 @@ log "Aligning the scaffolding sequences to the contigs"
 $MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REF $REFN.$QRYN.patches.fa 2>minimap.err | \
 awk '{if($4-$3>int("'$MIN_MATCH'") && ($8<int("'$OVERHANG'") || $7-$9<int("'$OVERHANG'")) && $12>=60) print $0}' |\
 sort -k1,1 -k3,3n -S 10% | \
-awk 'BEGIN{r="";c=""}{if($1!=r){print $0" "$1;r=$1;c=$6}else if($6!=c){print $0" "$1;c=$6}}' | \
-uniq -D -f 18 | \
+awk 'BEGIN{r="";c=""}{if($1==r && $6!=c){print prevline"\n"$0;}prevline=$0;c=$6;r=$1;}' | \
 awk '{if($5=="+"){print $8+1" "$9" | "$3+1" "$4" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}else{print $8+1" "$9" | "$4" "$3+1" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}}' > $REFN.$QRYN.patches.coords.tmp && mv $REFN.$QRYN.patches.coords.tmp $REFN.$QRYN.patches.coords && \
 touch scaffold_align_patches.success || error_exit "minimap2 patches failed"
 fi
