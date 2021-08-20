@@ -31,8 +31,8 @@ while($line=<FILE>){
 
 #first we read in all the matches into an array
 my $prevline="";
-my $slack=1000;
-my $maxgap=200000;
+my $slack=20000;
+my $maxgap=500000;
 my $mingap=-10000;
 my %oh1=(),%oh2=(),%gap=(),%gapseq=();
 while($line=<STDIN>){
