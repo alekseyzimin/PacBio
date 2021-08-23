@@ -4,7 +4,8 @@ while($line=<STDIN>){
   chomp($line);
   if($line=~/^>/){
   if(length($seq)>0){
-      @f=split(/(N{1,})/,uc($seq)); 
+      $seq=~s/n/N/g;
+      @f=split(/(N{1,})/,$seq); 
       my $n=1;
       foreach $c(@f){
         if(not($c=~/^N/) && length($c)>0){
@@ -21,8 +22,8 @@ while($line=<STDIN>){
   $seq.=$line;
 }
 }
-
-  @f=split(/(N{1,})/,uc($seq));
+  $seq=~s/n/N/g;
+  @f=split(/(N{1,})/,$seq);
   my $n=1;
   foreach $c(@f){
     if(not($c=~/^N/) && length($c)>0){
