@@ -652,9 +652,17 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
     else
         log "Warning! Some or all gap consensus jobs failed, see files in ${COORDS}.join_consensus.tmp, however this is fine and assembly can proceed normally"
         if [ -s ${COORDS}.1$POSTFIX.joined.fa ];then
+          if [ $FLYE_ASSEMBLY -gt 0 ];then
+            cat $COORDS.1$POSTFIX.joined.fa $COORDS.1$POSTFIX.unjoined.fa | $MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H <(cat $COORDS.1$POSTFIX.joined.fa $COORDS.1$POSTFIX.unjoined.fa) | sort -nrk2,2 -S 10% | awk '{n+=$2;if(n<549755813888) print $1;}') > $COORDS.1$POSTFIX.fa.tmp && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.fa
+          else
             cat $COORDS.1$POSTFIX.joined.fa $COORDS.1$POSTFIX.unjoined.fa  > $COORDS.1$POSTFIX.fa.tmp && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.fa
+          fi
         else
+          if [ $FLYE_ASSEMBLY -gt 0 ];then
+            cat $COORDS.1$POSTFIX.joined.fa $COORDS.1$POSTFIX.to_join.fa | $MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H <(cat $COORDS.1$POSTFIX.to_join.fa $COORDS.1$POSTFIX.unjoined.fa) | sort -nrk2,2 -S 10% | awk '{n+=$2;if(n<549755813888) print $1;}') > $COORDS.1$POSTFIX.fa.tmp && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.fa
+          else
             cat $COORDS.1$POSTFIX.unjoined.fa $COORDS.1$POSTFIX.to_join.fa  > $COORDS.1$POSTFIX.fa.tmp && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.fa
+          fi
         fi
     fi
     touch .rerun
