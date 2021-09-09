@@ -190,7 +190,6 @@ do
 done
 
 ###############checking arguments#########################
-echo "flye $FLYE_ASSEMBLY"
 if [ $FLYE_ASSEMBLY -gt 0 ];then
     log "Using Flye from $CA_PATH"
     if [ ! -e $CA_PATH/flye ];then
