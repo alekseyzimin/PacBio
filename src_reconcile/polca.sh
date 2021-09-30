@@ -161,7 +161,11 @@ if [ ! -e $BASM.vc.success ];then
 
 #end subshell execution
   if [ -e ./$BASM.vc/$BASM.vc.success ];then
-    seq 1 $BATCHES | xargs -I % ls $BASM.vc/%.vcf |xargs cat  > $BASM.vcf.tmp && mv $BASM.vcf.tmp $BASM.vcf && touch $BASM.vc.success && rm -rf $BASM.vc
+    seq 1 $BATCHES | xargs -I % ls $BASM.vc/%.vcf |xargs cat  | grep '^##' |grep -v commandline | sort -S 10% |uniq > $BASM.vcf.header.tmp && mv $BASM.vcf.header.tmp $BASM.vcf.header1 && \
+    seq 1 $BATCHES | xargs -I % ls $BASM.vc/%.vcf |xargs cat  | grep '^#C' |sort -S 10% |uniq > $BASM.vcf.header.tmp && mv $BASM.vcf.header.tmp $BASM.vcf.header2 && \
+    seq 1 $BATCHES | xargs -I % ls $BASM.vc/%.vcf |xargs cat  | grep -v '^#' > $BASM.vcf.body.tmp && mv $BASM.vcf.body.tmp $BASM.vcf.body && \
+    cat $BASM.vcf.header1 $BASM.vcf.header2 $BASM.vcf.body > $BASM.vcf.tmp && mv $BASM.vcf.tmp $BASM.vcf && \
+    touch $BASM.vc.success && rm -rf $BASM.vc $BASM.vcf.body $BASM.vcf.header{1,2}
   else
     error_exit "Variant calling failed in ./$BASM.vc"
   fi
