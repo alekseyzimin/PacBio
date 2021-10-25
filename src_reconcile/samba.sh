@@ -130,15 +130,19 @@ cat  $REFN.$QRYN.coords |$MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa $ALLOWED
 $MYPATH/find_repeats.pl $REFN.$QRYN.coords $REFN.$QRYN.links.txt >$REFN.repeats.txt.tmp && mv $REFN.repeats.txt.tmp $REFN.repeats.txt && \
 rm -f patches.polished.fa && \
 echo "#!/bin/bash" > do_consensus.sh && \
-echo "rm -rf polish.tmp" >> do_consensus.sh && \
-echo "$MYPATH/../Flye/bin/flye --polish-target patches.ref.fa --iterations 1 --nano-raw patches.reads.fa --threads $NUM_THREADS --out-dir polish.tmp 1>polish.err 2>&1 && $MYPATH/ufasta one polish.tmp/polished_1.fasta >> patches.polished.fa"  >> do_consensus.sh && \
+echo "rm -rf polish.?.tmp" >> do_consensus.sh
+for jindex in $(seq 0 9);do
+echo "if [ -s patches.ref.$jindex.fa ] && [ -s patches.reads.$jindex.fa ];then $MYPATH/../Flye/bin/flye --polish-target patches.ref.$jindex.fa --iterations 1 --nano-raw patches.reads.$jindex.fa --threads 8 --out-dir polish.$jindex.tmp 1>polish.err 2>&1 && rm -f patches.ref.$jindex.fa patches.reads.$jindex.fa;fi &"  >> do_consensus.sh 
+done
+echo "wait;" >> do_consensus.sh && \
+echo "cat polish.?.tmp/polished_1.fasta | $MYPATH/ufasta one >> patches.polished.fa" >> do_consensus.sh && \
 chmod 0755 do_consensus.sh && \
 perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \
 $MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa  $ALLOWED >/dev/null && \
 rm -f do_consensus.sh && \
 touch patches.polished.fa && \
 cat patches.polished.fa patches.raw.fa > $REFN.$QRYN.patches.fa.tmp && mv $REFN.$QRYN.patches.fa.tmp $REFN.$QRYN.patches.fa && \
-rm -rf patches.ref.fa patches.reads.fa patches.raw.fa polish.tmp && \
+rm -rf patches.ref.fa patches.reads.fa patches.raw.fa polish.?.tmp && \
 touch scaffold_links.success && rm -f scaffold_align_patches.success || error_exit "links consensus failed"
 fi
 

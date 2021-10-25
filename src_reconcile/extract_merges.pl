@@ -162,13 +162,14 @@ foreach my $k (keys %rnames){
 
 if(-e "do_consensus.sh"){
   open(RAW,">patches.raw.fa");
+  my $pindex=0;
   foreach my $name(keys %jnames){
     my @names=split(/\s+/,$jnames{$name});
     if($#names==0){#no polishing seq -- put into raw
       print RAW ">$name\n$qseq{$name}\n";
     }else{
-      open(REF,">patches.ref.fa");
-      open(READS,">patches.reads.fa");
+      open(REF,">patches.ref.$pindex.fa");
+      open(READS,">patches.reads.$pindex.fa");
       print REF ">$name\n$qseq{$name}\n";
 #need uniq to avoid outputting duplicates
       my %output=();
@@ -180,9 +181,16 @@ if(-e "do_consensus.sh"){
       }
       close(REF);
       close(READS);
+      $pindex++;
 #run consensus
-      system("./do_consensus.sh");
+      if($pindex>=10){
+        system("./do_consensus.sh");
+        $pindex=0;
+      }
     }
+  }
+  if($pindex>0){
+    system("./do_consensus.sh");
   }
 }
 
