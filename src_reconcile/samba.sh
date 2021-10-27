@@ -148,18 +148,17 @@ fi
 
 if [ ! -e scaffold_align_patches.success ];then
 log "Aligning the scaffolding sequences to the contigs"
-$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REF $REFN.$QRYN.patches.fa 2>minimap.err | \
-awk '{if($4-$3>int("'$MIN_MATCH'") && ($8<int("'$OVERHANG'") || $7-$9<int("'$OVERHANG'")) && $12>=60) print $0}' |\
-sort -k1,1 -k3,3n -S 10% | \
-awk 'BEGIN{r="";c=""}{if($1==r && $6!=c){print prevline"\n"$0;}prevline=$0;c=$6;r=$1;}' | \
-awk '{if($5=="+"){print $8+1" "$9" | "$3+1" "$4" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}else{print $8+1" "$9" | "$4" "$3+1" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}}' > $REFN.$QRYN.patches.coords.tmp && mv $REFN.$QRYN.patches.coords.tmp $REFN.$QRYN.patches.coords && \
-touch scaffold_align_patches.success && rm -f scaffold_scaffold.success || error_exit "minimap2 patches failed"
+$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REF $REFN.$QRYN.patches.fa 2>minimap.err  > $REFN.$QRYN.patches.paf.tmp && mv  $REFN.$QRYN.patches.paf.tmp  $REFN.$QRYN.patches.paf && touch scaffold_align_patches.success && rm -f scaffold_scaffold.success || error_exit "minimap2 patches failed"
 fi
 
 if [ ! -e scaffold_scaffold.success ];then
 log "Creating scaffold graph and building scaffolds"
 rm -f do_consensus.sh && \
-cat $REFN.$QRYN.patches.coords | $MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa $ALLOWED > $REFN.$QRYN.patches.links.txt.tmp && mv $REFN.$QRYN.patches.links.txt.tmp $REFN.$QRYN.patches.links.txt && \
+awk '{if($4-$3>int("'$MIN_MATCH'") && ($8<int("'$OVERHANG'") || $7-$9<int("'$OVERHANG'")) && $12>=60) print $0}' $REFN.$QRYN.patches.paf |\
+sort -k1,1 -k3,3n -S 10% | \
+awk 'BEGIN{r="";c=""}{if($1==r && $6!=c){print prevline"\n"$0;}prevline=$0;c=$6;r=$1;}' | \
+awk '{if($5=="+"){print $8+1" "$9" | "$3+1" "$4" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}else{print $8+1" "$9" | "$4" "$3+1" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}}' |\
+$MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa $ALLOWED > $REFN.$QRYN.patches.links.txt.tmp && mv $REFN.$QRYN.patches.links.txt.tmp $REFN.$QRYN.patches.links.txt && \
 $MYPATH/find_repeats.pl $REFN.$QRYN.patches.coords $REFN.$QRYN.patches.links.txt >$REFN.repeats.txt.tmp && mv $REFN.repeats.txt.tmp $REFN.repeats.txt && \
 perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.patches.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \
 $MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa $ALLOWED > $REFN.$QRYN.patches.uniq.links.txt.tmp && mv $REFN.$QRYN.patches.uniq.links.txt.tmp $REFN.$QRYN.patches.uniq.links.txt && \
@@ -173,7 +172,7 @@ fi
 if [ ! -e scaffold_deduplicate.success ];then
 log "Deduplicating contigs"
 awk 'BEGIN{n=0}{if(length($NF)>100){print ">"n"\n"$NF;n++}}' $REFN.$QRYN.patches.uniq.links.txt > $REFN.$QRYN.patches.uniq.links.fa.tmp && mv $REFN.$QRYN.patches.uniq.links.fa.tmp $REFN.$QRYN.patches.uniq.links.fa && \
-$MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H $REFN.scaffolds.fa | awk '{if($2<int("'$MIN_MATCH'")) print $1}') $REFN.scaffolds.all.fa > $REFN.short_contigs.fa.tmp && mv $REFN.short_contigs.fa.tmp $REFN.short_contigs.fa && \
+$MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H $REFN.scaffolds.all.fa | awk '{if($2<int("'$MIN_MATCH'")) print $1}') $REFN.scaffolds.all.fa > $REFN.short_contigs.fa.tmp && mv $REFN.short_contigs.fa.tmp $REFN.short_contigs.fa && \
 ufasta extract -v -f <($MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS $REFN.short_contigs.fa $REFN.$QRYN.patches.uniq.links.fa 2>/dev/null | awk '{if(($9-$8)/$7>.95) print $6}') $REFN.scaffolds.all.fa > $REFN.scaffolds.fa.tmp && mv $REFN.scaffolds.fa.tmp $REFN.scaffolds.fa && \
 rm $REFN.short_contigs.fa $REFN.$QRYN.patches.uniq.links.fa && touch scaffold_deduplicate.success || error_exit "deduplicate failed"
 fi
