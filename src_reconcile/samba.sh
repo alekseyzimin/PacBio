@@ -100,16 +100,53 @@ DELTAFILE=$REFN.$QRYN
 #minimap
 if [ ! -e scaffold_align.success ];then
 log "Aligning the reads to the contigs"
-$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REF $QRY 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
+$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REF $QRY 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_split.success || error_exit "minimap2 failed"
 fi
 
+if [ ! -e scaffold_split.success ];then
+log "Filtering alignments and looking for misassemblies"
+#first we figure out which reads we are keepping for subsequent steps.  We are keeping alignments of all reads that satisfy minimum alignment length criteria and map to 2+ contigs
+awk '{if($4-$3>int("'$MIN_MATCH'") && $12>=60) print $0}' $REFN.$QRYN.paf | \
+perl -ane '{push(@lines,join(" ",@F));$ctg{$F[0]}.="$F[5] ";}
+END{
+my %to_output=();
+foreach $r (keys %ctg){my @f=split(/\s+/,$ctg{$r}); 
+my %temp=(); 
+foreach $c(@f){$temp{$c}=1}; 
+my $size = keys %temp; if($size>1){$to_output{$r}=1;}
+}
+foreach $l(@lines){my @f=split(/\s+/,$l);print "$l\n" if(defined($to_output{$f[0]}));}}' | \
+sort -k1,1 -k3,3n -S 10% > $REFN.$QRYN.filtered.paf.tmp && mv $REFN.$QRYN.filtered.paf.tmp $REFN.$QRYN.filtered.paf && \ 
+awk 'BEGIN{r="";c="";oh=int("'$MIN_MATCH'");}{if($1==r && $6!=c){split(prevline,a," ");if(a[5]=="+"){if(a[7]-a[9]>oh){print a[6]" "a[9];}}else{if(a[8]>oh){print a[6]" "a[8]}} if($5=="+"){if($8>oh){print $6" "$8;}}else{if($7-$9 > oh){print $6" "$9;}}}prevline=$0;c=$6;r=$1;}' $REFN.$QRYN.filtered.paf | \
+sort -S10% -k1,1 -k2,2n | perl -ane '{push(@ctg,$F[0]);push(@coord,$F[1]);}END{$rad=30;$tol=100;for($i=0;$i<=$#ctg;$i++){my $score=0;for($j=$i-$rad;$j<$i+$rad;$j++){next if($j<0 || $j>$#ctg);if(abs($coord[$j]-$coord[$i])<$tol && $ctg[$j] eq $ctg[$i]){$score+=exp(-abs($coord[$j]-$coord[$i])/$tol)}} print "$ctg[$i] $coord[$i] $score\n"}}' | \
+sort -nrk3,3 -S10% | uniq | perl -ane '{if(not(defined($h{$F[0]}))){$h{$F[0]}=$F[1];}elsif($F[2]>=4){@f=split(/\s+/,$h{$F[0]});my $flag=0;foreach $v(@f){$flag=1 if(abs($v-$F[1])<int("'$MIN_MATCH'"));}if($flag==0){$h{$F[0]}.=" $F[1]"}}}END{foreach $k(keys %h){@f=split(/\s+/,$h{$k});foreach $v(@f){print "break $k $v\n"}}}' |
+sort -S10% -k2,2 -k3,3n > $REFN.$QRYN.splits.txt && \
+echo -n "Found misassemblies: " && wc -l $REFN.$QRYN.splits.txt && \
+$MYPATH/break_contigs.pl  $REFN.$QRYN.splits.txt < $REFN > $REFN.split.fa.tmp && mv $REFN.split.fa.tmp $REFN.split.fa && \
+rm -f scaffold_split_align.success || error_exit "splitting at misassemblies failed" 
+fi
+
+#minimap
+if [ ! -e scaffold_split_align.success ];then
+log "Aligning the reads to the split contigs"
+$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REFN.split.fa <(ufasta extract -f <(awk '{print $1}' $REFN.$QRYN.filtered.paf) $QRY) 1> $REFN.$QRYN.split.paf.tmp 2>minimap.err && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && touch scaffold_split_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
+fi
+
+
 if [ ! -e scaffold_filter.success ];then
-log "Filtering alignments"
-awk '{max_overhang=0.1*$7;if(max_overhang>int("'$OVERHANG'")) max_overhang=int("'$OVERHANG'"); if($4-$3>int("'$MIN_MATCH'") && ($8<max_overhang || $7-$9<max_overhang) && $12>=60) print $0}' $REFN.$QRYN.paf | \
-sort -k1,1 -k3,3n -S 10% | \
-awk 'BEGIN{r="";c=""}{if($1==r && $6!=c){print prevline"\n"$0;}prevline=$0;c=$6;r=$1;}' | \
-awk '{if($5=="+"){print $8+1" "$9" | "$3+1" "$4" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}else{print $8+1" "$9" | "$4" "$3+1" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}}' > $REFN.$QRYN.coords.tmp && mv $REFN.$QRYN.coords.tmp $REFN.$QRYN.coords || error_exit "filtering alignments failed" 
-touch scaffold_filter.success && rm -f  scaffold_reads.success 
+awk '{max_overhang=0.1*$7;if(max_overhang>int("'$OVERHANG'")) max_overhang=int("'$OVERHANG'"); if($4-$3>int("'$MIN_MATCH'") && ($8<max_overhang || $7-$9<max_overhang) && $12>=60) print $0}' $REFN.$QRYN.split.paf | \
+perl -ane '{push(@lines,join(" ",@F));$ctg{$F[0]}.="$F[5] ";}
+END{
+my %to_output=();
+foreach $r (keys %ctg){my @f=split(/\s+/,$ctg{$r}); 
+my %temp=(); 
+foreach $c(@f){$temp{$c}=1}; 
+my $size = keys %temp; if($size>1){$to_output{$r}=1;}
+}
+foreach $l(@lines){my @f=split(/\s+/,$l);print "$l\n" if(defined($to_output{$f[0]}));}}' | \
+sort -k1,1 -k3,3n -S 10% |\
+awk '{if($5=="+"){print $8+1" "$9" | "$3+1" "$4" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}else{print $8+1" "$9" | "$4" "$3+1" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}}' > $REFN.$QRYN.coords.tmp && mv $REFN.$QRYN.coords.tmp $REFN.$QRYN.coords || error_exit "filtering alignments failed"
+touch scaffold_filter.success && rm -f  scaffold_reads.success
 fi
 
 if [ ! -e scaffold_reads.success ];then
@@ -148,7 +185,7 @@ fi
 
 if [ ! -e scaffold_align_patches.success ];then
 log "Aligning the scaffolding sequences to the contigs"
-$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REF $REFN.$QRYN.patches.fa 2>minimap.err  > $REFN.$QRYN.patches.paf.tmp && mv  $REFN.$QRYN.patches.paf.tmp  $REFN.$QRYN.patches.paf && touch scaffold_align_patches.success && rm -f scaffold_scaffold.success || error_exit "minimap2 patches failed"
+$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REFN.split.fa $REFN.$QRYN.patches.fa 2>minimap.err  > $REFN.$QRYN.patches.paf.tmp && mv  $REFN.$QRYN.patches.paf.tmp  $REFN.$QRYN.patches.paf && touch scaffold_align_patches.success && rm -f scaffold_scaffold.success || error_exit "minimap2 patches failed"
 fi
 
 if [ ! -e scaffold_scaffold.success ];then
@@ -166,9 +203,9 @@ mv $REFN.repeats.txt.tmp $REFN.repeats.txt && \
 perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.patches.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \
 $MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa $ALLOWED > $REFN.$QRYN.patches.uniq.links.txt.tmp && \
 mv $REFN.$QRYN.patches.uniq.links.txt.tmp $REFN.$QRYN.patches.uniq.links.txt && \
-$MYPATH/merge_contigs.pl $REF < $REFN.$QRYN.patches.uniq.links.txt 2>$REFN.$QRYN.bubbles.txt | \
+$MYPATH/merge_contigs.pl $REFN.split.fa < $REFN.$QRYN.patches.uniq.links.txt 2>$REFN.$QRYN.bubbles.txt | \
 $MYPATH/insert_repeats.pl $REFN.repeats.txt |\
-$MYPATH/create_merged_sequences.pl $REF  <(cat $REFN.$QRYN.patches.uniq.links.txt $REFN.$QRYN.patches.links.txt |sort -S 10% |uniq) | \
+$MYPATH/create_merged_sequences.pl $REFN.split.fa  <(cat $REFN.$QRYN.patches.uniq.links.txt $REFN.$QRYN.patches.links.txt |sort -S 10% |uniq) | \
 $MYPATH/ufasta extract -v -f $REFN.$QRYN.bubbles.txt > $REFN.$QRYN.scaffolds.fa.tmp && \
 mv $REFN.$QRYN.scaffolds.fa.tmp $REFN.scaffolds.all.fa  && touch scaffold_scaffold.success && rm -f scaffold_deduplicate.success || error_exit "walking the scaffold graph failed"
 fi
