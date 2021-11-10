@@ -28,7 +28,7 @@ while($line=<STDIN>){
         print ">$ctg\n$seq\n";
         }
     }
-    $ctg=substr($f[0],4);
+    $ctg=substr($f[0],1);
     $seq="";
   }else{
     $seq.=$line;
