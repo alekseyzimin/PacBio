@@ -117,9 +117,14 @@ my $size = keys %temp; if($size>1){$to_output{$r}=1;}
 }
 foreach $l(@lines){my @f=split(/\s+/,$l);print "$l\n" if(defined($to_output{$f[0]}));}}' | \
 sort -k1,1 -k3,3n -S 10% > $REFN.$QRYN.filtered.paf.tmp && mv $REFN.$QRYN.filtered.paf.tmp $REFN.$QRYN.filtered.paf && \
-awk 'BEGIN{r="";c="";oh=int("'$MIN_MATCH'");}{if($1==r && $6!=c){split(prevline,a," ");if(a[5]=="+"){if(a[7]-a[9]>oh){print a[6]" "a[9];}}else{if(a[8]>oh){print a[6]" "a[8]}} if($5=="+"){if($8>oh){print $6" "$8;}}else{if($7-$9 > oh){print $6" "$9;}}}prevline=$0;c=$6;r=$1;}' $REFN.$QRYN.filtered.paf | \
+awk 'BEGIN{r="";c="";oh=int("'$MIN_MATCH'");}{
+if($1==r && $6!=c){
+split(prevline,a," ");
+if(a[5]=="+"){if(a[7]-a[9] > oh && $2-$4 > oh){print a[6]" "a[9];}}else{ if(a[8] > oh && $2-$4 > oh){print a[6]" "a[8]}} 
+  if($5=="+"){       if($8 > oh &&    $3 > oh){print $6" "$8;}}    else{if($7-$9 > oh &&    $3 > oh){print $6" "$9;}}
+}prevline=$0;c=$6;r=$1;}' $REFN.$QRYN.filtered.paf | \
 sort -S10% -k1,1 -k2,2n | perl -ane '{push(@ctg,$F[0]);push(@coord,$F[1]);}END{$rad=30;$tol=100;for($i=0;$i<=$#ctg;$i++){my $score=0;for($j=$i-$rad;$j<$i+$rad;$j++){next if($j<0 || $j>$#ctg);if(abs($coord[$j]-$coord[$i])<$tol && $ctg[$j] eq $ctg[$i]){$score+=exp(-abs($coord[$j]-$coord[$i])/$tol)}} print "$ctg[$i] $coord[$i] $score\n"}}' | \
-sort -nrk3,3 -S10% | uniq | perl -ane '{if(not(defined($h{$F[0]}))){$h{$F[0]}=$F[1];}elsif($F[2]>=4){@f=split(/\s+/,$h{$F[0]});my $flag=0;foreach $v(@f){$flag=1 if(abs($v-$F[1])<int("'$MIN_MATCH'"));}if($flag==0){$h{$F[0]}.=" $F[1]"}}}END{foreach $k(keys %h){@f=split(/\s+/,$h{$k});foreach $v(@f){print "break $k $v\n"}}}' |
+sort -nrk3,3 -S10% | uniq | perl -ane '{if($F[2]>=2){if(not(defined($h{$F[0]}))){$h{$F[0]}=$F[1];}else{@f=split(/\s+/,$h{$F[0]});my $flag=0;foreach $v(@f){$flag=1 if(abs($v-$F[1])<int("'$MIN_MATCH'"));}if($flag==0){$h{$F[0]}.=" $F[1]"}}}}END{foreach $k(keys %h){@f=split(/\s+/,$h{$k});foreach $v(@f){print "break $k $v\n"}}}' |
 sort -S10% -k2,2 -k3,3n > $REFN.$QRYN.splits.txt && \
 echo -n "Found misassemblies: " && wc -l $REFN.$QRYN.splits.txt && \
 $MYPATH/break_contigs.pl  $REFN.$QRYN.splits.txt < $REF > $REFN.split.fa.tmp && mv $REFN.split.fa.tmp $REFN.split.fa && \
