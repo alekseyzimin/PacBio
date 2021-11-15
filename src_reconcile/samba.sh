@@ -6,6 +6,7 @@ set -o pipefail
 NUM_THREADS=1
 MIN_MATCH=5000
 OVERHANG=1000
+SPLIT_OVERHANG=2000
 ALLOWED=""
 GC=
 RC=
@@ -106,7 +107,7 @@ fi
 if [ ! -e scaffold_split.success ];then
 log "Filtering alignments and looking for misassemblies"
 #first we figure out which reads we are keepping for subsequent steps.  We are keeping alignments of all reads that satisfy minimum alignment length criteria and map to 2+ contigs
-awk '{if($4-$3>int("'$MIN_MATCH'") && $12>=60) print $0}' $REFN.$QRYN.paf | \
+awk '{if($4-$3>int("'$SPLIT_OVERHANG'") && $12>=60) print $0}' $REFN.$QRYN.paf | \
 perl -ane '{push(@lines,join(" ",@F));$ctg{$F[0]}.="$F[5] ";}
 END{
 my %to_output=();
