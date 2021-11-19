@@ -6,7 +6,7 @@ set -o pipefail
 NUM_THREADS=1
 MIN_MATCH=5000
 OVERHANG=1000
-SPLIT_OVERHANG=2000
+MIN_SCORE=60
 ALLOWED=""
 GC=
 RC=
@@ -19,26 +19,45 @@ fi
 
 trap abort 1 2 15
 function abort {
-log "Aborted"
-kill 0
-exit 1
+  log "Aborted"
+  kill 0
+  exit 1
 }
 
 
 log () {
-    dddd=$(date)
-    echo -e "${GC}[$dddd]${NC} $@"
+  dddd=$(date)
+  echo -e "${GC}[$dddd]${NC} $@"
 }
 
 
 function error_exit {
-    dddd=$(date)
-    echo -e "${RC}[$dddd]${NC} $1" >&2
-    exit "${2:-1}"
+  dddd=$(date)
+  echo -e "${RC}[$dddd]${NC} $1" >&2
+  exit "${2:-1}"
+}
+
+function filter_convert_paf () {
+#extract alignments of all long reads that satisfy the overhng, score and match length requirements and align to two or more contigs and convert to coords format
+  awk '{ max_overhang=int("'$OVERHANG'"); if($4-$3>int("'$MIN_MATCH'") && ($8 < max_overhang || $7-$9 < max_overhang) && $12>=int("'$MIN_SCORE'")) print $0}' $1 |\
+  perl -ane 'BEGIN{my %to_output=();}{
+    push(@lines,join(" ",@F));if(not(defined($ctg{$F[0]}))){$ctg{$F[0]}=$F[5];}else{$to_output{$F[0]}=1 if(not($ctg{$F[0]} eq $F[5]));}
+    }
+    END{
+    foreach $l(@lines){my @f=split(/\s+/,$l);print "$l\n" if(defined($to_output{$f[0]}));}
+    }' | \
+  sort -k1,1 -k3,3n -S 10% | \
+  awk '{if($5=="+"){print $8+1" "$9" | "$3+1" "$4" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}else{print $8+1" "$9" | "$4" "$3+1" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}}' > $2.tmp && \
+  mv $2.tmp $2
+}
+
+function usage () {
+  echo "Usage:"
+  echo "samba.sh -r <contigs or scaffolds in fasta format> -q <long reads or another assembly used to scaffold in fasta format> -t <number of threads> -m <minimum matching length, default:5000> -o <maximum overhang, default:1000> -a <optional: allowed merges file in the format per line: contig1 contig2, only pairs of contigs listed will be considered for merging, useful for intrascaffold gap filling>"
 }
 
 if [ $# -lt 1 ];then
-  error_exit "Usage: samba.sh -r <contigs or scaffolds in fasta format> -q <long reads or another assembly used to scaffold in fasta format> -t <number of threads> -m <minimum matching length, default:5000> -o <maximum overhang, default:1000> -a <optional: allowed merges file in the format per line: contig1 contig2, only pairs of contigs listed will be considered for merging, useful for intrascaffold gap filling>"
+  usage
 fi
 
 #parsing arguments
@@ -75,7 +94,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage: samba.sh -r <contigs or scaffolds in fasta format> -q <long reads or another assembly used to scaffold in fasta format> -t <number of threads> -m <minimum matching length, default:5000> -o <maximum overhang, default:1000> -a <optional: allowed merges file in the format per line: contig1 contig2, only pairs of contigs listed will be considered for merging, useful for intrascaffold gap filling>"
+            usage
             exit 0
             ;;
         *)
@@ -107,7 +126,7 @@ fi
 if [ ! -e scaffold_split.success ];then
 log "Filtering alignments and looking for misassemblies"
 #first we figure out which reads we are keepping for subsequent steps.  We are keeping alignments of all reads that satisfy minimum alignment length criteria and map to 2+ contigs
-awk '{if($4-$3>int("'$MIN_MATCH'") && $12>=60) print $0}' $REFN.$QRYN.paf | \
+awk '{if($4-$3>int("'$MIN_MATCH'") && $12>=int("'$MIN_SCORE'")) print $0}' $REFN.$QRYN.paf | \
 perl -ane '{push(@lines,join(" ",@F));$ctg{$F[0]}.="$F[5] ";}
 END{
 my %to_output=();
@@ -118,14 +137,14 @@ my $size = keys %temp; if($size>1){$to_output{$r}=1;}
 }
 foreach $l(@lines){my @f=split(/\s+/,$l);print "$l\n" if(defined($to_output{$f[0]}));}}' | \
 sort -k1,1 -k3,3n -S 10% > $REFN.$QRYN.filtered.paf.tmp && mv $REFN.$QRYN.filtered.paf.tmp $REFN.$QRYN.filtered.paf && \
-awk 'BEGIN{r="";c="";oh=int("'$SPLIT_OVERHANG'");}{
+awk 'BEGIN{r="";c="";oh=int("'$MIN_MATCH'");}{
 if($1==r && $6!=c){
 split(prevline,a," ");
-if(a[5]=="+"){if(a[7]-a[9] > oh && a[2]-a[4] > oh){print a[6]" "a[9];}}else{ if(a[8] > oh && a[2]-a[4] > oh){print a[6]" "a[8]}} 
-  if($5=="+"){       if($8 > oh &&    $3 > oh){print $6" "$8;}}    else{if($7-$9 > oh &&    $3 > oh){print $6" "$9;}}
+if(a[5]=="+"){if(a[7]-a[9] >= oh && a[2]-a[4] >= oh){print a[6]" "a[9];}}else{ if(a[8] >= oh && a[2]-a[4] >= oh){print a[6]" "a[8]}} 
+  if($5=="+"){       if($8 >= oh &&    $3 >= oh){print $6" "$8;}}    else{if($7-$9 >= oh &&    $3 >= oh){print $6" "$9;}}
 }prevline=$0;c=$6;r=$1;}' $REFN.$QRYN.filtered.paf | \
 sort -S10% -k1,1 -k2,2n | \
-uniq -c |awk '{if($1<3) print $2" "$3" "$4}' | \
+uniq -c |awk '{if($1<3) print $2" "$3}' | \
 perl -ane '{push(@ctg,$F[0]);push(@coord,$F[1]);}END{$rad=30;$tol=500;for($i=0;$i<=$#ctg;$i++){my $score=0;for($j=$i-$rad;$j<$i+$rad;$j++){next if($j<0 || $j>$#ctg);if(abs($coord[$j]-$coord[$i])<$tol && $ctg[$j] eq $ctg[$i]){$score+=exp(-abs($coord[$j]-$coord[$i])/$tol)}} print "$ctg[$i] $coord[$i] $score\n" if($score>3);}}' | \
 sort -nrk3,3 -S10% | uniq | perl -ane '{if(not(defined($h{$F[0]}))){$h{$F[0]}=$F[1];}else{@f=split(/\s+/,$h{$F[0]});my $flag=0;foreach $v(@f){$flag=1 if(abs($v-$F[1])<int("'$MIN_MATCH'"));}if($flag==0){$h{$F[0]}.=" $F[1]"}}}END{foreach $k(keys %h){@f=split(/\s+/,$h{$k});foreach $v(@f){print "break $k $v\n"}}}' |
 sort -S10% -k2,2 -k3,3n > $REFN.$QRYN.splits.txt && \
@@ -140,20 +159,8 @@ log "Aligning the reads to the split contigs"
 $MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REFN.split.fa <(ufasta extract -f <(awk '{print $1}' $REFN.$QRYN.filtered.paf) $QRY) 1> $REFN.$QRYN.split.paf.tmp 2>minimap.err && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && touch scaffold_split_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
 fi
 
-
 if [ ! -e scaffold_filter.success ];then
-awk '{max_overhang=0.1*$7;if(max_overhang>int("'$OVERHANG'")) max_overhang=int("'$OVERHANG'"); if($4-$3>int("'$MIN_MATCH'") && ($8<max_overhang || $7-$9<max_overhang) && $12>=60) print $0}' $REFN.$QRYN.split.paf | \
-perl -ane '{push(@lines,join(" ",@F));$ctg{$F[0]}.="$F[5] ";}
-END{
-my %to_output=();
-foreach $r (keys %ctg){my @f=split(/\s+/,$ctg{$r}); 
-my %temp=(); 
-foreach $c(@f){$temp{$c}=1}; 
-my $size = keys %temp; if($size>1){$to_output{$r}=1;}
-}
-foreach $l(@lines){my @f=split(/\s+/,$l);print "$l\n" if(defined($to_output{$f[0]}));}}' | \
-sort -k1,1 -k3,3n -S 10% |\
-awk '{if($5=="+"){print $8+1" "$9" | "$3+1" "$4" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}else{print $8+1" "$9" | "$4" "$3+1" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}}' > $REFN.$QRYN.coords.tmp && mv $REFN.$QRYN.coords.tmp $REFN.$QRYN.coords || error_exit "filtering alignments failed"
+filter_convert_paf $REFN.$QRYN.split.paf $REFN.$QRYN.coords || error_exit "filtering alignments failed"
 touch scaffold_filter.success && rm -f  scaffold_reads.success
 fi
 
@@ -199,11 +206,7 @@ fi
 if [ ! -e scaffold_scaffold.success ];then
 log "Creating scaffold graph and building scaffolds"
 rm -f do_consensus.sh && \
-awk '{if($4-$3>int("'$MIN_MATCH'") && ($8<int("'$OVERHANG'") || $7-$9<int("'$OVERHANG'")) && $12>=60) print $0}' $REFN.$QRYN.patches.paf |\
-sort -k1,1 -k3,3n -S 10% | \
-awk 'BEGIN{r="";c=""}{if($1==r && $6!=c){print prevline"\n"$0;}prevline=$0;c=$6;r=$1;}' | \
-awk '{if($5=="+"){print $8+1" "$9" | "$3+1" "$4" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}else{print $8+1" "$9" | "$4" "$3+1" | "$11" "$4-$3" | 100 | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}}' > $REFN.$QRYN.patches.coords.tmp && \
-mv $REFN.$QRYN.patches.coords.tmp $REFN.$QRYN.patches.coords && \
+filter_convert_paf $REFN.$QRYN.patches.paf $REFN.$QRYN.patches.coords && \
 cat $REFN.$QRYN.patches.coords | $MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa $ALLOWED > $REFN.$QRYN.patches.links.txt.tmp && \
 mv $REFN.$QRYN.patches.links.txt.tmp $REFN.$QRYN.patches.links.txt && \
 $MYPATH/find_repeats.pl $REFN.$QRYN.patches.coords $REFN.$QRYN.patches.links.txt >$REFN.repeats.txt.tmp && \
