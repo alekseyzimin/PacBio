@@ -7,6 +7,7 @@ NUM_THREADS=1
 MIN_MATCH=5000
 OVERHANG=1000
 MIN_SCORE=60
+SCORE=3
 ALLOWED=""
 GC=
 RC=
@@ -145,7 +146,7 @@ if(a[5]=="+"){if(a[7]-a[9] >= oh && a[2]-a[4] >= oh){print a[6]" "a[9];}}else{ i
 }prevline=$0;c=$6;r=$1;}' $REFN.$QRYN.filtered.paf | \
 sort -S10% -k1,1 -k2,2n | \
 uniq -c |awk '{if($1<3) print $2" "$3}' | \
-perl -ane '{push(@ctg,$F[0]);push(@coord,$F[1]);}END{$rad=30;$tol=500;for($i=0;$i<=$#ctg;$i++){my $score=0;for($j=$i-$rad;$j<$i+$rad;$j++){next if($j<0 || $j>$#ctg);if(abs($coord[$j]-$coord[$i])<$tol && $ctg[$j] eq $ctg[$i]){$score+=exp(-abs($coord[$j]-$coord[$i])/$tol)}} print "$ctg[$i] $coord[$i] $score\n" if($score>3);}}' | \
+perl -ane '{push(@ctg,$F[0]);push(@coord,$F[1]);}END{$rad=30;$tol=500;for($i=0;$i<=$#ctg;$i++){my $score=0;for($j=$i-$rad;$j<$i+$rad;$j++){next if($j<0 || $j>$#ctg);if(abs($coord[$j]-$coord[$i])<$tol && $ctg[$j] eq $ctg[$i]){$score+=exp(-abs($coord[$j]-$coord[$i])/$tol)}} print "$ctg[$i] $coord[$i] $score\n" if($score>'$SCORE');}}' | \
 sort -nrk3,3 -S10% | uniq | perl -ane '{if(not(defined($h{$F[0]}))){$h{$F[0]}=$F[1];}else{@f=split(/\s+/,$h{$F[0]});my $flag=0;foreach $v(@f){$flag=1 if(abs($v-$F[1])<int("'$MIN_MATCH'"));}if($flag==0){$h{$F[0]}.=" $F[1]"}}}END{foreach $k(keys %h){@f=split(/\s+/,$h{$k});foreach $v(@f){print "break $k $v\n"}}}' |
 sort -S10% -k2,2 -k3,3n > $REFN.$QRYN.splits.txt && \
 echo -n "Found misassemblies: " && wc -l $REFN.$QRYN.splits.txt && \
@@ -222,8 +223,9 @@ mv $REFN.$QRYN.scaffolds.fa.tmp $REFN.scaffolds.all.fa  && touch scaffold_scaffo
 fi
 
 if [ ! -e scaffold_rejoin.success ];then
+log "Rejoining questionable breaks"
 ufasta sizes -H $REFN.scaffolds.all.fa | $MYPATH/make_rejoin_links.pl > $REFN.rejoin.links.txt.tmp && mv $REFN.rejoin.links.txt.tmp $REFN.rejoin.links.txt && \
-awk '{print $1" "$2" "$3" "$4" "$5" "$6}' $REFN.rejoin.links.txt | \
+$MYPATH/merge_contigs.pl $REFN.scaffolds.all.fa  < $REFN.rejoin.links.txt 2>/dev/null | \
 $MYPATH/create_merged_sequences.pl $REFN.scaffolds.all.fa $REFN.rejoin.links.txt > $REFN.scaffolds.all.rejoin.fa.tmp && mv $REFN.scaffolds.all.rejoin.fa.tmp $REFN.scaffolds.all.rejoin.fa && touch scaffold_rejoin.success && rm -f scaffold_deduplicate.success || error_exit "rejoining spurios breaks failed"
 fi
 
