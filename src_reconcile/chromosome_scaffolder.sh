@@ -165,7 +165,7 @@ if [ ! -e $PREFIX.readalign.success ];then
   log "Mapping reads to query contigs"
   rm -f $PREFIX.coverage.success
   if [[ $READS = *.fa ]] || [[ $READS = *.fasta ]] || [[ $READS = *.fastq ]];then
-  #$MYPATH/../CA8/Linux-amd64/bin/blasr $BLASR_PARAM -nproc $NUM_THREADS -bestn 1 $READS $HYB_CTG | awk '{if(($11-$10)/$12>0.75){if($4==0) print $1" "substr($2,4)" "$7" "$8" f"; else print  $1" "substr($2,4)" "$9-$8" "$9-$7" r"}}' $1 | sort -nk2,2, -k3,3n -S 10% > $HYB_POS && touch $PREFIX.readalign.success
+  #$MYPATH/../CA8/Linux-amd64/bin/blasr $BLASR_PARAM -nproc $NUM_THREADS -bestn 1 $READS $HYB_CTG | awk '{if(($11-$10)/$12>0.75){if($4==0) print $1" "substr($2,4)" "$7" "$8" f"; else print  $1" "substr($2,4)" "$9-$8" "$9-$7" r"}}' $1 | sort -nk2,2 -k3,3n -S 10% > $HYB_POS && touch $PREFIX.readalign.success
   $MYPATH/../Flye/bin/flye-minimap2 $MINIMAP_PARAM -t $NUM_THREADS -N 1 -a $HYB_CTG $READS 2>minimap.err | gzip -c -1 > $PREFIX.sam.gz.tmp  && mv $PREFIX.sam.gz.tmp $PREFIX.sam.gz && touch $PREFIX.readalign.success
   else
   error_exit "Wrong type/extension for the $READS file, must be .fa, .fasta or .fastq"
