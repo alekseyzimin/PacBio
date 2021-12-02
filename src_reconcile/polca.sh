@@ -91,15 +91,15 @@ exit 1
 fi
 
 which bwa || error_exit "bwa not found on the PATH, please install bwa aligner"
-which freebayes || error_exit "freebayes not found in MaSuRCA bin, please check your MaSuRCA install"
-which samtools || error_exit "samtools not found in MaSuRCA bin, please check your MaSuRCA install"
+ls $MYPATH/freebayes || error_exit "freebayes not found in MaSuRCA bin, please check your MaSuRCA install"
+ls $MYPATH/samtools || error_exit "samtools not found in MaSuRCA bin, please check your MaSuRCA install"
 
 ASMPATH="`dirname \"$ASM\"`"
 ASMPATH="`( cd \"$ASMPATH\" && pwd )`"
 export BASM=`basename $ASM`
 export BWA=`which bwa` 
-export FREEBAYES=`which freebayes`
-export SAMTOOLS=`which samtools`
+export FREEBAYES=$MYPATH/freebayes
+export SAMTOOLS=$MYPATH/samtools
 rm -f bwa.err samtools.err
 
 if [ ! -e $BASM.index.success ];then 
