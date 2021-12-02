@@ -30,7 +30,7 @@ $seq=$rseq{$ctg};
 for($i=2*$max_indel;$i<length($seq)-2*$max_indel;$i++){
   next if(uc(substr($seq,$i,1)) eq "N");
   if(rand(1)<$error_rate){#add an error
-    if(rand(1)<0.9){#error is substitution
+    if(rand(1)<1){# all errors are substitutions
       $sub="A";
       $sub="G" if(uc(substr($seq,$i,1)) eq "A");
       print "$ctg\t",$i+1,"\t.\t",substr($seq,$i,1),"\t$sub\t*\t*\t*\t*\t1:1:1:0:0:10:10:0\n";

@@ -141,9 +141,9 @@ if [ ! -e $PREFIX.gaps.success ];then
 fi
 
 if [ ! -e $PREFIX.split.success ];then
-  log "Splitting query scaffolds at >100000bp gaps"
+  log "Splitting query scaffolds at >100bp gaps"
   rm -f $PREFIX.readalign.success
-  $MYPATH/splitFileAtNs $QRY 100000 > $HYB_CTG && rm  genome.asm genome.posmap.ctgscf && \
+  $MYPATH/splitScaffoldsAtNs.sh $QRY 100 > $HYB_CTG && \
   touch $PREFIX.split.success
 fi
 
@@ -165,7 +165,6 @@ if [ ! -e $PREFIX.readalign.success ];then
   log "Mapping reads to query contigs"
   rm -f $PREFIX.coverage.success
   if [[ $READS = *.fa ]] || [[ $READS = *.fasta ]] || [[ $READS = *.fastq ]];then
-  #$MYPATH/../CA8/Linux-amd64/bin/blasr $BLASR_PARAM -nproc $NUM_THREADS -bestn 1 $READS $HYB_CTG | awk '{if(($11-$10)/$12>0.75){if($4==0) print $1" "substr($2,4)" "$7" "$8" f"; else print  $1" "substr($2,4)" "$9-$8" "$9-$7" r"}}' $1 | sort -nk2,2 -k3,3n -S 10% > $HYB_POS && touch $PREFIX.readalign.success
   $MYPATH/../Flye/bin/flye-minimap2 $MINIMAP_PARAM -t $NUM_THREADS -N 1 -a $HYB_CTG $READS 2>minimap.err | gzip -c -1 > $PREFIX.sam.gz.tmp  && mv $PREFIX.sam.gz.tmp $PREFIX.sam.gz && touch $PREFIX.readalign.success
   else
   error_exit "Wrong type/extension for the $READS file, must be .fa, .fasta or .fastq"
@@ -174,9 +173,9 @@ fi
 
 #compute coverage from the posmap file
 if [ ! -e $PREFIX.coverage.success ];then
-  log "Computing read coverage for query contigs"
+  log "Computing read coverage of query contigs"
   rm -f $PREFIX.break.success
-  cat <(ufasta sizes -H $HYB_CTG | awk '{print "@SQ\tSN:"$1"\tLN:"$2}') <(gunzip -c $PREFIX.sam.gz) | awk '{if($0 ~ /^@/) print $0; else if($5>=20) print $0}' | $MYPATH/samToDelta | $MYPATH/show-coords -lcH /dev/stdin|awk '{print $NF" "substr($(NF-1),4)" "$1"\n"$NF" "substr($(NF-1),4)" "$2}' |  sort -nk2,2 -k3,3n -S 20% |$MYPATH/compute_coverage.pl > $HYB_POS.coverage.tmp && mv $HYB_POS.coverage.tmp $HYB_POS.coverage && touch $PREFIX.coverage.success
+  cat <(ufasta sizes -H $HYB_CTG | awk '{print "@SQ\tSN:"$1"\tLN:"$2}') <(gunzip -c $PREFIX.sam.gz) | awk '{if($0 ~ /^@/) print $0; else if($5>=20) print $0}' | $MYPATH/samToDelta | $MYPATH/show-coords -lcH /dev/stdin|awk '{print $NF" "$(NF-1)" "$1"\n"$NF" "$(NF-1)" "$2}' |  sort -k2,2 -k3,3n -S 20% |$MYPATH/compute_coverage.pl > $HYB_POS.coverage.tmp && mv $HYB_POS.coverage.tmp $HYB_POS.coverage && touch $PREFIX.coverage.success
 fi
 
 if [ ! -e $PREFIX.align1.success ];then
@@ -205,7 +204,11 @@ if [ ! -e $PREFIX.break.success ];then
   log "Splitting query contigs at suspect locations"
   rm -f $PREFIX.align2.success
   #first we figure out the coverage -- take the mode
-  let AUTO_REP_COV_THRESH=`awk '{print $4}'  $HYB_POS.coverage | sort -n -S 10% |uniq -c| sort -nrk1,1 |head -n 1 | awk '{print int($2/.69)}'`
+  let AUTO_REP_COV_THRESH=`awk '{print $4}'  $HYB_POS.coverage | sort -n -S 10% |uniq -c| sort -nrk1,1 -S 10% |head -n 1 | awk '{print int($2/.69)}'`
+  if [ $AUTO_REP_COV_THRESH -lt 2 ];then
+    echo "Warning!  It appears that read coverage is very low.  We will be unable to find misassemblies reliably"
+    AUTO_REP_COV_THRESH=2;
+  fi
   if [ $REP_COV_THRESH -lt 0 ];then
     let REP_COV_THRESH=$AUTO_REP_COV_THRESH
   fi
@@ -216,10 +219,10 @@ if [ ! -e $PREFIX.break.success ];then
   awk '{if($4<$5) print $4" "$5" "($4+$5)/2" "$NF" "$13; else print $5" "$4" "($4+$5)/2" "$NF" "$13;}' $REF_CHR.$HYB_CTG.1.coords| \
   sort -k4,4 -k1,1n -S 10% | \
   uniq -D -f 3 | \
-  awk '{if($NF != prev){offset=$2;prev=$NF;print $0}else if($2>offset){print $0;offset=$2;}}' | uniq -D -f 3 | awk '{if($4==ctg){if($1>5000 && $1<$NF-5000) print "alnbreak "substr($4,4)" "$1" 0"}else{ctg=$4;if($2>5000 && $2<$NF-5000) print "alnbreak "substr($4,4)" "$2" 0"}}' > $REF_CHR.$HYB_CTG.1.coords.breaks && \
-  cat $REF_CHR.$HYB_CTG.1.coords.breaks $HYB_POS.coverage  | sort -nk2,2 -k3,2n -S 10% > $HYB_POS.coverage.w_breaks && \
-  grep -C 50 break $HYB_POS.coverage.w_breaks  | $MYPATH/evaluate_splits.pl <(ufasta sizes -H $HYB_CTG | awk '{print substr($1,4)" "$2}') | sort -nk3,3 -S 10% >  $HYB_POS.coverage.w_breaks.validated && \
-  $MYPATH/break_contigs.pl <(grep -v "end" $HYB_POS.coverage.w_breaks.validated |awk '{if($4<=int("'$COV_THRESH'") || ($1="repeat" && $4>=int("'$REP_COV_THRESH'"))) print $1" "substr($2,4)" "$3" "$4}') < $HYB_CTG > $HYB_CTG.broken && touch $PREFIX.break.success
+  awk '{if($NF != prev){offset=$2;prev=$NF;print $0}else if($2>offset){print $0;offset=$2;}}' | uniq -D -f 3 | awk '{if($4==ctg){if($1>5000 && $1<$NF-5000) print "alnbreak "$4" "$1" 0"}else{ctg=$4;if($2>5000 && $2<$NF-5000) print "alnbreak "$4" "$2" 0"}}' > $REF_CHR.$HYB_CTG.1.coords.breaks && \
+  cat $REF_CHR.$HYB_CTG.1.coords.breaks $HYB_POS.coverage  | sort -k2,2 -k3,3n -S 10% > $HYB_POS.coverage.w_breaks && \
+  grep -C 50 break $HYB_POS.coverage.w_breaks  | $MYPATH/evaluate_splits.pl <(ufasta sizes -H $HYB_CTG | awk '{print $1" "$2}') | sort -k2,2 -k3,3n -S 10% >  $HYB_POS.coverage.w_breaks.validated && \
+  $MYPATH/break_contigs.pl <(grep -v "end" $HYB_POS.coverage.w_breaks.validated |awk '{if($4<=int("'$COV_THRESH'") || ($1="repeat" && $4>=int("'$REP_COV_THRESH'"))) print $1" "$2" "$3" "$4}') < $HYB_CTG > $HYB_CTG.broken && touch $PREFIX.break.success
 fi
 
 else #no_break
@@ -265,7 +268,7 @@ if [ ! -e $PREFIX.scaffold.success ];then
 fi
 
 if [ -e $PREFIX.scaffold.success ];then
-  log "Success! Final scaffold are in $REF_CHR.$HYB_CTG.reconciled.fa"
+  log "Success! Final scaffolds are in $REF_CHR.$HYB_CTG.reconciled.fa"
 fi
 
 #this line resets all gaps to 100
