@@ -218,15 +218,11 @@ mv $REFN.$QRYN.patches.uniq.links.txt.tmp $REFN.$QRYN.patches.uniq.links.txt && 
 $MYPATH/merge_contigs.pl $REFN.split.fa < $REFN.$QRYN.patches.uniq.links.txt 2>$REFN.$QRYN.bubbles.txt | \
 $MYPATH/insert_repeats.pl $REFN.repeats.txt |\
 $MYPATH/create_merged_sequences.pl $REFN.split.fa  <(cat $REFN.$QRYN.patches.uniq.links.txt $REFN.$QRYN.patches.links.txt |sort -S 10% |uniq) | \
-$MYPATH/ufasta extract -v -f $REFN.$QRYN.bubbles.txt > $REFN.$QRYN.scaffolds.fa.tmp && \
-mv $REFN.$QRYN.scaffolds.fa.tmp $REFN.scaffolds.all.fa  && touch scaffold_scaffold.success && rm -f scaffold_rejoin.success || error_exit "walking the scaffold graph failed"
-fi
-
-if [ ! -e scaffold_rejoin.success ];then
-log "Rejoining questionable breaks"
+$MYPATH/ufasta extract -v -f $REFN.$QRYN.bubbles.txt > $REFN.$QRYN.scaffolds.fa.tmp && mv $REFN.$QRYN.scaffolds.fa.tmp $REFN.scaffolds.all.fa && \
 ufasta sizes -H $REFN.scaffolds.all.fa | $MYPATH/make_rejoin_links.pl > $REFN.rejoin.links.txt.tmp && mv $REFN.rejoin.links.txt.tmp $REFN.rejoin.links.txt && \
 $MYPATH/merge_contigs.pl $REFN.scaffolds.all.fa  < $REFN.rejoin.links.txt 2>/dev/null | \
-$MYPATH/create_merged_sequences.pl $REFN.scaffolds.all.fa $REFN.rejoin.links.txt > $REFN.scaffolds.all.rejoin.fa.tmp && mv $REFN.scaffolds.all.rejoin.fa.tmp $REFN.scaffolds.all.rejoin.fa && touch scaffold_rejoin.success && rm -f scaffold_deduplicate.success || error_exit "rejoining spurios breaks failed"
+$MYPATH/create_merged_sequences.pl $REFN.scaffolds.all.fa $REFN.rejoin.links.txt > $REFN.scaffolds.all.rejoin.fa.tmp && mv $REFN.scaffolds.all.rejoin.fa.tmp $REFN.scaffolds.all.rejoin.fa && \
+rm $REFN.scaffolds.all.fa  && touch scaffold_scaffold.success && rm -f scaffold_deduplicate.success || error_exit "walking the scaffold graph failed"
 fi
 
 if [ ! -e scaffold_deduplicate.success ];then
