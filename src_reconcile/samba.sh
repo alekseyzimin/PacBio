@@ -195,38 +195,33 @@ $MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa  $ALLOWED >/dev/null && \
 rm -f do_consensus.sh && \
 touch patches.polished.fa && \
 cat patches.polished.fa patches.raw.fa > $REFN.$QRYN.patches.fa.tmp && mv $REFN.$QRYN.patches.fa.tmp $REFN.$QRYN.patches.fa && \
-rm -rf patches.ref.fa patches.reads.fa patches.raw.fa polish.?.tmp && \
-touch scaffold_links.success && rm -f scaffold_align_patches.success || error_exit "links consensus failed"
+ufasta extract -f <(ufasta sizes -H $REF |awk '{if($2<250000) print $1}') $REF > $REFN.short.fa.tmp && mv $REFN.short.fa.tmp $REFN.short.fa && \
+$MYPATH/nucmer -l 15 --batch 500000 -c 31 -t $NUM_THREADS $REFN.$QRYN.patches.fa $REFN.short.fa  && \
+$MYPATH/delta-filter -r -l 100 out.delta | \
+$MYPATH/show-coords -lcHr /dev/stdin | awk '{if($16>1) print $0}' | \
+$MYPATH/reconcile_consensus.pl $REFN.$QRYN.patches.fa $REFN.short.fa > $REFN.$QRYN.patches.polish.fa.tmp && mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.polish.fa && \
+touch scaffold_links.success && rm -rf scaffold_align_patches.success out.delta patches.ref.fa patches.reads.fa patches.raw.fa polish.?.tmp || error_exit "links consensus failed"
 fi
 
 if [ ! -e scaffold_align_patches.success ];then
 log "Aligning the scaffolding sequences to the contigs"
-$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REFN.split.fa $REFN.$QRYN.patches.fa 2>minimap.err  > $REFN.$QRYN.patches.paf.tmp && mv  $REFN.$QRYN.patches.paf.tmp  $REFN.$QRYN.patches.paf && touch scaffold_align_patches.success && rm -f scaffold_scaffold.success || error_exit "minimap2 patches failed"
+$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REFN.split.fa $REFN.$QRYN.patches.polish.fa 2>minimap.err  > $REFN.$QRYN.patches.paf.tmp && mv  $REFN.$QRYN.patches.paf.tmp  $REFN.$QRYN.patches.paf && touch scaffold_align_patches.success && rm -f scaffold_scaffold.success || error_exit "minimap2 patches failed"
 fi
 
 if [ ! -e scaffold_scaffold.success ];then
 log "Creating scaffold graph and building scaffolds"
 rm -f do_consensus.sh && \
 filter_convert_paf $REFN.$QRYN.patches.paf $REFN.$QRYN.patches.coords && \
-cat $REFN.$QRYN.patches.coords | $MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa $ALLOWED > $REFN.$QRYN.patches.links.txt.tmp && \
+cat $REFN.$QRYN.patches.coords | $MYPATH/extract_merges.pl $REFN.$QRYN.patches.polish.fa $ALLOWED > $REFN.$QRYN.patches.links.txt.tmp && \
 mv $REFN.$QRYN.patches.links.txt.tmp $REFN.$QRYN.patches.links.txt && \
-awk 'BEGIN{n=1}{print ">"n"\n"$NF;n++}' $REFN.$QRYN.patches.links.txt > $REFN.$QRYN.patches.links.fa && \
-ufasta extract -f <(ufasta sizes -H $REF |awk '{if($2<250000) print $1}') $REF > $REFN.short.fa.tmp && mv $REFN.short.fa.tmp $REFN.short.fa && \
-$MYPATH/nucmer -l 15 -c 31 -t $NUM_THREADS $REFN.$QRYN.patches.links.fa $REFN.short.fa  && \
-$MYPATH/delta-filter -r -l 100 out.delta | \
-$MYPATH/show-coords -lcHr /dev/stdin | \
-$MYPATH/reconcile_consensus.pl $REFN.$QRYN.patches.links.fa $REFN.short.fa > $REFN.$QRYN.patches.links.polish.fa.tmp && mv $REFN.$QRYN.patches.links.polish.fa.tmp $REFN.$QRYN.patches.links.polish.fa && \
-paste <(perl -ane '{if($F[-2]>0){print join(" ",@F[0..$#F-2]),"\n";}else{print}}' $REFN.$QRYN.patches.links.txt) <(awk '{if($1 ~/^>/) ctg=substr($1,2); else print ctg" "$0}'  $REFN.$QRYN.patches.links.polish.fa | \
-sort -nk1,1 -S10% | \
-awk '{if($2 ==  "n") print "";else print length($2)" "tolower($2)}') > $REFN.$QRYN.patches.links.polish.txt.tmp && mv $REFN.$QRYN.patches.links.polish.txt.tmp $REFN.$QRYN.patches.links.polish.txt && \
-$MYPATH/find_repeats.pl $REFN.$QRYN.patches.coords $REFN.$QRYN.patches.links.polish.txt >$REFN.repeats.txt.tmp && \
+$MYPATH/find_repeats.pl $REFN.$QRYN.patches.coords $REFN.$QRYN.patches.links.txt >$REFN.repeats.txt.tmp && \
 mv $REFN.repeats.txt.tmp $REFN.repeats.txt && \
 perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.patches.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \
 $MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa $ALLOWED > $REFN.$QRYN.patches.uniq.links.txt.tmp && \
 mv $REFN.$QRYN.patches.uniq.links.txt.tmp $REFN.$QRYN.patches.uniq.links.txt && \
 $MYPATH/merge_contigs.pl $REFN.split.fa < $REFN.$QRYN.patches.uniq.links.txt 2>$REFN.$QRYN.bubbles.txt | \
 $MYPATH/insert_repeats.pl $REFN.repeats.txt |\
-$MYPATH/create_merged_sequences.pl $REFN.split.fa  <(cat $REFN.$QRYN.patches.uniq.links.txt $REFN.$QRYN.patches.links.polish.txt) | \
+$MYPATH/create_merged_sequences.pl $REFN.split.fa  <(cat $REFN.$QRYN.patches.uniq.links.txt $REFN.$QRYN.patches.links.txt) | \
 $MYPATH/ufasta extract -v -f $REFN.$QRYN.bubbles.txt > $REFN.$QRYN.scaffolds.fa.tmp && mv $REFN.$QRYN.scaffolds.fa.tmp $REFN.scaffolds.all.fa && \
 ufasta sizes -H $REFN.scaffolds.all.fa | $MYPATH/make_rejoin_links.pl > $REFN.rejoin.links.txt.tmp && mv $REFN.rejoin.links.txt.tmp $REFN.rejoin.links.txt && \
 $MYPATH/merge_contigs.pl $REFN.scaffolds.all.fa  < $REFN.rejoin.links.txt 2>/dev/null | \
