@@ -3,6 +3,11 @@
 #this code extracts possible contig merges from a nucmer alignment: the reference sequences are merged with query sequence intput is a delta file 
 #ASSUMES show-coords -q output, that is sorted by query coord!!!!!!
 
+my $min_match=500;
+if(defined($ARGV[1])){
+  $min_match=$ARGV[1];
+}
+
 my $output_prefix="patches";
 open(FILE,$ARGV[0]);#file with query contigs
 while($line=<FILE>){
@@ -17,9 +22,9 @@ while($line=<FILE>){
 
 my $only_allowed=0;
 my %allowed_merges=();
-if(defined($ARGV[1])){
+if(defined($ARGV[2])){
 $only_allowed=1;
-open(FILE,$ARGV[1]);
+open(FILE,$ARGV[2]);
 while($line=<FILE>){
   chomp($line);
   my @f=split(/\s+/,$line);
@@ -27,19 +32,23 @@ while($line=<FILE>){
 }
 }
 
-
-
 #first we read in all the matches into an array
 my $prevline="";
-my $slack=20000;
+my $slack=20000;#this is the maximum reasonable overhang
 my $maxgap=500000;
 my $mingap=-10000;
-my %oh1=(),%oh2=(),%gap=(),%gapseq=();
+my %oh1=(),%oh2=(),%gap=(),%gapseq=(),%idy=();
+
 while($line=<STDIN>){
   chomp($line);
   $line=~s/^\s+//;
   my @f=split(/\s+/,$line);
-  push(@lines,$line) if($f[0]<=$slack || $f[1]>=$f[11]-$slack);#only see useful lines
+  #this is the location where we filter the alignments by match length
+  #we also allow to merge with a contig where over 95% of its length is aligned
+  #filtering by overhang is provided earlier
+  #we use matches that are smaller than the min_match to collect reads that span the gap, but may not pass the minimum match criteria, for consensus
+  push(@lines,$line) if(($f[7] >= $min_match || $f[14]>95) && ($f[0]-1<=$slack || $f[1]>=$f[11]-$slack));
+  $read_on_contig{$f[-2]}.="$f[-1] ";#for each contig get a list of reads that map to it
 }
 
 #now we go through the array and collect the possible merges
@@ -60,6 +69,8 @@ for($i=0;$i<$#lines;$i++){
     my $gstart=1;
     my $dir1="F";
     my $dir2="F";
+    my $idy1=$f1[9]*$f1[6];
+    my $idy2=$f2[9]*$f2[6];
 #print "DEBUG considering $i $j\n$lines[$i]\n$lines[$j]\n\n";
     if($f1[3]<$f1[4]){
       $gstart=$f1[4];
@@ -96,17 +107,18 @@ for($i=0;$i<$#lines;$i++){
         $dir2="R";
         } 
     }
-    if($oh1<$slack && $oh2<$slack && $gap<$maxgap && $gap>$mingap){
+    if($gap < $maxgap && $gap > $mingap){
         $gstart=1 if($gstart<1);
         if($f1[-2] lt $f2[-2]){
           $joinline="$f1[-2]:$dir1:$f2[-2]:$dir2";
           #print "DEBUG $joinline $oh1 $oh2 $gap\n";
-          if(not(defined($oh1{$joinline})) || $oh1{$joinline} + $oh2{$joinline} > $oh1+$oh2){
+          if(not(defined($idy{$joinline})) || $idy{$joinline} > $idy1+$idy2){#here we use the best join for each pair of contigs, we maximize the sum of total number of matching bases on each end
             $gseq{$joinline}="n";
             $gseq{$joinline}=lc(substr($qseq{$f1[-1]},$gstart-1,$gap)) if($gap>0);
             $oh1{$joinline}=$oh1;
             $oh2{$joinline}=$oh2;
             $gap{$joinline}=$gap;
+            $idy{$joinline}=$idy1+$idy2;
           }
           $paircount{"$f1[-2] $f2[-2]"}++;
         }else{
@@ -114,24 +126,25 @@ for($i=0;$i<$#lines;$i++){
           $dir2= $dir2 eq "F" ? "R" : "F";
           $joinline="$f2[-2]:$dir2:$f1[-2]:$dir1";
           #print "DEBUG $joinline $oh1 $oh2 $gap\n";
-          if(not(defined($oh1{$joinline})) || $oh1{$joinline} + $oh2{$joinline} > $oh1+$oh2){
+          if(not(defined($idy{$joinline})) || $idy{$joinline} > $idy1+$idy2){
             $gseq{$joinline}="n";
             $gseq{$joinline}=reverse_complement(lc(substr($qseq{$f1[-1]},$gstart-1,$gap))) if($gap>0);
             $oh1{$joinline}=$oh2;
             $oh2{$joinline}=$oh1;
             $gap{$joinline}=$gap;
+            $idy{$joinline}=$idy1+$idy2;
           }
           $paircount{"$f2[-2] $f1[-2]"}++;
         }
       $joincount{$joinline}++;
-      $rnames{$joinline}.=$f1[-1]." ";
+      $rnames{$joinline}.="$f1[-1] ";
     }
 }#$i loop
 
 #now we have all information in the hashes, let's output the bundles
 #the longest read is the seq, the rest used to polish
 #we output the reads and run the consensus for each patch separately
-foreach my $k (keys %rnames){
+foreach my $k (keys %rnames){# $k is the joinline
   my @names=split(/\s+/,$rnames{$k});
   my $max_len=0;
   my $max_i=0;
@@ -152,8 +165,22 @@ foreach my $k (keys %rnames){
   $output{$names[$max_i]}=1;
   foreach my $n(@names){
     if(not(defined($output{$n}))){
-      $jnames{$names[$max_i]}.=" ".$n;
+      $jnames{$names[$max_i]}.=" $n";
       $output{$n}=1;
+    }
+  }
+  #here we also add all other reads that map to the two contigs
+  my @f=split(/:/,$k);
+  my @ff1=split(/\s+/,$read_on_contig{$f[0]});
+  my @ff2=split(/\s+/,$read_on_contig{$f[2]});
+  my %temp=();
+  foreach my $n(@ff1){
+    $temp{$n}=1;
+  }
+  foreach my $n(@ff2){
+    if(not(defined($output{$n})) && defined($temp{$n})){
+        $jnames{$names[$max_i]}.=" $n";
+        $output{$n}=1;
     }
   }
 }
@@ -195,7 +222,7 @@ if(-e "do_consensus.sh"){
 }
 
 #output the links
-foreach $k (keys %joincount){
+foreach $k (keys %joincount){ #$k is the joinline
   my @f=split(/:/,$k);
   if($paircount{"$f[0] $f[2]"} == $joincount{$k} || $joincount{$k}>1){
     print "$f[0] $oh1{$k} $f[1] $f[2] $oh2{$k} $f[3] $gap{$k} $gseq{$k}\n";
