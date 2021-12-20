@@ -3,10 +3,18 @@
 #this code extracts possible contig merges from a nucmer alignment: the reference sequences are merged with query sequence intput is a delta file 
 #ASSUMES show-coords -q output, that is sorted by query coord!!!!!!
 
+my $maxgap=500000;
+my $mingap=-10000;
+
 my $min_match=500;
 if(defined($ARGV[1])){
   $min_match=$ARGV[1];
 }
+my $max_overhang=1000;
+if(defined($ARGV[2])){
+  $max_overhang=$ARGV[2];
+}
+
 
 my $output_prefix="patches";
 open(FILE,$ARGV[0]);#file with query contigs
@@ -22,9 +30,9 @@ while($line=<FILE>){
 
 my $only_allowed=0;
 my %allowed_merges=();
-if(defined($ARGV[2])){
+if(defined($ARGV[3])){
 $only_allowed=1;
-open(FILE,$ARGV[2]);
+open(FILE,$ARGV[3]);
 while($line=<FILE>){
   chomp($line);
   my @f=split(/\s+/,$line);
@@ -34,9 +42,6 @@ while($line=<FILE>){
 
 #first we read in all the matches into an array
 my $prevline="";
-my $slack=20000;#this is the maximum reasonable overhang
-my $maxgap=500000;
-my $mingap=-10000;
 my %oh1=(),%oh2=(),%gap=(),%gapseq=(),%idy=();
 
 while($line=<STDIN>){
@@ -47,7 +52,7 @@ while($line=<STDIN>){
   #we also allow to merge with a contig where over 95% of its length is aligned
   #filtering by overhang is provided earlier
   #we use matches that are smaller than the min_match to collect reads that span the gap, but may not pass the minimum match criteria, for consensus
-  push(@lines,$line) if(($f[7] >= $min_match || $f[14]>95) && ($f[0]-1<=$slack || $f[1]>=$f[11]-$slack));
+  push(@lines,$line) if(($f[7] >= $min_match || $f[14]>95) && ($f[0]-1<=$max_overhang || $f[1]>=$f[11]-$max_overhang));
   $read_on_contig{$f[-2]}.="$f[-1] ";#for each contig get a list of reads that map to it
 }
 
@@ -69,8 +74,8 @@ for($i=0;$i<$#lines;$i++){
     my $gstart=1;
     my $dir1="F";
     my $dir2="F";
-    my $idy1=$f1[9]*$f1[6];
-    my $idy2=$f2[9]*$f2[6];
+    my $idy1=$f1[9];
+    my $idy2=$f2[9];
 #print "DEBUG considering $i $j\n$lines[$i]\n$lines[$j]\n\n";
     if($f1[3]<$f1[4]){
       $gstart=$f1[4];
@@ -107,12 +112,12 @@ for($i=0;$i<$#lines;$i++){
         $dir2="R";
         } 
     }
-    if($gap < $maxgap && $gap > $mingap){
+    if($gap < $maxgap && $gap > $mingap && $oh1<=$max_overhang && $oh2<=$max_overhang){
         $gstart=1 if($gstart<1);
         if($f1[-2] lt $f2[-2]){
           $joinline="$f1[-2]:$dir1:$f2[-2]:$dir2";
           #print "DEBUG $joinline $oh1 $oh2 $gap\n";
-          if(not(defined($idy{$joinline})) || $idy{$joinline} > $idy1+$idy2){#here we use the best join for each pair of contigs, we maximize the sum of total number of matching bases on each end
+          if(not(defined($idy{$joinline})) || $idy{$joinline} < $idy1+$idy2){#here we use the best join for each pair of contigs, we maximize the sum of total number of matching bases on each end
             $gseq{$joinline}="n";
             $gseq{$joinline}=lc(substr($qseq{$f1[-1]},$gstart-1,$gap)) if($gap>0);
             $oh1{$joinline}=$oh1;
@@ -126,7 +131,7 @@ for($i=0;$i<$#lines;$i++){
           $dir2= $dir2 eq "F" ? "R" : "F";
           $joinline="$f2[-2]:$dir2:$f1[-2]:$dir1";
           #print "DEBUG $joinline $oh1 $oh2 $gap\n";
-          if(not(defined($idy{$joinline})) || $idy{$joinline} > $idy1+$idy2){
+          if(not(defined($idy{$joinline})) || $idy{$joinline} < $idy1+$idy2){
             $gseq{$joinline}="n";
             $gseq{$joinline}=reverse_complement(lc(substr($qseq{$f1[-1]},$gstart-1,$gap))) if($gap>0);
             $oh1{$joinline}=$oh2;

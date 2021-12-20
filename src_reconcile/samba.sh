@@ -48,7 +48,7 @@ function filter_convert_paf () {
     foreach $l(@lines){my @f=split(/\s+/,$l);print "$l\n" if(defined($to_output{$f[0]}));}
     }' | \
   sort -k1,1 -k3,3n -S 10% | \
-  awk '{for(i=1;i<=NF;i++){if($i ~ /^dv/){split($i,a,":"); idy=(1-a[3])*100;}} if($5=="+"){print $8+1" "$9" | "$3+1" "$4" | "$11" "$4-$3" | "idy" | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}else{print $8+1" "$9" | "$4" "$3+1" | "$11" "$4-$3" | "idy" | "$7" "$2" | "int($11/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}}' > $2.tmp && \
+  awk '{idy=100;for(i=1;i<=NF;i++){if($i ~ /^dv/){split($i,a,":"); idy=(1-a[3])*100;}} if($5=="+"){print $8+1" "$9" | "$3+1" "$4" | "$9-$8" "$4-$3" | "idy" | "$7" "$2" | "int(($9-$8)/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}else{print $8+1" "$9" | "$4" "$3+1" | "$9-$8" "$4-$3" | "idy" | "$7" "$2" | "int(($9-$8)/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}}' > $2.tmp && \
   mv $2.tmp $2
 }
 
@@ -179,19 +179,19 @@ if [ ! -e scaffold_links.success ];then
 #we now create do_consensus.sh and extract_merges.pl will see it and will use it do the consensus for the patches, do not forgrt to delete it
 log "Creating scaffold links"
 rm -f do_consensus.sh && \
-cat  $REFN.$QRYN.coords |$MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa $MIN_MATCH $ALLOWED > $REFN.$QRYN.links.txt.tmp && mv $REFN.$QRYN.links.txt.tmp $REFN.$QRYN.links.txt && \
+cat  $REFN.$QRYN.coords |$MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa $MIN_MATCH $OVERHANG $ALLOWED > $REFN.$QRYN.links.txt.tmp && mv $REFN.$QRYN.links.txt.tmp $REFN.$QRYN.links.txt && \
 $MYPATH/find_repeats.pl $REFN.$QRYN.coords $REFN.$QRYN.links.txt >$REFN.repeats.txt.tmp && mv $REFN.repeats.txt.tmp $REFN.repeats.txt && \
 rm -f patches.polished.fa && \
 echo "#!/bin/bash" > do_consensus.sh && \
 echo "rm -rf polish.?.tmp" >> do_consensus.sh
 for jindex in $(seq 0 9);do
-echo "if [ -s patches.ref.$jindex.fa ] && [ -s patches.reads.$jindex.fa ];then $MYPATH/../Flye/bin/flye --polish-target patches.ref.$jindex.fa --iterations 1 --nano-raw patches.reads.$jindex.fa --threads 8 --out-dir polish.$jindex.tmp 1>polish.err 2>&1 && rm -f patches.ref.$jindex.fa patches.reads.$jindex.fa;fi &"  >> do_consensus.sh 
+echo "if [ -s patches.ref.$jindex.fa ] && [ -s patches.reads.$jindex.fa ];then $MYPATH/../Flye/bin/flye --polish-target patches.ref.$jindex.fa --iterations 2 --nano-raw patches.reads.$jindex.fa --threads 8 --out-dir polish.$jindex.tmp 1>polish.err 2>&1 && rm -f patches.ref.$jindex.fa patches.reads.$jindex.fa;fi &"  >> do_consensus.sh 
 done
 echo "wait;" >> do_consensus.sh && \
 echo "cat polish.?.tmp/polished_1.fasta | $MYPATH/ufasta one >> patches.polished.fa" >> do_consensus.sh && \
 chmod 0755 do_consensus.sh && \
 perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \
-$MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa $MIN_MATCH $ALLOWED >/dev/null && \
+$MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa $MIN_MATCH $OVERHANG $ALLOWED >/dev/null && \
 rm -f do_consensus.sh && \
 touch patches.polished.fa && \
 if [ -s patches.polished.fa ];then 
@@ -199,10 +199,11 @@ cat  patches.raw.fa patches.polished.fa > $REFN.$QRYN.patches.polish.fa.tmp && m
 else
 mv patches.raw.fa $REFN.$QRYN.patches.polish.fa
 fi && \
+#the code below is for polishing patches with short contigs, it does not help much
 #$MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H $REF |awk '{if($2<250000) print $1}') $REF > $REFN.short.fa.tmp && mv $REFN.short.fa.tmp $REFN.short.fa && \
 #$MYPATH/nucmer -l 15 --batch 1000000 -t $NUM_THREADS $REFN.$QRYN.patches.fa $REFN.short.fa  && \
 #$MYPATH/delta-filter -r -l 200 out.delta | \
-#$MYPATH/show-coords -lcHr /dev/stdin | awk '{if($16>5 || $$7>500) print $0}' | \
+#$MYPATH/show-coords -lcHr /dev/stdin | awk '{if($16>5 || $7>500) print $0}' | \
 #$MYPATH/reconcile_consensus.pl $REFN.$QRYN.patches.fa $REFN.short.fa > $REFN.$QRYN.patches.polish.fa.tmp && mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.polish.fa && \
 touch scaffold_links.success && rm -rf scaffold_align_patches.success out.delta patches.ref.fa patches.reads.fa patches.raw.fa polish.?.tmp || error_exit "links consensus failed"
 fi
@@ -216,12 +217,12 @@ if [ ! -e scaffold_scaffold.success ];then
 log "Creating scaffold graph and building scaffolds"
 rm -f do_consensus.sh && \
 filter_convert_paf $REFN.$QRYN.patches.paf $REFN.$QRYN.patches.coords && \
-cat $REFN.$QRYN.patches.coords | $MYPATH/extract_merges.pl $REFN.$QRYN.patches.polish.fa $MIN_MATCH $ALLOWED > $REFN.$QRYN.patches.links.txt.tmp && \
+cat $REFN.$QRYN.patches.coords | $MYPATH/extract_merges.pl $REFN.$QRYN.patches.polish.fa $MIN_MATCH $OVERHANG $ALLOWED > $REFN.$QRYN.patches.links.txt.tmp && \
 mv $REFN.$QRYN.patches.links.txt.tmp $REFN.$QRYN.patches.links.txt && \
 $MYPATH/find_repeats.pl $REFN.$QRYN.patches.coords $REFN.$QRYN.patches.links.txt >$REFN.repeats.txt.tmp && \
 mv $REFN.repeats.txt.tmp $REFN.repeats.txt && \
 perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.patches.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \
-$MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa $MIN_MATCH $ALLOWED > $REFN.$QRYN.patches.uniq.links.txt.tmp && \
+$MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa $MIN_MATCH $OVERHANG $ALLOWED > $REFN.$QRYN.patches.uniq.links.txt.tmp && \
 mv $REFN.$QRYN.patches.uniq.links.txt.tmp $REFN.$QRYN.patches.uniq.links.txt && \
 $MYPATH/merge_contigs.pl $REFN.split.fa < $REFN.$QRYN.patches.uniq.links.txt 2>$REFN.$QRYN.bubbles.txt | \
 $MYPATH/insert_repeats.pl $REFN.repeats.txt |\
@@ -238,7 +239,7 @@ log "Deduplicating contigs"
 awk 'BEGIN{n=0}{if(length($NF)>100){print ">"n"\n"$NF;n++}}' $REFN.$QRYN.patches.uniq.links.txt > $REFN.$QRYN.patches.uniq.links.fa.tmp && mv $REFN.$QRYN.patches.uniq.links.fa.tmp $REFN.$QRYN.patches.uniq.links.fa && \
 MAX_PATCH=`ufasta sizes -H  $REFN.$QRYN.patches.uniq.links.fa | sort -nrk2,2 -S 10% | head -n 1 | awk '{print $2}'`
 $MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H $REFN.scaffolds.all.rejoin.fa | awk '{if($2<int("'$MAX_PATCH'")) print $1}') $REFN.scaffolds.all.rejoin.fa > $REFN.short_contigs.fa.tmp && mv $REFN.short_contigs.fa.tmp $REFN.short_contigs.fa && \
-ufasta extract -v -f <($MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS $REFN.short_contigs.fa $REFN.$QRYN.patches.uniq.links.fa 2>/dev/null | awk '{for(i=1;i<=NF;i++){if($i ~ /^dv/){split($i,a,":"); idy=1-a[3];}} if(($9-$8)/$7>.90 && idy > 0.95) print $6}') $REFN.scaffolds.all.rejoin.fa > $REFN.scaffolds.fa.tmp && mv $REFN.scaffolds.fa.tmp $REFN.scaffolds.fa && \
+ufasta extract -v -f <($MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS $REFN.short_contigs.fa $REFN.$QRYN.patches.uniq.links.fa 2>/dev/null | awk '{idy=1;for(i=1;i<=NF;i++){if($i ~ /^dv/){split($i,a,":"); idy=1-a[3];}} if(($9-$8)/$7>.9 && idy > 0.9) print $6}') $REFN.scaffolds.all.rejoin.fa > $REFN.scaffolds.fa.tmp && mv $REFN.scaffolds.fa.tmp $REFN.scaffolds.fa && \
 rm $REFN.short_contigs.fa $REFN.$QRYN.patches.uniq.links.fa && touch scaffold_deduplicate.success || error_exit "deduplicate failed"
 fi
 
