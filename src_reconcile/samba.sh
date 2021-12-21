@@ -8,6 +8,8 @@ MIN_MATCH=5000
 OVERHANG=1000
 MIN_SCORE=60
 SCORE=4
+ALN_PARAM="map-ont"
+ALN_DATA="ont"
 ALLOWED=""
 GC=
 RC=
@@ -54,7 +56,7 @@ function filter_convert_paf () {
 
 function usage () {
   echo "Usage:"
-  echo "samba.sh -r <contigs or scaffolds in fasta format> -q <long reads or another assembly used to scaffold in fasta format> -t <number of threads> -m <minimum matching length, default:5000> -o <maximum overhang, default:1000> -a <optional: allowed merges file in the format per line: contig1 contig2, only pairs of contigs listed will be considered for merging, useful for intrascaffold gap filling>"
+  echo "samba.sh -r <contigs or scaffolds in fasta format> -q <long reads or another assembly used to scaffold in fasta format> -d <type of scaffolding data: pbclr for PacBio CLR or older reads, ont for Oxford Nanopore reads, or asm for assembly or PacBio HIFI reads, default:ont> -t <number of threads> -m <minimum matching length, default:5000> -o <maximum overhang, default:1000> -a <optional: allowed merges file in the format per line: contig1 contig2, only pairs of contigs listed will be considered for merging, useful for intrascaffold gap filling>"
 }
 
 if [ $# -lt 1 ];then
@@ -77,6 +79,10 @@ do
             ;;
         -q|--query)
             QRY="$2"
+            shift
+            ;;
+        -d|--data)
+            ALN_DATA="$2"
             shift
             ;;
         -m|--min-match)
@@ -114,6 +120,16 @@ if [ ! -s $QRY ];then
 error_exit "merging sequence $QRY does not exist or size zero"
 fi
 
+if [ $ALN_DATA = "ont" ];then
+  ALN_PARAM="map-ont"
+elif [ $ALN_DATA = "pbclr" ];then
+  ALN_PARAM="map-pb"
+elif [ $ALN_DATA = "asm" ];then
+  ALN_PARAM="asm10"
+else
+  error_exit "invalid scaffolding data type:  must be ont, pbclr or asm"
+fi
+
 REFN=`basename $REF`
 QRYN=`basename $QRY`
 DELTAFILE=$REFN.$QRYN
@@ -121,7 +137,7 @@ DELTAFILE=$REFN.$QRYN
 #minimap
 if [ ! -e scaffold_align.success ];then
 log "Aligning the reads to the contigs"
-$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REF $QRY 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_split.success || error_exit "minimap2 failed"
+$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REF $QRY 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_split.success || error_exit "minimap2 failed"
 fi
 
 if [ ! -e scaffold_split.success ];then
@@ -157,7 +173,7 @@ fi
 #minimap
 if [ ! -e scaffold_split_align.success ];then
 log "Aligning the reads to the split contigs"
-$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REFN.split.fa <(ufasta extract -f <(awk '{print $1}' $REFN.$QRYN.filtered.paf) $QRY) 1> $REFN.$QRYN.split.paf.tmp 2>minimap.err && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && touch scaffold_split_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
+$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa <(ufasta extract -f <(awk '{print $1}' $REFN.$QRYN.filtered.paf) $QRY) 1> $REFN.$QRYN.split.paf.tmp 2>minimap.err && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && touch scaffold_split_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
 fi
 
 if [ ! -e scaffold_filter.success ];then
@@ -194,23 +210,22 @@ perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.coords'");while($line=<FILE>)
 $MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa $MIN_MATCH $OVERHANG $ALLOWED >/dev/null && \
 rm -f do_consensus.sh && \
 touch patches.polished.fa && \
-if [ -s patches.polished.fa ];then 
-cat  patches.raw.fa patches.polished.fa > $REFN.$QRYN.patches.polish.fa.tmp && mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.polish.fa
+cat  patches.raw.fa patches.polished.fa > $REFN.$QRYN.patches.polish.fa.tmp && mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.fa && \
+if [ $ALN_DATA = "pbclr" ];then
+$MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H $REF |awk '{if($2<250000) print $1}') $REF > $REFN.short.fa.tmp && mv $REFN.short.fa.tmp $REFN.short.fa && \
+$MYPATH/nucmer -l 15 --batch 1000000 -t $NUM_THREADS $REFN.$QRYN.patches.fa $REFN.short.fa  && \
+$MYPATH/delta-filter -r -l 200 out.delta | \
+$MYPATH/show-coords -lcHr /dev/stdin | awk '{if($16>5 || $7>500) print $0}' | \
+$MYPATH/reconcile_consensus.pl $REFN.$QRYN.patches.fa $REFN.short.fa > $REFN.$QRYN.patches.polish.fa.tmp && mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.polish.fa
 else
-mv patches.raw.fa $REFN.$QRYN.patches.polish.fa
+mv $REFN.$QRYN.patches.fa $REFN.$QRYN.patches.polish.fa
 fi && \
-#the code below is for polishing patches with short contigs, it does not help much
-#$MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H $REF |awk '{if($2<250000) print $1}') $REF > $REFN.short.fa.tmp && mv $REFN.short.fa.tmp $REFN.short.fa && \
-#$MYPATH/nucmer -l 15 --batch 1000000 -t $NUM_THREADS $REFN.$QRYN.patches.fa $REFN.short.fa  && \
-#$MYPATH/delta-filter -r -l 200 out.delta | \
-#$MYPATH/show-coords -lcHr /dev/stdin | awk '{if($16>5 || $7>500) print $0}' | \
-#$MYPATH/reconcile_consensus.pl $REFN.$QRYN.patches.fa $REFN.short.fa > $REFN.$QRYN.patches.polish.fa.tmp && mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.polish.fa && \
 touch scaffold_links.success && rm -rf scaffold_align_patches.success out.delta patches.ref.fa patches.reads.fa patches.raw.fa polish.?.tmp || error_exit "links consensus failed"
 fi
 
 if [ ! -e scaffold_align_patches.success ];then
 log "Aligning the scaffolding sequences to the contigs"
-$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x map-ont $REFN.split.fa $REFN.$QRYN.patches.polish.fa 2>minimap.err  > $REFN.$QRYN.patches.paf.tmp && mv  $REFN.$QRYN.patches.paf.tmp  $REFN.$QRYN.patches.paf && touch scaffold_align_patches.success && rm -f scaffold_scaffold.success || error_exit "minimap2 patches failed"
+$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa $REFN.$QRYN.patches.polish.fa 2>minimap.err  > $REFN.$QRYN.patches.paf.tmp && mv  $REFN.$QRYN.patches.paf.tmp  $REFN.$QRYN.patches.paf && touch scaffold_align_patches.success && rm -f scaffold_scaffold.success || error_exit "minimap2 patches failed"
 fi
 
 if [ ! -e scaffold_scaffold.success ];then
@@ -239,7 +254,7 @@ log "Deduplicating contigs"
 awk 'BEGIN{n=0}{if(length($NF)>100){print ">"n"\n"$NF;n++}}' $REFN.$QRYN.patches.uniq.links.txt > $REFN.$QRYN.patches.uniq.links.fa.tmp && mv $REFN.$QRYN.patches.uniq.links.fa.tmp $REFN.$QRYN.patches.uniq.links.fa && \
 MAX_PATCH=`ufasta sizes -H  $REFN.$QRYN.patches.uniq.links.fa | sort -nrk2,2 -S 10% | head -n 1 | awk '{print $2}'`
 $MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H $REFN.scaffolds.all.rejoin.fa | awk '{if($2<int("'$MAX_PATCH'")) print $1}') $REFN.scaffolds.all.rejoin.fa > $REFN.short_contigs.fa.tmp && mv $REFN.short_contigs.fa.tmp $REFN.short_contigs.fa && \
-ufasta extract -v -f <($MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS $REFN.short_contigs.fa $REFN.$QRYN.patches.uniq.links.fa 2>/dev/null | awk '{idy=1;for(i=1;i<=NF;i++){if($i ~ /^dv/){split($i,a,":"); idy=1-a[3];}} if(($9-$8)/$7>.9 && idy > 0.9) print $6}') $REFN.scaffolds.all.rejoin.fa > $REFN.scaffolds.fa.tmp && mv $REFN.scaffolds.fa.tmp $REFN.scaffolds.fa && \
+ufasta extract -v -f <($MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS $REFN.short_contigs.fa $REFN.$QRYN.patches.uniq.links.fa 2>/dev/null | awk '{idy=1;for(i=1;i<=NF;i++){if($i ~ /^dv/){split($i,a,":"); idy=1-a[3];}} if(($9-$8)/$7>.95 && idy > 0.95) print $6}') $REFN.scaffolds.all.rejoin.fa > $REFN.scaffolds.fa.tmp && mv $REFN.scaffolds.fa.tmp $REFN.scaffolds.fa && \
 rm $REFN.short_contigs.fa $REFN.$QRYN.patches.uniq.links.fa && touch scaffold_deduplicate.success || error_exit "deduplicate failed"
 fi
 
