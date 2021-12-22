@@ -7,9 +7,10 @@ NUM_THREADS=1
 MIN_MATCH=5000
 OVERHANG=1000
 MIN_SCORE=60
-SCORE=4
+SCORE=4000000
 ALN_PARAM="map-ont"
 ALN_DATA="ont"
+POLISH_PARAM="--nano-raw"
 ALLOWED=""
 GC=
 RC=
@@ -123,7 +124,8 @@ fi
 if [ $ALN_DATA = "ont" ];then
   ALN_PARAM="map-ont"
 elif [ $ALN_DATA = "pbclr" ];then
-  ALN_PARAM="map-pb"
+  ALN_PARAM="map-ont"
+  POLISH_PARAM="--pacbio-raw"
 elif [ $ALN_DATA = "asm" ];then
   ALN_PARAM="asm10"
 else
@@ -201,7 +203,7 @@ rm -f patches.polished.fa && \
 echo "#!/bin/bash" > do_consensus.sh && \
 echo "rm -rf polish.?.tmp" >> do_consensus.sh
 for jindex in $(seq 0 9);do
-echo "if [ -s patches.ref.$jindex.fa ] && [ -s patches.reads.$jindex.fa ];then $MYPATH/../Flye/bin/flye --polish-target patches.ref.$jindex.fa --iterations 2 --nano-raw patches.reads.$jindex.fa --threads 8 --out-dir polish.$jindex.tmp 1>polish.err 2>&1 && rm -f patches.ref.$jindex.fa patches.reads.$jindex.fa;fi &"  >> do_consensus.sh 
+echo "if [ -s patches.ref.$jindex.fa ] && [ -s patches.reads.$jindex.fa ];then $MYPATH/../Flye/bin/flye --polish-target patches.ref.$jindex.fa --iterations 1 $POLISH_PARAM patches.reads.$jindex.fa --threads 8 --out-dir polish.$jindex.tmp 1>polish.err 2>&1 && rm -f patches.ref.$jindex.fa patches.reads.$jindex.fa;fi &"  >> do_consensus.sh 
 done
 echo "wait;" >> do_consensus.sh && \
 echo "cat polish.?.tmp/polished_1.fasta | $MYPATH/ufasta one >> patches.polished.fa" >> do_consensus.sh && \
