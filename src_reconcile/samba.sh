@@ -149,15 +149,20 @@ if [ ! -e scaffold_split.success ];then
 log "Filtering alignments and looking for misassemblies"
 #first we figure out which reads we are keepping for subsequent steps.  We are keeping alignments of all reads that satisfy minimum alignment length criteria and map to 2+ contigs
 awk '{if($4-$3>int("'$MIN_MATCH'") && $12>=int("'$MIN_SCORE'")) print $0}' $REFN.$QRYN.paf | \
-perl -ane '{push(@lines,join(" ",@F));$ctg{$F[0]}.="$F[5] ";}
-END{
-my %to_output=();
-foreach $r (keys %ctg){my @f=split(/\s+/,$ctg{$r}); 
-my %temp=(); 
-foreach $c(@f){$temp{$c}=1}; 
-my $size = keys %temp; if($size>1){$to_output{$r}=1;}
+perl -ane '{
+push(@lines,join(" ",@F));
+if(not(defined($ctg{$F[0]}))){
+$ctg{$F[0]}=$F[5];
+}else{
+$to_output{$F[0]}=1 if(not($ctg{$F[0]} eq $F[5]));
 }
-foreach $l(@lines){my @f=split(/\s+/,$l);print "$l\n" if(defined($to_output{$f[0]}));}}' | \
+}
+END{
+foreach $l(@lines){
+my @f=split(/\s+/,$l);
+print "$l\n" if(defined($to_output{$f[0]}));
+}
+}' | \
 sort -k1,1 -k3,3n -S 10% > $REFN.$QRYN.filtered.paf.tmp && mv $REFN.$QRYN.filtered.paf.tmp $REFN.$QRYN.filtered.paf && \
 awk 'BEGIN{r="";c="";oh=int("'$MIN_MATCH'");}{
 if($1==r && $6!=c){
@@ -244,11 +249,12 @@ mv $REFN.repeats.txt.tmp $REFN.repeats.txt && \
 perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.patches.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \
 $MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa $MIN_MATCH $OVERHANG $ALLOWED > $REFN.$QRYN.patches.uniq.links.txt.tmp && \
 mv $REFN.$QRYN.patches.uniq.links.txt.tmp $REFN.$QRYN.patches.uniq.links.txt && \
-$MYPATH/merge_contigs.pl $REFN.split.fa < $REFN.$QRYN.patches.uniq.links.txt 2>$REFN.$QRYN.bubbles.txt | \
+$MYPATH/merge_contigs.pl $REFN.split.fa < $REFN.$QRYN.patches.uniq.links.txt 2>/dev/null | \
 $MYPATH/insert_repeats.pl $REFN.repeats.txt |\
-$MYPATH/create_merged_sequences.pl $REFN.split.fa  <(cat $REFN.$QRYN.patches.uniq.links.txt $REFN.$QRYN.patches.links.txt) | \
-$MYPATH/ufasta extract -v -f $REFN.$QRYN.bubbles.txt > $REFN.$QRYN.scaffolds.fa.tmp && mv $REFN.$QRYN.scaffolds.fa.tmp $REFN.scaffolds.all.fa && \
-ufasta sizes -H $REFN.scaffolds.all.fa | $MYPATH/make_rejoin_links.pl > $REFN.rejoin.links.txt.tmp && mv $REFN.rejoin.links.txt.tmp $REFN.rejoin.links.txt && \
+$MYPATH/create_merged_sequences.pl $REFN.split.fa  <(cat $REFN.$QRYN.patches.uniq.links.txt $REFN.$QRYN.patches.links.txt) > $REFN.$QRYN.scaffolds.fa.tmp && \
+mv $REFN.$QRYN.scaffolds.fa.tmp $REFN.scaffolds.all.fa && \
+ufasta sizes -H $REFN.scaffolds.all.fa | $MYPATH/make_rejoin_links.pl > $REFN.rejoin.links.txt.tmp && \
+mv $REFN.rejoin.links.txt.tmp $REFN.rejoin.links.txt && \
 $MYPATH/merge_contigs.pl $REFN.scaffolds.all.fa  < $REFN.rejoin.links.txt 2>/dev/null | \
 $MYPATH/create_merged_sequences.pl $REFN.scaffolds.all.fa $REFN.rejoin.links.txt > $REFN.scaffolds.all.rejoin.fa.tmp && mv $REFN.scaffolds.all.rejoin.fa.tmp $REFN.scaffolds.all.rejoin.fa && \
 rm $REFN.scaffolds.all.fa  && touch scaffold_scaffold.success && rm -f scaffold_deduplicate.success || error_exit "walking the scaffold graph failed"
