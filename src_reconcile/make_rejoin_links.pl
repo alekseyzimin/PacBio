@@ -26,7 +26,7 @@ foreach $l(@lines){
 #print "$l\n";
 my @f=split(/\s+/,$l);
   if($f[0] eq $prevname && $f[1] == $prevoffset){
-    print "$f[0].$prevcoord 0 F $f[0].$f[1] 0 F n\n";
+    print "$f[0].$prevcoord 0 F $f[0].$f[1] 0 F 0 n\n";
   }
   $prevname=$f[0];
   $prevcoord=$f[1];

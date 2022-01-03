@@ -7,8 +7,8 @@ NUM_THREADS=1
 MIN_MATCH=5000
 OVERHANG=1000
 MIN_SCORE=60
-SCORE=4000000
-ALN_PARAM="map-ont"
+SCORE=4
+ALN_PARAM="map-ont -N 1 "
 ALN_DATA="ont"
 POLISH_PARAM="--nano-raw"
 ALLOWED=""
@@ -43,7 +43,10 @@ function error_exit {
 
 function filter_convert_paf () {
 #extract alignments of all long reads that satisfy the overhng, score and match length requirements and align to two or more contigs and convert to coords format
-  awk '{ max_overhang=int("'$OVERHANG'"); if($4-$3>500 && ($8 < max_overhang || $7-$9 < max_overhang) && $12>=int("'$MIN_SCORE'")) print $0}' $1 |\
+  awk '{max_overhang=int("'$OVERHANG'");min_overlap=500;
+    if($4-$3>min_overlap && $12>=int("'$MIN_SCORE'")){
+      if(($5 == "+" && (($8 < max_overhang && $3 >=min_overlap) || ($7-$9 < max_overhang && $2-$4 >= min_overlap))) || ($5 == "-" && (($8 < max_overhang && $2-$4 >=min_overlap) || ($7-$9 < max_overhang && $3 >= min_overlap)))) print $0;
+    }}' $1 |\
   perl -ane 'BEGIN{my %to_output=();}{
     push(@lines,join(" ",@F));if(not(defined($ctg{$F[0]}))){$ctg{$F[0]}=$F[5];}else{$to_output{$F[0]}=1 if(not($ctg{$F[0]} eq $F[5]));}
     }
@@ -122,12 +125,12 @@ error_exit "merging sequence $QRY does not exist or size zero"
 fi
 
 if [ $ALN_DATA = "ont" ];then
-  ALN_PARAM="map-ont"
+  ALN_PARAM="map-ont -N 1 "
 elif [ $ALN_DATA = "pbclr" ];then
-  ALN_PARAM="map-ont"
+  ALN_PARAM="map-ont -N 1 "
   POLISH_PARAM="--pacbio-raw"
 elif [ $ALN_DATA = "asm" ];then
-  ALN_PARAM="asm10"
+  ALN_PARAM="asm10 "
 else
   error_exit "invalid scaffolding data type:  must be ont, pbclr or asm"
 fi
