@@ -43,7 +43,7 @@ function error_exit {
 
 function filter_convert_paf () {
 #extract alignments of all long reads that satisfy the overhng, score and match length requirements and align to two or more contigs and convert to coords format
-  awk '{max_overhang=int("'$OVERHANG'");min_overlap=500;
+  awk '{max_overhang=int("'$OVERHANG'");min_overlap=1000;
     if($4-$3>min_overlap && $12>=int("'$MIN_SCORE'")){
       if(($5 == "+" && (($8 < max_overhang && $3 >=min_overlap) || ($7-$9 < max_overhang && $2-$4 >= min_overlap))) || ($5 == "-" && (($8 < max_overhang && $2-$4 >=min_overlap) || ($7-$9 < max_overhang && $3 >= min_overlap)))) print $0;
     }}' $1 |\
@@ -163,13 +163,13 @@ my @f=split(/\s+/,$l);
 print "$l\n" if(defined($to_output{$f[0]}));
 }
 }' | \
-sort -k1,1 -k3,3n -S 10% > $REFN.$QRYN.filtered.paf.tmp && mv $REFN.$QRYN.filtered.paf.tmp $REFN.$QRYN.filtered.paf && \
+sort -k1,1 -k3,3n -S 10% | \
 awk 'BEGIN{r="";c="";oh=int("'$MIN_MATCH'");}{
 if($1==r && $6!=c){
 split(prevline,a," ");
 if(a[5]=="+"){if(a[7]-a[9] >= oh && a[2]-a[4] >= oh){print a[6]" "a[9];}}else{ if(a[8] >= oh && a[2]-a[4] >= oh){print a[6]" "a[8]}} 
   if($5=="+"){       if($8 >= oh &&    $3 >= oh){print $6" "$8;}}    else{if($7-$9 >= oh &&    $3 >= oh){print $6" "$9;}}
-}prevline=$0;c=$6;r=$1;}' $REFN.$QRYN.filtered.paf | \
+}prevline=$0;c=$6;r=$1;}' | \
 sort -S10% -k1,1 -k2,2n | \
 uniq -c |awk '{if($1<3) print $2" "$3}' | \
 perl -ane '{push(@ctg,$F[0]);push(@coord,$F[1]);}END{$rad=30;$tol=5000;for($i=0;$i<=$#ctg;$i++){my $score=0;for($j=$i-$rad;$j<$i+$rad;$j++){next if($j<0 || $j>$#ctg);if(abs($coord[$j]-$coord[$i])<$tol && $ctg[$j] eq $ctg[$i]){$score+=exp(-abs($coord[$j]-$coord[$i])/$tol)}} print "$ctg[$i] $coord[$i] $score\n" if($score>'$SCORE');}}' | \
@@ -183,7 +183,8 @@ fi
 #minimap
 if [ ! -e scaffold_split_align.success ];then
 log "Aligning the reads to the split contigs"
-$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa <(ufasta extract -f <(awk '{print $1}' $REFN.$QRYN.filtered.paf) $QRY) 1> $REFN.$QRYN.split.paf.tmp 2>minimap.err && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && touch scaffold_split_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
+filter_convert_paf $REFN.$QRYN.paf $REFN.$QRYN.coords && \
+$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa <(ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY) 1> $REFN.$QRYN.split.paf.tmp 2>minimap.err && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && touch scaffold_split_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
 fi
 
 if [ ! -e scaffold_filter.success ];then
@@ -220,17 +221,21 @@ perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.coords'");while($line=<FILE>)
 $MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa $MIN_MATCH $OVERHANG $ALLOWED >/dev/null && \
 rm -f do_consensus.sh && \
 touch patches.polished.fa && \
-cat  patches.raw.fa patches.polished.fa > $REFN.$QRYN.patches.polish.fa.tmp && mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.fa && \
-if [ $ALN_DATA = "pbclr" ];then
+#cat  patches.raw.fa patches.polished.fa > $REFN.$QRYN.patches.polish.fa.tmp && mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.fa && \
+if [ $ALN_DATA = "pbclr" ] ||  [ $ALN_DATA = "ont" ];then
 $MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H $REF |awk '{if($2<250000) print $1}') $REF > $REFN.short.fa.tmp && mv $REFN.short.fa.tmp $REFN.short.fa && \
-$MYPATH/nucmer -l 15 --batch 1000000 -t $NUM_THREADS $REFN.$QRYN.patches.fa $REFN.short.fa  && \
+$MYPATH/nucmer -l 15 --batch 1000000 -t $NUM_THREADS patches.raw.fa $REFN.short.fa  && \
 $MYPATH/delta-filter -r -l 200 out.delta | \
 $MYPATH/show-coords -lcHr /dev/stdin | awk '{if($16>5 || $7>500) print $0}' | \
-$MYPATH/reconcile_consensus.pl $REFN.$QRYN.patches.fa $REFN.short.fa > $REFN.$QRYN.patches.polish.fa.tmp && mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.polish.fa
+$MYPATH/reconcile_consensus.pl patches.raw.fa $REFN.short.fa > patches.cpolished.fa.tmp && \
+mv patches.cpolished.fa.tmp patches.cpolished.fa && \
+cat patches.cpolished.fa patches.polished.fa > $REFN.$QRYN.patches.polish.fa.tmp && \
+mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.fa
 else
-mv $REFN.$QRYN.patches.fa $REFN.$QRYN.patches.polish.fa
+cat patches.raw.fa patches.polished.fa > $REFN.$QRYN.patches.polish.fa.tmp && \
+mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.fa
 fi && \
-touch scaffold_links.success && rm -rf scaffold_align_patches.success out.delta patches.ref.fa patches.reads.fa patches.raw.fa polish.?.tmp || error_exit "links consensus failed"
+touch scaffold_links.success && rm -rf scaffold_align_patches.success out.delta patches.raw.fa patches.polished.fa patches.cpolished.fa polish.?.tmp || error_exit "links consensus failed"
 fi
 
 if [ ! -e scaffold_align_patches.success ];then
