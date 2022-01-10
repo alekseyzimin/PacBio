@@ -203,11 +203,13 @@ if(-e "do_consensus.sh"){
       open(REF,">patches.ref.$pindex.fa");
       open(READS,">patches.reads.$pindex.fa");
       print REF ">$name\n$qseq{$name}\n";
+      print READS ">_$name\n$qseq{$name}\n";
 #need uniq to avoid outputting duplicates
       my %output=();
       for(my $i=1;$i<=$#names;$i++){
         if(not(defined($output{$names[$i]}))){
           print READS ">$names[$i]\n$qseq{$names[$i]}\n";
+          print READS ">_$names[$i]\n$qseq{$names[$i]}\n";
           $output{$names[$i]}=1;
         }
       }

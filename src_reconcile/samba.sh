@@ -222,18 +222,18 @@ $MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa $MIN_MATCH $OVERHANG $ALLOWED >/d
 rm -f do_consensus.sh && \
 touch patches.polished.fa && \
 #cat  patches.raw.fa patches.polished.fa > $REFN.$QRYN.patches.polish.fa.tmp && mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.fa && \
-if [ $ALN_DATA = "pbclr" ] ||  [ $ALN_DATA = "ont" ];then
+if [ $ALN_DATA = "pbclr" ] || [ $ALN_DATA = "ont" ];then
 $MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H $REF |awk '{if($2<250000) print $1}') $REF > $REFN.short.fa.tmp && mv $REFN.short.fa.tmp $REFN.short.fa && \
-$MYPATH/nucmer -l 15 --batch 1000000 -t $NUM_THREADS patches.raw.fa $REFN.short.fa  && \
+$MYPATH/nucmer -l 15 -c 31 -b 500 --batch 1000000 -t $NUM_THREADS patches.raw.fa $REFN.short.fa  && \
 $MYPATH/delta-filter -r -l 200 out.delta | \
 $MYPATH/show-coords -lcHr /dev/stdin | awk '{if($16>5 || $7>500) print $0}' | \
 $MYPATH/reconcile_consensus.pl patches.raw.fa $REFN.short.fa > patches.cpolished.fa.tmp && \
 mv patches.cpolished.fa.tmp patches.cpolished.fa && \
 cat patches.cpolished.fa patches.polished.fa > $REFN.$QRYN.patches.polish.fa.tmp && \
-mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.fa
+mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.polish.fa
 else
 cat patches.raw.fa patches.polished.fa > $REFN.$QRYN.patches.polish.fa.tmp && \
-mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.fa
+mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.polish.fa
 fi && \
 touch scaffold_links.success && rm -rf scaffold_align_patches.success out.delta patches.raw.fa patches.polished.fa patches.cpolished.fa polish.?.tmp || error_exit "links consensus failed"
 fi
