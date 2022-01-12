@@ -43,7 +43,7 @@ function error_exit {
 
 function filter_convert_paf () {
 #extract alignments of all long reads that satisfy the overhng, score and match length requirements and align to two or more contigs and convert to coords format
-  awk '{max_overhang=int("'$OVERHANG'");min_overlap=400;
+  awk '{max_overhang=int("'$OVERHANG'");min_overlap=int("'$MIN_MATCH'")/6;if(min_overlap<400) min_overlap=400;
     if($4-$3>min_overlap && $12>=int("'$MIN_SCORE'")){
       if(($5 == "+" && (($8 < max_overhang && $3 >=min_overlap) || ($7-$9 < max_overhang && $2-$4 >= min_overlap))) || ($5 == "-" && (($8 < max_overhang && $2-$4 >=min_overlap) || ($7-$9 < max_overhang && $3 >= min_overlap)))) print $0;
     }}' $1 |\
