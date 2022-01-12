@@ -43,7 +43,7 @@ function error_exit {
 
 function filter_convert_paf () {
 #extract alignments of all long reads that satisfy the overhng, score and match length requirements and align to two or more contigs and convert to coords format
-  awk '{max_overhang=int("'$OVERHANG'");min_overlap=1000;
+  awk '{max_overhang=int("'$OVERHANG'");min_overlap=400;
     if($4-$3>min_overlap && $12>=int("'$MIN_SCORE'")){
       if(($5 == "+" && (($8 < max_overhang && $3 >=min_overlap) || ($7-$9 < max_overhang && $2-$4 >= min_overlap))) || ($5 == "-" && (($8 < max_overhang && $2-$4 >=min_overlap) || ($7-$9 < max_overhang && $3 >= min_overlap)))) print $0;
     }}' $1 |\
@@ -221,7 +221,6 @@ perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.coords'");while($line=<FILE>)
 $MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa $MIN_MATCH $OVERHANG $ALLOWED >/dev/null && \
 rm -f do_consensus.sh && \
 touch patches.polished.fa && \
-#cat  patches.raw.fa patches.polished.fa > $REFN.$QRYN.patches.polish.fa.tmp && mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.fa && \
 if [ $ALN_DATA = "pbclr" ] || [ $ALN_DATA = "ont" ];then
 $MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H $REF |awk '{if($2<250000) print $1}') $REF > $REFN.short.fa.tmp && mv $REFN.short.fa.tmp $REFN.short.fa && \
 $MYPATH/nucmer -l 15 -c 31 -b 500 --batch 1000000 -t $NUM_THREADS patches.raw.fa $REFN.short.fa  && \

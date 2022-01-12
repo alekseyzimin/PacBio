@@ -209,7 +209,7 @@ if(-e "do_consensus.sh"){
       for(my $i=1;$i<=$#names;$i++){
         if(not(defined($output{$names[$i]}))){
           print READS ">$names[$i]\n$qseq{$names[$i]}\n";
-          print READS ">_$names[$i]\n$qseq{$names[$i]}\n";
+          print READS ">_$names[$i]\n$qseq{$names[$i]}\n" if($#names<5);
           $output{$names[$i]}=1;
         }
       }
