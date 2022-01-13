@@ -223,7 +223,7 @@ rm -f do_consensus.sh && \
 touch patches.polished.fa && \
 if [ $ALN_DATA = "pbclr" ] || [ $ALN_DATA = "ont" ];then
 $MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H $REF |awk '{if($2<250000) print $1}') $REF > $REFN.short.fa.tmp && mv $REFN.short.fa.tmp $REFN.short.fa && \
-$MYPATH/nucmer -l 15 -b 400 --batch 1000000 -t $NUM_THREADS patches.raw.fa $REFN.short.fa  && \
+$MYPATH/nucmer -l 15 -b 400 --batch 10000000 -t $NUM_THREADS patches.raw.fa $REFN.short.fa  && \
 $MYPATH/delta-filter -r -l 200 out.delta | \
 $MYPATH/show-coords -lcHr /dev/stdin | awk '{if($16>5 || $7>500) print $0}' | \
 $MYPATH/reconcile_consensus.pl patches.raw.fa $REFN.short.fa > patches.cpolished.fa.tmp && \
