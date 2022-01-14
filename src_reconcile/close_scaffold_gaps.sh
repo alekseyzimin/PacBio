@@ -108,7 +108,7 @@ fi
 
 if [ ! -e "scaffold_merge.scaffold.success" ];then
 log "Closing gaps"
-$MYPATH/samba.sh -r $REFN.split -q $QRY -t $NUM_THREADS -o $OVERHANG -m $MIN_MATCH -a $REFN.valid_join_pairs.txt && \
+$MYPATH/samba.sh -r $REFN.split -q $QRY -t $NUM_THREADS -o $OVERHANG -m $MIN_MATCH -a $REFN.valid_join_pairs.txt -n && \
 $MYPATH/recover_scaffolds.pl < $REFN.split.scaffolds.fa |ufasta format > $REFN.split.joined.tmp && \
 mv $REFN.split.joined.tmp $REFN.split.joined.fa && \
 touch scaffold_merge.scaffold.success

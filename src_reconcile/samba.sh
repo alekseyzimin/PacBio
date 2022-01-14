@@ -8,6 +8,7 @@ MIN_MATCH=5000
 OVERHANG=1000
 MIN_SCORE=60
 SCORE=4
+NOBREAK="0"
 ALN_PARAM="map-ont -N 1 "
 ALN_DATA="ont"
 POLISH_PARAM="--nano-raw"
@@ -60,7 +61,7 @@ function filter_convert_paf () {
 
 function usage () {
   echo "Usage:"
-  echo "samba.sh -r <contigs or scaffolds in fasta format> -q <long reads or another assembly used to scaffold in fasta format> -d <type of scaffolding data: pbclr for PacBio CLR or older reads, ont for Oxford Nanopore reads, or asm for assembly or PacBio HIFI reads, default:ont> -t <number of threads> -m <minimum matching length, default:5000> -o <maximum overhang, default:1000> -a <optional: allowed merges file in the format per line: contig1 contig2, only pairs of contigs listed will be considered for merging, useful for intrascaffold gap filling>"
+  echo "samba.sh -r <contigs or scaffolds in fasta format> -q <long reads or another assembly used to scaffold in fasta format> -d <type of scaffolding data: pbclr for PacBio CLR or older reads, ont for Oxford Nanopore reads, or asm for assembly or PacBio HIFI reads, default:ont> -t <number of threads> -m <minimum matching length, default:5000> -o <maximum overhang, default:1000> -a <optional: allowed merges file in the format per line: contig1 contig2, only pairs of contigs listed will be considered for merging, useful for intrascaffold gap filling> -n <optional: do not look for misassemblies in contigs>" 
 }
 
 if [ $# -lt 1 ];then
@@ -88,6 +89,9 @@ do
         -d|--data)
             ALN_DATA="$2"
             shift
+            ;;
+        -n|--no-break)
+            NOBREAK="1"
             ;;
         -m|--min-match)
             MIN_MATCH="$2"
@@ -142,49 +146,56 @@ DELTAFILE=$REFN.$QRYN
 #minimap
 if [ ! -e scaffold_align.success ];then
 log "Aligning the reads to the contigs"
-$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REF $QRY 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_split.success || error_exit "minimap2 failed"
+$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REF $QRY 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_split.success scaffold_filter.success || error_exit "minimap2 failed"
 fi
 
-if [ ! -e scaffold_split.success ];then
-log "Filtering alignments and looking for misassemblies"
-#first we figure out which reads we are keepping for subsequent steps.  We are keeping alignments of all reads that satisfy minimum alignment length criteria and map to 2+ contigs
-awk '{if($4-$3>int("'$MIN_MATCH'") && $12>=int("'$MIN_SCORE'")) print $0}' $REFN.$QRYN.paf | \
-perl -ane '{
-push(@lines,join(" ",@F));
-if(not(defined($ctg{$F[0]}))){
-$ctg{$F[0]}=$F[5];
-}else{
-$to_output{$F[0]}=1 if(not($ctg{$F[0]} eq $F[5]));
-}
-}
-END{
-foreach $l(@lines){
-my @f=split(/\s+/,$l);
-print "$l\n" if(defined($to_output{$f[0]}));
-}
-}' | \
-sort -k1,1 -k3,3n -S 10% | \
-awk 'BEGIN{r="";c="";oh=int("'$MIN_MATCH'");}{
-if($1==r && $6!=c){
-split(prevline,a," ");
-if(a[5]=="+"){if(a[7]-a[9] >= oh && a[2]-a[4] >= oh){print a[6]" "a[9];}}else{ if(a[8] >= oh && a[2]-a[4] >= oh){print a[6]" "a[8]}} 
-  if($5=="+"){       if($8 >= oh &&    $3 >= oh){print $6" "$8;}}    else{if($7-$9 >= oh &&    $3 >= oh){print $6" "$9;}}
-}prevline=$0;c=$6;r=$1;}' | \
-sort -S10% -k1,1 -k2,2n | \
-uniq -c |awk '{if($1<3) print $2" "$3}' | \
-perl -ane '{push(@ctg,$F[0]);push(@coord,$F[1]);}END{$rad=30;$tol=5000;for($i=0;$i<=$#ctg;$i++){my $score=0;for($j=$i-$rad;$j<$i+$rad;$j++){next if($j<0 || $j>$#ctg);if(abs($coord[$j]-$coord[$i])<$tol && $ctg[$j] eq $ctg[$i]){$score+=exp(-abs($coord[$j]-$coord[$i])/$tol)}} print "$ctg[$i] $coord[$i] $score\n" if($score>'$SCORE');}}' | \
-sort -nrk3,3 -S10% | uniq | perl -ane '{if(not(defined($h{$F[0]}))){$h{$F[0]}=$F[1];}else{@f=split(/\s+/,$h{$F[0]});my $flag=0;foreach $v(@f){$flag=1 if(abs($v-$F[1])<int("'$MIN_MATCH'"));}if($flag==0){$h{$F[0]}.=" $F[1]"}}}END{foreach $k(keys %h){@f=split(/\s+/,$h{$k});foreach $v(@f){print "break $k $v\n"}}}' |
-sort -S10% -k2,2 -k3,3n > $REFN.$QRYN.splits.txt && \
-echo -n "Found misassemblies: " && wc -l $REFN.$QRYN.splits.txt && \
-$MYPATH/break_contigs.pl  $REFN.$QRYN.splits.txt < $REF > $REFN.split.fa.tmp && mv $REFN.split.fa.tmp $REFN.split.fa && touch scaffold_split.success && \
-rm -f scaffold_split_align.success || error_exit "splitting at misassemblies failed" 
-fi
+if [ $NOBREAK = "0" ];then
 
-#minimap
-if [ ! -e scaffold_split_align.success ];then
-log "Aligning the reads to the split contigs"
-filter_convert_paf $REFN.$QRYN.paf $REFN.$QRYN.coords && \
-$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa <(ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY) 1> $REFN.$QRYN.split.paf.tmp 2>minimap.err && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && touch scaffold_split_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
+  if [ ! -e scaffold_split.success ];then
+  log "Filtering alignments and looking for misassemblies"
+  #first we figure out which reads we are keepping for subsequent steps.  We are keeping alignments of all reads that satisfy minimum alignment length criteria and map to 2+ contigs
+  awk '{if($4-$3>int("'$MIN_MATCH'") && $12>=int("'$MIN_SCORE'")) print $0}' $REFN.$QRYN.paf | \
+  perl -ane '{
+  push(@lines,join(" ",@F));
+  if(not(defined($ctg{$F[0]}))){
+  $ctg{$F[0]}=$F[5];
+  }else{
+  $to_output{$F[0]}=1 if(not($ctg{$F[0]} eq $F[5]));
+  }
+  }
+  END{
+  foreach $l(@lines){
+  my @f=split(/\s+/,$l);
+  print "$l\n" if(defined($to_output{$f[0]}));
+  }
+  }' | \
+  sort -k1,1 -k3,3n -S 10% | \
+  awk 'BEGIN{r="";c="";oh=int("'$MIN_MATCH'");}{
+  if($1==r && $6!=c){
+  split(prevline,a," ");
+  if(a[5]=="+"){if(a[7]-a[9] >= oh && a[2]-a[4] >= oh){print a[6]" "a[9];}}else{ if(a[8] >= oh && a[2]-a[4] >= oh){print a[6]" "a[8]}} 
+    if($5=="+"){       if($8 >= oh &&    $3 >= oh){print $6" "$8;}}    else{if($7-$9 >= oh &&    $3 >= oh){print $6" "$9;}}
+  }prevline=$0;c=$6;r=$1;}' | \
+  sort -S10% -k1,1 -k2,2n | \
+  uniq -c |awk '{if($1<3) print $2" "$3}' | \
+  perl -ane '{push(@ctg,$F[0]);push(@coord,$F[1]);}END{$rad=30;$tol=5000;for($i=0;$i<=$#ctg;$i++){my $score=0;for($j=$i-$rad;$j<$i+$rad;$j++){next if($j<0 || $j>$#ctg);if(abs($coord[$j]-$coord[$i])<$tol && $ctg[$j] eq $ctg[$i]){$score+=exp(-abs($coord[$j]-$coord[$i])/$tol)}} print "$ctg[$i] $coord[$i] $score\n" if($score>'$SCORE');}}' | \
+  sort -nrk3,3 -S10% | uniq | perl -ane '{if(not(defined($h{$F[0]}))){$h{$F[0]}=$F[1];}else{@f=split(/\s+/,$h{$F[0]});my $flag=0;foreach $v(@f){$flag=1 if(abs($v-$F[1])<int("'$MIN_MATCH'"));}if($flag==0){$h{$F[0]}.=" $F[1]"}}}END{foreach $k(keys %h){@f=split(/\s+/,$h{$k});foreach $v(@f){print "break $k $v\n"}}}' |
+  sort -S10% -k2,2 -k3,3n > $REFN.$QRYN.splits.txt && \
+  echo -n "Found misassemblies: " && wc -l $REFN.$QRYN.splits.txt && \
+  $MYPATH/break_contigs.pl  $REFN.$QRYN.splits.txt < $REF > $REFN.split.fa.tmp && mv $REFN.split.fa.tmp $REFN.split.fa && touch scaffold_split.success && \
+  rm -f scaffold_split_align.success || error_exit "splitting at misassemblies failed" 
+  fi
+
+  #minimap
+  if [ ! -e scaffold_split_align.success ];then
+  log "Aligning the reads to the split contigs"
+  filter_convert_paf $REFN.$QRYN.paf $REFN.$QRYN.coords && \
+  $MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa <(ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY) 1> $REFN.$QRYN.split.paf.tmp 2>minimap.err && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && touch scaffold_split_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
+  fi
+
+else
+  ln -s $REFN.$QRYN.paf $REFN.$QRYN.split.paf && \
+  ln -s $REFN $REFN.split.fa
 fi
 
 if [ ! -e scaffold_filter.success ];then
@@ -222,17 +233,17 @@ $MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa $MIN_MATCH $OVERHANG $ALLOWED >/d
 rm -f do_consensus.sh && \
 touch patches.polished.fa && \
 if [ $ALN_DATA = "pbclr" ] || [ $ALN_DATA = "ont" ];then
-$MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H $REF |awk '{if($2<250000) print $1}') $REF > $REFN.short.fa.tmp && mv $REFN.short.fa.tmp $REFN.short.fa && \
-$MYPATH/nucmer -l 15 -b 400 --batch 10000000 -t $NUM_THREADS patches.raw.fa $REFN.short.fa  && \
-$MYPATH/delta-filter -r -l 200 out.delta | \
-$MYPATH/show-coords -lcHr /dev/stdin | awk '{if($16>5 || $7>500) print $0}' | \
-$MYPATH/reconcile_consensus.pl patches.raw.fa $REFN.short.fa > patches.cpolished.fa.tmp && \
-mv patches.cpolished.fa.tmp patches.cpolished.fa && \
-cat patches.cpolished.fa patches.polished.fa > $REFN.$QRYN.patches.polish.fa.tmp && \
-mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.polish.fa
+  $MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H $REF |awk '{if($2<250000) print $1}') $REF > $REFN.short.fa.tmp && mv $REFN.short.fa.tmp $REFN.short.fa && \
+  $MYPATH/nucmer -l 15 -b 400 --batch 10000000 -t $NUM_THREADS patches.raw.fa $REFN.short.fa  && \
+  $MYPATH/delta-filter -r -l 200 out.delta | \
+  $MYPATH/show-coords -lcHr /dev/stdin | awk '{if($16>5 || $7>500) print $0}' | \
+  $MYPATH/reconcile_consensus.pl patches.raw.fa $REFN.short.fa > patches.cpolished.fa.tmp && \
+  mv patches.cpolished.fa.tmp patches.cpolished.fa && \
+  cat patches.cpolished.fa patches.polished.fa > $REFN.$QRYN.patches.polish.fa.tmp && \
+  mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.polish.fa
 else
-cat patches.raw.fa patches.polished.fa > $REFN.$QRYN.patches.polish.fa.tmp && \
-mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.polish.fa
+  cat patches.raw.fa patches.polished.fa > $REFN.$QRYN.patches.polish.fa.tmp && \
+  mv $REFN.$QRYN.patches.polish.fa.tmp $REFN.$QRYN.patches.polish.fa
 fi && \
 touch scaffold_links.success && rm -rf scaffold_align_patches.success out.delta patches.raw.fa patches.polished.fa patches.cpolished.fa polish.?.tmp || error_exit "links consensus failed"
 fi
@@ -257,11 +268,15 @@ $MYPATH/merge_contigs.pl $REFN.split.fa < $REFN.$QRYN.patches.uniq.links.txt 2>/
 $MYPATH/insert_repeats.pl $REFN.repeats.txt |\
 $MYPATH/create_merged_sequences.pl $REFN.split.fa  <(cat $REFN.$QRYN.patches.uniq.links.txt $REFN.$QRYN.patches.links.txt) > $REFN.$QRYN.scaffolds.fa.tmp && \
 mv $REFN.$QRYN.scaffolds.fa.tmp $REFN.scaffolds.all.fa && \
-ufasta sizes -H $REFN.scaffolds.all.fa | $MYPATH/make_rejoin_links.pl > $REFN.rejoin.links.txt.tmp && \
-mv $REFN.rejoin.links.txt.tmp $REFN.rejoin.links.txt && \
-$MYPATH/merge_contigs.pl $REFN.scaffolds.all.fa  < $REFN.rejoin.links.txt 2>/dev/null | \
-$MYPATH/create_merged_sequences.pl $REFN.scaffolds.all.fa $REFN.rejoin.links.txt > $REFN.scaffolds.all.rejoin.fa.tmp && mv $REFN.scaffolds.all.rejoin.fa.tmp $REFN.scaffolds.all.rejoin.fa && \
-rm $REFN.scaffolds.all.fa  && touch scaffold_scaffold.success && rm -f scaffold_deduplicate.success || error_exit "walking the scaffold graph failed"
+if [ $NOBREAK = "0" ];then
+  ufasta sizes -H $REFN.scaffolds.all.fa | $MYPATH/make_rejoin_links.pl > $REFN.rejoin.links.txt.tmp && \
+  mv $REFN.rejoin.links.txt.tmp $REFN.rejoin.links.txt && \
+  $MYPATH/merge_contigs.pl $REFN.scaffolds.all.fa  < $REFN.rejoin.links.txt 2>/dev/null | \
+  $MYPATH/create_merged_sequences.pl $REFN.scaffolds.all.fa $REFN.rejoin.links.txt > $REFN.scaffolds.all.rejoin.fa.tmp && mv $REFN.scaffolds.all.rejoin.fa.tmp $REFN.scaffolds.all.rejoin.fa
+else
+  mv $REFN.scaffolds.all.fa $REFN.scaffolds.all.rejoin.fa
+fi && \
+rm -f $REFN.scaffolds.all.fa  && touch scaffold_scaffold.success && rm -f scaffold_deduplicate.success || error_exit "walking the scaffold graph failed"
 fi
 
 if [ ! -e scaffold_deduplicate.success ];then
