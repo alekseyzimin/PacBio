@@ -194,8 +194,8 @@ if [ $NOBREAK = "0" ];then
   fi
 
 else
-  ln -s $REFN.$QRYN.paf $REFN.$QRYN.split.paf && \
-  ln -s $REFN $REFN.split.fa
+  ln -sf $REFN.$QRYN.paf $REFN.$QRYN.split.paf && \
+  ln -sf $REFN $REFN.split.fa
 fi
 
 if [ ! -e scaffold_filter.success ];then
