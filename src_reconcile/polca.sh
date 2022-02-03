@@ -34,9 +34,22 @@ function error_exit {
     exit "${2:-1}"
 }
 
+function usage {
+echo "Usage:"
+echo "polca.sh [arguments]"
+echo "-a <assembly contigs or scaffolds>"
+echo "-r <'polishing_reads_fastq1 polishing_reads_fastq2'> can use any number of fastq files, polishing reads must be in fastq format!"
+echo "-t <number of threads, default:1>"
+echo "-n <optional: do not polish, just create vcf file, evaluate the assembly and exit>"
+echo "-m <optional: memory per thread to use in samtools sort, set to 2G or more for large genomes>"
+echo ""
+echo "External dependency: must have bwa available on the PATH"
+which bwa
+}
+
 #parsing arguments
 if [[ $# -eq 0 ]];then
-echo "Usage:  polca.sh -a <assembly contigs or scaffolds> -r <'Illumina_reads_fastq1 Illumina_reads_fastq'> -t <number of threads> [-n] <optional:do not fix errors that are found> [-m] <optional: memory per thread to use in samtools sort>"
+usage
 exit 1
 fi
 
@@ -72,8 +85,7 @@ do
             set -x
             ;;
         -h|--help|-u|--usage)
-            echo "Usage:  polca.sh -a <assembly contigs or scaffolds> -r <'Illumina_reads_fastq1 Illumina_reads_fastq'> -t <number of threads> [-n] <optional:do not fix errors that are found> [-m] <optional: memory per thread to use in samtools sort>"
-            echo "Must have bwa, samtools and freebayes available on the PATH"
+            usage
             exit 0
             ;;
         *)
@@ -86,7 +98,7 @@ done
 
 if [[ ! -e $ASM ]];then
 echo "Input file $ASM not found or not specified!"
-echo "Usage:  polca.sh -a <assembly contigs or scaffolds> -r <'Illumina_reads_fastq1 Illumina_reads_fastq'> -t <number of threads> [-n] <optional:do not fix errors that are found> [-m] <optional: memory per thread to use in samtools sort>"
+usage
 exit 1
 fi
 
