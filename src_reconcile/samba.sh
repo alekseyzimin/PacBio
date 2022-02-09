@@ -155,7 +155,7 @@ DELTAFILE=$REFN.$QRYN
 #minimap
 if [ ! -e scaffold_align.success ];then
 log "Aligning the reads to the contigs"
-$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REF $QRY 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_split.success scaffold_filter.success || error_exit "minimap2 failed"
+$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REF <(zcat -f $QRY ) 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_split.success scaffold_filter.success || error_exit "minimap2 failed"
 fi
 
 if [ $NOBREAK = "0" ];then
@@ -199,7 +199,7 @@ if [ $NOBREAK = "0" ];then
   if [ ! -e scaffold_split_align.success ];then
   log "Aligning the reads to the split contigs"
   filter_convert_paf $REFN.$QRYN.paf $REFN.$QRYN.coords && \
-  $MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa <(ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY) 1> $REFN.$QRYN.split.paf.tmp 2>minimap.err && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && touch scaffold_split_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
+  $MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa <(zcat -f  $QRY | ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords)) 1> $REFN.$QRYN.split.paf.tmp 2>minimap.err && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && touch scaffold_split_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
   fi
 
 else
@@ -214,7 +214,7 @@ fi
 
 if [ ! -e scaffold_reads.success ];then
 log "Extracting reads for the patches"
-$MYPATH/ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) $QRY > $REFN.$QRYN.reads.fa.tmp && mv $REFN.$QRYN.reads.fa.tmp $REFN.$QRYN.reads.fa && \
+zcat -f $QRY | $MYPATH/ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) > $REFN.$QRYN.reads.fa.tmp && mv $REFN.$QRYN.reads.fa.tmp $REFN.$QRYN.reads.fa && \
 touch scaffold_reads.success && rm -f  scaffold_links.success || error_exit "failed in extracting the reads for scaffolding"
 fi
 
