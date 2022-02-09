@@ -241,7 +241,8 @@ perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.coords'");while($line=<FILE>)
 $MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa $MIN_MATCH $OVERHANG $ALLOWED >/dev/null && \
 rm -f do_consensus.sh && \
 touch patches.polished.fa && \
-if [ $ALN_DATA = "pbclr" ] || [ $ALN_DATA = "ont" ];then
+touch patches.raw.fa && \
+if ([ $ALN_DATA = "pbclr" ] || [ $ALN_DATA = "ont" ]) && ([ -s patches.raw.fa ]);then
   $MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H $REF |awk '{if($2<250000) print $1}') $REF > $REFN.short.fa.tmp && mv $REFN.short.fa.tmp $REFN.short.fa && \
   echo ">_" >> $REFN.short.fa && \
   echo "ACGTACGTACGTACGTACGTACGT" >> $REFN.short.fa && \
