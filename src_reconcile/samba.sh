@@ -215,6 +215,9 @@ fi
 if [ ! -e scaffold_reads.success ];then
 log "Extracting reads for the patches"
 zcat -f $QRY | $MYPATH/ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) > $REFN.$QRYN.reads.fa.tmp && mv $REFN.$QRYN.reads.fa.tmp $REFN.$QRYN.reads.fa && \
+if [ ! -s $REFN.$QRYN.reads.fa ];then
+error_exit "Did not find any reads to create patches: no scaffolding possible with $QRY"
+fi && \
 touch scaffold_reads.success && rm -f  scaffold_links.success || error_exit "failed in extracting the reads for scaffolding"
 fi
 
