@@ -155,7 +155,9 @@ if [ $NOISE -gt 0 ];then
     $MYPATH/introduce_errors_fasta_file.pl $REF 0.004 1 | $MYPATH/fix_consensus_from_vcf.pl $REF > $REF_CHR.w_noise && touch $PREFIX.noise.success
   fi
 else
-  ln -s $REF $REF_CHR.w_noise
+  if [ ! -e $REF_CHR.w_noise ];then
+    ln -s $REF $REF_CHR.w_noise
+  fi
 fi
 
 #if we need to break
@@ -204,7 +206,7 @@ if [ ! -e $PREFIX.break.success ];then
   log "Splitting query contigs at suspect locations"
   rm -f $PREFIX.align2.success
   #first we figure out the coverage -- take the mode
-  let AUTO_REP_COV_THRESH=`awk '{print $4}'  $HYB_POS.coverage | sort -n -S 10% |uniq -c| sort -nrk1,1 -S 10% |head -n 1 | awk '{print int($2/.69)}'`
+  let AUTO_REP_COV_THRESH=`awk '{print $4}'  $HYB_POS.coverage | sort -n -S 10% |uniq -c| sort -nrk1,1 -S 10% |head -n 1 | awk '{print int($2/.8)}'`
   if [ $AUTO_REP_COV_THRESH -lt 2 ];then
     echo "Warning!  It appears that read coverage is very low.  We will be unable to find misassemblies reliably"
     AUTO_REP_COV_THRESH=2;
