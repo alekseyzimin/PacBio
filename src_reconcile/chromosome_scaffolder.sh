@@ -199,7 +199,11 @@ if [ ! -e $PREFIX.merge1.success ];then
   show-coords -lcHr $REF_CHR.$HYB_CTG.1.delta | \
   $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
   awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
-  awk '{if($16>5 || $7>5000 ) print $0}' > $REF_CHR.$HYB_CTG.1.coords  && touch $PREFIX.merge1.success
+  awk '{if($16>5 || $7>5000 ) print $0}' > $REF_CHR.$HYB_CTG.1.coords  && \
+  show-coords -lcHr $REF_CHR.$HYB_CTG.1.delta | \
+  $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
+  awk '{if($16>5 || $7>5000 ) print $0}' perl -ane '{$chrom{$F[-1]}.="$F[-2] "}END{foreach $c(keys %chrom){my %temp=();@f=split(/\s+/,$chrom{$c});foreach $t(@f){$temp{$t}=1}print "$c ",scalar(keys %temp),"\n";}}' > $REF_CHR.$HYB_CTG.contig_chromosome_count.txt  && \
+  touch $PREFIX.merge1.success
 fi
 
 if [ ! -e $PREFIX.break.success ];then
@@ -219,6 +223,7 @@ if [ ! -e $PREFIX.break.success ];then
   fi
   log "Using low coverage threshold $COV_THRESH and repeat coverage threshold $REP_COV_THRESH" 
   awk '{if($4<$5) print $4" "$5" "($4+$5)/2" "$NF" "$13; else print $5" "$4" "($4+$5)/2" "$NF" "$13;}' $REF_CHR.$HYB_CTG.1.coords| \
+  perl -e '{open(FILE,"'$REF_CHR'.'$HYB_CTG'.contig_chromosome_count.txt");while($line=<FILE>){chomp($line);($ctg,$cnt)=split(/\s+/,$line);$count{$ctg}=$cnt;} while($line=<STDIN>){chomp($line);@t=split(/\s+/,$line);print "$line\n" if($count{$t[-1]}>1);}}' | \
   sort -k4,4 -k1,1n -S 10% | \
   uniq -D -f 3 | \
   awk '{if($NF != prev){offset=$2;prev=$NF;print $0}else if($2>offset){print $0;offset=$2;}}' | uniq -D -f 3 | awk '{if($4==ctg){if($1>5000 && $1<$NF-5000) print "alnbreak "$4" "$1" 0"}else{ctg=$4;if($2>5000 && $2<$NF-5000) print "alnbreak "$4" "$2" 0"}}' > $REF_CHR.$HYB_CTG.1.coords.breaks && \
