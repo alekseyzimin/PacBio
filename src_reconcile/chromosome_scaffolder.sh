@@ -128,7 +128,6 @@ REF_CHR=`basename $REF`
 HYB_CTG=`basename $QRY`.split
 HYB_POS=$HYB_CTG.posmap
 PREFIX=$REF_CHR.$HYB_CTG
-let IDENTITY=$IDENTITY-1
 
 if [ ! -e $PREFIX.gaps.success ];then
   log "Computing gap coordinates in the reference"
@@ -152,7 +151,7 @@ if [ $NOISE -gt 0 ];then
     log "Adding noise to reference to align to duplicated regions"
     rm -f $PREFIX.align1.success
     rm -f $PREFIX.align2.success
-    $MYPATH/introduce_errors_fasta_file.pl $REF 0.004 1 | $MYPATH/fix_consensus_from_vcf.pl $REF > $REF_CHR.w_noise && touch $PREFIX.noise.success
+    $MYPATH/introduce_errors_fasta_file.pl $REF 0.002 1 | $MYPATH/fix_consensus_from_vcf.pl $REF > $REF_CHR.w_noise && touch $PREFIX.noise.success
   fi
 else
   if [ ! -e $REF_CHR.w_noise ];then
@@ -202,7 +201,7 @@ if [ ! -e $PREFIX.merge1.success ];then
   awk '{if($16>5 || $7>5000 ) print $0}' > $REF_CHR.$HYB_CTG.1.coords  && \
   show-coords -lcHr $REF_CHR.$HYB_CTG.1.delta | \
   $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
-  awk '{if($16>5 || $7>5000 ) print $0}' perl -ane '{$chrom{$F[-1]}.="$F[-2] "}END{foreach $c(keys %chrom){my %temp=();@f=split(/\s+/,$chrom{$c});foreach $t(@f){$temp{$t}=1}print "$c ",scalar(keys %temp),"\n";}}' > $REF_CHR.$HYB_CTG.contig_chromosome_count.txt  && \
+  awk '{if($16>5 || $7>5000 ) print $0}' | perl -ane '{$chrom{$F[-1]}.="$F[-2] "}END{foreach $c(keys %chrom){my %temp=();@f=split(/\s+/,$chrom{$c});foreach $t(@f){$temp{$t}=1}print "$c ",scalar(keys %temp),"\n";}}' > $REF_CHR.$HYB_CTG.contig_chromosome_count.txt  && \
   touch $PREFIX.merge1.success
 fi
 
@@ -223,7 +222,7 @@ if [ ! -e $PREFIX.break.success ];then
   fi
   log "Using low coverage threshold $COV_THRESH and repeat coverage threshold $REP_COV_THRESH" 
   awk '{if($4<$5) print $4" "$5" "($4+$5)/2" "$NF" "$13; else print $5" "$4" "($4+$5)/2" "$NF" "$13;}' $REF_CHR.$HYB_CTG.1.coords| \
-  perl -e '{open(FILE,"'$REF_CHR'.'$HYB_CTG'.contig_chromosome_count.txt");while($line=<FILE>){chomp($line);($ctg,$cnt)=split(/\s+/,$line);$count{$ctg}=$cnt;} while($line=<STDIN>){chomp($line);@t=split(/\s+/,$line);print "$line\n" if($count{$t[-1]}>1);}}' | \
+  perl -e '{open(FILE,"'$REF_CHR'.'$HYB_CTG'.contig_chromosome_count.txt");while($line=<FILE>){chomp($line);($ctg,$cnt)=split(/\s+/,$line);$count{$ctg}=$cnt;} while($line=<STDIN>){chomp($line);@t=split(/\s+/,$line);print "$line\n" if($count{$t[-2]}>1);}}' | \
   sort -k4,4 -k1,1n -S 10% | \
   uniq -D -f 3 | \
   awk '{if($NF != prev){offset=$2;prev=$NF;print $0}else if($2>offset){print $0;offset=$2;}}' | uniq -D -f 3 | awk '{if($4==ctg){if($1>5000 && $1<$NF-5000) print "alnbreak "$4" "$1" 0"}else{ctg=$4;if($2>5000 && $2<$NF-5000) print "alnbreak "$4" "$2" 0"}}' > $REF_CHR.$HYB_CTG.1.coords.breaks && \
