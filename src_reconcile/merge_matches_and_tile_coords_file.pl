@@ -54,6 +54,9 @@ my $match_direction = 0;
 my $keepMatchLine = 0;
 my $groupNotEmpty = 0;
 #assumes matches for one contig at a time
+if(scalar(@_)==1){
+  push(@output_matches,"$_[0]\n");
+}else{
 foreach my $line (@_) {
     @currentFlds = split(/\s+/,$line); 
     #adust if contained
@@ -101,7 +104,7 @@ foreach my $line (@_) {
 }
 &outputMatchGroup if($groupNotEmpty);
 }
-
+}
 sub reportDirectionBasedOnOrderedCoords
 {
     my ($val1, $val2) = @_;

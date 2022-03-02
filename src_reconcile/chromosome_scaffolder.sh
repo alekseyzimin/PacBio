@@ -199,9 +199,7 @@ if [ ! -e $PREFIX.merge1.success ];then
   $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
   awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
   awk '{if($16>5 || $7>5000 ) print $0}' > $REF_CHR.$HYB_CTG.1.coords  && \
-  show-coords -lcHr $REF_CHR.$HYB_CTG.1.delta | \
-  $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
-  awk '{if($16>5 || $7>5000 ) print $0}' | perl -ane '{$chrom{$F[-1]}.="$F[-2] "}END{foreach $c(keys %chrom){my %temp=();@f=split(/\s+/,$chrom{$c});foreach $t(@f){$temp{$t}=1}print "$c ",scalar(keys %temp),"\n";}}' > $REF_CHR.$HYB_CTG.contig_chromosome_count.txt  && \
+  cat $REF_CHR.$HYB_CTG.1.coords | perl -ane '{$chrom{$F[-1]}.="$F[-2] "}END{foreach $c(keys %chrom){my %temp=();@f=split(/\s+/,$chrom{$c});foreach $t(@f){$temp{$t}=1}print "$c ",scalar(keys %temp),"\n";}}' > $REF_CHR.$HYB_CTG.contig_chromosome_count.txt  && \
   touch $PREFIX.merge1.success
 fi
 
