@@ -158,8 +158,7 @@ log "Aligning the reads to the contigs"
 $MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REF <(zcat -f $QRY | $MYPATH/fastqToFasta.pl ) 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_split.success scaffold_filter.success || error_exit "minimap2 failed"
 fi
 
-if [ $NOBREAK = "0" ];then
-
+if [ $NOBREAK = "0" ] && [ ! $ALN_DATA = "asm" ];then #we do not break in not instructed to or if the scaffolding sequence in another assembly
   if [ ! -e scaffold_split.success ];then
   log "Filtering alignments and looking for misassemblies"
   #first we figure out which reads we are keepping for subsequent steps.  We are keeping alignments of all reads that satisfy minimum alignment length criteria and map to 2+ contigs
@@ -230,7 +229,7 @@ if [ ! -e scaffold_links.success ];then
 #we now create do_consensus.sh and extract_merges.pl will see it and will use it do the consensus for the patches, do not forgrt to delete it
 log "Creating scaffold links"
 rm -f do_consensus.sh && \
-cat  $REFN.$QRYN.coords |$MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa $MIN_MATCH $OVERHANG $ALLOWED > $REFN.$QRYN.links.txt.tmp && mv $REFN.$QRYN.links.txt.tmp $REFN.$QRYN.links.txt && \
+cat  $REFN.$QRYN.coords |$MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa $MIN_MATCH $OVERHANG $ALN_DATA $ALLOWED > $REFN.$QRYN.links.txt.tmp && mv $REFN.$QRYN.links.txt.tmp $REFN.$QRYN.links.txt && \
 $MYPATH/find_repeats.pl $REFN.$QRYN.coords $REFN.$QRYN.links.txt >$REFN.repeats.txt.tmp && mv $REFN.repeats.txt.tmp $REFN.repeats.txt && \
 rm -f patches.polished.fa && \
 echo "#!/bin/bash" > do_consensus.sh && \
@@ -242,7 +241,7 @@ echo "wait;" >> do_consensus.sh && \
 echo "cat polish.?.tmp/polished_1.fasta | $MYPATH/ufasta one >> patches.polished.fa" >> do_consensus.sh && \
 chmod 0755 do_consensus.sh && \
 perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \
-$MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa $MIN_MATCH $OVERHANG $ALLOWED >/dev/null && \
+$MYPATH/extract_merges.pl $REFN.$QRYN.reads.fa $MIN_MATCH $OVERHANG $ALN_DATA $ALLOWED >/dev/null && \
 rm -f do_consensus.sh && \
 touch patches.polished.fa && \
 touch patches.raw.fa && \
@@ -272,15 +271,19 @@ fi
 if [ ! -e scaffold_scaffold.success ];then
 log "Creating scaffold graph and building scaffolds"
 rm -f do_consensus.sh && \
-filter_convert_paf $REFN.$QRYN.patches.paf $REFN.$QRYN.patches.coords.all 0 && \
-perl -ane '{@f=split(":",$F[-1]);print if($F[-2] eq $f[0] || $F[-2] eq $f[2])}' $REFN.$QRYN.patches.coords.all > $REFN.$QRYN.patches.coords.tmp && \
-mv $REFN.$QRYN.patches.coords.tmp $REFN.$QRYN.patches.coords && \
-cat $REFN.$QRYN.patches.coords | $MYPATH/extract_merges.pl $REFN.$QRYN.patches.polish.fa $MIN_MATCH $OVERHANG $ALLOWED > $REFN.$QRYN.patches.links.txt.tmp && \
+if [ $ALN_DATA = "asm" ];then
+  filter_convert_paf $REFN.$QRYN.patches.paf $REFN.$QRYN.patches.coords.all 0 && \
+  perl -ane '{@f=split(":",$F[-1]);print if($F[-2] eq $f[0] || $F[-2] eq $f[2])}' $REFN.$QRYN.patches.coords.all > $REFN.$QRYN.patches.coords.tmp && \
+  mv $REFN.$QRYN.patches.coords.tmp $REFN.$QRYN.patches.coords 
+else
+  filter_convert_paf $REFN.$QRYN.patches.paf $REFN.$QRYN.patches.coords $MIN_SCORE
+fi
+cat $REFN.$QRYN.patches.coords | $MYPATH/extract_merges.pl $REFN.$QRYN.patches.polish.fa $MIN_MATCH $OVERHANG $ALN_DATA $ALLOWED > $REFN.$QRYN.patches.links.txt.tmp && \
 mv $REFN.$QRYN.patches.links.txt.tmp $REFN.$QRYN.patches.links.txt && \
 $MYPATH/find_repeats.pl $REFN.$QRYN.patches.coords $REFN.$QRYN.patches.links.txt >$REFN.repeats.txt.tmp && \
 mv $REFN.repeats.txt.tmp $REFN.repeats.txt && \
 perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.patches.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \
-$MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa $MIN_MATCH $OVERHANG $ALLOWED > $REFN.$QRYN.patches.uniq.links.txt.tmp && \
+$MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa $MIN_MATCH $OVERHANG $ALN_DATA $ALLOWED > $REFN.$QRYN.patches.uniq.links.txt.tmp && \
 mv $REFN.$QRYN.patches.uniq.links.txt.tmp $REFN.$QRYN.patches.uniq.links.txt && \
 $MYPATH/merge_contigs.pl $REFN.split.fa < $REFN.$QRYN.patches.uniq.links.txt 2>/dev/null | \
 $MYPATH/insert_repeats.pl $REFN.repeats.txt |\

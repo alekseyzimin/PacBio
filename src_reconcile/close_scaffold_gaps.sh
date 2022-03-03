@@ -7,6 +7,7 @@ set -o pipefail
 NUM_THREADS=1
 MIN_MATCH=2500
 OVERHANG=1000
+ALN_DATA="ont"
 GC=
 RC=
 NC=
@@ -56,6 +57,10 @@ do
             MIN_MATCH="$2"
             shift
             ;;
+        -d|--data)
+            ALN_DATA="$2"
+            shift
+            ;;
         -r|--reference)
             REF="$2"
             shift
@@ -71,6 +76,7 @@ do
             echo "Usage: close_scaffold_gaps.sh <options>"
             echo "-r <scaffolds to gapclose> MANDATORY"
             echo "-q <gapclosing sequences, can be long reads> MANDATORY"
+            echo "-d <gap-closing data type \"ont\" for ONT reads, \"pbclr\" for PacBio CLR reads, or \"asm\" for assembly of HiFi reads> default: \"ont\""
             echo "-t <number of threads> default:1"
             echo "-i <identity%> default:98"
             echo "-m <minimum match length on the two sides of the gap> default:2500"
@@ -108,7 +114,7 @@ fi
 
 if [ ! -e "scaffold_merge.scaffold.success" ];then
 log "Closing gaps"
-$MYPATH/samba.sh -r $REFN.split -q $QRY -t $NUM_THREADS -o $OVERHANG -m $MIN_MATCH -a $REFN.valid_join_pairs.txt -n && \
+$MYPATH/samba.sh -d $ALN_DATA -r $REFN.split -q $QRY -t $NUM_THREADS -o $OVERHANG -m $MIN_MATCH -a $REFN.valid_join_pairs.txt -n && \
 $MYPATH/recover_scaffolds.pl < $REFN.split.scaffolds.fa |ufasta format > $REFN.split.joined.tmp && \
 mv $REFN.split.joined.tmp $REFN.split.joined.fa && \
 touch scaffold_merge.scaffold.success

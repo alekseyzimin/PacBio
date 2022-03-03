@@ -15,6 +15,10 @@ if(defined($ARGV[2])){
   $max_overhang=$ARGV[2];
 }
 
+my $type="ont";
+if(defined($ARGV[3])){
+  $type=$ARGV[3];
+} 
 
 my $output_prefix="patches";
 open(FILE,$ARGV[0]);#file with query contigs
@@ -30,7 +34,7 @@ while($line=<FILE>){
 
 my $only_allowed=0;
 my %allowed_merges=();
-if(defined($ARGV[3])){
+if(defined($ARGV[4])){
 $only_allowed=1;
 open(FILE,$ARGV[3]);
 while($line=<FILE>){
@@ -74,8 +78,8 @@ for($i=0;$i<$#lines;$i++){
     my $gstart=1;
     my $dir1="F";
     my $dir2="F";
-    my $idy1=$f1[9];
-    my $idy2=$f2[9];
+    my $idy1=$f1[6]*$f1[9]; #6 mtchlen 9 identity
+    my $idy2=$f2[6]*$f2[9];
 #print "DEBUG considering $i $j\n$lines[$i]\n$lines[$j]\n\n";
     if($f1[3]<$f1[4]){
       $gstart=$f1[4];
@@ -114,7 +118,7 @@ for($i=0;$i<$#lines;$i++){
     }
     if($gap < $maxgap && $gap > $mingap && $oh1<=$max_overhang && $oh2<=$max_overhang){
         $gstart=1 if($gstart<1);
-        my $fudge=10;
+        my $fudge=5;
         my $jstart = $gstart-1-$min_match*$fudge-$max_overhang > 0 ? $gstart-1-$min_match*$fudge-$max_overhang : 0;
         my $jend = $gstart-1+$gap+$min_match*$fudge+$max_overhang <= length($qseq{$f1[-1]}) ? $gstart-1+$gap+$min_match*$fudge+$max_overhang : length($qseq{$f1[-1]});
         $jend = $gstart-1+$min_match*$fudge+$max_overhang <= length($qseq{$f1[-1]}) ? $gstart-1+$min_match*$fudge+$max_overhang : length($qseq{$f1[-1]}) if($gap<0);
@@ -123,8 +127,7 @@ for($i=0;$i<$#lines;$i++){
           $joinline="$f1[-2]:$dir1:$f2[-2]:$dir2";
           #print "DEBUG $joinline $oh1 $oh2 $gap\n";
           if(not(defined($idy{$joinline})) || $idy{$joinline} < $idy1+$idy2){#here we use the best join for each pair of contigs, we maximize the sum of total number of matching bases on each end
-            $gseq{$joinline}="n";
-            $gseq{$joinline}=lc(substr($qseq{$f1[-1]},$gstart-1,$gap)) if($gap>0);
+            $gseq{$joinline}= $gap>0 ? lc(substr($qseq{$f1[-1]},$gstart-1,$gap)) : "n";
             $jseq{$joinline}=substr($qseq{$f1[-1]},$jstart,$jend-$jstart);
             $oh1{$joinline}=$oh1;
             $oh2{$joinline}=$oh2;
@@ -138,8 +141,7 @@ for($i=0;$i<$#lines;$i++){
           $joinline="$f2[-2]:$dir2:$f1[-2]:$dir1";
           #print "DEBUG $joinline $oh1 $oh2 $gap\n";
           if(not(defined($idy{$joinline})) || $idy{$joinline} < $idy1+$idy2){
-            $gseq{$joinline}="n";
-            $gseq{$joinline}=reverse_complement(lc(substr($qseq{$f1[-1]},$gstart-1,$gap))) if($gap>0);
+            $gseq{$joinline}= $gap>0 ? reverse_complement(lc(substr($qseq{$f1[-1]},$gstart-1,$gap))) : "n";
             $jseq{$joinline}=substr($qseq{$f1[-1]},$jstart,$jend-$jstart);
             $oh1{$joinline}=$oh2;
             $oh2{$joinline}=$oh1;
@@ -153,75 +155,93 @@ for($i=0;$i<$#lines;$i++){
     }
 }#$i loop
 
+my %jnames=();
+#if asm then no consensus needed
+if($type eq "asm"){
+  open(RAW,">patches.raw.fa");
+  foreach my $jl(keys %jseq){#$jl is joinline, REF is the best joining sequence padded
+    print RAW ">$jl\n$jseq{$jl}\n";
+  }
+}else{
 #now we have all information in the hashes, let's output the bundles
-#the $jseq{$joinline} is the seq, the rest used to polish
+#the longest read is the seq, the rest used to polish
 #we output the reads and run the consensus for each patch separately
-foreach my $k (keys %rnames){# $k is the joinline
-  my @names=split(/\s+/,$rnames{$k});
+  foreach my $k (keys %rnames){# $k is the joinline
+    my @names=split(/\s+/,$rnames{$k});
+    my $max_len=0;
+    my $max_i=0;
+    for(my $i=0;$i<=$#names;$i++){
+      if(length($qseq{$names[$i]})>$max_len){
+        $max_i=$i;
+        $max_len=length($qseq{$names[$i]});
+      }
+    }
+#here we found the longest joining sequence -- it will be our reference for the consensus
+#note that it may be present more than once
 #here we collect all non-redundant read names into %jnames hash
 #and associate them with the longest read
 #these can be done over multiple gaps, that is the same longest read can accumulate other reads from the other gaps
-#%jnames will be a single entry of jseq{$k} if there is only one read in @names
-  my %output=();
-  $jnames{$k}=$jseq{$k};
-  if($#names>0){
+#%jnames will be a single entry of 1 if there is only one read in @names
+    my %output=();
+    $jnames{$names[$max_i]}=1 if(not(defined($jnames{$names[$max_i]})));
+    $output{$names[$max_i]}=1;
     foreach my $n(@names){
       if(not(defined($output{$n}))){
-        $jnames{$k}.=" $n";
+        $jnames{$names[$max_i]}.=" $n";
+        $output{$n}=1;
+      }
+    }
+#here we also add all other reads that map to the two contigs
+    my @f=split(/:/,$k);
+    my @ff1=split(/\s+/,$read_on_contig{$f[0]});
+    my @ff2=split(/\s+/,$read_on_contig{$f[2]});
+    my %temp=();
+    foreach my $n(@ff1){
+      $temp{$n}=1;
+    }
+    foreach my $n(@ff2){
+      if(not(defined($output{$n})) && defined($temp{$n})){
+        $jnames{$names[$max_i]}.=" $n";
         $output{$n}=1;
       }
     }
   }
-  #here we also add all other reads that map to the two contigs
-  my @f=split(/:/,$k);
-  my @ff1=split(/\s+/,$read_on_contig{$f[0]});
-  my @ff2=split(/\s+/,$read_on_contig{$f[2]});
-  my %temp=();
-  foreach my $n(@ff1){
-    $temp{$n}=1;
-  }
-  foreach my $n(@ff2){
-    if(not(defined($output{$n})) && defined($temp{$n})){
-        $jnames{$k}.=" $n";
-        $output{$n}=1;
-    }
-  }
-}
 #output the seqs and run consensus
 #do_consensus.sh must exist!
-
-if(-e "do_consensus.sh"){
-  open(RAW,">patches.raw.fa");
-  my $pindex=0;
-  foreach my $jl(keys %jnames){#$jl is joinline, REF is the best joining sequence padded
-    my @names=split(/\s+/,$jnames{$jl});
-    if($#names==1){#no polishing seq -- put into raw
-      print RAW ">$jl\n$names[0]\n";
-    }else{
-      open(REF,">patches.ref.$pindex.fa");
-      open(READS,">patches.reads.$pindex.fa");
-      print REF ">$jl\n$names[0]\n";
+  if(-e "do_consensus.sh"){
+    open(RAW,">patches.raw.fa");
+    my $pindex=0;
+    foreach my $name(keys %jnames){
+      my @names=split(/\s+/,$jnames{$name});
+      if($#names==0){#no polishing seq -- put into raw
+        print RAW ">$name\n$qseq{$name}\n";
+      }else{
+        open(REF,">patches.ref.$pindex.fa");
+        open(READS,">patches.reads.$pindex.fa");
+        print REF ">$name\n$qseq{$name}\n";
+        print READS ">_$name\n$qseq{$name}\n";
 #need uniq to avoid outputting duplicates
-      my %output=();
-      for(my $i=1;$i<=$#names;$i++){
-        if(not(defined($output{$names[$i]}))){
-          print READS ">$names[$i]\n$qseq{$names[$i]}\n";
-          print READS ">_$names[$i]\n$qseq{$names[$i]}\n" if($#names<5 && $i>1);
-          $output{$names[$i]}=1;
+        my %output=();
+        for(my $i=1;$i<=$#names;$i++){
+          if(not(defined($output{$names[$i]}))){
+            print READS ">$names[$i]\n$qseq{$names[$i]}\n";
+            print READS ">_$names[$i]\n$qseq{$names[$i]}\n" if($#names<5);
+            $output{$names[$i]}=1;
+          }
+        }
+        close(REF);
+        close(READS);
+        $pindex++;
+#run consensus
+        if($pindex>=10){
+          system("./do_consensus.sh");
+          $pindex=0;
         }
       }
-      close(REF);
-      close(READS);
-      $pindex++;
-#run consensus
-      if($pindex>=10){
-        system("./do_consensus.sh");
-        $pindex=0;
-      }
     }
-  }
-  if($pindex>0){
-    system("./do_consensus.sh");
+    if($pindex>0){
+      system("./do_consensus.sh");
+    }
   }
 }
 
