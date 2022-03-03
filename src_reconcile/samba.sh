@@ -45,7 +45,7 @@ function error_exit {
 function filter_convert_paf () {
 #extract alignments of all long reads that satisfy the overhng, score and match length requirements and align to two or more contigs and convert to coords format
   awk '{max_overhang=int("'$OVERHANG'");min_overlap=int("'$MIN_MATCH'")/6;if(min_overlap<400) min_overlap=400;
-    if($4-$3>min_overlap && $12>=int("'$MIN_SCORE'")){
+    if($4-$3>min_overlap && $12>=int("'$3'")){
       if(($5 == "+" && (($8 < max_overhang && $3 >=min_overlap) || ($7-$9 < max_overhang && $2-$4 >= min_overlap))) || ($5 == "-" && (($8 < max_overhang && $2-$4 >=min_overlap) || ($7-$9 < max_overhang && $3 >= min_overlap)))) print $0;
     }}' $1 |\
   perl -ane 'BEGIN{my %to_output=();}{
@@ -198,7 +198,7 @@ if [ $NOBREAK = "0" ];then
   #minimap
   if [ ! -e scaffold_split_align.success ];then
   log "Aligning the reads to the split contigs"
-  filter_convert_paf $REFN.$QRYN.paf $REFN.$QRYN.coords && \
+  filter_convert_paf $REFN.$QRYN.paf $REFN.$QRYN.coords $MIN_SCORE && \
   $MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa <(zcat -f  $QRY | $MYPATH/fastqToFasta.pl | ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords)) 1> $REFN.$QRYN.split.paf.tmp 2>minimap.err && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && touch scaffold_split_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
   fi
 
@@ -208,7 +208,7 @@ else
 fi
 
 if [ ! -e scaffold_filter.success ];then
-filter_convert_paf $REFN.$QRYN.split.paf $REFN.$QRYN.coords || error_exit "filtering alignments failed"
+filter_convert_paf $REFN.$QRYN.split.paf $REFN.$QRYN.coords $MIN_SCORE || error_exit "filtering alignments failed"
 touch scaffold_filter.success && rm -f  scaffold_reads.success
 fi
 
@@ -272,7 +272,9 @@ fi
 if [ ! -e scaffold_scaffold.success ];then
 log "Creating scaffold graph and building scaffolds"
 rm -f do_consensus.sh && \
-filter_convert_paf $REFN.$QRYN.patches.paf $REFN.$QRYN.patches.coords && \
+filter_convert_paf $REFN.$QRYN.patches.paf $REFN.$QRYN.patches.coords.all 0 && \
+perl -ane '{@f=split(":",$F[-1]);print if($F[-2] eq $f[0] || $F[-2] eq $f[2])}' $REFN.$QRYN.patches.coords.all > $REFN.$QRYN.patches.coords.tmp && \
+mv $REFN.$QRYN.patches.coords.tmp $REFN.$QRYN.patches.coords && \
 cat $REFN.$QRYN.patches.coords | $MYPATH/extract_merges.pl $REFN.$QRYN.patches.polish.fa $MIN_MATCH $OVERHANG $ALLOWED > $REFN.$QRYN.patches.links.txt.tmp && \
 mv $REFN.$QRYN.patches.links.txt.tmp $REFN.$QRYN.patches.links.txt && \
 $MYPATH/find_repeats.pl $REFN.$QRYN.patches.coords $REFN.$QRYN.patches.links.txt >$REFN.repeats.txt.tmp && \
