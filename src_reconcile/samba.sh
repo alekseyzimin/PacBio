@@ -7,6 +7,7 @@ NUM_THREADS=1
 MIN_MATCH=5000
 OVERHANG=1000
 MIN_SCORE=60
+MIN_IDENTITY=0
 SCORE=4
 NOBREAK="0"
 ALN_PARAM="map-ont -N 1 "
@@ -55,7 +56,7 @@ function filter_convert_paf () {
     foreach $l(@lines){my @f=split(/\s+/,$l);print "$l\n" if(defined($to_output{$f[0]}));}
     }' | \
   sort -k1,1 -k3,3n -S 10% | \
-  awk '{idy=100;for(i=1;i<=NF;i++){if($i ~ /^dv/){split($i,a,":"); idy=(1-a[3])*100;}} if($5=="+"){print $8+1" "$9" | "$3+1" "$4" | "$9-$8" "$4-$3" | "idy" | "$7" "$2" | "int(($9-$8)/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}else{print $8+1" "$9" | "$4" "$3+1" | "$9-$8" "$4-$3" | "idy" | "$7" "$2" | "int(($9-$8)/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}}' > $2.tmp && \
+  awk '{idy=100;for(i=1;i<=NF;i++){if($i ~ /^dv/){split($i,a,":"); idy=(1-a[3])*100;}} if(idy>=int('$MIN_IDENTITY'){if($5=="+"){print $8+1" "$9" | "$3+1" "$4" | "$9-$8" "$4-$3" | "idy" | "$7" "$2" | "int(($9-$8)/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}else{print $8+1" "$9" | "$4" "$3+1" | "$9-$8" "$4-$3" | "idy" | "$7" "$2" | "int(($9-$8)/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}}}' > $2.tmp && \
   mv $2.tmp $2
 }
 
@@ -144,6 +145,7 @@ elif [ $ALN_DATA = "pbclr" ];then
   POLISH_PARAM="--pacbio-raw"
 elif [ $ALN_DATA = "asm" ];then
   ALN_PARAM="asm10 "
+  MIN_IDENTITY=98
 else
   error_exit "invalid scaffolding data type:  must be ont, pbclr or asm"
 fi
