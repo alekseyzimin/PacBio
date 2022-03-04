@@ -283,7 +283,7 @@ mv $REFN.$QRYN.patches.links.txt.tmp $REFN.$QRYN.patches.links.txt && \
 $MYPATH/find_repeats.pl $REFN.$QRYN.patches.coords $REFN.$QRYN.patches.links.txt >$REFN.repeats.txt.tmp && \
 mv $REFN.repeats.txt.tmp $REFN.repeats.txt && \
 perl -ane '$h{$F[0]}=1;END{open(FILE,"'$REFN.$QRYN.patches.coords'");while($line=<FILE>){@f=split(/\s+/,$line);print $line unless(defined($h{$f[-2]}));}}' $REFN.repeats.txt | \
-$MYPATH/extract_merges.pl $REFN.$QRYN.patches.fa $MIN_MATCH $OVERHANG $ALN_DATA $ALLOWED > $REFN.$QRYN.patches.uniq.links.txt.tmp && \
+$MYPATH/extract_merges.pl $REFN.$QRYN.patches.polish.fa $MIN_MATCH $OVERHANG $ALN_DATA $ALLOWED > $REFN.$QRYN.patches.uniq.links.txt.tmp && \
 mv $REFN.$QRYN.patches.uniq.links.txt.tmp $REFN.$QRYN.patches.uniq.links.txt && \
 $MYPATH/merge_contigs.pl $REFN.split.fa < $REFN.$QRYN.patches.uniq.links.txt 2>/dev/null | \
 $MYPATH/insert_repeats.pl $REFN.repeats.txt |\

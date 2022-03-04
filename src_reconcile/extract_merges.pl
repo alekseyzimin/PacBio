@@ -6,6 +6,18 @@
 my $maxgap=500000;
 my $mingap=-10000;
 
+my $output_prefix="patches";
+open(FILE,$ARGV[0]);#file with query contigs
+while($line=<FILE>){
+  chomp($line);
+  if($line =~ /^>/){
+    my @f=split(/\s+/,$line);
+    $qn=substr($f[0],1);
+  }else{
+    $qseq{$qn}.=$line;
+  }
+}
+
 my $min_match=500;
 if(defined($ARGV[1])){
   $min_match=$ARGV[1];
@@ -20,28 +32,17 @@ if(defined($ARGV[3])){
   $type=$ARGV[3];
 } 
 
-my $output_prefix="patches";
-open(FILE,$ARGV[0]);#file with query contigs
-while($line=<FILE>){
-  chomp($line);
-  if($line =~ /^>/){
-    my @f=split(/\s+/,$line);
-    $qn=substr($f[0],1);
-  }else{
-    $qseq{$qn}.=$line;
-  }
-}
-
 my $only_allowed=0;
 my %allowed_merges=();
 if(defined($ARGV[4])){
-$only_allowed=1;
-open(FILE,$ARGV[3]);
-while($line=<FILE>){
-  chomp($line);
-  my @f=split(/\s+/,$line);
-  $allowed{"$f[0] $f[1]"}=1 if($#f==1);
-}
+  $only_allowed=1;
+  $maxgap=5000000;
+  open(FILE,$ARGV[4]);
+  while($line=<FILE>){
+    chomp($line);
+    my @f=split(/\s+/,$line);
+    $allowed{"$f[0] $f[1]"}=1 if($#f==1);
+  }
 }
 
 #first we read in all the matches into an array
