@@ -245,7 +245,7 @@ if [ ! -e $BASM.report.success ];then
   ASMSIZE=`ufasta n50 -S $ASM | awk '{print $2}'` 
   NUMERR=$(($NUMSUB+$NUMIND)) 
   QUAL=`echo $NUMERR $ASMSIZE | awk '{print 100-$1/$2*100}'`
-  QV=`perl -e '{$erate='$NUMERR'/'$ASMSIZE';printf("%.2f\n", -10*log($erate)/log(10))}'`
+  QV=`perl -e '{$erate='$NUMERR'/'$ASMSIZE';printf("%.2f\n", -10*log($erate+0.0000000001)/log(10))}'`
   echo "Substitution Errors: $NUMSUB" > $BASM.report 
   echo "Insertion/Deletion Errors: $NUMIND" >> $BASM.report 
   echo "Assembly Size: $ASMSIZE" >> $BASM.report 

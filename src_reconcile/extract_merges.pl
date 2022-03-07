@@ -156,12 +156,35 @@ for($i=0;$i<$#lines;$i++){
     }
 }#$i loop
 
+#here we remove keys from rnames if "only allowed" and there are orientation conflicts
+if($only_allowed){
+  my %fwd=();
+  my %rev=();
+  my @to_delete=();
+  foreach my $k (keys %rnames){
+    my @f=split(/:/,$k);
+    $fwd{"$f[0] $f[2]"}=1;
+    $rev{"$f[0] $f[2]"}=1 if(not($f[1] eq $f[3]));
+  }
+  foreach $k (keys %rnames){
+    my @f=split(/:/,$k);
+    if(defined($fwd{"$f[0] $f[2]"}) && defined($rev{"$f[0] $f[2]"})){
+      push(@to_delete,$k) if(not($f[1] eq $f[3]));
+    }
+  }
+  foreach $k (@to_delete){
+    delete($rnames{$k});
+  }
+}
+
 my %jnames=();
 #if asm then no consensus needed
 if($type eq "asm"){
-  open(RAW,">patches.raw.fa");
-  foreach my $jl(keys %jseq){#$jl is joinline, REF is the best joining sequence padded
-    print RAW ">$jl\n$jseq{$jl}\n";
+  if(-e "do_consensus.sh"){
+    open(RAW,">patches.raw.fa");
+    foreach my $jl(keys %jseq){#$jl is joinline, REF is the best joining sequence padded
+      print RAW ">$jl\n$jseq{$jl}\n";
+    }
   }
 }else{
 #now we have all information in the hashes, let's output the bundles
@@ -247,7 +270,7 @@ if($type eq "asm"){
 }
 
 #output the links
-foreach $k (keys %joincount){ #$k is the joinline
+foreach $k (keys %rnames){ #$k is the joinline
   my @f=split(/:/,$k);
   if($paircount{"$f[0] $f[2]"} == $joincount{$k} || $joincount{$k}>1){
     print "$f[0] $oh1{$k} $f[1] $f[2] $oh2{$k} $f[3] $gap{$k} $gseq{$k}\n";

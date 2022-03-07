@@ -56,7 +56,7 @@ function filter_convert_paf () {
     foreach $l(@lines){my @f=split(/\s+/,$l);print "$l\n" if(defined($to_output{$f[0]}));}
     }' | \
   sort -k1,1 -k3,3n -S 10% | \
-  awk '{idy=100;for(i=1;i<=NF;i++){if($i ~ /^dv/){split($i,a,":"); idy=(1-a[3])*100;}} if(idy>=int('$MIN_IDENTITY'){if($5=="+"){print $8+1" "$9" | "$3+1" "$4" | "$9-$8" "$4-$3" | "idy" | "$7" "$2" | "int(($9-$8)/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}else{print $8+1" "$9" | "$4" "$3+1" | "$9-$8" "$4-$3" | "idy" | "$7" "$2" | "int(($9-$8)/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}}}' > $2.tmp && \
+  awk '{idy=100;for(i=1;i<=NF;i++){if($i ~ /^dv/){split($i,a,":"); idy=(1-a[3])*100;}} if(idy>=int('$MIN_IDENTITY')){if($5=="+"){print $8+1" "$9" | "$3+1" "$4" | "$9-$8" "$4-$3" | "idy" | "$7" "$2" | "int(($9-$8)/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}else{print $8+1" "$9" | "$4" "$3+1" | "$9-$8" "$4-$3" | "idy" | "$7" "$2" | "int(($9-$8)/$7*10000)/100" "int(($4-$3)/$2*10000)/100" | "$6" "$1}}}' > $2.tmp && \
   mv $2.tmp $2
 }
 
@@ -145,7 +145,7 @@ elif [ $ALN_DATA = "pbclr" ];then
   POLISH_PARAM="--pacbio-raw"
 elif [ $ALN_DATA = "asm" ];then
   ALN_PARAM="asm10 "
-  MIN_IDENTITY=98
+  MIN_IDENTITY=95
 else
   error_exit "invalid scaffolding data type:  must be ont, pbclr or asm"
 fi
@@ -160,7 +160,7 @@ log "Aligning the reads to the contigs"
 $MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REF <(zcat -f $QRY | $MYPATH/fastqToFasta.pl ) 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_split.success scaffold_filter.success || error_exit "minimap2 failed"
 fi
 
-if [ $NOBREAK = "0" ] && [ ! $ALN_DATA = "asm" ];then #we do not break in not instructed to or if the scaffolding sequence in another assembly
+if [ $NOBREAK = "0" ];then #we do not break in not instructed to or if the scaffolding sequence in another assembly
   if [ ! -e scaffold_split.success ];then
   log "Filtering alignments and looking for misassemblies"
   #first we figure out which reads we are keepping for subsequent steps.  We are keeping alignments of all reads that satisfy minimum alignment length criteria and map to 2+ contigs
@@ -218,7 +218,8 @@ if [ ! -e scaffold_reads.success ];then
   if [ -s $REFN.$QRYN.coords ];then
     zcat -f $QRY | $MYPATH/fastqToFasta.pl | $MYPATH/ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords) > $REFN.$QRYN.reads.fa.tmp && mv $REFN.$QRYN.reads.fa.tmp $REFN.$QRYN.reads.fa 
   else
-    error_exit "Did not find any reads to create patches: no scaffolding possible with $QRY"
+    log "Did not find any reads to create patches: no scaffolding possible with $QRY" && \
+    cp $REF $REFN.scaffolds.fa.tmp && mv $REFN.scaffolds.fa.tmp $REFN.scaffolds.fa
   fi && \
   touch scaffold_reads.success && rm -f  scaffold_links.success || error_exit "failed in extracting the reads for scaffolding"
 fi
@@ -267,7 +268,7 @@ fi
 
 if [ ! -e scaffold_align_patches.success ];then
 log "Aligning the scaffolding sequences to the contigs"
-$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa $REFN.$QRYN.patches.polish.fa 2>minimap.err  > $REFN.$QRYN.patches.paf.tmp && mv  $REFN.$QRYN.patches.paf.tmp  $REFN.$QRYN.patches.paf && touch scaffold_align_patches.success && rm -f scaffold_scaffold.success || error_exit "minimap2 patches failed"
+  $MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa $REFN.$QRYN.patches.polish.fa 2>minimap.err  > $REFN.$QRYN.patches.paf.tmp && mv  $REFN.$QRYN.patches.paf.tmp  $REFN.$QRYN.patches.paf && touch scaffold_align_patches.success && rm -f scaffold_scaffold.success || error_exit "minimap2 patches failed"
 fi
 
 if [ ! -e scaffold_scaffold.success ];then
