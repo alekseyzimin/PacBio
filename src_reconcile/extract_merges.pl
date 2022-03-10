@@ -37,6 +37,7 @@ my %allowed_merges=();
 if(defined($ARGV[4])){
   $only_allowed=1;
   $maxgap=5000000;
+  $mingap=-100000;
   open(FILE,$ARGV[4]);
   while($line=<FILE>){
     chomp($line);
@@ -64,16 +65,22 @@ while($line=<STDIN>){
 #now we go through the array and collect the possible merges
 #
 #
+
+my $nctg="";
+my $max_offset=1;
+$max_offset=3 if($only_allowed);
 for($i=0;$i<$#lines;$i++){
   @f1=split(/\s+/,$lines[$i]);
-  $j=$i+1;
-#print "DEBUG $i $j\n$lines[$i]\n$lines[$j]\n\n"; 
+  for($j=$i+1;$j<=$i+$max_offset;$j++){
+#print "DEBUG $i $j\n$lines[$i]\n$lines[$j]\n"; 
     @f2=split(/\s+/,$lines[$j]);
     next if($f1[-2] eq $f2[-2]);
-    if($only_allowed){
+    if($only_allowed){   
       next if(not(defined($allowed{"$f1[-2] $f2[-2]"})) && not(defined($allowed{"$f2[-2] $f1[-2]"})));
     }
     next if(not($f1[-1] eq $f2[-1]));
+    $nctg=$f2[-2] if($j==$i+1);
+    next if($j>$i+1 && not($nctg eq $f2[-2]));
     my $oh1=0;
     my $oh2=0;
     my $gstart=1;
@@ -117,7 +124,9 @@ for($i=0;$i<$#lines;$i++){
         $dir2="R";
         } 
     }
+    #print "DEBUG $gap $oh1 $oh2\n";
     if($gap < $maxgap && $gap > $mingap && $oh1<=$max_overhang && $oh2<=$max_overhang){
+        $j=$i+$max_offset;
         $gstart=1 if($gstart<1);
         my $fudge=5;
         my $jstart = $gstart-1-$min_match*$fudge-$max_overhang > 0 ? $gstart-1-$min_match*$fudge-$max_overhang : 0;
@@ -154,6 +163,7 @@ for($i=0;$i<$#lines;$i++){
       $joincount{$joinline}++;
       $rnames{$joinline}.="$f1[-1] ";
     }
+  }#$j loop
 }#$i loop
 
 #here we remove keys from rnames if "only allowed" and there are orientation conflicts
@@ -163,8 +173,11 @@ if($only_allowed){
   my @to_delete=();
   foreach my $k (keys %rnames){
     my @f=split(/:/,$k);
-    $fwd{"$f[0] $f[2]"}=1;
-    $rev{"$f[0] $f[2]"}=1 if(not($f[1] eq $f[3]));
+    if($f[1] eq $f[3]){
+      $fwd{"$f[0] $f[2]"}=1;
+    }else{
+      $rev{"$f[0] $f[2]"}=1;
+    }
   }
   foreach $k (keys %rnames){
     my @f=split(/:/,$k);

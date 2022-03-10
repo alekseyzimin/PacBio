@@ -145,7 +145,7 @@ elif [ $ALN_DATA = "pbclr" ];then
   POLISH_PARAM="--pacbio-raw"
 elif [ $ALN_DATA = "asm" ];then
   ALN_PARAM="asm10 "
-  MIN_IDENTITY=95
+  MIN_IDENTITY=98
 else
   error_exit "invalid scaffolding data type:  must be ont, pbclr or asm"
 fi

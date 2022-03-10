@@ -15,6 +15,7 @@ IDENTITY=97
 MERGE=100000
 MERGE_SEQ=0
 NO_BRK=0
+MIN_CONTIG=200
 MINIMAP_PARAM="-x map-pb"
 SAMTOOLSMEM="1G"
 NOISE=1
@@ -87,6 +88,10 @@ do
             MERGE="$2"
             shift
             ;;
+        -c|--contig-min)
+            MIN_CONTIG="$2"
+            shift
+            ;;
         -M|--merge-sequences)
             MERGE_SEQ=1
             ;;
@@ -100,16 +105,17 @@ do
         -h|--help|-u|--usage)
             echo ""
             echo "Usage: chromosome_scaffolder.sh"
-            echo "-r <reference genome> MANDATORY"
-            echo "-q <assembly to be scaffolded with the reference> MANDATORY"
-            echo "-t <number of threads>" 
-            echo "-i <minimum sequence similarity percentage: default 97>"
-            echo "-m <merge equence alignments slack: default 100000>"
+            echo "-r <string: reference genome> MANDATORY"
+            echo "-q <string: assembly to be scaffolded with the reference> MANDATORY"
+            echo "-t <int: number of threads>" 
+            echo "-i <float: minimum sequence similarity percentage: default 97>"
+            echo "-m <int: merge equence alignments slack: default 100000>"
             echo "-nb do not align reads to query contigs and do not attempt to break at misassemblies: default off" 
-            echo "-v <verbose>"
+            echo "-v verbose"
+            echo "-c <int: minimum contig size to keep in final scaffolds, default 200>"
             echo "-cl <coverage threshold for splitting at misassemblies: default auto>"
             echo "-ch <repeat coverage threshold for splitting at misassemblies: default auto>"
-            echo "-s <reads to align to the assembly to check for misassemblies> MANDATORY unless -nb set"
+            echo "-s <string: reads to align to the assembly to check for misassemblies> MANDATORY unless -nb set"
             echo "-hf Use Pacbio HIFI reads -- speeds up the alignment"
             echo "-M attempt to fill unaligned gaps with reference contigs: defalut off"
             echo "-h|-u|--help this message"
@@ -266,7 +272,7 @@ if [ ! -e $PREFIX.scaffold.success ];then
   fi
   cat $PREFIX.reconciled.txt | $MYPATH/output_reconciled_scaffolds.pl <(cat $PREFIX.fillseq.fa $HYB_CTG.broken) > $REF_CHR.$HYB_CTG.reconciled.fa.tmp && mv $REF_CHR.$HYB_CTG.reconciled.fa.tmp $REF_CHR.$HYB_CTG.reconciled.fa
   $MYPATH/splitScaffoldsAtNs.sh $REF_CHR.$HYB_CTG.reconciled.fa 1 > $REF_CHR.$HYB_CTG.reconciled.split.fa.tmp && mv $REF_CHR.$HYB_CTG.reconciled.split.fa.tmp $REF_CHR.$HYB_CTG.reconciled.split.fa
-  $MYPATH/ufasta sizes -H $REF_CHR.$HYB_CTG.reconciled.split.fa | $MYPATH/sizesToScaff.pl |awk '{if($NF>100) print $0}' > $PREFIX.reconciled2.txt.tmp && mv $PREFIX.reconciled2.txt.tmp $PREFIX.reconciled2.txt 
+  $MYPATH/ufasta sizes -H $REF_CHR.$HYB_CTG.reconciled.split.fa | $MYPATH/sizesToScaff.pl |awk '{if($NF>int("'$MIN_CONTIG'")) print $0}' > $PREFIX.reconciled2.txt.tmp && mv $PREFIX.reconciled2.txt.tmp $PREFIX.reconciled2.txt 
   cat $PREFIX.reconciled2.txt | $MYPATH/output_reconciled_scaffolds.pl $REF_CHR.$HYB_CTG.reconciled.split.fa | \
   $MYPATH/ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa && touch $PREFIX.scaffold.success 
 fi
