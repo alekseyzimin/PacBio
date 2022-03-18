@@ -254,6 +254,7 @@ if [ ! -e $PREFIX.filter2.success ];then
 fi
 
 #now we merge/rebuild chromosomes
+#here we also remove highly contained contigs
 if [ ! -e $PREFIX.scaffold.success ];then
   rm -f $PREFIX.place_extra.success
   log "Final scaffolding"
@@ -262,19 +263,30 @@ if [ ! -e $PREFIX.scaffold.success ];then
   $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
   awk '{if($15>25 || $16>25 || $8>25000) print $0}' |\
   awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>=last_end) {print $0; last_end=$2}}' | \
-  $MYPATH/extract_single_best_match_coords_file.pl >  $PREFIX.best.coords.tmp && mv $PREFIX.best.coords.tmp $PREFIX.best.coords
+  $MYPATH/extract_single_best_match_coords_file.pl | \
+  awk '{if($4<$5){print $1-$4+1" "$1-$4+$13+1" "$0}else{print $1-($13-$4)" "$1+$4" "$0}}' | \
+  sort -k20,20 -k1,1n -S 10% | \
+  awk 'BEGIN{ch="";cend=0;}{if(ch == $20){if($2-cend > -1*int("'$MIN_CONTIG'")){print $3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21;cend=$2}}else{print $3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21;;cend=$2;ch=$20;}}' > $PREFIX.best.coords.tmp && \
+  mv $PREFIX.best.coords.tmp $PREFIX.best.coords && \
   if [ $MERGE_SEQ -gt 0 ];then
     cat $PREFIX.best.coords | $MYPATH/fill_unaligned_gaps.pl $REF 2>$PREFIX.fillseq.fa |\
-    perl -ane '{$dir="f"; $dir="r" if($F[3]>$F[4]);print "$F[-2] $F[-1] 1 $F[12] $dir 100 100 $F[12]\n"}' > $PREFIX.reconciled.txt.tmp && mv $PREFIX.reconciled.txt.tmp $PREFIX.reconciled.txt
+    perl -ane '{$dir="f"; $dir="r" if($F[3]>$F[4]);print "$F[-2] $F[-1] 1 $F[12] $dir 100 100 $F[12]\n"}' > $PREFIX.reconciled.txt.tmp && \
+    mv $PREFIX.reconciled.txt.tmp $PREFIX.reconciled.txt
   else
-    cat $PREFIX.best.coords | $MYPATH/reconcile_matches.pl $PREFIX.gap_coordinates.txt> $PREFIX.reconciled.txt.tmp && mv $PREFIX.reconciled.txt.tmp $PREFIX.reconciled.txt && \
+    cat $PREFIX.best.coords | $MYPATH/reconcile_matches.pl $PREFIX.gap_coordinates.txt> $PREFIX.reconciled.txt.tmp && \
+    mv $PREFIX.reconciled.txt.tmp $PREFIX.reconciled.txt && \
     rm -f $PREFIX.fillseq.fa && touch $PREFIX.fillseq.fa
   fi
-  cat $PREFIX.reconciled.txt | $MYPATH/output_reconciled_scaffolds.pl <(cat $PREFIX.fillseq.fa $HYB_CTG.broken) > $REF_CHR.$HYB_CTG.reconciled.fa.tmp && mv $REF_CHR.$HYB_CTG.reconciled.fa.tmp $REF_CHR.$HYB_CTG.reconciled.fa
-  $MYPATH/splitScaffoldsAtNs.sh $REF_CHR.$HYB_CTG.reconciled.fa 1 > $REF_CHR.$HYB_CTG.reconciled.split.fa.tmp && mv $REF_CHR.$HYB_CTG.reconciled.split.fa.tmp $REF_CHR.$HYB_CTG.reconciled.split.fa
-  $MYPATH/ufasta sizes -H $REF_CHR.$HYB_CTG.reconciled.split.fa | $MYPATH/sizesToScaff.pl |awk '{if($NF>int("'$MIN_CONTIG'")) print $0}' > $PREFIX.reconciled2.txt.tmp && mv $PREFIX.reconciled2.txt.tmp $PREFIX.reconciled2.txt 
+  cat $PREFIX.reconciled.txt | $MYPATH/output_reconciled_scaffolds.pl <(cat $PREFIX.fillseq.fa $HYB_CTG.broken) > $REF_CHR.$HYB_CTG.reconciled.fa.tmp && mv $REF_CHR.$HYB_CTG.reconciled.fa.tmp $REF_CHR.$HYB_CTG.reconciled.fa && \
+  $MYPATH/splitScaffoldsAtNs.sh $REF_CHR.$HYB_CTG.reconciled.fa 1 > $REF_CHR.$HYB_CTG.reconciled.split.fa.tmp && \
+  mv $REF_CHR.$HYB_CTG.reconciled.split.fa.tmp $REF_CHR.$HYB_CTG.reconciled.split.fa && \
+  $MYPATH/ufasta sizes -H $REF_CHR.$HYB_CTG.reconciled.split.fa | $MYPATH/sizesToScaff.pl |awk '{if($NF>int("'$MIN_CONTIG'")) print $0}' > $PREFIX.reconciled2.txt.tmp && \
+  mv $PREFIX.reconciled2.txt.tmp $PREFIX.reconciled2.txt  && \
   cat $PREFIX.reconciled2.txt | $MYPATH/output_reconciled_scaffolds.pl $REF_CHR.$HYB_CTG.reconciled.split.fa | \
-  $MYPATH/ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa && touch $PREFIX.scaffold.success 
+  $MYPATH/ufasta format > $REF_CHR.$HYB_CTG.reconciled.fa.tmp && \
+  mv $REF_CHR.$HYB_CTG.reconciled.fa.tmp $REF_CHR.$HYB_CTG.reconciled.fa && \
+  rm -f $REF_CHR.$HYB_CTG.reconciled.split.fa && \
+  touch $PREFIX.scaffold.success
 fi
 
 if [ -e $PREFIX.scaffold.success ];then

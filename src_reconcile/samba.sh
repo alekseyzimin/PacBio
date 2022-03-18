@@ -8,6 +8,7 @@ MIN_MATCH=5000
 OVERHANG=1000
 MIN_SCORE=60
 MIN_IDENTITY=0
+KMER=15
 SCORE=4
 NOBREAK="0"
 ALN_PARAM="map-ont -N 1 "
@@ -144,10 +145,19 @@ elif [ $ALN_DATA = "pbclr" ];then
   ALN_PARAM="map-ont -N 1 "
   POLISH_PARAM="--pacbio-raw"
 elif [ $ALN_DATA = "asm" ];then
-  ALN_PARAM="asm10 "
+  ALN_PARAM="asm20 "
   MIN_IDENTITY=98
+  KMER=20
 else
   error_exit "invalid scaffolding data type:  must be ont, pbclr or asm"
+fi
+
+if [ ! -z $ALLOWED ];then
+  if [ ! -s $ALLOWED ];then
+    error_exit "Allowed joins file $ALLOWED is empty, no scaffolding possible"
+  else
+    MIN_SCORE=0
+  fi
 fi
 
 REFN=`basename $REF`
@@ -157,7 +167,7 @@ DELTAFILE=$REFN.$QRYN
 #minimap
 if [ ! -e scaffold_align.success ];then
 log "Aligning the reads to the contigs"
-$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REF <(zcat -f $QRY | $MYPATH/fastqToFasta.pl ) 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_split.success scaffold_filter.success || error_exit "minimap2 failed"
+$MYPATH/../Flye/bin/flye-minimap2 -k $KMER -t $NUM_THREADS -x $ALN_PARAM $REF <(zcat -f $QRY | $MYPATH/fastqToFasta.pl ) 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_split.success scaffold_filter.success || error_exit "minimap2 failed"
 fi
 
 if [ $NOBREAK = "0" ];then #we do not break in not instructed to or if the scaffolding sequence in another assembly
@@ -200,7 +210,7 @@ if [ $NOBREAK = "0" ];then #we do not break in not instructed to or if the scaff
   if [ ! -e scaffold_split_align.success ];then
   log "Aligning the reads to the split contigs"
   filter_convert_paf $REFN.$QRYN.paf $REFN.$QRYN.coords $MIN_SCORE && \
-  $MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa <(zcat -f  $QRY | $MYPATH/fastqToFasta.pl | ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords)) 1> $REFN.$QRYN.split.paf.tmp 2>minimap.err && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && touch scaffold_split_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
+  $MYPATH/../Flye/bin/flye-minimap2 -k $KMER -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa <(zcat -f  $QRY | $MYPATH/fastqToFasta.pl | ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords)) 1> $REFN.$QRYN.split.paf.tmp 2>minimap.err && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && touch scaffold_split_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
   fi
 
 else
@@ -268,7 +278,7 @@ fi
 
 if [ ! -e scaffold_align_patches.success ];then
 log "Aligning the scaffolding sequences to the contigs"
-  $MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa $REFN.$QRYN.patches.polish.fa 2>minimap.err  > $REFN.$QRYN.patches.paf.tmp && mv  $REFN.$QRYN.patches.paf.tmp  $REFN.$QRYN.patches.paf && touch scaffold_align_patches.success && rm -f scaffold_scaffold.success || error_exit "minimap2 patches failed"
+  $MYPATH/../Flye/bin/flye-minimap2 -k $KMER -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa $REFN.$QRYN.patches.polish.fa 2>minimap.err  > $REFN.$QRYN.patches.paf.tmp && mv  $REFN.$QRYN.patches.paf.tmp  $REFN.$QRYN.patches.paf && touch scaffold_align_patches.success && rm -f scaffold_scaffold.success || error_exit "minimap2 patches failed"
 fi
 
 if [ ! -e scaffold_scaffold.success ];then
@@ -308,7 +318,7 @@ log "Deduplicating contigs"
 awk 'BEGIN{n=0}{if(length($NF)>100){print ">"n"\n"$NF;n++}}' $REFN.$QRYN.patches.uniq.links.txt > $REFN.$QRYN.patches.uniq.links.fa.tmp && mv $REFN.$QRYN.patches.uniq.links.fa.tmp $REFN.$QRYN.patches.uniq.links.fa && \
 MAX_PATCH=`ufasta sizes -H  $REFN.$QRYN.patches.uniq.links.fa | sort -nrk2,2 -S 10% | head -n 1 | awk '{print $2}'`
 $MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H $REFN.scaffolds.all.rejoin.fa | awk '{if($2<int("'$MAX_PATCH'")) print $1}') $REFN.scaffolds.all.rejoin.fa > $REFN.short_contigs.fa.tmp && mv $REFN.short_contigs.fa.tmp $REFN.short_contigs.fa && \
-ufasta extract -v -f <($MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS $REFN.short_contigs.fa $REFN.$QRYN.patches.uniq.links.fa 2>/dev/null | awk '{idy=1;for(i=1;i<=NF;i++){if($i ~ /^dv/){split($i,a,":"); idy=1-a[3];}} if(($9-$8)/$7>.95 && idy > 0.95) print $6}') $REFN.scaffolds.all.rejoin.fa > $REFN.scaffolds.fa.tmp && mv $REFN.scaffolds.fa.tmp $REFN.scaffolds.fa && \
+ufasta extract -v -f <($MYPATH/../Flye/bin/flye-minimap2 -N 1 -x asm10 -k $KMER -t $NUM_THREADS $REFN.short_contigs.fa $REFN.$QRYN.patches.uniq.links.fa 2>/dev/null | awk '{idy=1;for(i=1;i<=NF;i++){if($i ~ /^dv/){split($i,a,":"); idy=1-a[3];}} if(($9-$8)/$7>.95 && idy > 0.95) print $6}') $REFN.scaffolds.all.rejoin.fa > $REFN.scaffolds.fa.tmp && mv $REFN.scaffolds.fa.tmp $REFN.scaffolds.fa && \
 rm $REFN.short_contigs.fa $REFN.$QRYN.patches.uniq.links.fa && touch scaffold_deduplicate.success || error_exit "deduplicate failed"
 fi
 

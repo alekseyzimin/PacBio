@@ -36,8 +36,8 @@ my $only_allowed=0;
 my %allowed_merges=();
 if(defined($ARGV[4])){
   $only_allowed=1;
-  $maxgap=5000000;
-  $mingap=-100000;
+  $maxgap=10000000;
+  $mingap=-250000;
   open(FILE,$ARGV[4]);
   while($line=<FILE>){
     chomp($line);
@@ -136,7 +136,7 @@ for($i=0;$i<$#lines;$i++){
         if($f1[-2] lt $f2[-2]){
           $joinline="$f1[-2]:$dir1:$f2[-2]:$dir2";
           #print "DEBUG $joinline $oh1 $oh2 $gap\n";
-          if(not(defined($idy{$joinline})) || $idy{$joinline} < $idy1+$idy2){#here we use the best join for each pair of contigs, we maximize the sum of total number of matching bases on each end
+          if(not(defined($idy{$joinline})) || $idy{$joinline} < $idy1+$idy2 || abs($gap) < abs($gap{$joinline})){#here we use the best join for each pair of contigs, we maximize the sum of total number of matching bases on each end
             $gseq{$joinline}= $gap>0 ? lc(substr($qseq{$f1[-1]},$gstart-1,$gap)) : "n";
             $jseq{$joinline}=substr($qseq{$f1[-1]},$jstart,$jend-$jstart);
             $oh1{$joinline}=$oh1;
@@ -150,7 +150,7 @@ for($i=0;$i<$#lines;$i++){
           $dir2= $dir2 eq "F" ? "R" : "F";
           $joinline="$f2[-2]:$dir2:$f1[-2]:$dir1";
           #print "DEBUG $joinline $oh1 $oh2 $gap\n";
-          if(not(defined($idy{$joinline})) || $idy{$joinline} < $idy1+$idy2){
+          if(not(defined($idy{$joinline})) || $idy{$joinline} < $idy1+$idy2 || abs($gap) < abs($gap{$joinline})){
             $gseq{$joinline}= $gap>0 ? reverse_complement(lc(substr($qseq{$f1[-1]},$gstart-1,$gap))) : "n";
             $jseq{$joinline}=substr($qseq{$f1[-1]},$jstart,$jend-$jstart);
             $oh1{$joinline}=$oh2;
