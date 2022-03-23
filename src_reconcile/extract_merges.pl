@@ -68,7 +68,7 @@ while($line=<STDIN>){
 
 my $nctg="";
 my $max_offset=1;
-$max_offset=3 if($only_allowed);
+$max_offset=10 if($only_allowed);
 for($i=0;$i<$#lines;$i++){
   @f1=split(/\s+/,$lines[$i]);
   for($j=$i+1;$j<=$i+$max_offset;$j++){
@@ -76,8 +76,6 @@ for($i=0;$i<$#lines;$i++){
     @f2=split(/\s+/,$lines[$j]);
     next if($f1[-2] eq $f2[-2]);
     next if(not($f1[-1] eq $f2[-1]));
-    $nctg=$f2[-2] if($j==$i+1);
-    next if($j>$i+1 && not($nctg eq $f2[-2]));
     my $oh1=0;
     my $oh2=0;
     my $gstart=1;
