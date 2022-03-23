@@ -75,9 +75,6 @@ for($i=0;$i<$#lines;$i++){
 #print "DEBUG $i $j\n$lines[$i]\n$lines[$j]\n"; 
     @f2=split(/\s+/,$lines[$j]);
     next if($f1[-2] eq $f2[-2]);
-    if($only_allowed){   
-      next if(not(defined($allowed{"$f1[-2] $f2[-2]"})) && not(defined($allowed{"$f2[-2] $f1[-2]"})));
-    }
     next if(not($f1[-1] eq $f2[-1]));
     $nctg=$f2[-2] if($j==$i+1);
     next if($j>$i+1 && not($nctg eq $f2[-2]));
@@ -124,6 +121,11 @@ for($i=0;$i<$#lines;$i++){
         $dir2="R";
         } 
     }
+    if($only_allowed){
+      #check if the merge is allowed
+      #allow for a single contig to be flipped
+      next if((not(defined($allowed{"$f1[-2] $f2[-2]"})) && not(defined($allowed{"$f2[-2] $f1[-2]"}))) || (defined($allowed{"$f1[-2] $f2[-2]"}) && $dir1 eq "R" && $dir2 eq "R") || (defined($allowed{"$f2[-2] $f1[-2]"}) && $dir1 eq "F" && $dir2 eq "F"));
+    }
     #print "DEBUG $gap $oh1 $oh2\n";
     if($gap < $maxgap && $gap > $mingap && $oh1<=$max_overhang && $oh2<=$max_overhang){
         $j=$i+$max_offset;
@@ -136,7 +138,7 @@ for($i=0;$i<$#lines;$i++){
         if($f1[-2] lt $f2[-2]){
           $joinline="$f1[-2]:$dir1:$f2[-2]:$dir2";
           #print "DEBUG $joinline $oh1 $oh2 $gap\n";
-          if(not(defined($idy{$joinline})) || $idy{$joinline} < $idy1+$idy2 || abs($gap) < abs($gap{$joinline})){#here we use the best join for each pair of contigs, we maximize the sum of total number of matching bases on each end
+          if(not(defined($idy{$joinline})) || $idy{$joinline} < $idy1+$idy2){#here we use the best join for each pair of contigs, we maximize the sum of total number of matching bases on each end
             $gseq{$joinline}= $gap>0 ? lc(substr($qseq{$f1[-1]},$gstart-1,$gap)) : "n";
             $jseq{$joinline}=substr($qseq{$f1[-1]},$jstart,$jend-$jstart);
             $oh1{$joinline}=$oh1;
@@ -150,7 +152,7 @@ for($i=0;$i<$#lines;$i++){
           $dir2= $dir2 eq "F" ? "R" : "F";
           $joinline="$f2[-2]:$dir2:$f1[-2]:$dir1";
           #print "DEBUG $joinline $oh1 $oh2 $gap\n";
-          if(not(defined($idy{$joinline})) || $idy{$joinline} < $idy1+$idy2 || abs($gap) < abs($gap{$joinline})){
+          if(not(defined($idy{$joinline})) || $idy{$joinline} < $idy1+$idy2){
             $gseq{$joinline}= $gap>0 ? reverse_complement(lc(substr($qseq{$f1[-1]},$gstart-1,$gap))) : "n";
             $jseq{$joinline}=substr($qseq{$f1[-1]},$jstart,$jend-$jstart);
             $oh1{$joinline}=$oh2;
