@@ -125,7 +125,7 @@ for($i=0;$i<$#lines;$i++){
       #allow for a single contig to be flipped
       next if((not(defined($allowed{"$f1[-2] $f2[-2]"})) && not(defined($allowed{"$f2[-2] $f1[-2]"}))) || (defined($allowed{"$f1[-2] $f2[-2]"}) && $dir1 eq "R" && $dir2 eq "R") || (defined($allowed{"$f2[-2] $f1[-2]"}) && $dir1 eq "F" && $dir2 eq "F"));
     }
-    #print "DEBUG $gap $oh1 $oh2\n";
+    #print "DEBUG PASS $gap $oh1 $oh2\n";
     if($gap < $maxgap && $gap > $mingap && $oh1<=$max_overhang && $oh2<=$max_overhang){
         $j=$i+$max_offset;
         $gstart=1 if($gstart<1);
@@ -136,7 +136,7 @@ for($i=0;$i<$#lines;$i++){
         #print "DEBUG $jstart $jend\n";
         if($f1[-2] lt $f2[-2]){
           $joinline="$f1[-2]:$dir1:$f2[-2]:$dir2";
-          #print "DEBUG $joinline $oh1 $oh2 $gap\n";
+          #print "DEBUG joinline $joinline $oh1 $oh2 $gap\n";
           if(not(defined($idy{$joinline})) || $idy{$joinline} < $idy1+$idy2){#here we use the best join for each pair of contigs, we maximize the sum of total number of matching bases on each end
             $gseq{$joinline}= $gap>0 ? lc(substr($qseq{$f1[-1]},$gstart-1,$gap)) : "n";
             $jseq{$joinline}=substr($qseq{$f1[-1]},$jstart,$jend-$jstart);
@@ -150,7 +150,7 @@ for($i=0;$i<$#lines;$i++){
           $dir1= $dir1 eq "F" ? "R" : "F";
           $dir2= $dir2 eq "F" ? "R" : "F";
           $joinline="$f2[-2]:$dir2:$f1[-2]:$dir1";
-          #print "DEBUG $joinline $oh1 $oh2 $gap\n";
+          #print "DEBUG joinline $joinline $oh1 $oh2 $gap\n";
           if(not(defined($idy{$joinline})) || $idy{$joinline} < $idy1+$idy2){
             $gseq{$joinline}= $gap>0 ? reverse_complement(lc(substr($qseq{$f1[-1]},$gstart-1,$gap))) : "n";
             $jseq{$joinline}=substr($qseq{$f1[-1]},$jstart,$jend-$jstart);
@@ -182,11 +182,13 @@ if($only_allowed){
   }
   foreach $k (keys %rnames){
     my @f=split(/:/,$k);
+    #print "DEBUG checking $k\n";
     if(defined($fwd{"$f[0] $f[2]"}) && defined($rev{"$f[0] $f[2]"})){
       push(@to_delete,$k) if(not($f[1] eq $f[3]));
     }
   }
   foreach $k (@to_delete){
+    #print "DEBUG deleted $k\n";
     delete($rnames{$k});
   }
 }
@@ -286,7 +288,9 @@ if($type eq "asm"){
 #output the links
 foreach $k (keys %rnames){ #$k is the joinline
   my @f=split(/:/,$k);
-  if($paircount{"$f[0] $f[2]"} == $joincount{$k} || $joincount{$k}>1){
+  if($only_allowed){
+    print "$f[0] $oh1{$k} $f[1] $f[2] $oh2{$k} $f[3] $gap{$k} $gseq{$k}\n";
+  }elsif($paircount{"$f[0] $f[2]"} == $joincount{$k} || $joincount{$k}>1){
     print "$f[0] $oh1{$k} $f[1] $f[2] $oh2{$k} $f[3] $gap{$k} $gseq{$k}\n";
   }
 }
