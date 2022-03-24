@@ -68,10 +68,11 @@ while($line=<STDIN>){
 
 my $nctg="";
 my $max_offset=1;
-$max_offset=10 if($only_allowed);
+$max_offset=30 if($only_allowed);
 for($i=0;$i<$#lines;$i++){
   @f1=split(/\s+/,$lines[$i]);
   for($j=$i+1;$j<=$i+$max_offset;$j++){
+    next if($j>$#lines);
 #print "DEBUG $i $j\n$lines[$i]\n$lines[$j]\n"; 
     @f2=split(/\s+/,$lines[$j]);
     next if($f1[-2] eq $f2[-2]);

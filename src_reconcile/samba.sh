@@ -159,6 +159,10 @@ if [ ! -z $ALLOWED ];then
     MIN_SCORE=0
   fi
 fi
+#this is how much sequence we keep on ends of contigs for alignment, OVERHANG+50000
+#this is only relevant for very contiguous assemblies with multi-Mbp contigs
+#we only keep sequence on the ends and replace middle by N's for alignment to joining sequences
+KEEP_ON_ENDS=$((50000+$OVERHANG))
 
 REFN=`basename $REF`
 QRYN=`basename $QRY`
@@ -210,7 +214,7 @@ if [ $NOBREAK = "0" ];then #we do not break in not instructed to or if the scaff
   if [ ! -e scaffold_split_align.success ];then
   log "Aligning the reads to the split contigs"
   filter_convert_paf $REFN.$QRYN.paf $REFN.$QRYN.coords $MIN_SCORE && \
-  $MYPATH/../Flye/bin/flye-minimap2 -k $KMER -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa <(zcat -f  $QRY | $MYPATH/fastqToFasta.pl | ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords)) 1> $REFN.$QRYN.split.paf.tmp 2>minimap.err && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && touch scaffold_split_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
+  $MYPATH/../Flye/bin/flye-minimap2 -k $KMER -t $NUM_THREADS -x $ALN_PARAM <(ufasta one $REFN.split.fa |perl -ane 'BEGIN{$keep_on_ends='$KEEP_ON_ENDS';}{if($F[0] =~ /^>/){print}else{$sub=length($F[0])-2*$keep_on_ends;if($sub>10000){substr($F[0],$keep_on_ends,$sub,"N"x$sub); print $F[0],"\n";}else{print}}}') <(zcat -f  $QRY | $MYPATH/fastqToFasta.pl | ufasta extract -f <(awk '{print $NF}' $REFN.$QRYN.coords)) 1> $REFN.$QRYN.split.paf.tmp 2>minimap.err && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && touch scaffold_split_align.success && rm -f scaffold_filter.success || error_exit "minimap2 failed"
   fi
 
 else
@@ -278,7 +282,7 @@ fi
 
 if [ ! -e scaffold_align_patches.success ];then
 log "Aligning the scaffolding sequences to the contigs"
-  $MYPATH/../Flye/bin/flye-minimap2 -k $KMER -t $NUM_THREADS -x $ALN_PARAM $REFN.split.fa $REFN.$QRYN.patches.polish.fa 2>minimap.err  > $REFN.$QRYN.patches.paf.tmp && mv  $REFN.$QRYN.patches.paf.tmp  $REFN.$QRYN.patches.paf && touch scaffold_align_patches.success && rm -f scaffold_scaffold.success || error_exit "minimap2 patches failed"
+  $MYPATH/../Flye/bin/flye-minimap2 -k $KMER -t $NUM_THREADS -x $ALN_PARAM <(ufasta one $REFN.split.fa |perl -ane 'BEGIN{$keep_on_ends='$KEEP_ON_ENDS';}{if($F[0] =~ /^>/){print}else{$sub=length($F[0])-2*$keep_on_ends;if($sub>10000){substr($F[0],$keep_on_ends,$sub,"N"x$sub); print $F[0],"\n";}else{print}}}') $REFN.$QRYN.patches.polish.fa 2>minimap.err  > $REFN.$QRYN.patches.paf.tmp && mv  $REFN.$QRYN.patches.paf.tmp  $REFN.$QRYN.patches.paf && touch scaffold_align_patches.success && rm -f scaffold_scaffold.success || error_exit "minimap2 patches failed"
 fi
 
 if [ ! -e scaffold_scaffold.success ];then
