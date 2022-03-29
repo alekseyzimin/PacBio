@@ -36,7 +36,7 @@ my $only_allowed=0;
 my %allowed_merges=();
 if(defined($ARGV[4])){
   $only_allowed=1;
-  $maxgap=10000000;
+  $maxgap=50000000;
   $mingap=-250000;
   open(FILE,$ARGV[4]);
   while($line=<FILE>){
@@ -127,7 +127,7 @@ for($i=0;$i<$#lines;$i++){
     }
     #print "DEBUG PASS $gap $oh1 $oh2\n";
     if($gap < $maxgap && $gap > $mingap && $oh1<=$max_overhang && $oh2<=$max_overhang){
-        $j=$i+$max_offset;
+        $j=$i+$max_offset if($dir1 eq $dir2);#stop skipping search if found a candidate merge in the correct orientation for closing gaps
         $gstart=1 if($gstart<1);
         my $fudge=5;
         my $jstart = $gstart-1-$min_match*$fudge-$max_overhang > 0 ? $gstart-1-$min_match*$fudge-$max_overhang : 0;
