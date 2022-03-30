@@ -65,8 +65,6 @@ while($line=<STDIN>){
 #now we go through the array and collect the possible merges
 #
 #
-
-my $nctg="";
 my $max_offset=1;
 $max_offset=30 if($only_allowed);
 for($i=0;$i<$#lines;$i++){
@@ -77,13 +75,8 @@ for($i=0;$i<$#lines;$i++){
     @f2=split(/\s+/,$lines[$j]);
     next if($f1[-2] eq $f2[-2]);
     next if(not($f1[-1] eq $f2[-1]));
-    my $oh1=0;
-    my $oh2=0;
     my $gstart=1;
-    my $dir1="F";
-    my $dir2="F";
-    my $idy1=$f1[6]*$f1[9]; #6 mtchlen 9 identity
-    my $idy2=$f2[6]*$f2[9];
+    my $dir1,$dir2,$oh1,$oh2;
 #print "DEBUG considering $i $j\n$lines[$i]\n$lines[$j]\n\n";
     if($f1[3]<$f1[4]){
       $gstart=$f1[4];
@@ -127,23 +120,29 @@ for($i=0;$i<$#lines;$i++){
     }
     #print "DEBUG PASS $gap $oh1 $oh2\n";
     if($gap < $maxgap && $gap > $mingap && $oh1<=$max_overhang && $oh2<=$max_overhang){
-        $j=$i+$max_offset if($dir1 eq $dir2);#stop skipping search if found a candidate merge in the correct orientation for closing gaps
+        #$j=$i+$max_offset if($dir1 eq $dir2);#stop skipping search if found a candidate merge in the correct orientation for closing gaps
         $gstart=1 if($gstart<1);
-        my $fudge=5;
-        my $jstart = $gstart-1-$min_match*$fudge-$max_overhang > 0 ? $gstart-1-$min_match*$fudge-$max_overhang : 0;
-        my $jend = $gstart-1+$gap+$min_match*$fudge+$max_overhang <= length($qseq{$f1[-1]}) ? $gstart-1+$gap+$min_match*$fudge+$max_overhang : length($qseq{$f1[-1]});
-        $jend = $gstart-1+$min_match*$fudge+$max_overhang <= length($qseq{$f1[-1]}) ? $gstart-1+$min_match*$fudge+$max_overhang : length($qseq{$f1[-1]}) if($gap<0);
+        my $jstart=0;
+        my $jend=length($qseq{$f1[-1]});
+        if($type eq "asm"){
+          my $fudge=5;
+          $jstart = $gstart-1-$min_match*$fudge-$max_overhang > 0 ? $gstart-1-$min_match*$fudge-$max_overhang : 0;
+          if($gap >= 0){
+            $jend = $gstart-1+$gap+$min_match*$fudge+$max_overhang <= length($qseq{$f1[-1]}) ? $gstart-1+$gap+$min_match*$fudge+$max_overhang : length($qseq{$f1[-1]});
+          }else{
+            $jend = $gstart-1+$min_match*$fudge+$max_overhang <= length($qseq{$f1[-1]}) ? $gstart-1+$min_match*$fudge+$max_overhang : length($qseq{$f1[-1]});
+          }
+        }
         #print "DEBUG $jstart $jend\n";
         if($f1[-2] lt $f2[-2]){
           $joinline="$f1[-2]:$dir1:$f2[-2]:$dir2";
           #print "DEBUG joinline $joinline $oh1 $oh2 $gap\n";
-          if(not(defined($idy{$joinline})) || $idy{$joinline} < $idy1+$idy2){#here we use the best join for each pair of contigs, we maximize the sum of total number of matching bases on each end
+          if(not(defined($oh1{$joinline})) || $oh1{$joinline}+$oh2{$joinline} > $oh1+$oh2 ){#here we use the best join for each pair of contigs, we minimize sum of overhangs
             $gseq{$joinline}= $gap>0 ? lc(substr($qseq{$f1[-1]},$gstart-1,$gap)) : "n";
-            $jseq{$joinline}=substr($qseq{$f1[-1]},$jstart,$jend-$jstart);
+            $jseq{$joinline}=lc(substr($qseq{$f1[-1]},$jstart,$jend-$jstart));
             $oh1{$joinline}=$oh1;
             $oh2{$joinline}=$oh2;
             $gap{$joinline}=$gap;
-            $idy{$joinline}=$idy1+$idy2;
           }
           $paircount{"$f1[-2] $f2[-2]"}++;
         }else{
@@ -151,13 +150,12 @@ for($i=0;$i<$#lines;$i++){
           $dir2= $dir2 eq "F" ? "R" : "F";
           $joinline="$f2[-2]:$dir2:$f1[-2]:$dir1";
           #print "DEBUG joinline $joinline $oh1 $oh2 $gap\n";
-          if(not(defined($idy{$joinline})) || $idy{$joinline} < $idy1+$idy2){
+          if(not(defined($oh1{$joinline})) || $oh1{$joinline}+$oh2{$joinline} > $oh1+$oh2 ){#here we use the best join for each pair of contigs, we minimize sum of overhangs
             $gseq{$joinline}= $gap>0 ? reverse_complement(lc(substr($qseq{$f1[-1]},$gstart-1,$gap))) : "n";
-            $jseq{$joinline}=substr($qseq{$f1[-1]},$jstart,$jend-$jstart);
+            $jseq{$joinline}=lc(substr($qseq{$f1[-1]},$jstart,$jend-$jstart));
             $oh1{$joinline}=$oh2;
             $oh2{$joinline}=$oh1;
             $gap{$joinline}=$gap;
-            $idy{$joinline}=$idy1+$idy2;
           }
           $paircount{"$f2[-2] $f1[-2]"}++;
         }
