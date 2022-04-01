@@ -18,14 +18,22 @@ while($line=<STDIN>){
       if(defined($break_coords{$ctg})){
         my $offset=0;
         for(my $i=0;$i<@{$break_coords{$ctg}};$i++){
-          print ">$ctg.$offset\n";
-          print substr($seq,$offset,${$break_coords{$ctg}}[$i]-$offset),"\n";
-          $offset=${$break_coords{$ctg}}[$i];
+          #should not break within 5kb near a gap
+          my $region=substr($seq,${$break_coords{$ctg}}[$i]-5000,10000);
+          if(not($region =~ /N/ || $region =~ /n/)){ 
+            print ">$ctg.$offset\n";
+            print substr($seq,$offset,${$break_coords{$ctg}}[$i]-$offset),"\n";
+            $offset=${$break_coords{$ctg}}[$i];
           }
-        print ">$ctg.$offset\n";
-        print substr($seq,$offset),"\n";
+        }
+        if($offset>0){
+          print ">$ctg.$offset\n";
+          print substr($seq,$offset),"\n";
         }else{
-        print ">$ctg\n$seq\n";
+          print ">$ctg\n$seq\n";
+        }
+        }else{
+          print ">$ctg\n$seq\n";
         }
     }
     $ctg=substr($f[0],1);
@@ -39,12 +47,19 @@ if(not($seq eq "")){
   if(defined($break_coords{$ctg})){
     my $offset=0;
     for($i=0;$i<@{$break_coords{$ctg}};$i++){
-      print ">$ctg.$offset\n";
-      print substr($seq,$offset,${$break_coords{$ctg}}[$i]-$offset),"\n";
-      $offset=${$break_coords{$ctg}}[$i];
+      my $region=substr($seq,${$break_coords{$ctg}}[$i]-5000,10000);
+      if(not($region =~ /N/ || $region =~ /n/)){
+        print ">$ctg.$offset\n";
+        print substr($seq,$offset,${$break_coords{$ctg}}[$i]-$offset),"\n";
+        $offset=${$break_coords{$ctg}}[$i];
+      }
     }
-    print ">$ctg.$offset\n";
-    print substr($seq,$offset),"\n";
+    if($offset>0){
+      print ">$ctg.$offset\n";
+      print substr($seq,$offset),"\n";
+    }else{
+      print ">$ctg\n$seq\n";
+    }
   }else{
     print ">$ctg\n$seq\n";
   }
