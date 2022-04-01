@@ -171,7 +171,11 @@ DELTAFILE=$REFN.$QRYN
 #minimap
 if [ ! -e scaffold_align.success ];then
 log "Aligning the reads to the contigs"
-$MYPATH/../Flye/bin/flye-minimap2 -k $KMER -t $NUM_THREADS -x $ALN_PARAM $REF <(zcat -f $QRY | $MYPATH/fastqToFasta.pl ) 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_split.success scaffold_filter.success || error_exit "minimap2 failed"
+  if [ $NOBREAK = "0" ];then
+    $MYPATH/../Flye/bin/flye-minimap2 -k $KMER -t $NUM_THREADS -x $ALN_PARAM $REF <(zcat -f $QRY | $MYPATH/fastqToFasta.pl ) 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_split.success scaffold_filter.success || error_exit "minimap2 failed"
+  else
+    $MYPATH/../Flye/bin/flye-minimap2 -k $KMER -t $NUM_THREADS -x $ALN_PARAM <(ufasta one $REF |perl -ane 'BEGIN{$keep_on_ends='$KEEP_ON_ENDS';}{if($F[0] =~ /^>/){print}else{$sub=length($F[0])-2*$keep_on_ends;if($sub>10000){substr($F[0],$keep_on_ends,$sub,"N"x$sub); print $F[0],"\n";}else{print}}}')  <(zcat -f $QRY | $MYPATH/fastqToFasta.pl ) 1> $REFN.$QRYN.paf.tmp 2>minimap.err && mv $REFN.$QRYN.paf.tmp $REFN.$QRYN.paf && touch scaffold_align.success && rm -f scaffold_split.success scaffold_filter.success || error_exit "minimap2 failed"
+  fi
 fi
 
 if [ $NOBREAK = "0" ];then #we do not break in not instructed to or if the scaffolding sequence in another assembly
