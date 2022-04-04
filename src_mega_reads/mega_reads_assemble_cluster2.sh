@@ -50,7 +50,7 @@ log () {
 trap abort 1 2 15
 function abort {
 log "Aborted"
-kill 0
+kill -9 0
 exit 1
 }
 
