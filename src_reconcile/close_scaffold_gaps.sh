@@ -97,24 +97,26 @@ if [ ! -s $REF ];then
 error_exit "reference $REF does not exist or size zero"
 fi
 
-if [ ! -s $QRY ];then
-error_exit "merging sequence $QRY does not exist or size zero"
-fi
-
 REFN=`basename $REF`
-QRYN=`basename $QRY`
 
 #split
 if [ ! -e "scaffold_merge.split.success" ];then
 log "Splitting scaffolds into contigs"
 $MYPATH/splitScaffoldsAtNs.pl  < $REF | ufasta one > $REFN.split && \
 grep '^>' --text $REFN.split | perl -ane '{($rn,$coord)=split(/\./,substr($F[0],1));$h{$rn}.=substr($F[0],1)." ";}END{foreach $r(keys %h){@f=split(/\s+/,$h{$r}); for ($i=0;$i<$#f;$i++){print $f[$i]," ",$f[$i+1],"\n"}}}' > $REFN.valid_join_pairs.txt && \
-touch scaffold_merge.split.success && rm -rf scaffold_merge.scaffold.success
+touch scaffold_merge.split.success && rm -f scaffold_merge.scaffold.success
+fi
+
+if [ ! -e "scaffold_merge.preprocess.success" ];then
+zcat -f $QRY | $MYPATH/fastqToFasta.pl > $REFN.split.gcs.fa.tmp && \
+mv $REFN.split.gcs.fa.tmp $REFN.split.gcs.fa && \
+touch scaffold_merge.preprocess.success && \
+rm -f scaffold_merge.scaffold.success
 fi
 
 if [ ! -e "scaffold_merge.scaffold.success" ];then
 log "Closing gaps"
-$MYPATH/samba.sh -d $ALN_DATA -r $REFN.split -q $QRY -t $NUM_THREADS -o $OVERHANG -m $MIN_MATCH -a $REFN.valid_join_pairs.txt -n && \
+$MYPATH/samba.sh -d $ALN_DATA -r $REFN.split -q $REFN.split.gcs.fa -t $NUM_THREADS -o $OVERHANG -m $MIN_MATCH -a $REFN.valid_join_pairs.txt -n && \
 $MYPATH/recover_scaffolds.pl < $REFN.split.scaffolds.fa |ufasta format > $REFN.split.joined.tmp && \
 mv $REFN.split.joined.tmp $REFN.split.joined.fa && \
 touch scaffold_merge.scaffold.success

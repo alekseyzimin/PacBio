@@ -135,10 +135,6 @@ if [ ! -s $REF ];then
 error_exit "reference $REF does not exist or size zero"
 fi
 
-if [ ! -s $QRY ];then
-error_exit "merging sequence $QRY does not exist or size zero"
-fi
-
 if [ $ALN_DATA = "ont" ];then
   ALN_PARAM="map-ont -N 1 "
 elif [ $ALN_DATA = "pbclr" ];then
@@ -165,8 +161,7 @@ fi
 KEEP_ON_ENDS=$((50000+$OVERHANG))
 
 REFN=`basename $REF`
-QRYN=`basename $QRY`
-DELTAFILE=$REFN.$QRYN
+QRYN=$ALN_DATA
 
 #minimap
 if [ ! -e scaffold_align.success ];then
