@@ -36,8 +36,8 @@ my $only_allowed=0;
 my %allowed_merges=();
 if(defined($ARGV[4])){
   $only_allowed=1;
-  $maxgap=50000000;
-  $mingap=-250000;
+  $maxgap=50*$max_overhang;
+  $mingap=-1*$max_overhang;
   open(FILE,$ARGV[4]);
   while($line=<FILE>){
     chomp($line);
