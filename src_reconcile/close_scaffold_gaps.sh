@@ -108,6 +108,7 @@ touch scaffold_merge.split.success && rm -f scaffold_merge.scaffold.success
 fi
 
 if [ ! -e "scaffold_merge.preprocess.success" ];then
+log "Pre-processing gap closing sequences"
 zcat -f $QRY | $MYPATH/fastqToFasta.pl > $REFN.split.gcs.fa.tmp && \
 mv $REFN.split.gcs.fa.tmp $REFN.split.gcs.fa && \
 touch scaffold_merge.preprocess.success && \

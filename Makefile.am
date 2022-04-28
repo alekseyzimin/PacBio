@@ -142,7 +142,8 @@ dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_cluster.sh src_mega_reads
 		    src_mega_reads/process_scaffold_gaps.pl src_mega_reads/splitScaffoldsAtNs.pl src_reconcile/splitScaffoldsAtNs.sh \
 		    src_trio/classify_reads.pl src_trio/resolve_trio.sh \
 		    src_mega_reads/extract_unique_mega-reads.pl src_mega_reads/mega_reads_assemble_polish.sh \
-		    src_mega_reads/correct_with_k_unitigs_fast.pl src_mega_reads/correct_with_k_unitigs.sh
+		    src_mega_reads/correct_with_k_unitigs_fast.pl src_mega_reads/correct_with_k_unitigs.sh \
+		    src_ref/build_human_reference.sh src_ref/final_polish.sh src_ref/extract_chrM.sh   
 
 
 YAGGO_SOURCES += src_jf_aligner/jf_aligner_cmdline.hpp			\

@@ -205,7 +205,7 @@ if [ $NOBREAK = "0" ];then #we do not break in not instructed to or if the scaff
   sort -nrk3,3 -S10% | uniq | perl -ane '{if(not(defined($h{$F[0]}))){$h{$F[0]}=$F[1];}else{@f=split(/\s+/,$h{$F[0]});my $flag=0;foreach $v(@f){$flag=1 if(abs($v-$F[1])<int("'$MIN_MATCH'"));}if($flag==0){$h{$F[0]}.=" $F[1]"}}}END{foreach $k(keys %h){@f=split(/\s+/,$h{$k});foreach $v(@f){print "break $k $v\n"}}}' |
   sort -S10% -k2,2 -k3,3n > $REFN.$QRYN.splits.txt && \
   echo -n "Found misassemblies: " && wc -l $REFN.$QRYN.splits.txt && \
-  $MYPATH/break_contigs.pl  $REFN.$QRYN.splits.txt < $REF > $REFN.split.fa.tmp && mv $REFN.split.fa.tmp $REFN.split.fa && touch scaffold_split.success && \
+  $MYPATH/break_contigs.pl  $REFN.$QRYN.splits.txt < $REF |  tr ':' 's' > $REFN.split.fa.tmp && mv $REFN.split.fa.tmp $REFN.split.fa && touch scaffold_split.success && \
   rm -f scaffold_split_align.success || error_exit "splitting at misassemblies failed" 
   fi
 
@@ -217,8 +217,8 @@ if [ $NOBREAK = "0" ];then #we do not break in not instructed to or if the scaff
   fi
 
 else
-  ln -sf $REFN.$QRYN.paf $REFN.$QRYN.split.paf && \
-  ln -sf $REFN $REFN.split.fa
+  perl -ane '$F[5]=~s/:/s/g; print join(/\t/,@F),"\n";' $REFN.$QRYN.paf > $REFN.$QRYN.split.paf.tmp && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && \
+  tr ':' 's' < $REF > $REFN.split.fa.tmp && mv $REFN.split.fa.tmp $REFN.split.fa
 fi
 
 if [ ! -e scaffold_filter.success ];then
