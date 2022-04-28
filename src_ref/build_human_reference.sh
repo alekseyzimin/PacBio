@@ -43,11 +43,13 @@ echo "Usage:"
 echo "-t <number of threads, default:1>"
 echo "-p <paternal genome fasta>"
 echo "-m <maternal genome fasta>"
-echo "-g <MANDATORY gender: male or female>"
-echo "-h <PATH to chm13 reference files downloaded from ftp://ftp.ccb.jhu.edu/pub/alekseyz/chm13.tgz"
 echo "-b <haplotype merged assembly fasta>"
+echo "MANDATORY: either -b hap_merged.fasta or (-m maternal.fasta and -p paternal.fasta) must be supplied"
+echo "-g <MANDATORY gender: male or female>"
+echo "-c <MANDATORY: path to chm13 reference files downloaded from ftp://ftp.ccb.jhu.edu/pub/alekseyz/chm13.tgz"
 echo "-r <MANDATORY: reads fastq or fasta>"
-echo "either -h hap_merged.fasta or -m maternal.fasta (and optionally -p paternal.fasta) must be supplied"
+echo "-v verbose mode"
+echo "-h this usage message"
 }
 
 #parsing arguments
@@ -60,7 +62,7 @@ do
             NUM_THREADS="$2"
             shift
             ;;
-        -h|--href)
+        -c|--chm13)
             CHM13PATH="$2"
             shift
             ;;
