@@ -105,8 +105,8 @@ do
     shift
 done
 
-if [ ! -s $CHM13PATH/$CHM13 ] || [ ! -s $CHM13PATH/$CHM13MALE ] || [ ! -s $CHM13PATH/$CHM13PAT ] || [ ! -s $CHM13PATH/$CONTAMINANTS ];then
-  error_exit "reference genome files not found, please download them from ftp://ftp.ccb.jhu.edu/pub/alekseyz/chm13.tgz, unpack (tar -xvzf chm13.tgz), and specify the PATH to them with -h /path_to/"
+if [ ! -s $CHM13PATH/$CHM13 ] || [ ! -s $CHM13PATH/$CHM13MALE ] || [ ! -s $CHM13PATH/$CHM13PAT.w_noise ] || [ ! -s $CHM13PATH/$CONTAMINANTS ] || [ ! -s $CHM13PATH/chrM.fa ];then
+  error_exit "reference genome files not found, please download them from ftp://ftp.ccb.jhu.edu/pub/alekseyz/chm13.tgz, unpack (tar -xvzf chm13.tgz), and specify the PATH to them with -c /path_to/"
 fi
 
 if [ ! $GENDER = "male" ] && [ ! $GENDER = "male" ];then
@@ -156,6 +156,7 @@ if [ ! -e build.chromosomes.success ];then
     chromosome_scaffolder.sh -c 50000 -i 99 -m 250000 -r $CHM13PATH/$CHM13.w_noise -q $MAT_ASM -s $READS -t $NUM_THREADS -n 0 && \
     close_scaffold_gaps.sh -r $CHM13.w_noise.$MAT_ASM_FN.split.reconciled.fa -q $READS -t $NUM_THREADS) && \
     if [ $GENDER = "male" ];then
+
       mkdir -p paternal
       PAT_ASM_FN=`basename $PAT_ASM` && \
       DPATH="`dirname \"$PAT_ASM\"`" && \
