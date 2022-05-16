@@ -661,7 +661,7 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
           fi
         else
           if [ $FLYE_ASSEMBLY -gt 0 ];then
-            cat $COORDS.1$POSTFIX.joined.fa $COORDS.1$POSTFIX.to_join.fa | $MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H <(cat $COORDS.1$POSTFIX.to_join.fa $COORDS.1$POSTFIX.unjoined.fa) | sort -nrk2,2 -S 10% | awk '{n+=$2;if(n<549755813888) print $1;}') > $COORDS.1$POSTFIX.fa.tmp && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.fa
+            cat $COORDS.1$POSTFIX.unjoined.fa $COORDS.1$POSTFIX.to_join.fa | $MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H <(cat $COORDS.1$POSTFIX.to_join.fa $COORDS.1$POSTFIX.unjoined.fa) | sort -nrk2,2 -S 10% | awk '{n+=$2;if(n<549755813888) print $1;}') > $COORDS.1$POSTFIX.fa.tmp && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.fa
           else
             cat $COORDS.1$POSTFIX.unjoined.fa $COORDS.1$POSTFIX.to_join.fa  > $COORDS.1$POSTFIX.fa.tmp && mv $COORDS.1$POSTFIX.fa.tmp $COORDS.1$POSTFIX.fa
           fi
