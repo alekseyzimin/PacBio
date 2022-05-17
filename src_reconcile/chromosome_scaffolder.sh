@@ -277,7 +277,7 @@ if [ ! -e $PREFIX.scaffold.success ];then
     mv $PREFIX.reconciled.txt.tmp $PREFIX.reconciled.txt && \
     rm -f $PREFIX.fillseq.fa && touch $PREFIX.fillseq.fa
   fi
-  cat $PREFIX.reconciled.txt | $MYPATH/output_reconciled_scaffolds.pl <(cat $PREFIX.fillseq.fa $HYB_CTG.broken) > $REF_CHR.$HYB_CTG.reconciled.fa.tmp && mv $REF_CHR.$HYB_CTG.reconciled.fa.tmp $REF_CHR.$HYB_CTG.reconciled.fa && \
+  cat $PREFIX.reconciled.txt | $MYPATH/output_reconciled_scaffolds.pl <(cat $PREFIX.fillseq.fa $HYB_CTG.broken) | tr ':' 'c' > $REF_CHR.$HYB_CTG.reconciled.fa.tmp && mv $REF_CHR.$HYB_CTG.reconciled.fa.tmp $REF_CHR.$HYB_CTG.reconciled.fa && \
   $MYPATH/splitScaffoldsAtNs.sh $REF_CHR.$HYB_CTG.reconciled.fa 1 > $REF_CHR.$HYB_CTG.reconciled.split.fa.tmp && \
   mv $REF_CHR.$HYB_CTG.reconciled.split.fa.tmp $REF_CHR.$HYB_CTG.reconciled.split.fa && \
   $MYPATH/ufasta sizes -H $REF_CHR.$HYB_CTG.reconciled.split.fa | $MYPATH/sizesToScaff.pl |awk '{if($NF>int("'$MIN_CONTIG'")) print $0}' > $PREFIX.reconciled2.txt.tmp && \
