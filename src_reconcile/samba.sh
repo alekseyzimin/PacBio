@@ -11,7 +11,7 @@ MIN_IDENTITY=0
 KMER=15
 SCORE=4
 NOBREAK="0"
-ALN_PARAM="map-ont -N 1 "
+ALN_PARAM="map-ont -N 0 "
 ALN_DATA="ont"
 POLISH_PARAM="--nano-raw"
 ALLOWED=""
@@ -136,9 +136,9 @@ error_exit "reference $REF does not exist or size zero"
 fi
 
 if [ $ALN_DATA = "ont" ];then
-  ALN_PARAM="map-ont -N 1 "
+  ALN_PARAM="map-ont -N 0 "
 elif [ $ALN_DATA = "pbclr" ];then
-  ALN_PARAM="map-ont -N 1 "
+  ALN_PARAM="map-ont -N 0 "
   POLISH_PARAM="--pacbio-raw"
 elif [ $ALN_DATA = "asm" ];then
   ALN_PARAM="asm20 "

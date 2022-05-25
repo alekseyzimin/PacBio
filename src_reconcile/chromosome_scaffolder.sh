@@ -146,9 +146,9 @@ if [ ! -e $PREFIX.gaps.success ];then
 fi
 
 if [ ! -e $PREFIX.split.success ];then
-  log "Splitting query scaffolds at >100bp gaps"
+  log "Splitting query scaffolds at >10000bp gaps"
   rm -f $PREFIX.readalign.success
-  $MYPATH/splitScaffoldsAtNs.sh $QRY 100 > $HYB_CTG && \
+  $MYPATH/splitScaffoldsAtNs.sh $QRY 10000 > $HYB_CTG && \
   touch $PREFIX.split.success
 fi
 
