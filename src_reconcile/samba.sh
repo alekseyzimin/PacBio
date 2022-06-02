@@ -217,7 +217,7 @@ if [ $NOBREAK = "0" ];then #we do not break in not instructed to or if the scaff
   fi
 
 else
-  perl -ane '$F[5]=~s/:/s/g; print join(/\t/,@F),"\n";' $REFN.$QRYN.paf > $REFN.$QRYN.split.paf.tmp && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && \
+  perl -ane '$F[5]=~s/:/s/g; print join("\t",@F),"\n";' $REFN.$QRYN.paf > $REFN.$QRYN.split.paf.tmp && mv $REFN.$QRYN.split.paf.tmp $REFN.$QRYN.split.paf && \
   tr ':' 's' < $REF > $REFN.split.fa.tmp && mv $REFN.split.fa.tmp $REFN.split.fa
 fi
 
