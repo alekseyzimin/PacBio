@@ -109,7 +109,7 @@ if [ ! -s $CHM13PATH/$CHM13 ] || [ ! -s $CHM13PATH/$CHM13MALE ] || [ ! -s $CHM13
   error_exit "reference genome files not found, please download them from ftp://ftp.ccb.jhu.edu/pub/alekseyz/chm13.tgz, unpack (tar -xvzf chm13.tgz), and specify the PATH to them with -c /path_to/"
 fi
 
-if [ ! $GENDER = "male" ] && [ ! $GENDER = "male" ];then
+if [ ! $GENDER = "male" ] && [ ! $GENDER = "female" ];then
   error_exit "please specify gender with -g male|female"
 fi
 

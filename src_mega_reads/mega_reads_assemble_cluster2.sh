@@ -676,7 +676,18 @@ fi
 if [ $FLYE_ASSEMBLY -gt 0 ];then
     if [ ! -s "$FLYE/assembly.fasta" ];then
         log "Running assembly with Flye"
-	$CA_PATH/flye -t $NUM_THREADS --nano-corr $COORDS.1$POSTFIX.fa -g $ESTIMATED_GENOME_SIZE --kmer-size 21 -m 2500 -o $FLYE -i 0 1>flye.log 2>&1
+        if [ $ESTIMATED_GENOME_SIZE -lt 10000000000 ];then
+	  $CA_PATH/flye -t $NUM_THREADS --nano-corr $COORDS.1$POSTFIX.fa -g $ESTIMATED_GENOME_SIZE --kmer-size 21 -m 2500 -o $FLYE -i 0 1>flye.log 2>&1
+        else
+          log "Running Flye in two stages for big genome >10Gbp"
+          if [ ! -s $FLYE/10-consensus/consensus.fasta ];then
+            $CA_PATH/flye --stop-after assembly -t $NUM_THREADS --nano-corr $COORDS.1$POSTFIX.fa -g $ESTIMATED_GENOME_SIZE --kmer-size 21 -m 2500 -o $FLYE -i 0 1>flye.log 2>&1 && \
+            mkdir -p $FLYE/10-consensus && \
+            mkdir -p $FLYE/20-repeat && \
+            cp $FLYE/00-assembly/draft_assembly.fasta $FLYE/10-consensus/consensus.fasta.tmp && mv $FLYE/10-consensus/consensus.fasta.tmp $FLYE/10-consensus/consensus.fasta
+          fi
+          $CA_PATH/flye --resume-from repeat -t $NUM_THREADS --nano-corr $COORDS.1$POSTFIX.fa -g $ESTIMATED_GENOME_SIZE --kmer-size 21 -m 2500 -o $FLYE -i 0 1>flye.log 2>&1
+        fi
     fi
     (cd $FLYE && $MYPATH/samba.sh -r assembly.fasta -q $LONGREADS -t $NUM_THREADS
     if [ -s assembly.fasta.scaffolds.fa ];then 
