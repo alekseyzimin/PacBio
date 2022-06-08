@@ -46,8 +46,8 @@ process_lines(@l);
 
 sub process_lines{
   my @lines=@_;
-  my $gap_before=100000000;
-  my $gap_after=100000000;
+  my $gap_before=100000000000;
+  my $gap_after=100000000000;
   if(@lines==1){
      @l2=split(/\s+/,$lines[0]);
     output_coords($gap_before,$gap_after,$l2[3],$l2[4],$l2[12],$l2[-2],$l2[-1],1);
@@ -71,7 +71,7 @@ sub process_lines{
     @l1=split(/\s+/,$lines[$#lines-1]);
     @l2=split(/\s+/,$lines[$#lines]);
     $gap_before=compute_gap($l1[1],$l2[0],$l2[-2]);
-    $gap_after=100000000;
+    $gap_after=100000000000;
     output_coords($gap_before,$gap_after,$l2[3],$l2[4],$l2[12],$l2[-2],$l2[-1],0);
   }
 }
@@ -138,8 +138,8 @@ sub output_coords{
   #restrict min and max gap size
   $gap_a=100 if($gap_a<100);
   $gap_b=100 if($gap_b<100);
-  $gap_a=10000 if($gap_a>10000);
-  $gap_b=10000 if($gap_b>10000);
+  $gap_a=1000 if($gap_a>1000);
+  $gap_b=1000 if($gap_b>1000);
 
   print "$scf $ctg $start $end $dir ",int($gap_b)," ",int($gap_a)," $len\n";
 }
