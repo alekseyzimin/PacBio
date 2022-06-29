@@ -265,8 +265,8 @@ if [ ! -e $PREFIX.scaffold.success ];then
   awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>=last_end) {print $0; last_end=$2}}' | \
   $MYPATH/extract_single_best_match_coords_file.pl | \
   awk '{if($4<$5){print $1-$4+1,$1-$4+$13+1,$13,$0}else{print $1-($13-$4),$1+$4,$13,$0}}' | \
-  sort -nrk3,3 -S 10% | \
-  perl -ane 'BEGIN{$n=0}{$contained=0;$st=$F[0]<0 ? 0:$F[0];$en=$F[1]>$F[14] ? $F[14]:$F[1];foreach $k(keys %start){$contained=1 if($st>$start{$k} && $en<$end{$k});}if(not($contained)){$start{$n}=$st;$end{$n}=$en;$n++;if($F[2]>int('$MIN_CONTIG')){print}}}'  | \
+  sort -k21,21 -nrk3,3 -S 10% | \
+  perl -ane 'BEGIN{$n=0;$ctg="";}{if(not($F[20] eq $ctg)){$ctg=$F[20];%start=();%end=();}$contained=0;$st=$F[0]<0 ? 0:$F[0];$en=$F[1]>$F[14] ? $F[14]:$F[1];foreach $k(keys %start){$contained=1 if($st>$start{$k} && $en<$end{$k});}if(not($contained)){$start{$n}=$st;$end{$n}=$en;$n++;if($F[2]>int('$MIN_CONTIG')){print}}}'  | \
   sort -k21,21 -k1,1n -S 10% | \
   perl -ane '{print join(" ",@F[3..$#F]),"\n"}' > $PREFIX.best.coords.tmp && \
   mv $PREFIX.best.coords.tmp $PREFIX.best.coords && \
