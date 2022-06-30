@@ -689,7 +689,7 @@ if [ $FLYE_ASSEMBLY -gt 0 ];then
           $CA_PATH/flye --resume-from repeat -t $NUM_THREADS --nano-corr $COORDS.1$POSTFIX.fa -g $ESTIMATED_GENOME_SIZE --kmer-size 21 -m 2500 -o $FLYE -i 0 1>flye.log 2>&1
         fi
     fi
-    (cd $FLYE && $MYPATH/samba.sh -r assembly.fasta -q $LONGREADS -t $NUM_THREADS
+    (cd $FLYE && $MYPATH/samba.sh -r assembly.fasta -q $LONGREADS -t $NUM_THREADS -n
     if [ -s assembly.fasta.scaffolds.fa ];then 
       mv assembly.fasta.scaffolds.fa assembly.scaffolds.fasta
     else

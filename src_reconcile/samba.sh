@@ -10,7 +10,7 @@ MIN_SCORE=60
 MIN_IDENTITY=0
 KMER=15
 SCORE=4
-NOBREAK="0"
+NOBREAK="1"
 ALN_PARAM="map-ont -N 0 "
 ALN_DATA="ont"
 POLISH_PARAM="--nano-raw"
@@ -72,7 +72,7 @@ function usage () {
   echo "-m <minimum matching length, default:5000>"
   echo "-o <maximum overhang, default:1000>"
   echo "-a <optional: allowed merges file in the format per line: contig1 contig2, only pairs of contigs listed will be considered for merging, useful for intrascaffold gap filling>"
-  echo "-n <optional: do not look for misassemblies in contigs>" 
+  echo "-f <optional: look for misassemblies in contigs and attempt to fix them>" 
 }
 
 if [ $# -lt 1 ];then
@@ -101,7 +101,10 @@ do
             ALN_DATA="$2"
             shift
             ;;
-        -n|--no-break)
+        -f|--fix)
+            NOBREAK="0"
+            ;;
+        -n|--nobreak)
             NOBREAK="1"
             ;;
         -m|--min-match)
