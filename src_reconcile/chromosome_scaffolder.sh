@@ -16,7 +16,7 @@ MERGE=100000
 MERGE_SEQ=0
 NO_BRK=0
 MIN_CONTIG=200
-MINIMAP_PARAM="-x map-pb"
+MINIMAP_PARAM="-x map-ont"
 SAMTOOLSMEM="1G"
 NOISE=1
 #low coverage threshold for breaking
@@ -43,6 +43,23 @@ function error_exit {
     exit "${2:-1}"
 }
 
+function usage {
+  echo "Usage: chromosome_scaffolder.sh"
+    echo "-r <string: reference genome> MANDATORY"
+    echo "-q <string: assembly to be scaffolded with the reference> MANDATORY"
+    echo "-t <int: number of threads>" 
+    echo "-i <float: minimum sequence similarity percentage: default 97>"
+    echo "-m <int: merge equence alignments slack: default 100000>"
+    echo "-nb do not align reads to query contigs and do not attempt to break at misassemblies: default off" 
+    echo "-v verbose"
+    echo "-c <int: minimum contig size to keep in final scaffolds, default 200>"
+    echo "-cl <coverage threshold for splitting at misassemblies: default auto>"
+    echo "-ch <repeat coverage threshold for splitting at misassemblies: default auto>"
+    echo "-s <string: reads to align to the assembly to check for misassemblies> MANDATORY unless -nb set"
+    echo "-hf Use Pacbio HIFI reads -- speeds up the alignment"
+    echo "-M attempt to fill unaligned gaps with reference contigs: defalut off"
+    echo "-h|-u|--help this message"
+}
 
 #parsing arguments
 while [[ $# > 0 ]]
@@ -104,21 +121,7 @@ do
             ;;
         -h|--help|-u|--usage)
             echo ""
-            echo "Usage: chromosome_scaffolder.sh"
-            echo "-r <string: reference genome> MANDATORY"
-            echo "-q <string: assembly to be scaffolded with the reference> MANDATORY"
-            echo "-t <int: number of threads>" 
-            echo "-i <float: minimum sequence similarity percentage: default 97>"
-            echo "-m <int: merge equence alignments slack: default 100000>"
-            echo "-nb do not align reads to query contigs and do not attempt to break at misassemblies: default off" 
-            echo "-v verbose"
-            echo "-c <int: minimum contig size to keep in final scaffolds, default 200>"
-            echo "-cl <coverage threshold for splitting at misassemblies: default auto>"
-            echo "-ch <repeat coverage threshold for splitting at misassemblies: default auto>"
-            echo "-s <string: reads to align to the assembly to check for misassemblies> MANDATORY unless -nb set"
-            echo "-hf Use Pacbio HIFI reads -- speeds up the alignment"
-            echo "-M attempt to fill unaligned gaps with reference contigs: defalut off"
-            echo "-h|-u|--help this message"
+            usage;
             echo ""
             exit 0
             ;;
@@ -134,6 +137,14 @@ REF_CHR=`basename $REF`
 HYB_CTG=`basename $QRY`.split
 HYB_POS=$HYB_CTG.posmap
 PREFIX=$REF_CHR.$HYB_CTG
+
+if [ ! -s $REF ];then
+  error_exit "Reference assembly $REF not found or size zero"
+fi
+
+if [ ! -s $REF ];then
+  error_exit "Assembly to be scaffolded $QRY not found or size zero"
+fi
 
 if [ ! -e $PREFIX.gaps.success ];then
   log "Computing gap coordinates in the reference"
@@ -212,7 +223,7 @@ fi
 if [ ! -e $PREFIX.break.success ];then
   log "Splitting query contigs at suspect locations"
   rm -f $PREFIX.align2.success
-  #first we figure out the coverage -- take the mode
+  #first we figure out the coverage -- take the most common coverage and divide by .8
   let AUTO_REP_COV_THRESH=`awk '{print $4}'  $HYB_POS.coverage | sort -n -S 10% |uniq -c| sort -nrk1,1 -S 10% |head -n 1 | awk '{print int($2/.8)}'`
   if [ $AUTO_REP_COV_THRESH -lt 2 ];then
     echo "Warning!  It appears that read coverage is very low.  We will be unable to find misassemblies reliably"
@@ -236,7 +247,7 @@ if [ ! -e $PREFIX.break.success ];then
 fi
 
 else #no_break
-ln -sf $HYB_CTG $HYB_CTG.broken
+  ln -sf $HYB_CTG $HYB_CTG.broken
 fi
 
 #now we re-align the broken contigs to the reference
@@ -266,7 +277,26 @@ if [ ! -e $PREFIX.scaffold.success ];then
   $MYPATH/extract_single_best_match_coords_file.pl | \
   awk '{if($4<$5){print $1-$4+1,$1-$4+$13+1,$13,$0}else{print $1-($13-$4),$1+$4,$13,$0}}' | \
   sort -k21,21 -nrk3,3 -S 10% | \
-  perl -ane 'BEGIN{$n=0;$ctg="";}{if(not($F[20] eq $ctg)){$ctg=$F[20];%start=();%end=();}$contained=0;$st=$F[0]<0 ? 0:$F[0];$en=$F[1]>$F[14] ? $F[14]:$F[1];foreach $k(keys %start){$contained=1 if($st>$start{$k} && $en<$end{$k});}if(not($contained)){$start{$n}=$st;$end{$n}=$en;$n++;if($F[2]>int('$MIN_CONTIG')){print}}}'  | \
+  perl -ane 'BEGIN{$n=0;$ctg="";}{
+    if(not($F[20] eq $ctg)){
+      $ctg=$F[20];
+      %start=();
+      %end=();
+      $n=0;
+    }
+    $contained=0;
+    $st=$F[0]<0 ? 0:$F[0];
+    $en=$F[1]>$F[14] ? $F[14]:$F[1];
+    foreach $k(keys %start){
+      $contained=1 if($st>$start{$k} && $en<$end{$k});
+    }
+    if(not($contained)){
+      $start{$n}=$st;
+      $end{$n}=$en;
+      $n++;
+      if($F[2]>int('$MIN_CONTIG')){print}
+    }
+  }'  | \
   sort -k21,21 -k1,1n -S 10% | \
   perl -ane '{print join(" ",@F[3..$#F]),"\n"}' > $PREFIX.best.coords.tmp && \
   mv $PREFIX.best.coords.tmp $PREFIX.best.coords && \
