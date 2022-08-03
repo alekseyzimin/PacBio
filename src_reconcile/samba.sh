@@ -139,12 +139,12 @@ error_exit "reference $REF does not exist or size zero"
 fi
 
 if [ $ALN_DATA = "ont" ];then
-  ALN_PARAM="map-ont -N 0 "
+  ALN_PARAM="map-ont -N 1 "
 elif [ $ALN_DATA = "pbclr" ];then
-  ALN_PARAM="map-ont -N 0 "
+  ALN_PARAM="map-ont -N 1 "
   POLISH_PARAM="--pacbio-raw"
 elif [ $ALN_DATA = "asm" ];then
-  ALN_PARAM="asm20 "
+  ALN_PARAM="asm20 -N 1 "
   MIN_IDENTITY=98
   KMER=20
 else
