@@ -125,7 +125,7 @@ if [ ! -s $COORDS.pcorrected.fa ];then
   log "Pre-correcting long reads"
   rm -f $COORDS.pcorrected.*.fa
   echo "#!/bin/bash" > correct_with_k_unitigs.sh
-  echo "numactl --interleave=all $MYPATH/create_mega_reads -s \$(($ESTIMATED_GENOME_SIZE*2)) -m $PKMER --psa-min 12 --stretch-cap 10000 -k $PKMER -u $PKUNITIGS -t $NUM_THREADS -B 1 --max-count 5000 -d 0.01 -r <(awk '{if(\$1 ~ /^>/) print \$1\"F\"; else print \$1}'  $PKUNITIGS)  -p <(zcat -f $LONGREADS | $MYPATH/fastqToFasta.pl | awk 'BEGIN{rn=0;}{if(\$1 ~ /^>/){print \">\"rn;rn++;}else{print \$1}}') -L $PKMER -o /dev/stdout 2>create_mega-reads.err |\\" >> correct_with_k_unitigs.sh
+  echo "$MYPATH/create_mega_reads -s \$(($ESTIMATED_GENOME_SIZE*2)) -m $PKMER --psa-min 12 --stretch-cap 10000 -k $PKMER -u $PKUNITIGS -t $NUM_THREADS -B 1 --max-count 5000 -d 0.01 -r <(awk '{if(\$1 ~ /^>/) print \$1\"F\"; else print \$1}'  $PKUNITIGS)  -p <(zcat -f $LONGREADS | $MYPATH/fastqToFasta.pl | awk 'BEGIN{rn=0;}{if(\$1 ~ /^>/){print \">\"rn;rn++;}else{print \$1}}') -L $PKMER -o /dev/stdout 2>create_mega-reads.err |\\" >> correct_with_k_unitigs.sh
   echo "$MYPATH/add_pb_seq.pl <(zcat -f $LONGREADS | $MYPATH/fastqToFasta.pl | awk 'BEGIN{rn=0;}{if(\$1 ~ /^>/){print \">\"rn;rn++;}else{print \$1}}') |\\" >> correct_with_k_unitigs.sh
   echo "$MYPATH/ufasta split -i /dev/stdin \\" >> correct_with_k_unitigs.sh
   for i in $(seq 1 $(($NUM_THREADS/16+2)));do
