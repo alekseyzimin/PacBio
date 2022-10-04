@@ -199,7 +199,7 @@ fi
 if [ ! -e $PREFIX.align1.success ];then
   log "Aligning query contigs to reference scaffolds"
   rm -f $PREFIX.filter1.success
-  $MYPATH/nucmer -t $NUM_THREADS -p $REF_CHR.$HYB_CTG -c 200 $REF_CHR.w_noise $HYB_CTG && touch $PREFIX.align1.success
+  $MYPATH/nucmer --batch 4000000000 -t $NUM_THREADS -p $REF_CHR.$HYB_CTG -c 200 $REF_CHR.w_noise $HYB_CTG && touch $PREFIX.align1.success
   #$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -k 21 -a -Q $REF $HYB_CTG 2>minimap2.err | $MYPATH/samToDelta > $REF_CHR.$HYB_CTG.delta && touch $PREFIX.align1.success
 fi
 
@@ -254,7 +254,7 @@ fi
 if [ ! -e $PREFIX.align2.success ];then
   log "Aligning contigs to the reference pass2"
   rm -f $PREFIX.filter2.success
-  $MYPATH/nucmer -t $NUM_THREADS -p $REF_CHR.$HYB_CTG.broken -c 200  $REF_CHR.w_noise $HYB_CTG.broken && touch $PREFIX.align2.success
+  $MYPATH/nucmer --batch 4000000000 -t $NUM_THREADS -p $REF_CHR.$HYB_CTG.broken -c 200  $REF_CHR.w_noise $HYB_CTG.broken && touch $PREFIX.align2.success
   #$MYPATH/../Flye/bin/flye-minimap2 -t $NUM_THREADS -k 21 -a -Q $REF $HYB_CTG.broken 2>minimap2.err | $MYPATH/samToDelta > $REF_CHR.$HYB_CTG.broken.delta && touch $PREFIX.align2.success
 fi
 
