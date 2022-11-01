@@ -11,7 +11,7 @@ MIN_IDENTITY=0
 KMER=15
 SCORE=4
 NOBREAK="1"
-ALN_PARAM="map-ont -N 1 "
+ALN_PARAM="map-ont "
 ALN_DATA="ont"
 POLISH_PARAM="--nano-raw"
 ALLOWED=""
@@ -139,12 +139,12 @@ error_exit "reference $REF does not exist or size zero"
 fi
 
 if [ $ALN_DATA = "ont" ];then
-  ALN_PARAM="map-ont -N 1 "
+  ALN_PARAM="map-ont "
 elif [ $ALN_DATA = "pbclr" ];then
-  ALN_PARAM="map-ont -N 1 "
+  ALN_PARAM="map-ont "
   POLISH_PARAM="--pacbio-raw"
 elif [ $ALN_DATA = "asm" ];then
-  ALN_PARAM="asm20 -N 1 "
+  ALN_PARAM="asm20 "
   MIN_IDENTITY=98
   KMER=20
 else
@@ -323,7 +323,7 @@ log "Deduplicating contigs"
 awk 'BEGIN{n=0}{if(length($NF)>100){print ">"n"\n"$NF;n++}}' $REFN.$QRYN.patches.uniq.links.txt > $REFN.$QRYN.patches.uniq.links.fa.tmp && mv $REFN.$QRYN.patches.uniq.links.fa.tmp $REFN.$QRYN.patches.uniq.links.fa && \
 MAX_PATCH=`ufasta sizes -H  $REFN.$QRYN.patches.uniq.links.fa | sort -nrk2,2 -S 10% | head -n 1 | awk '{print $2}'`
 $MYPATH/ufasta extract -f <($MYPATH/ufasta sizes -H $REFN.scaffolds.all.rejoin.fa | awk '{if($2<int("'$MAX_PATCH'")) print $1}') $REFN.scaffolds.all.rejoin.fa > $REFN.short_contigs.fa.tmp && mv $REFN.short_contigs.fa.tmp $REFN.short_contigs.fa && \
-ufasta extract -v -f <($MYPATH/../Flye/bin/flye-minimap2 -N 1 -x asm10 -k $KMER -t $NUM_THREADS $REFN.short_contigs.fa $REFN.$QRYN.patches.uniq.links.fa 2>/dev/null | awk '{idy=1;for(i=1;i<=NF;i++){if($i ~ /^dv/){split($i,a,":"); idy=1-a[3];}} if(($9-$8)/$7>.95 && idy > 0.95) print $6}') $REFN.scaffolds.all.rejoin.fa > $REFN.scaffolds.fa.tmp && mv $REFN.scaffolds.fa.tmp $REFN.scaffolds.fa && \
+ufasta extract -v -f <($MYPATH/../Flye/bin/flye-minimap2 -x asm10 -k $KMER -t $NUM_THREADS $REFN.short_contigs.fa $REFN.$QRYN.patches.uniq.links.fa 2>/dev/null | awk '{idy=1;for(i=1;i<=NF;i++){if($i ~ /^dv/){split($i,a,":"); idy=1-a[3];}} if(($9-$8)/$7>.95 && idy > 0.95) print $6}') $REFN.scaffolds.all.rejoin.fa > $REFN.scaffolds.fa.tmp && mv $REFN.scaffolds.fa.tmp $REFN.scaffolds.fa && \
 rm $REFN.short_contigs.fa $REFN.$QRYN.patches.uniq.links.fa && touch scaffold_deduplicate.success || error_exit "deduplicate failed"
 fi
 
