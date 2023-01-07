@@ -246,11 +246,12 @@ if [ ! -e $BASM.report.success ];then
   NUMERR=$(($NUMSUB+$NUMIND)) 
   QUAL=`echo $NUMERR $ASMSIZE | awk '{print 100-$1/$2*100}'`
   QV=`perl -e '{$erate='$NUMERR'/'$ASMSIZE';printf("%.2f\n", -10*log($erate+0.0000000001)/log(10))}'`
-  echo "Substitution Errors: $NUMSUB" > $BASM.report 
-  echo "Insertion/Deletion Errors: $NUMIND" >> $BASM.report 
+  echo "Stats BEFORE polishing:" > $BASM.report
+  echo "Substitution Errors Found: $NUMSUB" >> $BASM.report 
+  echo "Insertion/Deletion Errors Found: $NUMIND" >> $BASM.report 
   echo "Assembly Size: $ASMSIZE" >> $BASM.report 
-  echo "Consensus Quality: $QUAL" >> $BASM.report 
-  echo "Consensus QV: $QV" >> $BASM.report
+  echo "Consensus Quality Before Polishing: $QUAL" >> $BASM.report 
+  echo "Consensus QV Before Polishing: $QV" >> $BASM.report
   touch $BASM.report.success
 fi
 
