@@ -107,7 +107,7 @@ if(scalar(@_)==1){
     push(@rev_lens,$line_i[7]);
     push(@rev_quals,$line_i[7]*$line_i[9]);
     for(my $j=$i+1;$j<=$#matches_rev;$j++){
-      @line_j=split(/\s+/,$matches_fwd[$j]);
+      @line_j=split(/\s+/,$matches_rev[$j]);
       my $diff=abs($line_j[0]-$line_i[1]-$line_i[4]+$line_j[3]);
       if($diff>$max_gap_diff && $line_j[0]-$line_i[1]<$max_gap_allowed && $line_i[4]-$line_j[3]<$max_gap_allowed){
         $i=$j-1;
@@ -130,7 +130,7 @@ if(scalar(@_)==1){
     }
   }else{
     for(my $i=0;$i<=$#rev_rstarts;$i++){
-      print "$rev_rstarts[$i] $rev_rends[$i] | $rev_qstarts[$i] $rev_qends[$i] | ",$rev_rends[$i]-$rev_rstarts[$i]," ",$rev_qends[$i]-$rev_qstarts[$i]," | ",makeHundredths($rev_quals[$i]/$rev_lens[$i])," | $rlen $qlen | ",makeHundredths($rev_lens[$i]/$rlen*100)," ",makeHundredths($rev_lens[$i]/$qlen*100)," | $rname $qname\n";
+      print "$rev_rstarts[$i] $rev_rends[$i] | $rev_qstarts[$i] $rev_qends[$i] | ",$rev_rends[$i]-$rev_rstarts[$i]," ",-$rev_qends[$i]+$rev_qstarts[$i]," | ",makeHundredths($rev_quals[$i]/$rev_lens[$i])," | $rlen $qlen | ",makeHundredths($rev_lens[$i]/$rlen*100)," ",makeHundredths($rev_lens[$i]/$qlen*100)," | $rname $qname\n";
     }
   }
 }
