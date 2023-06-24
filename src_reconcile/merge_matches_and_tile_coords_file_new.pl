@@ -17,7 +17,7 @@ while($line=<STDIN>){
   if(not($f[-2] eq $scf)){
     if(not($scf eq "")){
       foreach my $ctg( keys %ctg_lines ){
-        merge_matches(split("\n",$ctg_lines{$ctg}));
+        merge_matches(sort by_first_field split("\n",$ctg_lines{$ctg}));
       }
     }
     %ctg_lines=();
@@ -27,7 +27,7 @@ while($line=<STDIN>){
 }
 my $ctg;
 foreach $ctg( keys %ctg_lines ){
-  merge_matches(split("\n",$ctg_lines{$ctg}));
+  merge_matches(sort by_first_field split("\n",$ctg_lines{$ctg}));
 }
 
 sub merge_matches{
@@ -64,6 +64,7 @@ if(scalar(@_)==1){
   my $fwd_len=0;
   if(scalar(@matches_fwd)>0){
   for($i=0;$i<$#matches_fwd;$i++){
+    #print "DEBUG start $matches_fwd[$i]\n";
     @line_i=split(/\s+/,$matches_fwd[$i]);
     $fwd_len+=$line_i[7]*$line_i[9]/100;
     push(@fwd_rstarts,$line_i[0]);
@@ -75,12 +76,19 @@ if(scalar(@_)==1){
     for($j=$i+1;$j<=$#matches_fwd;$j++){
       @line_j=split(/\s+/,$matches_fwd[$j]);
       my $diff=abs($line_j[0]-$line_i[1]-$line_j[3]+$line_i[4]);
-      if($diff>$max_gap_diff && $line_j[0]-$line_i[1]<$max_gap_allowed && $line_j[3]-$line_i[4]<$max_gap_allowed){
+      if($diff>$max_gap_diff || $line_j[0]-$line_i[1]>$max_gap_allowed || $line_j[3]-$line_i[4]>$max_gap_allowed){
+        #print "DEBUG $diff break $matches_fwd[$j]\n";
         $i=$j-1;
         $j=$#matches_fwd+2;
       }else{
+        #print "DEBUG $diff continue $matches_fwd[$j]\n";
         $fwd_rends[-1]=$line_j[1];
-        $fwd_qends[-1]=$line_j[4];
+        if($line_j[4]<$fwd_starts[-1]){
+          $fwd_starts[-1]=$line_j[4];
+        }elsif($line_j[4]>$fwd_qends[-1]){
+        #}else{
+          $fwd_qends[-1]=$line_j[4];
+        }
         $fwd_lens[-1]+=$line_j[7];
         $fwd_quals[-1]+=$line_j[7]*$line_j[9];
         $fwd_len+=$line_j[7]*$line_j[9]/100;
@@ -99,7 +107,7 @@ if(scalar(@_)==1){
   if(scalar(@matches_rev)>0){
   for(my $i=0;$i<$#matches_rev;$i++){
     @line_i=split(/\s+/,$matches_rev[$i]);
-    $rev_len=$line_i[7]*$line_i[9]/100;
+    $rev_len+=$line_i[7]*$line_i[9]/100;
     push(@rev_rstarts,$line_i[0]);
     push(@rev_rends,$line_i[1]);
     push(@rev_qstarts,$line_i[4]);
@@ -109,12 +117,17 @@ if(scalar(@_)==1){
     for(my $j=$i+1;$j<=$#matches_rev;$j++){
       @line_j=split(/\s+/,$matches_rev[$j]);
       my $diff=abs($line_j[0]-$line_i[1]-$line_i[4]+$line_j[3]);
-      if($diff>$max_gap_diff && $line_j[0]-$line_i[1]<$max_gap_allowed && $line_i[4]-$line_j[3]<$max_gap_allowed){
+      if($diff>$max_gap_diff || $line_j[0]-$line_i[1]>$max_gap_allowed || $line_i[4]-$line_j[3]>$max_gap_allowed){
         $i=$j-1;
         $j=$#matches_rev+1;
       }else{
         $rev_rends[-1]=$line_j[1];
-        $rev_qends[-1]=$line_j[3];
+        if($line_j[3]<$rev_qstarts[-1]){
+          $rev_qstarts[-1]=$line_j[3];
+        }elsif($line_j[3]>$rev_qends[-1]){
+        #}else{
+          $rev_qends[-1]=$line_j[3];
+        }
         $rev_lens[-1]+=$line_j[7];
         $rev_quals[-1]+=$line_j[7]*$line_j[9];
         $rev_len+=$line_j[7]*$line_j[9]/100;
@@ -123,16 +136,18 @@ if(scalar(@_)==1){
     }
   }
   }
-  if($fwd_len>$rev_len){
-#match is forward
+  #print "DEBUG $rname $qname $rlen $qlen $fwd_len $rev_len\n";
+  #if($fwd_len>$rev_len){
+#output forward combined matches 
     for(my $i=0;$i<=$#fwd_rstarts;$i++){
       print "$fwd_rstarts[$i] $fwd_rends[$i] | $fwd_qstarts[$i] $fwd_qends[$i] | ",$fwd_rends[$i]-$fwd_rstarts[$i]," ",$fwd_qends[$i]-$fwd_qstarts[$i]," | ",makeHundredths($fwd_quals[$i]/$fwd_lens[$i])," | $rlen $qlen | ",makeHundredths($fwd_lens[$i]/$rlen*100)," ",makeHundredths($fwd_lens[$i]/$qlen*100)," | $rname $qname\n";
     }
-  }else{
+  #}else{
+#output reverse combined matches
     for(my $i=0;$i<=$#rev_rstarts;$i++){
-      print "$rev_rstarts[$i] $rev_rends[$i] | $rev_qstarts[$i] $rev_qends[$i] | ",$rev_rends[$i]-$rev_rstarts[$i]," ",-$rev_qends[$i]+$rev_qstarts[$i]," | ",makeHundredths($rev_quals[$i]/$rev_lens[$i])," | $rlen $qlen | ",makeHundredths($rev_lens[$i]/$rlen*100)," ",makeHundredths($rev_lens[$i]/$qlen*100)," | $rname $qname\n";
+      print "$rev_rstarts[$i] $rev_rends[$i] | $rev_qends[$i] $rev_qstarts[$i] | ",$rev_rends[$i]-$rev_rstarts[$i]," ",$rev_qends[$i]-$rev_qstarts[$i]," | ",makeHundredths($rev_quals[$i]/$rev_lens[$i])," | $rlen $qlen | ",makeHundredths($rev_lens[$i]/$rlen*100)," ",makeHundredths($rev_lens[$i]/$qlen*100)," | $rname $qname\n";
     }
-  }
+  #}
 }
 }
 
@@ -147,9 +162,9 @@ sub makeHundredths{
 }
 
 sub by_first_field{
-my @f1=split(/\s+/,$a);
-my @f2=split(/\s+/,$b);
-return($f1[0] <=> $f2[0]);
+my ($f1,$junk)=split(/\s+/,$a);
+my ($f2,$junk)=split(/\s+/,$b);
+return($f1 <=> $f2);
 }
     
 	
