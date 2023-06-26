@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
-my $max_gap_diff =500;
-my $max_gap_allowed=10000000;
+my $max_gap_diff = 100000;
+my $max_gap_allowed = 10000000;
 if(defined($ARGV[0])){
   $max_gap_diff=$ARGV[0];
 }
@@ -16,11 +16,12 @@ while($line=<STDIN>){
   my @f=split(/\s+/,$line);
   if(not($f[-2] eq $scf)){
     if(not($scf eq "")){
-     my @output=();
+      #sort contigs by size
+      my @output=();
       foreach my $ctg( keys %ctg_lines ){
         push(@output,merge_matches(split("\n",$ctg_lines{$ctg})));
       }
-      print join("\n",sort by_first_field(@output)),"\n";
+      tile_and_print(@output);
     }
     %ctg_lines=();
     $scf=$f[-2];
@@ -31,7 +32,7 @@ my @output=();
 foreach my $ctg( keys %ctg_lines ){
   push(@output,merge_matches(split("\n",$ctg_lines{$ctg})));
 }
-print join("\n",sort by_first_field(@output)),"\n";
+tile_and_print(@output);
 
 
 sub merge_matches{
@@ -178,6 +179,34 @@ sub merge_matches{
   }#if scalar
 }
 
+#this sub removes containment from the merged output and prints
+#first we place the longest ones
+sub tile_and_print{
+  my @lines=sort by_eigth_field @_;
+  my @output_lines=();
+  my @interval_starts=();
+  my @interval_ends=();
+  foreach $l(@lines){
+    my @f=split(/\s+/,$l);
+    my $contained=0;
+    for(my $i=0;$i<=$#interval_starts;$i++){
+      if($f[0]>=$interval_starts[$i] && $f[1]<=$interval_ends[$i]){
+        $contained=1;
+        $i=$#interval_starts+1;
+        }
+    }
+    if(not($contained)){
+      push(@interval_starts,$f[0]);
+      push(@interval_ends,$f[1]);
+      push(@output_lines,$l);
+    }elsif($f[7]>20000){#if 20kb+ match output anyway even if contained
+      push(@output_lines,$l);
+    }
+  }
+  print join("\n",sort by_first_field @output_lines),"\n";
+}
+#here we tile 
+
 sub makeHundredths{
   my ($value) = @_;
   $value *= 100;
@@ -194,4 +223,9 @@ sub by_first_field{
   return($f1 <=> $f2);
 }
 
-	
+sub by_eigth_field{
+  my @f1=split(/\s+/,$a);
+  my @f2=split(/\s+/,$b);
+  return($f2[7] <=> $f1[7]);
+}
+
