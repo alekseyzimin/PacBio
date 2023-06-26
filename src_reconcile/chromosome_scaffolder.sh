@@ -213,7 +213,7 @@ if [ ! -e $PREFIX.merge1.success ];then
   log "Merging alignments"
   rm -f $PREFIX.break.success
   show-coords -lcHr $REF_CHR.$HYB_CTG.1.delta | \
-  $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
+  $MYPATH/merge_matches_and_tile_coords_file_new.pl $MERGE | \
   awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>last_end-10000) {print $0; last_end=$2}}' | \
   awk '{if($16>5 || $7>5000 ) print $0}' > $REF_CHR.$HYB_CTG.1.coords  && \
   cat $REF_CHR.$HYB_CTG.1.coords | perl -ane '{$chrom{$F[-1]}.="$F[-2] "}END{foreach $c(keys %chrom){my %temp=();@f=split(/\s+/,$chrom{$c});foreach $t(@f){$temp{$t}=1}print "$c ",scalar(keys %temp),"\n";}}' > $REF_CHR.$HYB_CTG.contig_chromosome_count.txt  && \
@@ -271,8 +271,9 @@ if [ ! -e $PREFIX.scaffold.success ];then
   log "Final scaffolding"
   touch $PREFIX.fillseq.fa
   $MYPATH/show-coords -lcHr -I $IDENTITY $REF_CHR.$HYB_CTG.broken.1.delta | \
-  $MYPATH/merge_matches_and_tile_coords_file.pl $MERGE | \
-  awk '{if($15>25 || $16>25 || $8>25000) print $0}' |\
+  $MYPATH/merge_matches_and_tile_coords_file_new.pl $MERGE | \
+  awk '{if($16>1 || $8>10000) print $0}' |\
+  $MYPATH/merge_matches_and_tile_coords_file_new.pl $(($MERGE+$MERGE)) | \
   awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>=last_end) {print $0; last_end=$2}}' | \
   $MYPATH/extract_single_best_match_coords_file.pl | \
   awk '{if($4<$5){print $1-$4+1,$1-$4+$13+1,$13,$0}else{print $1-($13-$4),$1+$4,$13,$0}}' | \

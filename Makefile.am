@@ -112,7 +112,7 @@ dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_cluster.sh src_mega_reads
 		    src_reconcile/reconcile_matches.pl \
 		    src_reconcile/samba.sh src_reconcile/close_scaffold_gaps.sh \
 		    src_reconcile/output_reconciled_scaffolds.pl \
-		    src_reconcile/merge_matches_and_tile_coords_file.pl \
+		    src_reconcile/merge_matches_and_tile_coords_file.pl src_reconcile/merge_matches_and_tile_coords_file_new.pl\
 		    src_mega_reads/reconcile_alignments.sh \
 		    src_mega_reads/split_long_unitigs.pl \
 		    src_mega_reads/recover_scaffolds.pl  src_mega_reads/trim_by_kunitigs.pl  src_mega_reads/trim_mega_reads.pl \

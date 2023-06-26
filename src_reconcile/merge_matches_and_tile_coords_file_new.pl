@@ -16,19 +16,23 @@ while($line=<STDIN>){
   my @f=split(/\s+/,$line);
   if(not($f[-2] eq $scf)){
     if(not($scf eq "")){
+     my @output=();
       foreach my $ctg( keys %ctg_lines ){
-        merge_matches(sort by_first_field split("\n",$ctg_lines{$ctg}));
+        push(@output,merge_matches(split("\n",$ctg_lines{$ctg})));
       }
+      print join("\n",sort by_first_field(@output)),"\n";
     }
     %ctg_lines=();
     $scf=$f[-2];
   }
   $ctg_lines{$f[-1]}.=$line;
 }
-my $ctg;
-foreach $ctg( keys %ctg_lines ){
-  merge_matches(sort by_first_field split("\n",$ctg_lines{$ctg}));
+my @output=();
+foreach my $ctg( keys %ctg_lines ){
+  push(@output,merge_matches(split("\n",$ctg_lines{$ctg})));
 }
+print join("\n",sort by_first_field(@output)),"\n";
+
 
 sub merge_matches{
 #this is an almost proper LCS code
@@ -39,8 +43,10 @@ sub merge_matches{
   my $qname;
   my $rlen;
   my $qlen;
+  my @output_local=();
   if(scalar(@_)==1){
-    print $_[0],"\n"
+    push(@output_local,$_[0]);
+    return(@output_local);
   }else{
     foreach my $line (@_){
       @currentFlds = split(/\s+/,$line);
@@ -138,37 +144,38 @@ sub merge_matches{
     if($fwd_len>$rev_len){
 #output forward combined matches 
       for(my $i=0;$i<=$#fwd_rstarts;$i++){
-        print "$fwd_rstarts[$i] $fwd_rends[$i] | $fwd_qstarts[$i] $fwd_qends[$i] | ",$fwd_rends[$i]-$fwd_rstarts[$i]," ",$fwd_qends[$i]-$fwd_qstarts[$i]," | ",makeHundredths($fwd_quals[$i]/$fwd_lens[$i])," | $rlen $qlen | ",makeHundredths($fwd_lens[$i]/$rlen*100)," ",makeHundredths($fwd_lens[$i]/$qlen*100)," | $rname $qname\n";
+        push(@output_local,"$fwd_rstarts[$i] $fwd_rends[$i] | $fwd_qstarts[$i] $fwd_qends[$i] | ".($fwd_rends[$i]-$fwd_rstarts[$i])." ".($fwd_qends[$i]-$fwd_qstarts[$i])." | ".makeHundredths($fwd_quals[$i]/$fwd_lens[$i])." | $rlen $qlen | ".makeHundredths($fwd_lens[$i]/$rlen*100)." ".makeHundredths($fwd_lens[$i]/$qlen*100)." | $rname $qname");
       }
 #then output reverse matches that are not contained in the forward matches
       for(my $i=0;$i<=$#rev_rstarts;$i++){
-        my $output=1;
+        my $to_output=1;
         for(my $j=0;$j<=$#fwd_rstarts;$j++){
           if($rev_rstarts[$i]>=$fwd_rstarts[$j] && $rev_rends[$i]<=$fwd_rends[$j]){
-            $output=0;
+            $to_output=0;
             $j=$#fwd_rstarts+1;
           }
         }
-        print "$rev_rstarts[$i] $rev_rends[$i] | $rev_qends[$i] $rev_qstarts[$i] | ",$rev_rends[$i]-$rev_rstarts[$i]," ",$rev_qends[$i]-$rev_qstarts[$i]," | ",makeHundredths($rev_quals[$i]/$rev_lens[$i])," | $rlen $qlen | ",makeHundredths($rev_lens[$i]/$rlen*100)," ",makeHundredths($rev_lens[$i]/$qlen*100)," | $rname $qname\n" if($output);
+        push(@output_local,"$rev_rstarts[$i] $rev_rends[$i] | $rev_qends[$i] $rev_qstarts[$i] | ".($rev_rends[$i]-$rev_rstarts[$i])." ".($rev_qends[$i]-$rev_qstarts[$i])." | ".makeHundredths($rev_quals[$i]/$rev_lens[$i])." | $rlen $qlen | ".makeHundredths($rev_lens[$i]/$rlen*100)." ".makeHundredths($rev_lens[$i]/$qlen*100)." | $rname $qname") if($to_output);
       }
     }else{
 #output reverse combined matches
       for(my $i=0;$i<=$#rev_rstarts;$i++){
-        print "$rev_rstarts[$i] $rev_rends[$i] | $rev_qends[$i] $rev_qstarts[$i] | ",$rev_rends[$i]-$rev_rstarts[$i]," ",$rev_qends[$i]-$rev_qstarts[$i]," | ",makeHundredths($rev_quals[$i]/$rev_lens[$i])," | $rlen $qlen | ",makeHundredths($rev_lens[$i]/$rlen*100)," ",makeHundredths($rev_lens[$i]/$qlen*100)," | $rname $qname\n";
+        push(@output_local,"$rev_rstarts[$i] $rev_rends[$i] | $rev_qends[$i] $rev_qstarts[$i] | ".($rev_rends[$i]-$rev_rstarts[$i])." ".($rev_qends[$i]-$rev_qstarts[$i])." | ".makeHundredths($rev_quals[$i]/$rev_lens[$i])." | $rlen $qlen | ".makeHundredths($rev_lens[$i]/$rlen*100)." ".makeHundredths($rev_lens[$i]/$qlen*100)." | $rname $qname");
       }
 #then output forward matches that are not contained in the reverse matches
       for(my $i=0;$i<=$#fwd_rstarts;$i++){
-        my $outut=1;
+        my $to_output=1;
         for(my $j=0;$j<=$#rev_rstarts;$j++){
           if($fwd_rstarts[$j]>=$rev_rstarts[$i] && $fwd_rends[$j]<=$rev_rends[$i]){
-            $output=0;
+            $to_output=0;
             $j=$#rev_rstarts+1;
           }
         }
-        print "$fwd_rstarts[$i] $fwd_rends[$i] | $fwd_qstarts[$i] $fwd_qends[$i] | ",$fwd_rends[$i]-$fwd_rstarts[$i]," ",$fwd_qends[$i]-$fwd_qstarts[$i]," | ",makeHundredths($fwd_quals[$i]/$fwd_lens[$i])," | $rlen $qlen | ",makeHundredths($fwd_lens[$i]/$rlen*100)," ",makeHundredths($fwd_lens[$i]/$qlen*100)," | $rname $qname\n" if($output);
+        push(@output_local,"$fwd_rstarts[$i] $fwd_rends[$i] | $fwd_qstarts[$i] $fwd_qends[$i] | ".($fwd_rends[$i]-$fwd_rstarts[$i])." ".($fwd_qends[$i]-$fwd_qstarts[$i])." | ".makeHundredths($fwd_quals[$i]/$fwd_lens[$i])." | $rlen $qlen | ".makeHundredths($fwd_lens[$i]/$rlen*100)." ".makeHundredths($fwd_lens[$i]/$qlen*100)." | $rname $qname") if($to_output);
       }
-    }
-  }
+    }#else
+  return(@output_local);
+  }#if scalar
 }
 
 sub makeHundredths{
