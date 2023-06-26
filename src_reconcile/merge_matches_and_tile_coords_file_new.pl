@@ -182,7 +182,7 @@ sub merge_matches{
 #this sub removes containment from the merged output and prints
 #first we place the longest ones
 sub tile_and_print{
-  my @lines=sort by_eigth_field @_;
+  my @lines=sort by_seventh_field_rev @_;
   my @output_lines=();
   my @interval_starts=();
   my @interval_ends=();
@@ -196,8 +196,23 @@ sub tile_and_print{
         }
     }
     if(not($contained)){
-      push(@interval_starts,$f[0]);
-      push(@interval_ends,$f[1]);
+      my $overlap=0;
+      for(my $i=0;$i<=$#interval_starts && $overlap==0;$i++){
+        #check for overlaps
+        if($f[0]<=$interval_starts[$i] && $f[1]>=$interval_starts[$i]){
+          #covers beginning
+          $interval_starts[$i]=$f[0];
+          $overlap=1;
+        }elsif($f[0]<=$interval_ends[$i] && $f[1]>=$interval_ends[$i]){
+          #covers end
+          $interval_ends[$i]=$f[1];
+          $overlap=1;
+        }
+      }
+      if(not($overlap)){#no overlap
+        push(@interval_starts,$f[0]);
+        push(@interval_ends,$f[1]);
+      }
       push(@output_lines,$l);
     }elsif($f[7]>20000){#if 20kb+ match output anyway even if contained
       push(@output_lines,$l);
@@ -223,9 +238,9 @@ sub by_first_field{
   return($f1 <=> $f2);
 }
 
-sub by_eigth_field{
+sub by_seventh_field_rev{
   my @f1=split(/\s+/,$a);
   my @f2=split(/\s+/,$b);
-  return($f2[7] <=> $f1[7]);
+  return($f2[6] <=> $f1[6]);
 }
 
