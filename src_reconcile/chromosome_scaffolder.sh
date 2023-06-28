@@ -183,7 +183,7 @@ if [ ! -e $PREFIX.readalign.success ];then
   log "Mapping reads to query contigs"
   rm -f $PREFIX.coverage.success
   if [[ $READS = *.fa ]] || [[ $READS = *.fasta ]] || [[ $READS = *.fastq ]];then
-  $MYPATH/../Flye/bin/flye-minimap2 $MINIMAP_PARAM -t $NUM_THREADS -N 1 -a $HYB_CTG $READS 2>minimap.err | gzip -c -1 > $PREFIX.sam.gz.tmp  && mv $PREFIX.sam.gz.tmp $PREFIX.sam.gz && touch $PREFIX.readalign.success
+  $MYPATH/../Flye/bin/flye-minimap2 $MINIMAP_PARAM -t $NUM_THREADS --secondary=no -a $HYB_CTG $READS 2>minimap.err | gzip -c -1 > $PREFIX.sam.gz.tmp  && mv $PREFIX.sam.gz.tmp $PREFIX.sam.gz && touch $PREFIX.readalign.success
   else
   error_exit "Wrong type/extension for the $READS file, must be .fa, .fasta or .fastq"
   fi
