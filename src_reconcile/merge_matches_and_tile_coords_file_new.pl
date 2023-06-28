@@ -188,7 +188,7 @@ sub tile_and_print{
   my @interval_starts=();
   my @interval_ends=();
   foreach $l(@lines){
-    print "DEBUG $l\n";
+    #print "DEBUG $l\n";
     my @f=split(/\s+/,$l);
     my $contained=0;
     for(my $i=0;$i<=$#interval_starts;$i++){
