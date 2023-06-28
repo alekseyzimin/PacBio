@@ -111,7 +111,7 @@ fi
 if [ ! -e polish_replace_consensus.success ];then
 log "Polishing consensus"
 if [ $MERGE -gt 0 ];then
-show-coords -lcHr -I $SIMILARITY_RATE -L 100 $DELTAFILE.1.delta |  merge_matches_and_tile_coords_file_new.pl $MERGE 2>/dev/null | reconcile_consensus.pl $REFN.$QRYN.all.fa $QRYN > $REFN.$QRYN.all.polished.fa && \
+show-coords -lcHr -I $SIMILARITY_RATE -L 100 $DELTAFILE.1.delta |  merge_matches_and_tile_coords_file_new.pl $MERGE | grep -v CONTAINED$ | reconcile_consensus.pl $REFN.$QRYN.all.fa $QRYN > $REFN.$QRYN.all.polished.fa && \
 touch polish_replace_consensus.success && rm -f polish_self_map.success || exit
 else
 show-coords -lcHr -I $SIMILARITY_RATE -L 100 $DELTAFILE.1.delta |  reconcile_consensus.pl $REFN.$QRYN.all.fa $QRYN > $REFN.$QRYN.all.polished.fa && \
@@ -130,7 +130,7 @@ fi
 
 if [ ! -e polish_filter_map.success ];then
 log "Removing duplicates"
-awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $REFN.$QRYN.sasm_to_sasm.delta | delta-filter -i $SIMILARITY_RATE -q -o 20 /dev/stdin | show-coords -lcHr /dev/stdin | awk '{if($12>$13) print $0}' |merge_matches_and_tile_coords_file_new.pl 1000 2>/dev/null| perl -ane '{$cov{$F[-1]}+=$F[15] if($F[15]>=5);}END{foreach $k(keys %cov){print $k,"\n" if($cov{$k}>75);}}' > $REFN.$QRYN.sduplicates.txt && \
+awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $REFN.$QRYN.sasm_to_sasm.delta | delta-filter -i $SIMILARITY_RATE -q -o 20 /dev/stdin | show-coords -lcHr /dev/stdin | awk '{if($12>$13) print $0}' |merge_matches_and_tile_coords_file_new.pl 1000 |grep -v CONTAINED$| perl -ane '{$cov{$F[-1]}+=$F[15] if($F[15]>=5);}END{foreach $k(keys %cov){print $k,"\n" if($cov{$k}>75);}}' > $REFN.$QRYN.sduplicates.txt && \
 awk 'BEGIN{p=1;}{if($1 ~/^>/){if(substr($1,2)==$2) p=0; else p=1;} if(p==1) print $0;}' $REFN.$QRYN.sasm_to_sasm.delta| show-coords -lcH /dev/stdin | awk '{if($12>$13 && $10>98 && $16>90) print $NF}' >> $REFN.$QRYN.sduplicates.txt && \
 ufasta extract -v -f $REFN.$QRYN.sduplicates.txt $REFN.$QRYN.all.polished.fa > $REFN.$QRYN.all.polished.deduplicated.fa && \
 touch polish_filter_map.success || exit

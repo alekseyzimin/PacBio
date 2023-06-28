@@ -188,6 +188,7 @@ sub tile_and_print{
   my @interval_starts=();
   my @interval_ends=();
   foreach $l(@lines){
+    print "DEBUG $l\n";
     my @f=split(/\s+/,$l);
     my $contained=0;
     for(my $i=0;$i<=$#interval_starts;$i++){
@@ -221,8 +222,8 @@ sub tile_and_print{
       push(@output_contained_lines,$l);
     } 
   }
-  print join("\n",sort by_first_field @output_lines),"\n";
-  print STDERR join("\n",sort by_first_field @output_contained_lines),"\n";
+  print  join("\n",sort by_first_field @output_lines),"\n";
+  print  join(" CONTAINED\n",sort by_first_field @output_contained_lines)," CONTAINED\n" if(scalar(@output_contained_lines)>0);
 }
 #here we tile 
 
