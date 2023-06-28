@@ -184,6 +184,7 @@ sub merge_matches{
 sub tile_and_print{
   my @lines=sort by_seventh_field_rev @_;
   my @output_lines=();
+  my @output_contained_lines=();
   my @interval_starts=();
   my @interval_ends=();
   foreach $l(@lines){
@@ -216,9 +217,12 @@ sub tile_and_print{
       push(@output_lines,$l);
     }elsif($f[7]>20000){#if 20kb+ match output anyway even if contained
       push(@output_lines,$l);
-    }
+    }else{
+      push(@output_contained_lines,$l);
+    } 
   }
   print join("\n",sort by_first_field @output_lines),"\n";
+  print STDERR join("\n",sort by_first_field @output_contained_lines),"\n";
 }
 #here we tile 
 

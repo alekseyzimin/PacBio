@@ -271,9 +271,9 @@ if [ ! -e $PREFIX.scaffold.success ];then
   log "Final scaffolding"
   touch $PREFIX.fillseq.fa
   $MYPATH/show-coords -lcHr -I $IDENTITY $REF_CHR.$HYB_CTG.broken.1.delta | \
-  $MYPATH/merge_matches_and_tile_coords_file_new.pl $MERGE | \
+  $MYPATH/merge_matches_and_tile_coords_file_new.pl $MERGE 2>/dev/null| \
   awk '{if($16>1 || $8>10000) print $0}' |\
-  $MYPATH/merge_matches_and_tile_coords_file_new.pl $(($MERGE+$MERGE)) | \
+  $MYPATH/merge_matches_and_tile_coords_file_new.pl $(($MERGE+$MERGE)) 2>/dev/null| \
   awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>=last_end) {print $0; last_end=$2}}' | \
   $MYPATH/extract_single_best_match_coords_file.pl | \
   awk '{if($4<$5){print $1-$4+1,$1-$4+$13+1,$13,$0}else{print $1-($13-$4),$1+$4,$13,$0}}' | \
