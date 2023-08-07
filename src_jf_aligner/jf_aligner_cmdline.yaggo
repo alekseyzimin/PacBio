@@ -1,8 +1,8 @@
-purpose "Align PacBio reads and SuperReads"
+purpose "jf_aligner computes approximate alignments between reference and query DNA sequences "
 description ""
 
 option("s", "size") {
-  description "Number of k-mers in SuperReads"
+  description "Approximatge size of the reference sequence"
   uint64; required; suffix }
 option("m", "mer") {
   description "Mer size"
@@ -70,8 +70,8 @@ option("k", "k-mer") {
   description "Length of k-mer used to create k-unitigs"
   uint32 }
 option("r", "superreads") {
-  description "SuperReads sequence file"
+  description "reference sequence file"
   c_string; typestr "path"; multiple }
-option("p", "pacbio") {
-  description "PacBio read sequence file"
+option("q", "pacbio") {
+  description "query sequence file"
   c_string; typestr "path"; multiple }
