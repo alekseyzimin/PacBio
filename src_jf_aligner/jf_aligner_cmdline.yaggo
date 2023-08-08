@@ -1,17 +1,17 @@
-purpose "jf_aligner computes approximate alignments between reference and query DNA sequences "
+purpose "jf_aligner computes approximate alignments between reference and query DNA sequences"
 description ""
 
 option("s", "size") {
   description "Approximate size of the reference sequence"
   uint64; required; suffix }
 option("m", "mer") {
-  description "Mer size"
-  uint32; required }
+  description "Alignment K-mer size -- the best practice is to use k-mer size such that the number of distinct k-mer s of that size was about greater or equal to the size of the reference.  4^15 ~ 1 Billion, so 15-mers are good for reference up to 1 Billion in size, 16-mers are good for references up to 4 Billion, etc. "
+  uint32; default 15 }
 option("F", "fine-mer") {
-  description "Mer size for fine alignment"
+  description "Mer size for fine alignment (experimental)"
   uint32 }
 option("psa-min") {
-  description "Min suffix length in SA. Increase for speed up at the cost of memory"
+  description "Min suffix length in SA. Increase for speed up at the cost of memoryi, minimum 12"
   uint32; default 13 }
 option("t", "threads") {
   description "Number of threads"
@@ -29,10 +29,10 @@ option("window-size") {
   description "Check stretch on every window of k-mer this size"
   uint32; default 1 }
 option("forward") {
-  description "Show all matches forward (reverse super read name if needed)"
+  description "Show all matches in forward direction"
   off }
 option("B", "bases-matching") {
-  description "Minimum percent of bases matching"
+  description "Minimum percent of bases matching exactly "
   double; default 17.0 }
 option("M", "mers-matching") {
   description "Minimum percent of k-mers matching"
@@ -56,21 +56,21 @@ option("0", "zero-match") {
   description "Output header even if query has no match (for standard or compact output format only)"
   off }
 option("max-count") {
-  description "Maximum mer count in super read to be used for alignment"
+  description "Maximum count of K-mer in reference sequence to be used for alignment. K-mers with count above this value are not used for alignment "
   uint32; default 5000 }
 option("l", "unitigs-lengths") {
-  description "Length of k-unitigs"
+  description "Length of k-unitigs (uncommon use case)"
   imply "forward"
   c_string; typestr "path" }
 option("u", "unitigs-sequences") {
-  description "Fasta file containing the sequence of the k-unitigs"
+  description "Fasta file containing the sequence of the k-unitigs (uncommon use case)"
   imply "forward"; conflict "unitigs-lengths"
   c_string; typestr "path" }
 option("f", "format") {
   description "Output format 0:standard 1:compact 2:PAF"
   uint32; default 1 }
 option("k", "k-mer") {
-  description "Length of k-mer used to create k-unitigs"
+  description "Length of k-mer used to create k-unitigs (uncommon use case)"
   uint32 }
 option("r", "reference") {
   description "reference sequence file"
