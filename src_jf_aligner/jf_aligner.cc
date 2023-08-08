@@ -39,32 +39,64 @@ void print_coords_header(Multiplexer* m, bool compact) {
 }
 
 void print_coords(Multiplexer::ostream& out, const std::string& pb_name, const size_t pb_size,
-                  const bool compact, const align_pb::coords_info_type& coords,
-                  const std::vector<int>& order, bool zero_skip = true) {
+                  const size_t format, const align_pb::coords_info_type& coords,
+                  const std::vector<int>& order, bool zero_skip = true, const size_t num_matches = 0) {
   const size_t nb_lines = coords.size();
+  size_t min_output_coverage = 0;
   if(nb_lines == 0 && zero_skip) return;
-
-  if(compact)
-    out << ">" << nb_lines << " " << pb_name << "\n";
-  for(size_t i = 0; i < nb_lines; ++i) {
-    const auto& it = coords[order[i]];
-    if(!compact)
-      out << pb_name << " ";
-    out << it.rs << " " << it.re << " " << it.qs << " " << it.qe << " "
-        << it.nb_mers << " "
-        << it.pb_cons << " " << it.sr_cons << " "
-        << it.pb_cover << " " << it.sr_cover << " "
-        << pb_size << " " << it.ql
-        << " " << it.stretch << " " << it.offset << " " << it.avg_err;
+  //format is 0 is compact, 1 is full and 2 is paf
+  if(format==2){//PAF
+    if(num_matches > 0){//determine minimum output coverage;
+      std::vector<size_t> coverages;
+      for(size_t i = 0; i < nb_lines; ++i) {
+        const auto& it = coords[order[i]];
+        coverages.push_back(it.pb_cover);
+      }
+      if(coverages.size() > num_matches){
+        std::sort(coverages.begin(),coverages.end());
+        min_output_coverage = coverages[coverages.size()-num_matches];
+      }
+    }
+    size_t matches_output = 0;
+    for(size_t i = 0; i < nb_lines; ++i) {
+      const auto& it = coords[order[i]];
+      char* ori="+";
+      size_t astart=it.qs;
+      size_t aend=it.qe;
+      if(astart>aend){
+        ori="-";
+        astart=it.qe;
+        aend=it.qs;
+      }
+      if((it.pb_cover >= min_output_coverage && matches_output <= num_matches) || num_matches == 0){
+        out << pb_name << "\t" << pb_size << "\t" << it.rs << "\t" << it.re << "\t" <<  ori << "\t" << it.name_u->name << "\t" << it.ql << "\t" << astart << "\t" << aend << "\t" << it.pb_cover << "\t" << it.nb_mers << "\t255\n";
+        matches_output++;
+      }
+      //out << "ALL matches:" << matches_output << " min_cov:" << min_output_coverage << " " << pb_name << "\t" << pb_size << "\t" << it.rs << "\t" << it.re << "\t" <<  ori << "\t" << it.name_u->name << "\t" << it.ql << "\t" << astart << "\t" << aend << "\t" << it.pb_cover << "\t" << it.nb_mers << "\t255\n";
+    }
+  }else{
+      if(format==1)
+      out << ">" << nb_lines << " " << pb_name << "\n";
+      for(size_t i = 0; i < nb_lines; ++i) {
+        const auto& it = coords[order[i]];
+        if(format==0)
+          out << pb_name << " ";
+        out << it.rs << " " << it.re << " " << it.qs << " " << it.qe << " "
+            << it.nb_mers << " "
+            << it.pb_cons << " " << it.sr_cons << " "
+            << it.pb_cover << " " << it.sr_cover << " "
+            << pb_size << " " << it.ql
+            << " " << it.stretch << " " << it.offset << " " << it.avg_err;
 //    if(!compact)
 //      out << " " << pb_name;
-    assert(it.name_u == &it.qfrag->fwd || it.name_u == &it.qfrag->bwd);
-    out << " " << it.name_u->name;
-    auto mit = it.kmers_info.cbegin();
-    auto bit = it.bases_info.cbegin();
-    for( ; mit != it.kmers_info.cend(); ++mit, ++bit)
-      out << " " << *mit << ":" << *bit;
-    out << "\n";
+        assert(it.name_u == &it.qfrag->fwd || it.name_u == &it.qfrag->bwd);
+        out << " " << it.name_u->name;
+        auto mit = it.kmers_info.cbegin();
+        auto bit = it.bases_info.cbegin();
+        for( ; mit != it.kmers_info.cend(); ++mit, ++bit)
+          out << " " << *mit << ":" << *bit;
+        out << "\n";
+      }
   }
   out.end_record();
 }
@@ -151,7 +183,7 @@ void print_alignments(read_parser* reads, Multiplexer* details_m, Multiplexer* c
       for(int i = 0; i < n; ++i)
         sort_array[i] = i;
       std::sort(sort_array.begin(), sort_array.begin() + n, [coords] (int i, int j) { return (*coords)[i] < (*coords)[j]; });
-      print_coords(*coords_io, name, pb_size, args.compact_flag, *coords, sort_array, skip_zero);
+      print_coords(*coords_io, name, pb_size, args.format_arg, *coords, sort_array, skip_zero, args.num_matches_arg);
       if(details_io) print_details(*details_io, name, aligner.frags_pos());
     }
   }
@@ -199,7 +231,7 @@ int main(int argc, char *argv[])
   // Read the super reads
   if(args.fine_mer_given)
     short_mer_type::k(args.fine_mer_arg);
-  auto psa = superread_parse(args.superreads_arg.cbegin(), args.superreads_arg.cend(),
+  auto psa = superread_parse(args.reference_arg.cbegin(), args.reference_arg.cend(),
                              std::min(short_mer_type::k(), args.psa_min_arg), mer_dna::k());
 
   // Prepare I/O
@@ -218,8 +250,8 @@ int main(int argc, char *argv[])
     short_align_data.reset(new fine_aligner(psa, args.fine_mer_arg, unitigs_lengths.get(), args.k_mer_arg));
 
   // Output header if necessary
-  if(!args.no_header_flag)
-    print_coords_header(coords.multiplexer(), args.compact_flag);
+  if(!args.no_header_flag && args.format_arg <= 1)
+    print_coords_header(coords.multiplexer(), args.format_arg);
 
   // Output alignements
   std::vector<std::thread> threads;

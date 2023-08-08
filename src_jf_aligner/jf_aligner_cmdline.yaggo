@@ -2,7 +2,7 @@ purpose "jf_aligner computes approximate alignments between reference and query 
 description ""
 
 option("s", "size") {
-  description "Approximatge size of the reference sequence"
+  description "Approximate size of the reference sequence"
   uint64; required; suffix }
 option("m", "mer") {
   description "Mer size"
@@ -12,7 +12,7 @@ option("F", "fine-mer") {
   uint32 }
 option("psa-min") {
   description "Min suffix length in SA. Increase for speed up at the cost of memory"
-    uint32; default 13 }
+  uint32; default 13 }
 option("t", "threads") {
   description "Number of threads"
   uint32; default 1 }
@@ -28,29 +28,32 @@ option("stretch-cap") {
 option("window-size") {
   description "Check stretch on every window of k-mer this size"
   uint32; default 1 }
-option("f", "forward") {
+option("forward") {
   description "Show all matches forward (reverse super read name if needed)"
   off }
 option("B", "bases-matching") {
-  description "Filter base on percent of bases matching"
+  description "Minimum percent of bases matching"
   double; default 17.0 }
 option("M", "mers-matching") {
-  description "Filter base on percent of k-mer matching"
+  description "Minimum percent of k-mers matching"
   double; default 0.0 }
+option("N", "num-matches") {
+  description "Maximum number of best matches output 0:unlimited, for PAF output format only"
+  uint32; default 0 }
 option("details") {
   description "Output files with detail k-mer information"
   c_string; typestr "path" }
-option("coords") {
-  description "Output files with math coordinate information (stdout)"
+option("o", "coords") {
+  description "Output file with approximate alignment coordinates information (stdout)"
   c_string; typestr "path"; }
 option("max-match") {
-  description "Output secondary matches"
+  description "Output more than a single match between any two sequences"
   off }
 option("H", "no-header") {
-  description "Do not output header"
+  description "Do not output header (for standard or compact output format only)"
   off }
 option("0", "zero-match") {
-  description "Output header even if query has no match"
+  description "Output header even if query has no match (for standard or compact output format only)"
   off }
 option("max-count") {
   description "Maximum mer count in super read to be used for alignment"
@@ -63,13 +66,13 @@ option("u", "unitigs-sequences") {
   description "Fasta file containing the sequence of the k-unitigs"
   imply "forward"; conflict "unitigs-lengths"
   c_string; typestr "path" }
-option("compact") {
-  description "Compact output format"
-  on }
+option("f", "format") {
+  description "Output format 0:standard 1:compact 2:PAF"
+  uint32; default 1 }
 option("k", "k-mer") {
   description "Length of k-mer used to create k-unitigs"
   uint32 }
-option("r", "superreads") {
+option("r", "reference") {
   description "reference sequence file"
   c_string; typestr "path"; multiple }
 option("q", "pacbio") {
