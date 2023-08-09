@@ -43,6 +43,12 @@ void print_coords(Multiplexer::ostream& out, const std::string& pb_name, const s
                   const std::vector<int>& order, bool zero_skip = true, const size_t num_matches = 0) {
   const size_t nb_lines = coords.size();
   size_t min_output_coverage = 0;
+  size_t matchq = 60;
+  if(nb_lines == 2) 
+    matchq = 30;
+  else
+    if(nb_lines > 2) 
+      matchq = 0;
   if(nb_lines == 0 && zero_skip) return;
   //format is 0 is compact, 1 is full and 2 is paf
   if(format==2){//PAF
@@ -69,7 +75,7 @@ void print_coords(Multiplexer::ostream& out, const std::string& pb_name, const s
         aend=it.qs;
       }
       if((it.pb_cover >= min_output_coverage && matches_output <= num_matches) || num_matches == 0){
-        out << pb_name << "\t" << pb_size << "\t" << it.rs << "\t" << it.re << "\t" <<  ori << "\t" << it.name_u->name << "\t" << it.ql << "\t" << astart << "\t" << aend << "\t" << it.pb_cover << "\t" << it.nb_mers << "\t255\n";
+        out << pb_name << "\t" << pb_size << "\t" << it.rs << "\t" << it.re << "\t" <<  ori << "\t" << it.name_u->name << "\t" << it.ql << "\t" << astart << "\t" << aend << "\t" << it.pb_cover << "\t" << it.nb_mers << "\t" << matchq << "\n";
         matches_output++;
       }
       //out << "ALL matches:" << matches_output << " min_cov:" << min_output_coverage << " " << pb_name << "\t" << pb_size << "\t" << it.rs << "\t" << it.re << "\t" <<  ori << "\t" << it.name_u->name << "\t" << it.ql << "\t" << astart << "\t" << aend << "\t" << it.pb_cover << "\t" << it.nb_mers << "\t255\n";

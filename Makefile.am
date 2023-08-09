@@ -25,17 +25,14 @@ YAGGO_SOURCES = # Append all file to be built by yaggo
 ##################
 # Build binaries #
 ##################
-bin_PROGRAMS += bin/jf_aligner bin/create_mega_reads bin/longest_path	\
-                bin/merge_coords 
+bin_PROGRAMS += bin/jf_aligner bin/merge_coords 
 
 noinst_HEADERS += src_jf_aligner/zstr.hpp src_jf_aligner/strict_fstream.hpp \
 		  src_jf_aligner/superread_parser.hpp			\
                   src_jf_aligner/super_read_name.hpp			\
                   src_jf_aligner/fine_aligner.hpp			\
                   src_jf_aligner/coarse_aligner.hpp			\
-                  src_jf_aligner/overlap_graph.hpp			\
                   src_jf_aligner/misc.hpp				\
-                  src_jf_aligner/coords_parsing.hpp			\
                   src_jf_aligner/union_find.hpp				\
                   src_jf_aligner/pb_aligner.hpp				\
                   src_jf_aligner/output_file.hpp			\
@@ -73,30 +70,10 @@ bin_jf_aligner_SOURCES = src_jf_aligner/jf_aligner.cc			\
                          src_jf_aligner/fine_aligner.cc			\
                          src_jf_aligner/misc.cc lib/global_timer.cc
 
-bin_create_mega_reads_SOURCES = src_jf_aligner/create_mega_reads.cc	\
-                                src_jf_aligner/pb_aligner.cc		\
-                                src_jf_aligner/superread_parser.cc	\
-                                src_jf_aligner/union_find.cc		\
-                                src_jf_aligner/overlap_graph.cc		\
-                                src_jf_aligner/super_read_name.cc	\
-                                src_jf_aligner/coarse_aligner.cc	\
-                                src_jf_aligner/fine_aligner.cc		\
-                                src_jf_aligner/misc.cc			\
-                                lib/global_timer.cc
-bin_longest_path_SOURCES = src_jf_aligner/longest_path_overlap_graph2.cc	\
-                           src_jf_aligner/pb_aligner.cc				\
-                           src_jf_aligner/superread_parser.cc			\
-                           src_jf_aligner/union_find.cc				\
-                           src_jf_aligner/overlap_graph.cc			\
-                           src_jf_aligner/super_read_name.cc			\
-                           src_jf_aligner/coords_parsing.cc			\
-                           src_jf_aligner/misc.cc
 bin_merge_coords_SOURCES = src_jf_aligner/merge_coords.cc
 
 
 YAGGO_SOURCES += src_jf_aligner/jf_aligner_cmdline.hpp			\
-	         src_jf_aligner/create_mega_reads_cmdline.hpp		\
-	         src_jf_aligner/longest_path_overlap_graph2_cmdline.hpp	\
 	         src_jf_aligner/merge_coords_cmdline.hpp		
 
 
