@@ -1,4 +1,4 @@
-purpose "jf_aligner computes approximate alignments between reference and query DNA sequences"
+purpose "psa_aligner computes approximate alignments between reference and query DNA sequences"
 description ""
 
 option("s", "size") {
