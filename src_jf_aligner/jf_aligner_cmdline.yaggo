@@ -75,6 +75,6 @@ option("k", "k-mer") {
 option("r", "reference") {
   description "reference sequence file"
   c_string; typestr "path"; multiple }
-option("q", "pacbio") {
+option("q", "query") {
   description "query sequence file"
   c_string; typestr "path"; multiple }

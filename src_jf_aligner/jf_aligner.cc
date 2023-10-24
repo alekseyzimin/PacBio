@@ -241,7 +241,7 @@ int main(int argc, char *argv[])
                              std::min(short_mer_type::k(), args.psa_min_arg), mer_dna::k());
 
   // Prepare I/O
-  stream_manager streams(args.pacbio_arg.cbegin(), args.pacbio_arg.cend());
+  stream_manager streams(args.query_arg.cbegin(), args.query_arg.cend());
   read_parser    reads(4 * args.threads_arg, 100, 1, streams);
 
   // Create aligners
