@@ -25,7 +25,7 @@ YAGGO_SOURCES = # Append all file to be built by yaggo
 ##################
 # Build binaries #
 ##################
-bin_PROGRAMS += bin/jf_aligner bin/merge_coords 
+bin_PROGRAMS += bin/psa_aligner bin/merge_coords 
 
 noinst_HEADERS += src_jf_aligner/zstr.hpp src_jf_aligner/coords_parsing.hpp src_jf_aligner/strict_fstream.hpp \
 		  src_jf_aligner/superread_parser.hpp			\
@@ -62,7 +62,7 @@ noinst_HEADERS += include/charb.hpp include/exp_buffer.hpp		\
                   include/boost/asio/coroutine.hpp			\
                   include/boost/asio/yield.hpp
 
-bin_jf_aligner_SOURCES = src_jf_aligner/jf_aligner.cc			\
+bin_psa_aligner_SOURCES = src_jf_aligner/jf_aligner.cc			\
                          src_jf_aligner/pb_aligner.cc			\
                          src_jf_aligner/superread_parser.cc		\
                          src_jf_aligner/super_read_name.cc		\
