@@ -594,23 +594,25 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
                 echo "fi" >> ./do_consensus.sh && \
                 echo "exit 0" >> ./do_consensus.sh && \
 		chmod 0755 ./do_consensus.sh
-
-                if [ $USE_GRID -eq 1 ]; then
-                  if [ $GRID_ENGINE = "SGE" ];then
-                    qsub -cwd -j y -sync y -N "join_mega_reads"  -t 1-$TOJOIN_BATCHES do_consensus.sh 1> cqsub2.out 2>&1 || error_exit "join consensus failed on the grid"  
-                  else
-                        echo " "
-                        echo "To submit SLURM jobs, please run"
-                        echo " "
-                        echo "(cd ${COORDS}.join_consensus.tmp && sbatch -D `pwd` -J join_mega_reads -a 1-$TOJOIN_BATCHES -n $NUM_THREADS -p $QUEUE -N 1 do_consensus.sh);"
-                        echo " "
-                        echo "Please re-run assemble.sh when all jobs finish. If you get this message again, it means that some jobs failed, simply re-submit again using the above command."
-                        echo " "
-                        exit 0 
-                  fi
-                else
+                
+                #this often fails on the grid
+                #if [ $USE_GRID -eq 1 ]; then
+                #  if [ $GRID_ENGINE = "SGE" ];then
+                #    qsub -cwd -j y -sync y -N "join_mega_reads"  -t 1-$TOJOIN_BATCHES do_consensus.sh 1> cqsub2.out 2>&1 || error_exit "join consensus failed on the grid"  
+                #  else
+                #        echo " "
+                #        echo "To submit SLURM jobs, please run"
+                #        echo " "
+                #        echo "(cd ${COORDS}.join_consensus.tmp && sbatch -D `pwd` -J join_mega_reads -a 1-$TOJOIN_BATCHES -n $NUM_THREADS -p $QUEUE -N 1 do_consensus.sh);"
+                #        echo " "
+                #        echo "Please re-run assemble.sh when all jobs finish. If you get this message again, it means that some jobs failed, simply re-submit again using the above command."
+                #        echo " "
+                #        exit 0 
+                #  fi
+                #else
+                #run locally
                   seq 1 $TOJOIN_BATCHES | xargs -P 4 -I % ./do_consensus.sh %
-                fi #use_grid
+                #fi #use_grid
 
             fi #pass one
 
