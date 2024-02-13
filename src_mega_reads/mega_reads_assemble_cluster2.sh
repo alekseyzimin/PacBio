@@ -355,7 +355,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
             fi
 #creating run scripts for SGE or SLURM
             if [ $GRID_ENGINE = "SGE" ];then
-		echo "#!/bin/sh" > create_mega_reads.sh && \
+		echo "#!/bin/bash" > create_mega_reads.sh && \
 		    echo "if [ ! -e mr.batch\$SGE_TASK_ID.success ];then" >> create_mega_reads.sh && \
                     echo "if numactl --show 1> /dev/null 2>&1;then" >> create_mega_reads.sh && \
 		    echo "numactl --interleave=all $MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 11  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SGE_TASK_ID -o mr.batch\$SGE_TASK_ID.tmp && mv mr.batch\$SGE_TASK_ID.tmp mr.batch\$SGE_TASK_ID.txt && touch mr.batch\$SGE_TASK_ID.success" >> create_mega_reads.sh && \
@@ -365,44 +365,71 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 		    echo "else" >> create_mega_reads.sh && \
 		    echo "echo \"job \$SGE_TASK_ID previously completed successfully\"" >> create_mega_reads.sh && \
 		    echo "fi"  >> create_mega_reads.sh && chmod 0755 create_mega_reads.sh
+            elif [ $GRID_ENGINE = "SLURM" ];then
+		echo "#!/bin/bash" > ../create_mega_reads.sh && \
+		    echo "if [ ! -e mr_pass1/mr.batch\$SLURM_ARRAY_TASK_ID.success ];then" >> ../create_mega_reads.sh && \
+                    echo "if numactl --show 1> /dev/null 2>&1;then" >> ../create_mega_reads.sh && \
+                    echo "numactl --interleave=all $MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 11  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p mr_pass1/lr.batch\$SLURM_ARRAY_TASK_ID -o mr_pass1/mr.batch\$SLURM_ARRAY_TASK_ID.tmp && mv mr_pass1/mr.batch\$SLURM_ARRAY_TASK_ID.tmp mr_pass1/mr.batch\$SLURM_ARRAY_TASK_ID.txt && touch mr_pass1/mr.batch\$SLURM_ARRAY_TASK_ID.success" >> ../create_mega_reads.sh && \
+                    echo "else" >> ../create_mega_reads.sh && \
+		    echo "$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 11  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p mr_pass1/lr.batch\$SLURM_ARRAY_TASK_ID -o mr_pass1/mr.batch\$SLURM_ARRAY_TASK_ID.tmp && mv mr_pass1/mr.batch\$SLURM_ARRAY_TASK_ID.tmp mr_pass1/mr.batch\$SLURM_ARRAY_TASK_ID.txt && touch mr_pass1/mr.batch\$SLURM_ARRAY_TASK_ID.success" >> ../create_mega_reads.sh && \
+                    echo "fi"  >> ../create_mega_reads.sh
+		    echo "else" >> ../create_mega_reads.sh && \
+		    echo "echo \"job \$SLURM_ARRAY_TASK_ID previously completed successfully\"" >> ../create_mega_reads.sh && \
+		    echo "fi"  >> ../create_mega_reads.sh && chmod 0755 ../create_mega_reads.sh
             else
-		echo "#!/bin/sh" > create_mega_reads.sh && \
-		    echo "if [ ! -e mr.batch\$SLURM_ARRAY_TASK_ID.success ];then" >> create_mega_reads.sh && \
-                    echo "if numactl --show 1> /dev/null 2>&1;then" >> create_mega_reads.sh && \
-                    echo "numactl --interleave=all $MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 11  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SLURM_ARRAY_TASK_ID -o mr.batch\$SLURM_ARRAY_TASK_ID.tmp && mv mr.batch\$SLURM_ARRAY_TASK_ID.tmp mr.batch\$SLURM_ARRAY_TASK_ID.txt && touch mr.batch\$SLURM_ARRAY_TASK_ID.success" >> create_mega_reads.sh && \
-                    echo "else" >> create_mega_reads.sh && \
-		    echo "$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 11  --stretch-cap 10000 -k $KMER -u ../$KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r ../$SUPERREADS  -p lr.batch\$SLURM_ARRAY_TASK_ID -o mr.batch\$SLURM_ARRAY_TASK_ID.tmp && mv mr.batch\$SLURM_ARRAY_TASK_ID.tmp mr.batch\$SLURM_ARRAY_TASK_ID.txt && touch mr.batch\$SLURM_ARRAY_TASK_ID.success" >> create_mega_reads.sh && \
-                    echo "fi"  >> create_mega_reads.sh
-		    echo "else" >> create_mega_reads.sh && \
-		    echo "echo \"job \$SLURM_ARRAY_TASK_ID previously completed successfully\"" >> create_mega_reads.sh && \
-		    echo "fi"  >> create_mega_reads.sh && chmod 0755 create_mega_reads.sh
+                echo "#!/bin/bash" > ../create_mega_reads.sh && \
+                    echo "echo \"running mega-reads batch \$1 manually\"" >> ../create_mega_reads.sh && \
+                    echo "if [ ! -s $KUNITIGS ];then echo \"k-unitigs file $KUNITIGS is not found, please link or copy the file to the current folder\"; else" >> ../create_mega_reads.sh && \
+                    echo "if [ ! -s $SUPERREADS ];then echo \"super-reads file $SUPERREADS is not found, please link or copy the file to the current folder\"; else" >> ../create_mega_reads.sh && \
+                    echo "if [ ! -s mr_pass1/lr.batch\$1 ];then echo \"input file mr_pass1/lr.batch\$1 is not found, please make sure that mr_pass1 folder from the MaSuRCA run is linked to the current folder\"; else" >> ../create_mega_reads.sh && \
+                    echo "if [ ! -e mr_pass1/mr.batch\$1.success ];then" >> ../create_mega_reads.sh && \
+                    echo "if numactl --show 1> /dev/null 2>&1;then" >> ../create_mega_reads.sh && \
+                    echo "numactl --interleave=all $MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 11  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p mr_pass1/lr.batch\$1 -o mr_pass1/mr.batch\$1.tmp && mv mr_pass1/mr.batch\$1.tmp mr_pass1/mr.batch\$1.txt && touch mr_pass1/mr.batch\$1.success && echo Success!" >> ../create_mega_reads.sh && \
+                    echo "else" >> ../create_mega_reads.sh && \
+                    echo "$MYPATH/create_mega_reads -s $JF_SIZE -m $MER --psa-min 11  --stretch-cap 10000 -k $KMER -u $KUNITIGS -t $NUM_THREADS -B $B --max-count 5000 -d $d  -r $SUPERREADS  -p mr_pass1/lr.batch\$1 -o mr_pass1/mr.batch\$1.tmp && mv mr_pass1/mr.batch\$1.tmp mr_pass1/mr.batch\$1.txt && touch mr_pass1/mr.batch\$1.success && echo Success!" >> ../create_mega_reads.sh && \
+                    echo "fi"  >> ../create_mega_reads.sh
+                    echo "else" >> ../create_mega_reads.sh && \
+                    echo "echo \"job \$1 previously completed successfully\"" >> ../create_mega_reads.sh && \
+                    echo "fi;fi;fi;fi"  >> ../create_mega_reads.sh && chmod 0755 ../create_mega_reads.sh
             fi
 
-#here we use two ways to submit jobs for now. It is straighforward with SGE -- we use the sync option.  For SLURM, we submit the jobs and exit, instructing the used to restart assemble.sh when all jobs finish
+#here we use three ways to submit jobs for now. It is straighforward with SGE -- we use the sync option.  For SLURM, we submit the jobs and exit, instructing the used to restart assemble.sh when all jobs finish.  For manual execution, we instruct the user what to do.
 
 #maybe the jobs finished successfully already?
             unset failArr;
             failArr=();
             for i in $(seq 1 $PBATCHES);do
 		if [ ! -e mr.batch$i.success ];then
-		    failArr+=('mr.batch$i')
+		    failArr+=($i)
 		fi
             done
             if [ ${#failArr[@]} -ge 1 ];then
+		echo "${#failArr[@]} jobs to run"
 		if [ $GRID_ENGINE = "SGE" ];then
 		    log "submitting SGE create_mega_reads jobs to the grid"
 		    qsub -q $QUEUE -cwd -j y -sync y -N "create_mega_reads"  -t 1-$PBATCHES create_mega_reads.sh 1> mqsub2.out 2>&1
                     #we submit the jobs the second time to re-run (hopefully successfully) any jobs that may hav failed
                     qsub -q $QUEUE -cwd -j y -sync y -N "create_mega_reads"  -t 1-$PBATCHES create_mega_reads.sh 1> mqsub2.out 2>&1 || error_exit "create_mega_reads failed on the grid"
-		else
+		elif [ $GRID_ENGINE = "SLURM" ];then
 		    echo " "
 		    echo "To submit SLURM jobs, please run"
 		    echo " "
-		    echo "sbatch -D `pwd` -J create_mega_reads -a 1-$PBATCHES -n $NUM_THREADS -p $QUEUE -N 1 mr_pass1/create_mega_reads.sh"
+		    echo "sbatch -D `pwd` -J create_mega_reads -a 1-$PBATCHES -n $NUM_THREADS -p $QUEUE -N 1 ./create_mega_reads.sh"
 		    echo " "
 		    echo "Please re-run assemble.sh when all jobs finish. If you get this message again, it means that some jobs failed, simply re-submit again using the above command."
 		    echo " "
 		    exit 1
+                else
+                    echo "Please run ${#failArr[@]} mega-reads correction jobs manually"
+                    echo "To do that, run"
+                    echo " "
+                    echo "bash ./create_mega_reads.sh <job_id>, where <job_id> is the job number from { ${failArr[@]} }"
+                    echo " "
+                    echo "When a job finishes successfully, it will produce a file mr_pass1/<job_id>.success. Each job will run with $NUM_THREADS threads. You can start the jobs on multiple computers that have shared access to this folder."
+                    echo " "
+                    echo "Please re-run assemble.sh when all jobs finish."
+                    echo " "
+                    exit 1 
 		fi
             fi
 
@@ -411,15 +438,16 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
             failArr=();
             for i in $(seq 1 $PBATCHES);do 
 		if [ ! -e mr.batch$i.success ];then
-                    failArr+=('mr.batch$i')
+                    failArr+=($i)
 		fi
             done
             if [ ${#failArr[@]} -ge 1 ];then
 		error_exit "${#failArr[@]} create_mega_reads jobs failed in mr_pass1: ${failArr[@]}, re-run assemble.sh"
             fi
 #cat the results
-	    cat ${lmrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.txt || error_exit "concatenation of mega-read grid output files failed" ) && rm -rf mr_pass1 || error_exit "mega-reads pass 1 on the grid exited, please re-run assemble.sh"
-    else #single computer
+	    cat ${lmrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.txt || error_exit "concatenation of mega-read grid output files failed" ) && rm -rf mr_pass1 || error_exit "mega-reads pass 1 on the grid exited"
+#end subshell execution
+  else #single computer
 	log "Running locally in 1 batch";
         #if previous temporary file exists -- run failure, then we continue after deleting the last entry in the $COORDS.txt.tmp; cannot use ufasta because the file may be corrupted/incomplete
         if [ -e $COORDS.txt.tmp ];then #if found previous temp file
