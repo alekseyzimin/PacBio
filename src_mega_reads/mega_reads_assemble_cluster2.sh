@@ -416,7 +416,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 		    echo " "
 		    echo "sbatch -D `pwd` -J create_mega_reads -a 1-$PBATCHES -n $NUM_THREADS -p $QUEUE -N 1 ./create_mega_reads.sh"
 		    echo " "
-		    echo "Please re-run assemble.sh when all jobs finish. If you get this message again, it means that some jobs failed, simply re-submit again using the above command."
+		    echo "Please re-generate assemble.sh by running MaSuRCA_path/bin/masurca your_config_file and run ./assemble.sh when all jobs finish. If you get this message again, it means that some jobs failed, simply re-submit again using the above command."
 		    echo " "
 		    exit 1
                 else
@@ -427,7 +427,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
                     echo " "
                     echo "When a job finishes successfully, it will produce a file mr_pass1/<job_id>.success. Each job will run with $NUM_THREADS threads. You can start the jobs on multiple computers that have shared access to this folder."
                     echo " "
-                    echo "Please re-run assemble.sh when all jobs finish."
+                    echo "Please re-generate assemble.sh by running MaSuRCA_path/bin/masurca your_config_file and run ./assemble.sh when all jobs finish. If you get this message again, it means that some jobs failed, simply re-run the failed jobs using the above command."
                     echo " "
                     exit 1 
 		fi
@@ -770,6 +770,9 @@ else
     OVL_MER=22
 
     log "Coverage threshold for splitting unitigs is $TCOVERAGE minimum ovl $OVLMIN"
+    #here we disable grid for CA unless grid engine is SGE
+    if [ ! $GRID_ENGINE = "SGE" ];then USE_GRID=0;fi
+
     let NUM_THREADSd4=$(($NUM_THREADS/4+1))
     if [ $USE_GRID -ge 1 ];then
 	OVL_THREADS=4
