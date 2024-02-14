@@ -338,7 +338,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
     log "Computing mega-reads"
 
     if [ $PBATCHES -ge 2 ] && [ $USE_GRID -eq 1 ];then
-	log "Running on the grid in $PBATCHES batches";
+	log "Running on the $GRID_ENGINE grid in $PBATCHES batches";
 	if [ "$QUEUE" = "" ];then
 	    error_exit "Queue for the grid is undefined, must specify which queue to submit jobs to"
 	fi
