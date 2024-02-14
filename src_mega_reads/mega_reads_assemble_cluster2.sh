@@ -595,27 +595,27 @@ if [ ! -s $COORDS.1$POSTFIX.fa ] || [ -e .rerun ];then
 #try to do gap consensus with blasr; some jobs may fail
             echo "#!/bin/bash" > ./do_consensus.sh
 		echo "set -o pipefail" >> ./do_consensus.sh
-                if [ $USE_GRID -eq 1 ]; then
-                  if [ $GRID_ENGINE = "SGE" ];then
-                    echo "TASK_ID=\$SGE_TASK_ID"  >> ./do_consensus.sh
-                    log "Using SGE grid"
-                  else
-                    echo "TASK_ID=\$SLURM_ARRAY_TASK_ID" >> ./do_consensus.sh
-                    log "Using SLURM grid queue $QUEUE"
-                  fi
-                else
+                #if [ $USE_GRID -eq 1 ]; then
+                #  if [ $GRID_ENGINE = "SGE" ];then
+                #    echo "TASK_ID=\$SGE_TASK_ID"  >> ./do_consensus.sh
+                #    log "Using SGE grid"
+                #  else
+                #    echo "TASK_ID=\$SLURM_ARRAY_TASK_ID" >> ./do_consensus.sh
+                #    log "Using SLURM grid queue $QUEUE"
+                #  fi
+                #else
                   echo "TASK_ID=\$1" >> ./do_consensus.sh
-                fi
+                #fi
 		echo "if [ ! -e consensus.\$TASK_ID.success ];then" >> ./do_consensus.sh
-                if [ $USE_GRID -eq 1 ]; then
-		  echo "$MYPATH/../CA8/Linux-amd64/bin/blasr to_blasr.\$TASK_ID.fa   ref.\$TASK_ID.fa  -minMatch 15 -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \\" >> ./do_consensus.sh && \
-                  echo "sort -k6 -S5% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j $NUM_THREADS -t 0 -c 1 /dev/stdin  2>pbdagcon.err | awk -F 'N' '{if(\$1 == \"\") print \"ACGT\"; else print \$1}' > join_consensus.\$TASK_ID.fasta && \\" >> ./do_consensus.sh
-                  echo "$MYPATH/nucmer --delta /dev/stdout --batch 10000 -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.\$TASK_ID.fa join_consensus.\$TASK_ID.fasta 2>/dev/null | \\" >> ./do_consensus.sh
-                else
+                #if [ $USE_GRID -eq 1 ]; then
+		#  echo "$MYPATH/../CA8/Linux-amd64/bin/blasr to_blasr.\$TASK_ID.fa   ref.\$TASK_ID.fa  -minMatch 15 -nproc $NUM_THREADS -bestn 10 -m 5 2>blasr.err | \\" >> ./do_consensus.sh && \
+                #  echo "sort -k6 -S5% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j $NUM_THREADS -t 0 -c 1 /dev/stdin  2>pbdagcon.err | awk -F 'N' '{if(\$1 == \"\") print \"ACGT\"; else print \$1}' > join_consensus.\$TASK_ID.fasta && \\" >> ./do_consensus.sh
+                #  echo "$MYPATH/nucmer --delta /dev/stdout --batch 10000 -l 17 -c 51 -L 200 -t $NUM_THREADS to_join.\$TASK_ID.fa join_consensus.\$TASK_ID.fasta 2>/dev/null | \\" >> ./do_consensus.sh
+                #else
                   echo "$MYPATH/../CA8/Linux-amd64/bin/blasr to_blasr.\$TASK_ID.fa   ref.\$TASK_ID.fa  -minMatch 15 -nproc 16 -bestn 10 -m 5 2>blasr.err | \\" >> ./do_consensus.sh 
                   echo "sort -k6 -S5% | $MYPATH/../CA8/Linux-amd64/bin/pbdagcon -j 8 -t 0 -c 1 /dev/stdin  2>pbdagcon.err | awk -F 'N' '{if(\$1 == \"\") print \"ACGT\"; else print \$1}' > join_consensus.\$TASK_ID.fasta && \\" >> ./do_consensus.sh
                   echo "$MYPATH/nucmer --delta /dev/stdout --batch 10000 -l 17 -c 51 -L 200 -t 16 to_join.\$TASK_ID.fa join_consensus.\$TASK_ID.fasta 2>/dev/null | \\" >> ./do_consensus.sh
-                fi
+                #fi
                 echo "$MYPATH/filter_delta_file_for_qrys.pl qrys.txt | \\" >> ./do_consensus.sh && \
                 echo "$MYPATH/show-coords -lcHq -I 88 /dev/stdin > coords.\$TASK_ID && cat coords.\$TASK_ID | \\" >> ./do_consensus.sh && \
                 echo "$MYPATH/extract_merges_mega-reads.pl join_consensus.\$TASK_ID.fasta  valid_join_pairs.txt > merges.\$TASK_ID.txt && touch consensus.\$TASK_ID.success" >> ./do_consensus.sh && \
