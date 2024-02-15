@@ -445,7 +445,7 @@ if [ ! -s $COORDS.txt ] || [ -e .rerun ];then
 		error_exit "${#failArr[@]} create_mega_reads jobs failed in mr_pass1: ${failArr[@]}, re-run assemble.sh"
             fi
 #cat the results
-	    cat ${lmrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.txt || error_exit "concatenation of mega-read grid output files failed" ) && rm -rf mr_pass1 || error_exit "mega-reads pass 1 on the grid exited"
+	    cat ${lmrOut[@]} > ../$COORDS.tmp.txt && mv ../$COORDS.tmp.txt ../$COORDS.txt || error_exit "concatenation of mega-read grid output files failed" ) && rm -rf mr_pass1 create_mega_reads.sh || error_exit "mega-reads pass 1 on the grid exited"
 #end subshell execution
   else #single computer
 	log "Running locally in 1 batch";
