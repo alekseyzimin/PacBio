@@ -85,6 +85,8 @@ void print_coords(Multiplexer::ostream& out, const std::string& pb_name, const s
       out << ">" << nb_lines << " " << pb_name << "\n";
       for(size_t i = 0; i < nb_lines; ++i) {
         const auto& it = coords[order[i]];
+        if(it.nb_mers == 0)
+          continue;//compensate for fine alignment bug
         if(format==0)
           out << pb_name << " ";
         out << it.rs << " " << it.re << " " << it.qs << " " << it.qe << " "
