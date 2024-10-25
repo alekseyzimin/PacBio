@@ -224,7 +224,7 @@ if [ ! -e $PREFIX.break.success ];then
   log "Splitting query contigs at suspect locations"
   rm -f $PREFIX.align2.success
   #first we figure out the coverage -- take the most common coverage and divide by .8
-  let AUTO_REP_COV_THRESH=`awk '{print $4}'  $HYB_POS.coverage | sort -n -S 10% |uniq -c| sort -k1,1nr -S 10% |head -n 1 | awk '{print int($2/.8)}'`
+  let AUTO_REP_COV_THRESH=`awk '{print $4}'  $HYB_POS.coverage | sort -n -S 10% |uniq -c| sort -nrk1,1 -S 10% |head -n 1 | awk '{print int($2/.8)}'`
   if [ $AUTO_REP_COV_THRESH -lt 2 ];then
     echo "Warning!  It appears that read coverage is very low.  We will be unable to find misassemblies reliably"
     AUTO_REP_COV_THRESH=2;
@@ -270,24 +270,18 @@ if [ ! -e $PREFIX.scaffold.success ];then
   rm -f $PREFIX.place_extra.success
   log "Final scaffolding"
   touch $PREFIX.fillseq.fa
-  $MYPATH/show-coords -lcHr -I $IDENTITY $REF_CHR.$HYB_CTG.broken.1.delta | \
-  $MYPATH/merge_matches_and_tile_coords_file_new.pl $MERGE | grep -v CONTAINED$| \
-  awk '{if($16>1 || $8>10000) print $0}' |\
-  $MYPATH/merge_matches_and_tile_coords_file_new.pl $(($MERGE+$MERGE)) | grep -v CONTAINED$ | \
-  awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>=last_end) {print $0; last_end=$2}}' | \
-  $MYPATH/extract_single_best_match_coords_file.pl | \
-  awk '{if($4<$5){print $1-$4+1,$1-$4+$13+1,$13,$0}else{print $1-($13-$4),$1+$4,$13,$0}}' | \
-  sort -k21,21 -k3,3nr -S 10% | \
+  show-coords -lcHr -L 1000 -I $IDENTITY $REF_CHR.$HYB_CTG.broken.1.delta | \
+  compute_contig_positions.pl| sort -k18,18 -k13,13nr -S 10% | \
   perl -ane 'BEGIN{$n=0;$ctg="";}{
-    if(not($F[20] eq $ctg)){
-      $ctg=$F[20];
+    if(not($F[17] eq $ctg)){
+      $ctg=$F[17];
       %start=();
       %end=();
       $n=0;
     }
     $contained=0;
     $st=$F[0]<0 ? 0:$F[0];
-    $en=$F[1]>$F[14] ? $F[14]:$F[1];
+    $en=$F[1]>$F[11] ? $F[11]:$F[1];
     foreach $k(keys %start){
       $contained=1 if($st>$start{$k} && $en<$end{$k});
     }
@@ -295,11 +289,10 @@ if [ ! -e $PREFIX.scaffold.success ];then
       $start{$n}=$st;
       $end{$n}=$en;
       $n++;
-      if($F[2]>int('$MIN_CONTIG')){print}
+      if($F[12]>int('$MIN_CONTIG')){print}
     }
   }'  | \
-  sort -k21,21 -k1,1n -S 10% | \
-  perl -ane '{print join(" ",@F[3..$#F]),"\n"}' > $PREFIX.best.coords.tmp && \
+  sort -k18,18 -k1,1n -S 10% > $PREFIX.best.coords.tmp && \
   mv $PREFIX.best.coords.tmp $PREFIX.best.coords && \
   if [ $MERGE_SEQ -gt 0 ];then
     cat $PREFIX.best.coords | $MYPATH/fill_unaligned_gaps.pl $REF 2>$PREFIX.fillseq.fa |\
