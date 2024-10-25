@@ -224,7 +224,7 @@ if [ ! -e $PREFIX.break.success ];then
   log "Splitting query contigs at suspect locations"
   rm -f $PREFIX.align2.success
   #first we figure out the coverage -- take the most common coverage and divide by .8
-  let AUTO_REP_COV_THRESH=`awk '{print $4}'  $HYB_POS.coverage | sort -n -S 10% |uniq -c| sort -nrk1,1 -S 10% |head -n 1 | awk '{print int($2/.8)}'`
+  let AUTO_REP_COV_THRESH=`awk '{print $4}'  $HYB_POS.coverage | sort -n -S 10% |uniq -c| sort -k1,1nr -S 10% |head -n 1 | awk '{print int($2/.8)}'`
   if [ $AUTO_REP_COV_THRESH -lt 2 ];then
     echo "Warning!  It appears that read coverage is very low.  We will be unable to find misassemblies reliably"
     AUTO_REP_COV_THRESH=2;
@@ -277,7 +277,7 @@ if [ ! -e $PREFIX.scaffold.success ];then
   awk 'BEGIN{last_end=0;last_scf="";}{if($18 != last_scf){last_end=$2;last_scf=$18} if($2>=last_end) {print $0; last_end=$2}}' | \
   $MYPATH/extract_single_best_match_coords_file.pl | \
   awk '{if($4<$5){print $1-$4+1,$1-$4+$13+1,$13,$0}else{print $1-($13-$4),$1+$4,$13,$0}}' | \
-  sort -k21,21 -nrk3,3 -S 10% | \
+  sort -k21,21 -k3,3nr -S 10% | \
   perl -ane 'BEGIN{$n=0;$ctg="";}{
     if(not($F[20] eq $ctg)){
       $ctg=$F[20];
