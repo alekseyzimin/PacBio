@@ -118,13 +118,13 @@ dist_bin_SCRIPTS += src_mega_reads/mega_reads_assemble_cluster.sh src_mega_reads
 		    src_reconcile/fill_unaligned_gaps.pl \
 		    src_reconcile/introduce_errors_fasta_file.pl \
 		    src_reconcile/compute_coverage.pl  \
+		    src_reconcile/compute_contig_positions.pl \
 		    src_reconcile/evaluate_splits.pl \
 		    src_reconcile/polca.sh src_reconcile/sizesToScaff.pl \
 		    src_reconcile/freebayes \
 		    src_reconcile/find_repeats.pl \
 		    src_reconcile/insert_repeats.pl \
 		    src_reconcile/fix_consensus_from_vcf.pl \
-		    src_reconcile/extract_single_best_match_coords_file.pl \
 		    src_reconcile/chromosome_scaffolder.sh \
 		    src_reconcile/break_contigs.pl src_reconcile/merge_sequences_simple.pl \
 		    src_mega_reads/get_super_read_sizes.pl src_mega_reads/translate_reduced_reads.pl \
