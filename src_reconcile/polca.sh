@@ -123,7 +123,7 @@ fi
 if [ ! -e $BASM.map.success ];then
   log "Aligning reads to $ASM"
   rm -f $BASM.sort.success
-  zcat -f $(echo $READS) | $BWA mem -SP -t $NUM_THREADS $BASM.bwa /dev/stdin 2>>bwa.err | $SAMTOOLS view -bhS > $BASM.unSorted.bam && \
+  zcat -f $(echo $READS) | $BWA mem -SP -t $NUM_THREADS $BASM.bwa /dev/stdin 2>>bwa.err | $SAMTOOLS view -bhS /dev/stdin > $BASM.unSorted.bam && \
   touch $BASM.map.success
   if [ ! -e $BASM.map.success ];then
     error_exit "Aligning reads to $ASM failed"
