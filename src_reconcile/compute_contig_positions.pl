@@ -4,7 +4,7 @@ while($line=<STDIN>){
   chomp($line);
   $line=~s/^\s+//;
   my @f=split(/\s+/,$line);
-  next if($f[7]<1000);
+  #next if($f[7]<1000);
   my $impl_start;
   my $impl_end;
   my $dir;
