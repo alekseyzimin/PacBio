@@ -4,7 +4,6 @@ while($line=<STDIN>){
   chomp($line);
   $line=~s/^\s+//;
   my @f=split(/\s+/,$line);
-  #next if($f[7]<1000);
   my $impl_start;
   my $impl_end;
   my $dir;
@@ -30,18 +29,18 @@ foreach $c(keys %matches){
   my @f=split(/\s+/,$matches{$c});
   my %temp=();
   for($i=0;$i<$#f;$i+=4){
-    $temp{$f[$i]}+=$f[$i+1];
+    $temp{$f[$i]." ".$f[$i+3]}+=$f[$i+1];
   }
   my $max_match=0;
-  my $max_chrom="";
+  my $max_chrom_dir="";
   foreach $ch(keys %temp){
     #print "DEBUG contig $c chromosome $ch bases $temp{$ch}\n";
     if($temp{$ch}>$max_match){
       $max_match=$temp{$ch};
-      $max_chrom=$ch;
+      $max_chrom_dir=$ch;
     }
   }
-  $chrom{$c}=$max_chrom;
+  $chrom_dir{$c}=$max_chrom_dir;
 }
 
 foreach $c(keys %matches){
@@ -53,7 +52,7 @@ foreach $c(keys %matches){
   my $fwd_sum=0;
   my $rev_sum=0;
   for($i=0;$i<$#f;$i+=4){
-    if($chrom{$c} eq $f[$i]){
+    if($chrom_dir{$c} eq $f[$i]." ".$f[$i+3]){
       $sum+=$f[$i+2]*$f[$i+1];
       $weight_sum+=$f[$i+1];
       if($f[$i+3] eq "+"){
@@ -67,7 +66,7 @@ foreach $c(keys %matches){
   $sum=0;
   #we compute error in position
   for($i=0;$i<$#f;$i+=3){
-    if($chrom{$c} eq $f[$i]){
+    if($chrom_dir{$c} eq $f[$i]." ".$f[$i+3]){
       $sum+=($f[$i+2]-$mean_pos)*($f[$i+2]-$mean_pos)*$f[$i+1];
     }
   }
@@ -75,11 +74,12 @@ foreach $c(keys %matches){
   $end_pos{$c}=$start_pos{$c}+$ctg_len{$c};
   $error_pos{$c}=$sum/$weight_sum;
   $error_interval{"$start_pos{$c} $end_pos{$c}"}=$error_pos{$c};
-  $percent=int($ctg_len{$c}/$ref_chr_len{$chrom{$c}}*100);
+  my ($ref_chr, $ref_dir)=split(/\s/,$chrom_dir{$c});
+  $percent=int($ctg_len{$c}/$ref_chr_len{$ref_chr}*100);
   if($fwd_sum>=$rev_sum){
-    print "$start_pos{$c} $end_pos{$c} | 1 $ctg_len{$c} | $ctg_len{$c} $ctg_len{$c} | 100 | $ref_chr_len{$chrom{$c}} $ctg_len{$c} | $percent 100 | $chrom{$c} $c\n";
+    print "$start_pos{$c} $end_pos{$c} | 1 $ctg_len{$c} | $ctg_len{$c} $ctg_len{$c} | ",int($error_pos{$c}/$ctg_len{$c}*10000)/100," | $ref_chr_len{$ref_chr} $ctg_len{$c} | $percent 100 | $ref_chr $c\n";
   }else{
-    print "$start_pos{$c} $end_pos{$c} | $ctg_len{$c} 1 | $ctg_len{$c} $ctg_len{$c} | 100 | $ref_chr_len{$chrom{$c}} $ctg_len{$c} | $percent 100 | $chrom{$c} $c\n";
+    print "$start_pos{$c} $end_pos{$c} | $ctg_len{$c} 1 | $ctg_len{$c} $ctg_len{$c} | ",int($error_pos{$c}/$ctg_len{$c}*10000)/100," | $ref_chr_len{$ref_chr} $ctg_len{$c} | $percent 100 | $ref_chr $c\n";
   }
 }
 
