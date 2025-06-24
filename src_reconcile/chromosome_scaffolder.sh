@@ -13,6 +13,7 @@ NUM_THREADS=1
 IDENTITY=97
 #parameter for merging alignments
 MERGE=100000
+MIN_MATCH=1000
 MERGE_SEQ=0
 NO_BRK=0
 MIN_CONTIG=200
@@ -49,7 +50,7 @@ function usage {
     echo "-q <string: assembly to be scaffolded with the reference> MANDATORY"
     echo "-t <int: number of threads>" 
     echo "-i <float: minimum sequence similarity percentage: default 97>"
-    echo "-m <int: merge equence alignments slack: default 100000>"
+    echo "-m <int: minimum match length: default 1000>"
     echo "-nb do not align reads to query contigs and do not attempt to break at misassemblies: default off" 
     echo "-v verbose"
     echo "-c <int: minimum contig size to keep in final scaffolds, default 200>"
@@ -98,18 +99,18 @@ do
         -nb|--no_breaks)
             NO_BRK=1
             ;;
-        -hf|--pacbio-hifi)
+        -hf|--pacbio_hifi)
             MINIMAP_PARAM="-x asm10"
             ;;
-        -m|--merge-slack)
-            MERGE="$2"
+        -m|--min_match)
+            MIN_MATCH="$2"
             shift
             ;;
-        -c|--contig-min)
+        -c|--contig_min)
             MIN_CONTIG="$2"
             shift
             ;;
-        -M|--merge-sequences)
+        -M|--merge_sequences)
             MERGE_SEQ=1
             ;;
         -r|--reference)
@@ -270,7 +271,7 @@ if [ ! -e $PREFIX.scaffold.success ];then
   rm -f $PREFIX.place_extra.success
   log "Final scaffolding"
   touch $PREFIX.fillseq.fa
-  show-coords -lcHr -L 1000 -I $IDENTITY $REF_CHR.$HYB_CTG.broken.1.delta | \
+  show-coords -lcHr -L $MIN_MATCH -I $IDENTITY $REF_CHR.$HYB_CTG.broken.1.delta | \
   compute_contig_positions.pl| sort -k18,18 -k13,13nr -S 10% | \
   perl -ane 'BEGIN{$n=0;$ctg="";}{
     if(not($F[17] eq $ctg)){
