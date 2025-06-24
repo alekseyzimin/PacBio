@@ -4,6 +4,7 @@ while($line=<STDIN>){
   chomp($line);
   $line=~s/^\s+//;
   my @f=split(/\s+/,$line);
+  next if($f[7]<1000);
   my $impl_start;
   my $impl_end;
   my $dir;
@@ -53,8 +54,8 @@ foreach $c(keys %matches){
   my $rev_sum=0;
   for($i=0;$i<$#f;$i+=4){
     if($chrom_dir{$c} eq $f[$i]." ".$f[$i+3]){
-      $sum+=$f[$i+2]*$f[$i+1];
-      $weight_sum+=$f[$i+1];
+      $sum+=$f[$i+2]*$f[$i+1]*$f[$i+1];
+      $weight_sum+=$f[$i+1]*$f[$i+1];
       if($f[$i+3] eq "+"){
          $fwd_sum+=$f[$i+1];
       }else{
@@ -67,12 +68,12 @@ foreach $c(keys %matches){
   #we compute error in position
   for($i=0;$i<$#f;$i+=3){
     if($chrom_dir{$c} eq $f[$i]." ".$f[$i+3]){
-      $sum+=($f[$i+2]-$mean_pos)*($f[$i+2]-$mean_pos)*$f[$i+1];
+      $sum+=($f[$i+2]-$mean_pos)*($f[$i+2]-$mean_pos)*$f[$i+1]*$f[$i+1];
     }
   }
   $start_pos{$c}=int($mean_pos-$ctg_len{$c}/2);
   $end_pos{$c}=$start_pos{$c}+$ctg_len{$c};
-  $error_pos{$c}=$sum/$weight_sum;
+  $error_pos{$c}=sqrt($sum/$weight_sum);
   $error_interval{"$start_pos{$c} $end_pos{$c}"}=$error_pos{$c};
   my ($ref_chr, $ref_dir)=split(/\s/,$chrom_dir{$c});
   $percent=int($ctg_len{$c}/$ref_chr_len{$ref_chr}*100);
