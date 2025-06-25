@@ -273,26 +273,25 @@ if [ ! -e $PREFIX.scaffold.success ];then
   touch $PREFIX.fillseq.fa
   show-coords -lcHr -L $MIN_MATCH -I $IDENTITY $REF_CHR.$HYB_CTG.broken.1.delta | \
   compute_contig_positions.pl| sort -k18,18 -k13,13nr -S 10% | \
-  perl -ane 'BEGIN{$n=0;$ctg="";}{
-    if(not($F[17] eq $ctg)){
-      $ctg=$F[17];
-      %start=();
-      %end=();
-      $n=0;
-    }
-    $contained=0;
-    $st=$F[0]<0 ? 0:$F[0];
-    $en=$F[1]>$F[11] ? $F[11]:$F[1];
-    foreach $k(keys %start){
-      $contained=1 if($st>$start{$k} && $en<$end{$k});
-    }
-    if(not($contained)){
-      $start{$n}=$st;
-      $end{$n}=$en;
-      $n++;
-      if($F[12]>int('$MIN_CONTIG')){print}
-    }
-  }'  | \
+    perl -ane 'BEGIN{$n=0;$ctg="";}{
+      if(not($F[17] eq $ctg)){
+        $ctg=$F[17];
+        %start=();
+        %end=();
+      }
+      $contained=0;
+      $st=$F[0]<0 ? 0:$F[0];
+      $en=$F[1]>$F[11] ? $F[11]:$F[1];
+      foreach $k(keys %start){
+        if($st-$F[9]*$F[12]>$start{$k} && $en+$F[9]*$F[12]<$end{$k}){$contained=1;}
+      }
+      if(not($contained)){
+        $start{$F[18]}=$st+$F[9]*$F[12];
+        $end{$F[18]}=$en-$F[9]*$F[12];
+        $start{$F[18]}=$end{$F[18]} if($start{$F[18]}>$end{$F[18]});
+        if($F[12]>int('$MIN_CONTIG')){print}
+      }
+    }'  | \
   sort -k18,18 -k1,1n -S 10% > $PREFIX.best.coords.tmp && \
   mv $PREFIX.best.coords.tmp $PREFIX.best.coords && \
   if [ $MERGE_SEQ -gt 0 ];then
