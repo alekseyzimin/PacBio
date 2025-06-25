@@ -283,7 +283,7 @@ if [ ! -e $PREFIX.scaffold.success ];then
       $st=$F[0]<0 ? 0:$F[0];
       $en=$F[1]>$F[11] ? $F[11]:$F[1];
       foreach $k(keys %start){
-        if($st-$F[9]*$F[12]>$start{$k} && $en+$F[9]*$F[12]<$end{$k}){$contained=1;}
+        if($st-$F[9]*$F[12]>$start{$k} && $en+$F[9]*$F[12]<$end{$k} && $F[12]<100000){$contained=1;}
       }
       if(not($contained)){
         $start{$F[18]}=$st+$F[9]*$F[12];
